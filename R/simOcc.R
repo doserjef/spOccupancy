@@ -1,29 +1,3 @@
-#' Simulate Single-Species Occupancy Data
-#'
-#' @param J.x Number of cells on x-axis
-#' @param J.y Number of cells on y-axis
-#' @param K Number of repeat visits
-#' @param beta Occupancy covariate values
-#' @param alpha Detection covariate values
-#' @param sigma.sq Spatial variance parameter
-#' @param phi Spatial range parameter
-#' @param sp Logical indicating if simulate spatial model or not.
-#'
-#' @return stuff
-#' @export
-#'
-#' @importFrom stats rnorm rbinom dist
-#'
-#' @examples J.x <- 10
-#'J.y <- 10
-#'K <- rep(4, J.x * J.y)
-#'beta <- c(0.5, -0.15)
-#'alpha <- c(0.7, 0.4)
-#'phi <- 3 / .6
-#'sigma.sq <- 2
-#'dat <- simOcc(J.x = J.x, J.y = J.y, K = K, beta = beta, alpha = alpha,
-#'              sigma.sq = sigma.sq, phi = phi, sp = TRUE)
-
 simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
                    sp = FALSE) {
 

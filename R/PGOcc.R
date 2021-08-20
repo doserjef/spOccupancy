@@ -1,21 +1,3 @@
-#' Function for Fitting Single Species Occupancy Models Using Polya-Gamma Latent Variables
-#'
-#' @param y Data
-#' @param X Occupancy covariates
-#' @param X.p Detection covariates
-#' @param starting Starting values
-#' @param n.rep Temporal replicates
-#' @param n.samples MCMC samples
-#' @param priors Priors
-#' @param n.omp.threads Number of threads
-#' @param verbose Be wordy
-#' @param n.report Value to report
-#' @param ... currently no additional arguments
-#'
-#' @return stuff
-#' @export
-#'
-#' @examples
 PGOcc <- function(y, X, X.p, starting, n.rep, n.samples,
 		  priors, n.omp.threads = 1, verbose = TRUE,
 		  n.report = 100, ...){

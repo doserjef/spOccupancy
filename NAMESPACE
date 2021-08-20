@@ -2,5 +2,6 @@ useDynLib(spOccupancy)
 
 export(PGOcc)
 export(simOcc)
+export(spPGOcc)
 importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", "is.empty.model", "model.matrix", "model.response", "terms")
 importFrom("coda", "mcmc")
