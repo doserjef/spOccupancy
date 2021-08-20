@@ -12,6 +12,8 @@
 #' @return stuff
 #' @export
 #'
+#' @importFrom stats rnorm rbinom dist
+#'
 #' @examples J.x <- 10
 #'J.y <- 10
 #'K <- rep(4, J.x * J.y)
@@ -32,7 +34,7 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
     if(any(is.na(match(dim(V),p))))
       stop("Dimension problem!")
     D <- chol(V)
-    t(matrix(stats::rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
+    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
   }
 
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
@@ -44,7 +46,7 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   X.psi <- matrix(1, nrow = J, ncol = n.beta)
   if (n.beta > 1) {
     for (i in 2:n.beta) {
-      X.psi[, i] <- stats::rnorm(J)
+      X.psi[, i] <- rnorm(J)
     } # i
   }
 
@@ -55,7 +57,7 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   if (n.alpha > 1) {
     for (i in 2:n.alpha) {
       for (j in 1:J) {
-        X.p[j, 1:K[j], i] <- stats::rnorm(K[j])
+        X.p[j, 1:K[j], i] <- rnorm(K[j])
       } # j
     } # i
   }
@@ -66,7 +68,7 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   s.y <- seq(0, 1, length.out = J.y)
   coords <- expand.grid(s.x, s.y)
   # Distance matrix
-  D <- as.matrix(stats::dist(coords))
+  D <- as.matrix(dist(coords))
   # Exponential correlation function
   R <- exp(-phi * D)
   # Random spatial process
@@ -78,14 +80,14 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   } else {
     psi <- logit.inv(X.psi %*% as.matrix(beta))
   }
-  z <- stats::rbinom(J, 1, psi)
+  z <- rbinom(J, 1, psi)
 
   # Data Formation --------------------------------------------------------
   p <- matrix(NA, nrow = J, ncol = max(K))
   y <- matrix(NA, nrow = J, ncol = max(K))
   for (j in 1:J) {
     p[j, 1:K[j]] <- logit.inv(X.p[j, 1:K[j], ] %*% as.matrix(alpha))
-    y[j, 1:K[j]] <- stats::rbinom(K[j], 1, p[j, 1:K[j]] * z[j])
+    y[j, 1:K[j]] <- rbinom(K[j], 1, p[j, 1:K[j]] * z[j])
   } # j
 
   return(
