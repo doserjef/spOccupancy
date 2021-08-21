@@ -1,6 +1,11 @@
 \name{simOcc}
 \alias{simOcc}
 \title{Simulate Single-Species Occupancy Data}
+
+\description{
+  The function \code{simOcc} simulates single-species occupancy data for simulation studies, power assessments, or function testing. Data can be optionally be simulated with a spatial Gaussian Process following an exponential correlation function.
+}
+
 \usage{
 simOcc(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 }
@@ -21,12 +26,11 @@ simOcc(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 
 \item{sp}{Logical indicating if simulate spatial model or not.}
 }
+
 \value{
 stuff
 }
-\description{
-Simulate Single-Species Occupancy Data
-}
+
 \examples{
 J.x <- 10
 J.y <- 10

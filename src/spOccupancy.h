@@ -33,5 +33,14 @@ extern "C" {
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	           SEXP nReport_r);
 
+  SEXP msPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP pocc_r, SEXP pdet_r, 
+	       SEXP J_r, SEXP K_r, SEXP N_r, SEXP betaStarting_r, 
+	       SEXP alphaStarting_r, SEXP zStarting_r, SEXP betaCommStarting_r, 
+	       SEXP alphaCommStarting_r, SEXP tauBetaStarting_r, SEXP tauAlphaStarting_r, 
+	       SEXP zLongIndx_r, SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+	       SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauBetaA_r, 
+	       SEXP tauBetaB_r, SEXP tauAlphaA_r, SEXP tauAlphaB_r, 
+	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r);
+
 
 }
