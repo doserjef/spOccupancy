@@ -13,31 +13,31 @@ intPGOcc(y, X, X.p, sites, n.data, starting, n.rep, n.samples, priors,
 )
 }
 \arguments{
-\item{y}{Data in list format}
-
-\item{X}{Occupancy covariates}
-
-\item{X.p}{Detection covariates}
-
-\item{sites}{Indices for latent occupancy sites}
-
-\item{n.data}{Number of data sources}
-
-\item{starting}{Starting values}
-
-\item{n.rep}{Temporal replicates}
-
-\item{n.samples}{MCMC samples}
-
-\item{priors}{Priors}
-
-\item{n.omp.threads}{Number of threads}
-
-\item{verbose}{Be wordy}
-
-\item{n.report}{Value to report}
-
-\item{...}{currently no additional arguments}
+  \item{y}{Data in list format}
+  
+  \item{X}{Occupancy covariates}
+  
+  \item{X.p}{Detection covariates}
+  
+  \item{sites}{Indices for latent occupancy sites}
+  
+  \item{n.data}{Number of data sources}
+  
+  \item{starting}{Starting values}
+  
+  \item{n.rep}{Temporal replicates}
+  
+  \item{n.samples}{MCMC samples}
+  
+  \item{priors}{Priors}
+  
+  \item{n.omp.threads}{Number of threads}
+  
+  \item{verbose}{Be wordy}
+  
+  \item{n.report}{Value to report}
+  
+  \item{...}{currently no additional arguments}
 }
 \value{
 stuff
