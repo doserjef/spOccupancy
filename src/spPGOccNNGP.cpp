@@ -13,9 +13,8 @@
 #include <omp.h>
 #endif
 
-//Description: update B and F.
 void updateBF1(double *B, double *F, double *c, double *C, double *coords, int *nnIndx, int *nnIndxLU, int n, int m, double sigmaSq, double phi, double nu, int covModel, double *bk, double nuUnifb){
-    
+
   int i, k, l;
   int info = 0;
   int inc = 1;
@@ -28,7 +27,7 @@ void updateBF1(double *B, double *F, double *c, double *C, double *coords, int *
   int threadID = 0;
   double e;
   int mm = m*m;
-  
+
 #ifdef _OPENMP
 #pragma omp parallel for private(k, l, info, threadID, e)
 #endif
@@ -41,8 +40,8 @@ void updateBF1(double *B, double *F, double *c, double *C, double *coords, int *
 	  e = dist2(coords[i], coords[n+i], coords[nnIndx[nnIndxLU[i]+k]], coords[n+nnIndx[nnIndxLU[i]+k]]);
 	  c[m*threadID+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]);
 	  for(l = 0; l <= k; l++){
-	    e = dist2(coords[nnIndx[nnIndxLU[i]+k]], coords[n+nnIndx[nnIndxLU[i]+k]], coords[nnIndx[nnIndxLU[i]+l]], coords[n+nnIndx[nnIndxLU[i]+l]]); 
-	    C[mm*threadID+l*nnIndxLU[n+i]+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]); 
+	    e = dist2(coords[nnIndx[nnIndxLU[i]+k]], coords[n+nnIndx[nnIndxLU[i]+k]], coords[nnIndx[nnIndxLU[i]+l]], coords[n+nnIndx[nnIndxLU[i]+l]]);
+	    C[mm*threadID+l*nnIndxLU[n+i]+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]);
 	  }
 	}
 	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info); if(info != 0){error("c++ error: dpotrf failed\n");}

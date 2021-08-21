@@ -1,5 +1,6 @@
 #include <string>
 
+
 extern "C" {
   void zeros(double *a, int n);
   
@@ -44,6 +45,5 @@ extern "C" {
   double rigamma(double a, double b); 
   void fillUTri(double *v, int m);
   double spCor(double &D, double &phi, double &nu, int &covModel, double *bk); 
-
 
 }
