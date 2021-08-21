@@ -6,6 +6,8 @@ export(spPGOcc)
 export(simMsOcc)
 export(msPGOcc)
 export(spMsPGOcc)
+export(simIntOcc)
+export(intPGOcc)
 
 importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", "is.empty.model", "model.matrix", "model.response", "terms", "runif")
 importFrom("coda", "mcmc")
