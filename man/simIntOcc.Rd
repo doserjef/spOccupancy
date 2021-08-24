@@ -38,14 +38,5 @@ stuff
 }
 
 \examples{
-# Needs updating. 
-J.x <- 10
-J.y <- 10
-K <- rep(4, J.x * J.y)
-beta <- c(0.5, -0.15)
-alpha <- c(0.7, 0.4)
-phi <- 3 / .6
-sigma.sq <- 2
-dat <- simOcc(J.x = J.x, J.y = J.y, K = K, beta = beta, alpha = alpha,
-             sigma.sq = sigma.sq, phi = phi, sp = TRUE)
+# Update
 }

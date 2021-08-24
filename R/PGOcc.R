@@ -22,15 +22,30 @@ PGOcc <- function(y, X, X.p, starting, n.rep, n.samples,
     if (missing(y)) {
       stop("error: data (y) must be specified")
     }
+    if (is.data.frame(y)) {
+      y <- as.matrix(y)
+    }
     # Number of sites
     J <- nrow(y)
     if (missing(X)) {
       message("X is not specified. Assuming intercept only occupancy model.\n")
       X <- matrix(1, J, 1)
     }
+    if (is.data.frame(X)) {
+      X <- as.matrix(X)
+    }
+    # Add intercept if not provided
+    if (sum(X[, 1] != rep(1, nrow(X)), na.rm = TRUE) != 0) {
+      message("Intercept is not specified in X. Adding intercept.\n")
+      X <- cbind(1, X)
+    }
     if (missing(X.p)) {
       message("X.p is not specified. Assuming intercept only detection model.\n")
       X.p <- array(1, dim = c(J, dim(y)[2], 1))
+    }
+    if (sum(X.p[, , 1] != matrix(1, J, dim(y)[2]), na.rm = TRUE) != 0) {
+      message("Intercept is not specified in X. Adding intercept.\n")
+      X.p <- abind(matrix(1, J, dim(y)[2]), X.p, along = 3)
     }
 
     # Get basic info from inputs ------------------------------------------

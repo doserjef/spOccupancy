@@ -7,14 +7,14 @@
 }
 
 \usage{
-simOcc(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
+simOcc(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 }
 \arguments{
 \item{J.x}{Number of cells on x-axis}
 
 \item{J.y}{Number of cells on y-axis}
 
-\item{K}{Number of repeat visits}
+\item{n.rep}{Number of repeat visits}
 
 \item{beta}{Occupancy covariate values}
 
@@ -34,11 +34,11 @@ stuff
 \examples{
 J.x <- 10
 J.y <- 10
-K <- rep(4, J.x * J.y)
+n.rep <- rep(4, J.x * J.y)
 beta <- c(0.5, -0.15)
 alpha <- c(0.7, 0.4)
 phi <- 3 / .6
 sigma.sq <- 2
-dat <- simOcc(J.x = J.x, J.y = J.y, K = K, beta = beta, alpha = alpha,
+dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
              sigma.sq = sigma.sq, phi = phi, sp = TRUE)
 }

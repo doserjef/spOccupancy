@@ -1,4 +1,4 @@
-simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
+simOcc <- function(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5,
                    sp = FALSE) {
 
   # Subroutines -----------------------------------------------------------
@@ -26,12 +26,12 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
 
   # Form detection covariate (if any) -------------------------------------
   n.alpha <- length(alpha)
-  X.p <- array(NA, dim = c(J, max(K), n.alpha))
+  X.p <- array(NA, dim = c(J, max(n.rep), n.alpha))
   X.p[, , 1] <- 1
   if (n.alpha > 1) {
     for (i in 2:n.alpha) {
       for (j in 1:J) {
-        X.p[j, 1:K[j], i] <- rnorm(K[j])
+        X.p[j, 1:n.rep[j], i] <- rnorm(n.rep[j])
       } # j
     } # i
   }
@@ -57,11 +57,11 @@ simOcc <- function(J.x, J.y, K, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   z <- rbinom(J, 1, psi)
 
   # Data Formation --------------------------------------------------------
-  p <- matrix(NA, nrow = J, ncol = max(K))
-  y <- matrix(NA, nrow = J, ncol = max(K))
+  p <- matrix(NA, nrow = J, ncol = max(n.rep))
+  y <- matrix(NA, nrow = J, ncol = max(n.rep))
   for (j in 1:J) {
-    p[j, 1:K[j]] <- logit.inv(X.p[j, 1:K[j], ] %*% as.matrix(alpha))
-    y[j, 1:K[j]] <- rbinom(K[j], 1, p[j, 1:K[j]] * z[j])
+    p[j, 1:n.rep[j]] <- logit.inv(X.p[j, 1:n.rep[j], ] %*% as.matrix(alpha))
+    y[j, 1:n.rep[j]] <- rbinom(n.rep[j], 1, p[j, 1:n.rep[j]] * z[j])
   } # j
 
   return(
