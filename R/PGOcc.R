@@ -218,9 +218,10 @@ PGOcc <- function(y, X, X.p, starting, n.rep, n.samples,
     out$X.occ <- X
     out$X.p <- X.p.orig
     out$y <- y.big
+    out$n.samples <- n.samples
     out$call <- cl
 
-    # class(out) <- "PGOcc"
+    class(out) <- "PGOcc"
 
     out
 }
