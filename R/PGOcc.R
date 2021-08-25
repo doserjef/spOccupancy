@@ -230,7 +230,7 @@ PGOcc <- function(y, X, X.p, starting, n.rep, n.samples,
     tmp <- array(NA, dim = c(J * K.max, n.samples))
     tmp[names.long, ] <- out$y.rep.samples
     out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.samples))
-    out$X.occ <- X
+    out$X <- X
     out$X.p <- X.p.orig
     out$y <- y.big
     out$n.samples <- n.samples

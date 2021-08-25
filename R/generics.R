@@ -51,7 +51,7 @@ predict.PGOcc <- function(object, X.0, sub.sample, ...) {
   if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  p.occ <- ncol(object$X.occ)
+  p.occ <- ncol(object$X)
   if (ncol(X.0) != p.occ) {
     stop(paste("error: X.0 must have ", p.occ, " columns\n", sep = ''))
   }
@@ -124,6 +124,20 @@ summary.PGOcc <- function(object, sub.sample,
   print(noquote(apply(t(apply(object$alpha.samples[s.indx,], 2, 
 			      function(x) quantile(x, prob=quantiles))), 
 		      2, function(x) formatC(x, format = "f", digits = digits))))
-  
+}
+
+summary.ppcOcc <- function(object, digits = max(3L, getOption("digits") - 3L), ...) {
+
+  cat("\nCall:", deparse(object$call, width.cutoff = floor(getOption("width") * 0.75)), 
+      "", sep = "\n")
+
+  cat("Chain sub.sample:\n")
+  cat(paste("start = ",object$start,"\n", sep=""))
+  cat(paste("end = ",object$end,"\n", sep=""))
+  cat(paste("thin = ",object$thin,"\n", sep=""))
+  cat(paste("sample size = ",object$sample.size,"\n\n", sep=""))
+
+  cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
+  cat("Fit statistic: ", object$fit.stat, "\n")
 
 }
