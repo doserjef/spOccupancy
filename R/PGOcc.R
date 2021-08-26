@@ -204,7 +204,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       Sigma.alpha <- diag(p.det) * 2.73
     }
 
-
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
     storage.mode(z.starting) <- "double"

@@ -139,3 +139,68 @@ summary.ppcOcc <- function(object, digits = max(3L, getOption("digits") - 3L), .
   cat("Fit statistic: ", object$fit.stat, "\n")
 
 }
+
+# spPGOcc -----------------------------------------------------------------
+# Predict function should go here. This actually requires thinking. 
+print.spPGOcc <- function(x, ...) {
+  cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.75)), 
+      "", sep = "\n")
+}
+
+
+summary.spPGOcc <- function(object, sub.sample, 
+			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
+			    digits = max(3L, getOption("digits") - 3L), ...) {
+  print(object)
+
+  n.samples <- nrow(object$beta.samples)
+
+  if (missing(sub.sample)) {
+    s.indx <- 1:n.samples
+    start <- 1
+    end <- n.samples
+    thin <- 1
+  } else {
+    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
+    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
+    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
+    if (!is.numeric(start) || start >= n.samples){ 
+      stop("invalid start")
+    }
+    if (!is.numeric(end) || end > n.samples){ 
+      stop("invalid end")
+    }
+    if (!is.numeric(thin) || thin >= n.samples){ 
+      stop("invalid thin")
+    }
+    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
+    n.samples <- length(s.indx)
+  }
+
+  cat("Chain sub.sample:\n")
+  cat(paste("start = ",start,"\n", sep=""))
+  cat(paste("end = ",end,"\n", sep=""))
+  cat(paste("thin = ",thin,"\n", sep=""))
+  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
+  
+  # Occupancy
+  cat("Occupancy: \n")
+  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2, 
+			      function(x) quantile(x, prob=quantiles))), digits)))
+  cat("\n")
+  # Detection
+  cat("Detection: \n")
+  print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2, 
+			      function(x) quantile(x, prob=quantiles))), digits)))
+
+  cat("\n")
+  # Covariance
+  cat("Covariance: \n")
+  print(noquote(round(t(apply(object$theta.samples[s.indx, , drop = FALSE], 2, 
+			      function(x) quantile(x, prob = quantiles))), digits)))
+}
+
+
+fitted.spPGOcc <- function(object, ...) {
+  return(object$y.rep.samples)
+}
