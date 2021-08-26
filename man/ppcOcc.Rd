@@ -33,6 +33,11 @@ column (replicate).}
 \item{...}{currently no additional arguments}
 }
 
+\details{
+  Standard GoF assessments are not valid for binary data, and posterior
+  predictive checks must be performed on some sort of binned data. 
+}
+
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
   Andrew O. Finley \email{finleya@msu.edu}
@@ -41,16 +46,33 @@ column (replicate).}
 \value{
   An object of class \code{ppcOcc} that is a list comprised of: 
 
+  \item{fit.y}{a \code{coda} object of posterior samples for the 
+  fit statistic calculated on the observed data.}
+
+  \item{fit.y.rep}{a \code{coda} object of posterior samples for the 
+  fit statistic calculated on a replicate data set generated from the 
+  model.}
+
+  \item{fit.y.group.quants}{a matrix consisting of posterior quantiles
+  for the fit statistic using the observed data for each unique element
+  the fit statistic is calculated for (i.e., sites when group = 1, 
+  replicates when group = 2).}
+
+  \item{fit.y.rep.group.quants}{a matrix consisting of posterior quantiles
+  for the fit statistic using the model replicated data for each unique element
+  the fit statistic is calculated for (i.e., sites when group = 1, 
+  replicates when group = 2).}
+
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  standard extractor functions. 
 
 }
 
 \examples{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
-J.x <- 10
-J.y <- 10
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
 n.rep <- sample(2:4, J, replace = TRUE)
 beta <- c(0.5, -0.15)
@@ -59,12 +81,13 @@ alpha <- c(0.7, 0.4)
 p.det <- length(alpha)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
 	      sp = FALSE)
-# Detection-nondetection data
-y <- dat$y
-# Occupancy covariates
-X <- dat$X.psi
-# Detection covariates
-X.p <- dat$X.p
+occ.covs <- dat$X[, 2, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov')
+det.covs <- list(det.cov = dat$X.p[, , 2])
+# Data bundle
+data.list <- list(y = dat$y, 
+		  occ.covs = occ.covs, 
+		  det.covs = det.covs)
 
 # Priors
 prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
@@ -74,21 +97,21 @@ prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
 # Starting values
 starting.list <- list(alpha = rep(0, p.det),
 		      beta = rep(0, p.occ),
-		      z = apply(y, 1, max, na.rm = TRUE))
+		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
 n.report <- 1000
 
-out <- PGOcc(y = y,
-	     X = as.data.frame(X),
-	     X.p = X.p,
+out <- PGOcc(occ.formula = ~ occ.cov, 
+	     det.formula = ~ det.cov, 
+	     data = data.list, 
 	     starting = starting.list,
-	     n.rep = n.rep,
 	     n.samples = n.samples,
 	     priors = prior.list,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
 	     n.report = n.report)
+
 # Posterior predictive check
 ppc.out <- ppcOcc(out, 'chi-square', list(start = 4001, end = 5000, thin = 1), 1)
 summary(ppc.out)

@@ -17,10 +17,10 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   # Form occupancy covariates (if any) ------------------------------------
   J <- J.x * J.y
   n.beta <- length(beta)
-  X.psi <- matrix(1, nrow = J, ncol = n.beta)
+  X <- matrix(1, nrow = J, ncol = n.beta)
   if (n.beta > 1) {
     for (i in 2:n.beta) {
-      X.psi[, i] <- rnorm(J)
+      X[, i] <- rnorm(J)
     } # i
   }
 
@@ -50,9 +50,9 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5,
 
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {
-    psi <- logit.inv(X.psi %*% as.matrix(beta) + w)
+    psi <- logit.inv(X %*% as.matrix(beta) + w)
   } else {
-    psi <- logit.inv(X.psi %*% as.matrix(beta))
+    psi <- logit.inv(X %*% as.matrix(beta))
   }
   z <- rbinom(J, 1, psi)
 
@@ -65,7 +65,7 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   } # j
 
   return(
-    list(X.psi = X.psi, X.p = X.p, coords = coords, D = D, R = R,
-         w = w, psi = psi, z = z, p = p, y = y, s.x = s.x, s.y = s.y)
+    list(X = X, X.p = X.p, coords = coords, D = D, R = R,
+         w = w, psi = psi, z = z, p = p, y = y)
   )
 }

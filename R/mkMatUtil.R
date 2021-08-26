@@ -17,13 +17,6 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
     X <- as.matrix(X)         # X matrix
     xvars <- dimnames(X)[[2]] # X variable names
     xobs  <- dimnames(X)[[1]] # X observation names
-    if (justX){
-      Y <- NULL
-    }
-    else {
-      Y <- as.matrix(model.response(mf, "numeric")) # Y matrix
-    }
-    return(list(Y, X, xvars, xobs))
+    return(list(X, xvars, xobs))
   }
-
 

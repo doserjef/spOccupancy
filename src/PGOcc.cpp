@@ -8,7 +8,6 @@
 #include "util.h"
 #include "rpg.h"
 
-// Optionally include OPENMP for parallelization if it exists. 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -28,7 +27,6 @@ extern "C" {
     const double one = 1.0;
     const double negOne = -1.0;
     const double zero = 0.0;
-    // These are specified as pointers since functions require the addresses.
     char const *lower = "L";
     char const *upper = "U";
     char const *ntran = "N";
@@ -39,14 +37,9 @@ extern "C" {
     /**********************************************************************
      * Get Inputs
      * *******************************************************************/
-    // The REAL or INTEGER are helper functions that allow you to access
-    // the C array inside the R objects that are read in as inputs or 
-    // created in the function. 
     double *y = REAL(y_r);
     double *X = REAL(X_r);
-    // Xp is sorted by parameter then visit (parameter 1 v1, p1v2, etc..) 
     double *Xp = REAL(Xp_r);
-    // Priors for regression coefficients
     double *muBeta = REAL(muBeta_r); 
     double *muAlpha = REAL(muAlpha_r); 
     double *SigmaBetaInv = REAL(SigmaBeta_r); 
@@ -65,12 +58,8 @@ extern "C" {
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
     int status = 0; 
-    // z starting values 
     double *z = REAL(zStarting_r); 
 
-    // Rprintf("Value of nObs is %i\n\n", nObs);
-
-// For parallelization.  
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
 #else
@@ -84,12 +73,11 @@ extern "C" {
      * Print Information 
      * *******************************************************************/
     if(verbose){
-      // Rprintf allows you to print messages and value on the R console screen. 
       Rprintf("----------------------------------------\n");
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
       Rprintf("Occupancy model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
-      Rprintf("Number of MCMC samples %i.\n\n", nSamples);
+      Rprintf("Number of MCMC samples: %i.\n\n", nSamples);
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
@@ -103,7 +91,6 @@ extern "C" {
      * *******************************************************************/
     // Occupancy covariates
     double *beta = (double *) R_alloc(pOcc, sizeof(double));   
-    // This copies the starting values provided as user input into beta.  
     F77_NAME(dcopy)(&pOcc, REAL(betaStarting_r), &inc, beta, &inc);
     // Detection covariates
     double *alpha = (double *) R_alloc(pDet, sizeof(double));   
@@ -118,11 +105,6 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    // Create an R-level matrix. The PROTECT is necessary to ensure that 
-    // the R objects you want for output are not deleted even if the garbage
-    // collector is activated. 
-    // The nProtect is used to track the number of protected objects, which 
-    // is added to as additional objects are protected. 
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++;
     SEXP alphaSamples_r; 
     PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++;
@@ -140,11 +122,6 @@ extern "C" {
     int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
-    // R_alloc is used to allocate memory. 
-    // The memory allocated with R_alloc is automatically released when 
-    // R returns from .Call. 
-    // R_alloc is used when one wants to rrepresent native c data types
-    // rather than R objects. 
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_pDet = (double *) R_alloc(pDet, sizeof(double));
@@ -170,65 +147,48 @@ extern "C" {
 
     // For normal priors
     // Occupancy regression coefficient priors. 
-    // Compute cholesky
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
-    // Compute inverse
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
     F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
     // Detection regression coefficient priors. 
-    // Compute cholesky
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
-    // Compute inverse
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
-    double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pOcc, sizeof(double)); 
+    double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, SigmaAlphaInvMuAlpha, &inc); 	  
 
 
-    // This is necessary for generating random numbers in C 
-    GetRNGstate();
-    
     for (s = 0; s < nSamples; s++) {
-    // for (s = 0; s < 10; s++) {
-    // for (s = 0; s < 1; s++) {
       /********************************************************************
        *Update Occupancy Auxiliary Variables 
        *******************************************************************/
       for (j = 0; j < J; j++) {
-        // ddot forms the dot product of two vectors. Note how the third argument
-        // of ddot that is the storage spacing. So the elements grabbed from X are
-        // X[j], X[j + J],  which is a row of the design matrix. 
         omegaOcc[j] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[j], &J, beta, &inc));
       } // j
+
       /********************************************************************
        *Update Detection Auxiliary Variables 
        *******************************************************************/
-      // Note that all of the variables are sampled, but only those at 
-      // locations with z[j] == 1 actually effect the results. 
       for (i = 0; i < nObs; i++) {
         omegaDet[i] = rpg(1.0, F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc));
-	// Rprintf("Value of omega currently %f \n", omegaDet[i]);
       } // i
-           
+
       /********************************************************************
        *Update Occupancy Regression Coefficients
        *******************************************************************/
       for (j = 0; j < J; j++) {
 	kappaOcc[j] = z[j] - 1.0 / 2.0; 
       } // j
+
       /********************************
        * Compute b.beta
        *******************************/
-      // X * kappaOcc + 0 * tmp_p. Output is stored in tmp_p
-      // dgemv computes linear combinations of different variables. 
       F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, kappaOcc, &inc, &zero, tmp_pOcc, &inc); 	 
       for (j = 0; j < pOcc; j++) {
-	// Rprintf("Value of SigmaBetaInv is %f \n", SigmaBetaInv[j]);
         tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
       } // j 
 
@@ -249,24 +209,14 @@ extern "C" {
         tmp_ppOcc[j] += SigmaBetaInv[j]; 
       } // j
 
-      // This gives the Cholesky of A.beta
-      // Computes cholesky of tmp_ppOcc. Output stored in tmp_ppOcc
       F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotrf here failed\n");}
-      // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
       F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotri here failed\n");}
-      // A.beta.inv %*% b.beta
-      // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2 
-      // (which is currently nothing) = tmp_pOcc2
       F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-      // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
-      F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); if(info != 0){error("c++ error: dpotrf here failed\n");}
-      // Args: destination, mu, cholesky of the covariance matrix, dimension
+      F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+      if(info != 0){error("c++ error: dpotrf here failed\n");}
       mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
-      // for (j = 0; j < pOcc; j++) {
-      //   Rprintf("Beta: %f\n", beta[j]); 
-      // } // j
       
       /********************************************************************
        *Update Detection Regression Coefficients
@@ -275,20 +225,15 @@ extern "C" {
       //  * Compute b.alpha
       //  *******************************/
       // First multiply kappDet * the current occupied values, such that values go 
-      // to 0 if they z == 0 and values go to kappaDet if z == 1
+      // to 0 if z == 0 and values go to kappaDet if z == 1
       for (i = 0; i < nObs; i++) {
-        // 1.0 is currently hardcoded in for occupancy data
         kappaDet[i] = (y[i] - 1.0/2.0) * z[zLongIndx[i]];
-        // Rprintf("kappa value %i is %f \n", i, kappaDet[i]);
-        // Rprintf("zLongIndx value %i is %i \n", i, zLongIndx[i]);
       } // i
       
       // Xp * kappaDet + 0 * tmp_pDet. Output is stored in tmp_pDet
-      // dgemv computes linear combinations of different variables. 
       F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, kappaDet, &inc, &zero, tmp_pDet, &inc); 	  
       for (j = 0; j < pDet; j++) {
         tmp_pDet[j] += SigmaAlphaInvMuAlpha[j]; 
-	// Rprintf("b.alpha: %f\n", tmp_pDet[j]); 
       } // j
 
       /********************************
@@ -297,7 +242,6 @@ extern "C" {
       for (j = 0; j < nObs; j++) {
         for (i = 0; i < pDet; i++) {
           tmp_nObspDet[i*nObs + j] = Xp[i * nObs + j] * omegaDet[j] * z[zLongIndx[j]];
-	  //Rprintf("tmp_nObspDet: %f\n", tmp_nObspDet[i*nObs + j]);  
         } // i
       } // j
 
@@ -307,30 +251,18 @@ extern "C" {
 
       for (j = 0; j < ppDet; j++) {
         tmp_ppDet[j] += SigmaAlphaInv[j]; 
-	// Rprintf("tmp_ppDet: %f\n", tmp_ppDet[j]); 
       } // j
 
-      // This gives the Cholesky of A.alpha
-      // Computes cholesky of tmp_ppDet. Output stored in tmp_ppOcc
       F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
       if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
-      // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
       F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
       if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
-      // A.alpha.inv %*% b.alpha
-      // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
-      // (which is currently nothing) = tmp_pDet2
       F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
       // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
       F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
       if(info != 0){error("c++ error: dpotrf here failed\n");}
-      // Args: destination, mu, cholesky of the covariance matrix, dimension
       mvrnorm(alpha, tmp_pDet2, tmp_ppDet, pDet);
-      // for (j = 0; j < pDet; j++) {
-      //   Rprintf("alpha: %f\n", alpha[j]); 
-      // } // j
 
-     
       /********************************************************************
        *Update Latent Occupancy
        *******************************************************************/
@@ -367,7 +299,6 @@ extern "C" {
 	INTEGER(yRepSamples_r)[s * nObs + i] = yRep[i]; 
       } // i
 
-
       /********************************************************************
        *Save samples
        *******************************************************************/
@@ -393,7 +324,6 @@ extern "C" {
 
       R_CheckUserInterrupt();
     }
-    // This is necessary when generating random numbers in C.     
     PutRNGstate();
 
     //make return object (which is a list)
@@ -409,14 +339,13 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 2, zSamples_r); 
     SET_VECTOR_ELT(result_r, 3, psiSamples_r);
     SET_VECTOR_ELT(result_r, 4, yRepSamples_r);
-    // mkChar turns a C string into a CHARSXP
+
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
     SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.samples")); 
     SET_VECTOR_ELT(resultName_r, 2, mkChar("z.samples")); 
     SET_VECTOR_ELT(resultName_r, 3, mkChar("psi.samples"));
     SET_VECTOR_ELT(resultName_r, 4, mkChar("y.rep.samples")); 
    
-    // Set the names of the output list.  
     namesgets(result_r, resultName_r);
     
     //unprotect

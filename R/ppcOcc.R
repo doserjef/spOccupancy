@@ -67,15 +67,14 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
     y <- object$y
     X.p <- object$X.p
-    p.det <- dim(X.p)[3]
+    p.det <- dim(X.p)[2]
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     J <- nrow(y)
-    y.rep.samples <- object$y.rep.samples[, , s.indx, drop = FALSE]
+    y.rep.samples <- object$y.rep.samples[s.indx, , , drop = FALSE]
     z.samples <- object$z.samples[s.indx, , drop = FALSE]
-    X.p.long <- matrix(X.p, J * max(n.rep), p.det)
     alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
     # Get detection probability
-    det.prob <- logit.inv(X.p.long %*% t(alpha.samples))
+    det.prob <- logit.inv(X.p %*% t(alpha.samples))
     det.prob <- array(det.prob, dim(y.rep.samples))
     fit.y <- rep(NA, n.samples)
     fit.y.rep <- rep(NA, n.samples)
@@ -88,18 +87,18 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[, , i] * z.samples[i, ], 1, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (y.rep.grouped[, i] - E.grouped)^2 / (E.grouped + e)
+	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       } else if (fit.stat == 'freeman-tukey') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[, , i] * z.samples[i, ], 1, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[, i]) - sqrt(E.grouped))^2 
+	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       }
@@ -110,24 +109,24 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[, , i] * z.samples[i, ], 2, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (y.rep.grouped[, i] - E.grouped)^2 / (E.grouped + e)
+	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       } else if (fit.stat == 'freeman-tukey') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[, , i] * z.samples[i, ], 2, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[, i]) - sqrt(E.grouped))^2 
+	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       }
     }
-    out$fit.y <- fit.y
-    out$fit.y.rep <- fit.y.rep
+    out$fit.y <- mcmc(fit.y)
+    out$fit.y.rep <- mcmc(fit.y.rep)
     out$fit.y.group.quants <- apply(fit.big.y, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     out$fit.y.rep.group.quants <- apply(fit.big.y.rep, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     # For summaries

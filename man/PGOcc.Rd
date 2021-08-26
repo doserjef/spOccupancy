@@ -3,10 +3,9 @@
 \title{Function for Fitting Single Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
-PGOcc(y, X, X.p, starting, n.rep, n.samples, priors,
+PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
       n.omp.threads = 1, verbose = TRUE, 
-      n.report = 100, ...
-)
+      n.report = 100, ...)
 }
 
 \description{
@@ -14,28 +13,31 @@ PGOcc(y, X, X.p, starting, n.rep, n.samples, priors,
 }
 
 \arguments{
-\item{y}{a matrix or data frame containing the detection-nondetection 
-  data with number of rows equal to the number of sites (\eqn{J}{J}) 
-  and number of columns equal to the maximum number of replicates 
-  at a given site (\code{max(n.rep)})}
+\item{occ.formula}{a symbolic description of the model to be fit
+  for the occupancy portion of the model using R's model syntax. Only
+  right-hand side of formula is specified. See example below.}
 
-\item{X}{a matrix or data frame containing the design matrix for the 
-  occupancy portion of the model with number of rows equal to the number 
-  of sites (\eqn{J}{J}) and number of columns equal to the number of 
-  occupancy regression coefficients.}
+\item{det.formula}{a symbolic description of the model to be fit
+  for the detection portion of the model using R's model syntax. Only
+  right-hand side of formula is specified. See example below.}
 
-\item{X.p}{a three-dimensional array containing the design matrix for the 
-  detection portion of the model with first dimension equal to the number 
-  of sites (\eqn{J}{J}), second dimension equal to the maximum number of 
-  replicates at a given site (\code{max(n.rep)}), and third dimension equal 
-  to the number of detection regression coefficients.} 
+\item{data}{a list containing data necessary for model fitting.
+  Valid tags are \code{y}, \code{occ.covs}, and \code{det.covs}. \code{y}
+  is a matrix or data frame with first dimension equal to the number of 
+  sites (\eqn{J}{J}) and second dimension equal to the maximum number of 
+  replicates at a given site. \code{occ.covs} is a matrix or data frame
+  containing the variables used in the occupancy portion of the model, with
+  \eqn{J}{J} rows for each column (variable). \code{det.covs} is a list of
+  variables included in the detection portion of the model. Each list element
+  is a different detection covariate, which can be site-level or 
+  observational-level. Site-level covariates are specified as a vector 
+  of length \eqn{J}{J} while observation-level covariates are specified 
+  as a matrix or data frame with the number of rows equal to \eqn{J}{J} and 
+  number of columns equal to the maximum number of replicates at a given site.}
 
 \item{starting}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, and \code{alpha}. The value portion
   of each tag is the parameter's starting value.}
-
-\item{n.rep}{a vector of length \eqn{J}{J} consisting of the number of 
-  replicate detection-nondetection surveys at each data point.}
 
 \item{n.samples}{the number of posterior samples to collect.}
 
@@ -120,12 +122,13 @@ alpha <- c(0.7, 0.4)
 p.det <- length(alpha)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
 	      sp = FALSE)
-# Detection-nondetection data
-y <- dat$y
-# Occupancy covariates
-X <- dat$X.psi
-# Detection covariates
-X.p <- dat$X.p
+occ.covs <- dat$X[, 2, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov')
+det.covs <- list(det.cov = dat$X.p[, , 2])
+# Data bundle
+data.list <- list(y = dat$y, 
+		  occ.covs = occ.covs, 
+		  det.covs = det.covs)
 
 # Priors
 prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
@@ -135,16 +138,15 @@ prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
 # Starting values
 starting.list <- list(alpha = rep(0, p.det),
 		      beta = rep(0, p.occ),
-		      z = apply(y, 1, max, na.rm = TRUE))
+		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
 n.report <- 1000
 
-out <- PGOcc(y = y,
-	     X = as.data.frame(X),
-	     X.p = X.p,
+out <- PGOcc(occ.formula = ~ occ.cov, 
+	     det.formula = ~ det.cov, 
+	     data = data.list, 
 	     starting = starting.list,
-	     n.rep = n.rep,
 	     n.samples = n.samples,
 	     priors = prior.list,
 	     n.omp.threads = 1,

@@ -59,9 +59,9 @@ predict.PGOcc <- function(object, X.0, sub.sample, ...) {
   # Composition sampling --------------------------------------------------
   beta.samples <- as.matrix(object$beta.samples[s.indx, , drop = FALSE])
   out <- list()
-  out$psi.hat <- logit.inv(t(as.matrix(X.0) %*% t(beta.samples)))
-  out$z.hat <- matrix(rbinom(length(out$psi.hat), 1, c(out$psi.hat)), 
-		      nrow = n.samples, ncol = ncol(X.0))
+  out$psi.hat <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
+  out$z.hat <- mcmc(matrix(rbinom(length(out$psi.hat), 1, c(out$psi.hat)), 
+		      nrow = n.samples, ncol = nrow(X.0)))
   out$sub.sample <- sub.sample
   out$s.indx <- s.indx
 
@@ -115,15 +115,13 @@ summary.PGOcc <- function(object, sub.sample,
   
   # Occupancy
   cat("Occupancy: \n")
-  print(noquote(apply(t(apply(object$beta.samples[s.indx,], 2, 
-			      function(x) quantile(x, prob=quantiles))), 
-		      2, function(x) formatC(x, format = "f", digits = digits))))
+  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2, 
+			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
   # Detection
   cat("Detection: \n")
-  print(noquote(apply(t(apply(object$alpha.samples[s.indx,], 2, 
-			      function(x) quantile(x, prob=quantiles))), 
-		      2, function(x) formatC(x, format = "f", digits = digits))))
+  print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2, 
+			      function(x) quantile(x, prob=quantiles))), digits)))
 }
 
 summary.ppcOcc <- function(object, digits = max(3L, getOption("digits") - 3L), ...) {
