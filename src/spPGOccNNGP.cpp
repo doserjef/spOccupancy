@@ -8,7 +8,6 @@
 #include "util.h"
 #include "rpg.h"
 
-// Optionally include OPENMP for parallelization if it exists. 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -57,7 +56,6 @@ void updateBF1(double *B, double *F, double *c, double *C, double *coords, int *
 }
 
 extern "C" {
-  // SEXP is the type all R objects are stored at the C-level.  
   SEXP spPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP pocc_r, SEXP pdet_r, 
 	           SEXP J_r, SEXP K_r, SEXP m_r, SEXP nnIndx_r, 
 		   SEXP nnIndxLU_r, SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r,
@@ -80,7 +78,6 @@ extern "C" {
     const double one = 1.0;
     const double negOne = -1.0;
     const double zero = 0.0;
-    // These are specified as pointers since functions require the addresses.
     char const *lower = "L";
     char const *upper = "U";
     char const *ntran = "N";
@@ -92,9 +89,6 @@ extern "C" {
     /**********************************************************************
      * Get Inputs
      * *******************************************************************/
-    // The REAL or INTEGER are helper functions that allow you to access
-    // the C array inside the R objects that are read in as inputs or 
-    // created in the function. 
     double *y = REAL(y_r);
     double *X = REAL(X_r);
     double *Xp = REAL(Xp_r);
@@ -134,11 +128,9 @@ extern "C" {
     double acceptRate = REAL(acceptRate_r)[0];
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
-    // z starting values 
     double *z = REAL(zStarting_r); 
     int nReport = INTEGER(nReport_r)[0];
 
-// For parallelization.  
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
 #else
@@ -175,18 +167,12 @@ extern "C" {
     /**********************************************************************
      * Parameters
      * *******************************************************************/
-    // Occupancy covariates
     double *beta = (double *) R_alloc(pOcc, sizeof(double));   
-    // This copies the starting values provided as user input into beta.  
     F77_NAME(dcopy)(&pOcc, REAL(betaStarting_r), &inc, beta, &inc);
-    // Detection covariates
     double *alpha = (double *) R_alloc(pDet, sizeof(double));   
     F77_NAME(dcopy)(&pDet, REAL(alphaStarting_r), &inc, alpha, &inc);
-    // Spatial random effects
     double *w = (double *) R_alloc(J, sizeof(double)); zeros(w, J);   
-    // Spatial smooth parameter for matern. 
     double nu = REAL(nuStarting_r)[0]; 
-    // Auxiliary variables
     double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
     double *omegaOcc = (double *) R_alloc(J, sizeof(double));
     double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
@@ -197,11 +183,6 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    // Create an R-level matrix. The PROTECT is necessary to ensure that 
-    // the R objects you want for output are not deleted even if the garbage
-    // collector is activated. 
-    // The nProtect is used to track the number of protected objects, which 
-    // is added to as additional objects are protected. 
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++;
     SEXP alphaSamples_r; 
     PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++;
@@ -223,11 +204,6 @@ extern "C" {
     int JJ = J * J; 
     int nObspDet = nObs * pDet;
     int jj, kk;
-    // R_alloc is used to allocate memory. 
-    // The memory allocated with R_alloc is automatically released when 
-    // R returns from .Call. 
-    // R_alloc is used when one wants to rrepresent native c data types
-    // rather than R objects. 
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_pDet = (double *) R_alloc(pDet, sizeof(double));
@@ -256,23 +232,18 @@ extern "C" {
 
     // For normal priors
     // Occupancy regression coefficient priors. 
-    // Compute cholesky
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
-    // Compute inverse
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
     F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
     // Detection regression coefficient priors. 
-    // Compute cholesky
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
-    // Compute inverse
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
-    double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pOcc, sizeof(double)); 
+    double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, SigmaAlphaInvMuAlpha, &inc); 	  
 
     /**********************************************************************
@@ -317,7 +288,6 @@ extern "C" {
     double *c =(double *) R_alloc(m*nThreads, sizeof(double));
     double *C = (double *) R_alloc(mm*nThreads, sizeof(double));
 
-
     double *bk = (double *) R_alloc(nThreads*(1.0+static_cast<int>(floor(nuB))), sizeof(double));
 
     if (corName == "matern") {
@@ -333,15 +303,10 @@ extern "C" {
      * *******************************************************************/
     for (s = 0, q = 0; s < nBatch; s++) {
       for (r = 0; r < batchLength; r++, q++) {
-    // // for (s = 0, q = 0; s < 1; s++) {
-    // //   for (r = 0; r < 10; r++, q++) {
         /********************************************************************
          *Update Occupancy Auxiliary Variables 
          *******************************************************************/
         for (j = 0; j < J; j++) {
-          // ddot forms the dot product of two vectors. Note how the third argument
-          // of ddot that is the storage spacing. So the elements grabbed from X are
-          // X[j], X[j + J],  which is a row of the design matrix. 
           omegaOcc[j] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[j], &J, beta, &inc) + w[j]);
         } // j
         /********************************************************************
@@ -363,8 +328,6 @@ extern "C" {
         /********************************
          * Compute b.beta
          *******************************/
-        // X * tmp_J1 + 0 * tmp_p. Output is stored in tmp_p
-        // dgemv computes linear combinations of different variables. 
         F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc); 	 
         for (j = 0; j < pOcc; j++) {
           tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
@@ -373,34 +336,23 @@ extern "C" {
         /********************************
          * Compute A.beta
          * *****************************/
-        // tmp_JpOcc is X %*% omegaOcc. 
         for(j = 0; j < J; j++){
           for(i = 0; i < pOcc; i++){
             tmp_JpOcc[i*J+j] = X[i*J+j]*omegaOcc[j];
           }
         }
 
-        // This finishes off A.beta
-        // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
         F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
         for (j = 0; j < ppOcc; j++) {
           tmp_ppOcc[j] += SigmaBetaInv[j]; 
         } // j
 
-        // This gives the Cholesky of A.beta
-        // Computes cholesky of tmp_ppOcc. Output stored in tmp_ppOcc
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
         if(info != 0){error("c++ error: dpotrf here failed\n");}
-        // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
         F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
         if(info != 0){error("c++ error: dpotri here failed\n");}
-        // A.beta.inv %*% b.beta
-        // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2 
-        // (which is currently nothing) = tmp_pOcc2
         F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-        // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); if(info != 0){error("c++ error: dpotrf here failed\n");}
-        // Args: destination, mu, cholesky of the covariance matrix, dimension
         mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
         
         /********************************************************************
@@ -412,12 +364,9 @@ extern "C" {
         // First multiply kappDet * the current occupied values, such that values go 
         // to 0 if they z == 0 and values go to kappaDet if z == 1
         for (i = 0; i < nObs; i++) {
-          // 1.0 is currently hardcoded in for occupancy data
           kappaDet[i] = (y[i] - 1.0/2.0) * z[zLongIndx[i]];
         } // i
         
-        // Xp * kappaDet + 0 * tmp_pDet. Output is stored in tmp_pDet
-        // dgemv computes linear combinations of different variables. 
         F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, kappaDet, &inc, &zero, tmp_pDet, &inc); 	  
         for (j = 0; j < pDet; j++) {
           tmp_pDet[j] += SigmaAlphaInvMuAlpha[j]; 
@@ -432,29 +381,19 @@ extern "C" {
           } // i
         } // j
 
-        // This finishes off A.alpha
-        // 1 * Xp * tmp_nObspDet + 0 * tmp_ppDet = tmp_ppDet
         F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet);
 
         for (j = 0; j < ppDet; j++) {
           tmp_ppDet[j] += SigmaAlphaInv[j]; 
         } // j
 
-        // This gives the Cholesky of A.alpha
-        // Computes cholesky of tmp_ppDet. Output stored in tmp_ppOcc
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
-        // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
         F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
-        // A.alpha.inv %*% b.alpha
-        // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
-        // (which is currently nothing) = tmp_pDet2
         F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
-        // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotrf here failed\n");}
-        // Args: destination, mu, cholesky of the covariance matrix, dimension
         mvrnorm(alpha, tmp_pDet2, tmp_ppDet, pDet);
 
         /********************************************************************
@@ -513,7 +452,6 @@ extern "C" {
          }
 
 	 theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
-         // sigmaSq = 1.0/rgamma(sigmaSqA+J/2.0, 1.0/(sigmaSqIGb+0.5*a*theta[sigmaSqIndx]));
 
         /********************************************************************
          *Update phi (and nu if matern)
@@ -641,8 +579,6 @@ extern "C" {
         F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[q*J], &inc); 
         F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[q*J], &inc); 
 
-        // This allows for users to interrupt the C code when running, 
-        // which is not normally allowed. 
         R_CheckUserInterrupt();
       } // r (end batch)
 

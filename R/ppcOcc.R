@@ -58,13 +58,13 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
   if (!(group %in% c(1, 2)) & class(object) %in% c('PGOcc', 'spPGOcc', 'intPGOcc', 'spIntPGOcc')) {
     stop("error: group must be 1 (row) or 2 (columns) for objects of class PGOcc, spPGOcc, intPGOcc, spIntPGOcc")
   }
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
   out <- list()
   # For single species models
   if (class(object) %in% c('PGOcc', 'spPGOcc', 'intPGOcc', 'spIntPGOcc')) {
-    # Functions -------------------------------------------------------------
-    logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
-    logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
     y <- object$y
     X.p <- object$X.p
     p.det <- dim(X.p)[2]
@@ -82,7 +82,7 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     # Do the stuff 
     if (group == 1) {
       y.grouped <- apply(y, 1, sum, na.rm = TRUE)
-      y.rep.grouped <- apply(y.rep.samples, c(1, 3), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2), sum, na.rm = TRUE)
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {
@@ -104,7 +104,7 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
       }
     } else if (group == 2) {
       y.grouped <- apply(y, 2, sum, na.rm = TRUE)
-      y.rep.grouped <- apply(y.rep.samples, c(2, 3), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 3), sum, na.rm = TRUE)
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {

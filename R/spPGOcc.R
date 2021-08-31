@@ -366,7 +366,8 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
       } 
     }
   }
-  tuning.c <- c(sigma.sq.tuning, phi.tuning, nu.tuning)
+  # Log the tuning values since they are used in the AMCMC. 
+  tuning.c <- log(c(sigma.sq.tuning, phi.tuning, nu.tuning))
 
   if (!NNGP) {
     # Get distance matrix for full GP -------------------------------------
@@ -443,6 +444,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$y <- y.big
     out$call <- cl
     out$n.samples <- batch.length * n.batch
+    out$cov.model.indx <- cov.model.indx
+    out$type <- "GP"
+    out$coords <- coords
 
     class(out) <- "spPGOcc"
     
@@ -559,11 +563,12 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     tmp <- tmp[order(ord), , ]
     out$X.p <- matrix(tmp, J * K.max, p.det)
     out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
-    out$y <- y.big
+    out$y <- y.big[order(ord), , drop = FALSE]
     tmp <- array(NA, dim = c(J * K.max, n.samples))
     tmp[names.long, ] <- out$y.rep.samples
     tmp <- array(tmp, dim = c(J, K.max, n.samples))
     out$y.rep.samples <- tmp[order(ord), , ]
+    out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
 
     # Return all the other good stuff. 
     out$beta.samples <- mcmc(t(out$beta.samples))
@@ -578,6 +583,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
     out$call <- cl
     out$n.samples <- batch.length * n.batch
+    out$n.neighbors <- n.neighbors
+    out$cov.model.indx <- cov.model.indx
+    out$type <- "NNGP"
 
     class(out) <- "spPGOcc"
     

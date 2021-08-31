@@ -29,10 +29,10 @@
 \value{
   An object of class \code{predict.PGOcc} that is a list comprised of: 
 
-  \item{psi.hat}{a \code{coda} object of posterior predictive samples for the
+  \item{psi.0.samples}{a \code{coda} object of posterior predictive samples for the
     latent occupancy probability values.}
 
-  \item{z.hat}{a \code{coda} object of posterior predictive samples for the
+  \item{z.0.samples}{a \code{coda} object of posterior predictive samples for the
     latent occupancy values.}
 
   The return object will include additional objects used for standard 
@@ -99,10 +99,10 @@ sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
 out.pred <- predict(out, X.0, sub.sample)
 \dontrun{
-psi.hat.quants <- apply(out.pred$psi.hat, 2, quantile, c(0.025, 0.5, 0.975))
-plot(dat$psi[pred.indx], psi.hat.quants[2, ], pch = 19, xlab = 'True', 
-     ylab = 'Fitted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)))
-segments(dat$psi[pred.indx], psi.hat.quants[1, ], dat$psi[pred.indx], psi.hat.quants[3, ])
+psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
+plot(dat$psi[pred.indx], psi.0.quants[2, ], pch = 19, xlab = 'True', 
+     ylab = 'Fitted', ylim = c(min(psi.0.quants), max(psi.0.quants)))
+segments(dat$psi[pred.indx], psi.0.quants[1, ], dat$psi[pred.indx], psi.0.quants[3, ])
 lines(dat$psi[pred.indx], dat$psi[pred.indx])
 }
 }

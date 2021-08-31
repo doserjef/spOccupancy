@@ -247,12 +247,12 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       search.type = 'cb', 
 	       n.report = 50)
 
+summary(out)
+
 \dontrun{
 # Plot of spatial GP. 
 w.summary <- summary(out$w.samples)$quantiles[, c(3, 1, 5)]
-#plot(out$w.samples, density = FALSE)
 w.true <- dat$w
-plot(w.true, w.summary[, 1])
 
 sq.cex=2.1
 par(cex.lab=1.5, cex.main=1.5, xaxt="n", yaxt="n", bty="n", mar=c(5,5,4,2))
