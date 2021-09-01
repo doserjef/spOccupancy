@@ -7,7 +7,8 @@
 }
 
 \usage{
-simMsOcc(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
+simMsOcc(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = rep(2, N), 
+	 phi = rep(3/0.5, N), sp = FALSE)
 }
 
 \arguments{

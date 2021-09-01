@@ -72,7 +72,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      warning("n.omp.threads > 1, but source not compiled with OpenMP support.");
       nThreads = 1;
     }
 #endif
@@ -227,7 +227,7 @@ extern "C" {
         F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc); 
       } // i
       for (q = 0; q < pOcc; q++) {
-        tmp_pOcc[j] += SigmaBetaCommInvMuBeta[j];  
+        tmp_pOcc[q] += SigmaBetaCommInvMuBeta[q];  
       } // j
 
       /********************************
@@ -255,7 +255,7 @@ extern "C" {
          F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc); 
        } // i
        for (q = 0; q < pDet; q++) {
-         tmp_pDet[j] += SigmaAlphaCommInvMuAlpha[j];  
+         tmp_pDet[q] += SigmaAlphaCommInvMuAlpha[q];  
        } // j
       /********************************
        * Compute A.alpha.comm
@@ -267,13 +267,9 @@ extern "C" {
       if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
       F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
       if(info != 0){error("c++ error: dpotri AAlphaComm failed\n");}
-      // A.alpha.inv %*% b.alpha
-      // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2  = tmp_pDet2
       F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
-      // Computes cholesky of tmp_pp again stored back in tmp_ppDet. This chol(A.alpha.inv)
       F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
       if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
-      // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
       mvrnorm(alphaComm, tmp_pDet2, tmp_ppDet, pDet);
 
       /********************************************************************
@@ -286,17 +282,10 @@ extern "C" {
         } // i
         tmp_0 *= 0.5;
         tauBeta[q] = rigamma(tauBetaA[q] + N / 2.0, tauBetaB[q] + tmp_0); 
-	// Rprintf("tauBetaB[%i]: %f\n", q, tauBetaB[q]); 
-	// Rprintf("tmp_0[%i]: %f\n", q, tmp_0 + tauBetaB[q]); 
       } // q
-      // This is correct, nothing wrong here. 
       for (q = 0; q < pOcc; q++) {
         TauBetaInv[q * pOcc + q] = tauBeta[q]; 
-        // Rprintf("TauBetaInv[%i]: %f\n", q * pOcc + q, TauBetaInv[q * pOcc + q]); 
-      } // i
-      // for (q = 0; q < ppOcc; q++) {
-      //   Rprintf("TauBetaInv[%i]: %f\n", q, TauBetaInv[q]); 
-      // }
+      } // q
       F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
       F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
@@ -314,8 +303,7 @@ extern "C" {
       } // q
       for (q = 0; q < pDet; q++) {
         TauAlphaInv[q * pDet + q] = tauAlpha[q]; 
-        // Rprintf("TauAlphaInv[%i]: %f\n", q * pDet + q, TauAlphaInv[q * pDet + q]); 
-      } // i
+      } // q
       F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
       if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
       F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info); 
@@ -346,8 +334,6 @@ extern "C" {
         /********************************
          * Compute b.beta
          *******************************/
-        // t(X) * kappaOcc + 0 * tmp_p. Output is stored in tmp_p
-        // dgemv computes linear combinations of different variables. 
         F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, kappaOcc, &inc, &zero, tmp_pOcc, &inc); 	 
         // TauBetaInv %*% betaComm + tmp_pOcc = tmp_pOcc
         F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, betaComm, &inc, &one, tmp_pOcc, &inc); 
@@ -355,31 +341,25 @@ extern "C" {
         /********************************
          * Compute A.beta
          * *****************************/
-        // t(X) %*% diag(omegaOcc)
         for(j = 0; j < J; j++){
           for(q = 0; q < pOcc; q++){
             tmp_JpOcc[q*J+j] = X[q*J+j]*omegaOcc[j];
           }
         }
-        // This finishes off A.beta
-        // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
         F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
-        for (j = 0; j < ppOcc; j++) {
-          tmp_ppOcc[j] += TauBetaInv[j]; 
-        } // j
+        for (q = 0; q < ppOcc; q++) {
+          tmp_ppOcc[q] += TauBetaInv[q]; 
+        } // q
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
         if(info != 0){error("c++ error: dpotrf ABeta failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
         if(info != 0){error("c++ error: dpotri ABeta failed\n");}
-        // A.beta.inv %*% b.beta
         F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); if(info != 0){error("c++ error: dpotrf here failed\n");}
-        // Args: destination, mu, cholesky of the covariance matrix, dimension
+        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+	if(info != 0){error("c++ error: dpotrf here failed\n");}
         mvrnorm(tmp_beta, tmp_pOcc2, tmp_ppOcc, pOcc);
-        // Can eventually get rid of this and change order of beta. 
         for (q = 0; q < pOcc; q++) {
           beta[q * N + i] = tmp_beta[q]; 
-          // Rprintf("beta[%i]: %f\n", q * N + i, tmp_beta[q]); 
         }
       
         /********************************************************************
@@ -389,9 +369,8 @@ extern "C" {
          * Compute b.alpha
          *******************************/
         // First multiply kappDet * the current occupied values, such that values go 
-        // to 0 if they z == 0 and values go to kappaDet if z == 1
+        // to 0 if z == 0 and values go to kappaDet if z == 1
         for (r = 0; r < nObs; r++) {
-          // 1.0 (the weight) is currently hardcoded in for occupancy data
           kappaDet[r] = (y[r * N + i] - 1.0/2.0) * z[zLongIndx[r] * N + i];
         } // r
         
@@ -401,38 +380,28 @@ extern "C" {
          * Compute A.alpha
          * *****************************/
         for (r = 0; r < nObs; r++) {
-          // Rprintf("omegaDet[%i]: %f\n", r, omegaDet[r]); 
           for (q = 0; q < pDet; q++) {
             tmp_nObspDet[q*nObs + r] = Xp[q * nObs + r] * omegaDet[r] * z[zLongIndx[r] * N + i];
           } // i
         } // j
 
-        // This finishes off A.alpha
-        // 1 * Xp * tmp_nObspDet + 0 * tmp_ppDet = tmp_ppDet
         F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet);
 
         for (q = 0; q < ppDet; q++) {
           tmp_ppDet[q] += TauAlphaInv[q]; 
-          // Rprintf("TauAlphaInv: %f\n", TauAlphaInv[q]); 
         } // q
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
         F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
-        // A.alpha.inv %*% b.alpha
-        // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
-        // (which is currently nothing) = tmp_pDet2
         F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
-        // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
         if(info != 0){error("c++ error: dpotrf here failed\n");}
-        // Args: destination, mu, cholesky of the covariance matrix, dimension
         mvrnorm(tmp_alpha, tmp_pDet2, tmp_ppDet, pDet);
         for (q = 0; q < pDet; q++) {
           alpha[q * N + i] = tmp_alpha[q];
         }
 
-     
         /********************************************************************
          *Update Latent Occupancy
          *******************************************************************/
@@ -454,8 +423,7 @@ extern "C" {
           } else {
             z[j * N + i] = one; 
           }
-          // Save z samples along the way. 
-          REAL(zSamples_r)[s * JN + j * N + i] = z[j * N + i]; 
+	  // Reset variables
           piProd[j] = one;
           ySum[j] = zero; 
           tmp_J[j] = 0; 
@@ -480,6 +448,7 @@ extern "C" {
       F77_NAME(dcopy)(&pDet, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[s*pDet], &inc);
       F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[s*pOccN], &inc); 
       F77_NAME(dcopy)(&pDetN, alpha, &inc, &REAL(alphaSamples_r)[s*pDetN], &inc); 
+      F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[s*JN], &inc); 
       F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[s*JN], &inc); 
 
       /********************************************************************
@@ -501,17 +470,14 @@ extern "C" {
       R_CheckUserInterrupt();
 
     }
-    // This is necessary when generating random numbers in C.     
     PutRNGstate();
 
-    // make return object (which is a list)
     SEXP result_r, resultName_r;
     int nResultListObjs = 9;
 
     PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
     PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
 
-    // Setting the components of the output list.
     SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
     SET_VECTOR_ELT(result_r, 1, alphaCommSamples_r);
     SET_VECTOR_ELT(result_r, 2, tauBetaSamples_r);
@@ -521,7 +487,6 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 6, zSamples_r);
     SET_VECTOR_ELT(result_r, 7, psiSamples_r);
     SET_VECTOR_ELT(result_r, 8, yRepSamples_r);
-    // mkChar turns a C string into a CHARSXP
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
     SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.comm.samples")); 
     SET_VECTOR_ELT(resultName_r, 2, mkChar("tau.beta.samples")); 
@@ -532,10 +497,8 @@ extern "C" {
     SET_VECTOR_ELT(resultName_r, 7, mkChar("psi.samples")); 
     SET_VECTOR_ELT(resultName_r, 8, mkChar("y.rep.samples")); 
    
-    // Set the names of the output list.  
     namesgets(result_r, resultName_r);
     
-    //unprotect
     UNPROTECT(nProtect);
     
     return(result_r);
