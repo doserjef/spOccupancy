@@ -111,7 +111,6 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 
 \examples{
 set.seed(400)
-# Simulate Data -----------------------------------------------------------
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y

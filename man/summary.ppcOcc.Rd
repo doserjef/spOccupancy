@@ -9,11 +9,14 @@
 }
 
 \usage{
-\method{summary}{ppcOcc}(object, digits = max(3L, getOption("digits") - 3L), \dots)
+\method{summary}{ppcOcc}(object, level, digits = max(3L, getOption("digits") - 3L), \dots)
 }
 
 \arguments{
   \item{object}{object of class \code{ppcOcc}.}
+  \item{level}{a quoted keyword for multispecies models that indicates 
+    the level to summarize the posterior predictive check. Valid key words
+    are: \code{"community"}, \code{"species"}, or \code{"both"}.}
   \item{digits}{for \code{summary}, number of digits to report.}
   \item{\dots}{currently no additional arguments}
 }

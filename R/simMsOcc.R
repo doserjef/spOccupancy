@@ -1,4 +1,4 @@
-simMsOcc <- function(J.x, J.y, K, N, beta, alpha, sigma.sq = 2, phi = 3/0.5, 
+simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = 2, phi = 3/0.5, 
 		          sp = FALSE) {
 
   # Subroutines -----------------------------------------------------------
@@ -17,21 +17,21 @@ simMsOcc <- function(J.x, J.y, K, N, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   # Form occupancy covariates (if any) ------------------------------------
   J <- J.x * J.y
   p.occ <- ncol(beta)
-  X.psi <- matrix(1, nrow = J, ncol = p.occ) 
+  X <- matrix(1, nrow = J, ncol = p.occ) 
   if (p.occ > 1) {
     for (i in 2:p.occ) {
-      X.psi[, i] <- rnorm(J)
+      X[, i] <- rnorm(J)
     } # i
   }
 
   # Form detection covariate (if any) -------------------------------------
   p.det <- ncol(alpha)
-  X.p <- array(NA, dim = c(J, max(K), p.det))
+  X.p <- array(NA, dim = c(J, max(n.rep), p.det))
   X.p[, , 1] <- 1
   if (p.det > 1) {
     for (i in 2:p.det) {
       for (j in 1:J) {
-        X.p[j, 1:K[j], i] <- rnorm(K[j])
+        X.p[j, 1:n.rep[j], i] <- rnorm(n.rep[j])
       } # j
     } # i
   }
@@ -54,24 +54,24 @@ simMsOcc <- function(J.x, J.y, K, N, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   z <- matrix(NA, nrow = N, ncol = J)
   for (i in 1:N) {
     if (sp) {
-      psi[i, ] <- logit.inv(X.psi %*% as.matrix(beta[i, ]) + w[i, ])
+      psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w[i, ])
     } else {
-        psi[i, ] <- logit.inv(X.psi %*% as.matrix(beta[i, ]))
+        psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]))
       }
     z[i, ] <- rbinom(J, 1, psi[i, ])
   }
 
   # Data Formation --------------------------------------------------------
-  p <- array(NA, dim = c(N, J, max(K)))
-  y <- array(NA, dim = c(N, J, max(K)))
+  p <- array(NA, dim = c(N, J, max(n.rep)))
+  y <- array(NA, dim = c(N, J, max(n.rep)))
   for (i in 1:N) {
     for (j in 1:J) {
-        p[i, j, 1:K[j]] <- logit.inv(X.p[j, 1:K[j], ] %*% as.matrix(alpha[i, ]))
-        y[i, j, 1:K[j]] <- rbinom(K[j], 1, p[i, j, 1:K[j]] * z[i, j]) 
+        p[i, j, 1:n.rep[j]] <- logit.inv(X.p[j, 1:n.rep[j], ] %*% as.matrix(alpha[i, ]))
+        y[i, j, 1:n.rep[j]] <- rbinom(n.rep[j], 1, p[i, j, 1:n.rep[j]] * z[i, j]) 
     } # j
   } # i
   return(
-    list(X.psi = X.psi, X.p = X.p, coords = coords, D = D,
-	 w = w, psi = psi, z = z, p = p, y = y, s.x = s.x, s.y = s.y)
+    list(X = X, X.p = X.p, coords = coords, D = D,
+	 w = w, psi = psi, z = z, p = p, y = y)
   )
 }

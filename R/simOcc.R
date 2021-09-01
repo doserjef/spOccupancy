@@ -65,7 +65,7 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5,
   } # j
 
   return(
-    list(X = X, X.p = X.p, coords = coords, D = D, R = R,
+    list(X = X, X.p = X.p, coords = coords, D = D,
          w = w, psi = psi, z = z, p = p, y = y)
   )
 }

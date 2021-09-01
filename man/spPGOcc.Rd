@@ -178,6 +178,7 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
 }
 
 \examples{
+\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 8
@@ -249,7 +250,6 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 
 summary(out)
 
-\dontrun{
 # Plot of spatial GP. 
 w.summary <- summary(out$w.samples)$quantiles[, c(3, 1, 5)]
 w.true <- dat$w

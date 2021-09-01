@@ -1,5 +1,5 @@
-msPGOcc <- function(y, X, X.p, starting, n.rep, n.samples, priors, 
-		    n.omp.threads = 1, verbose = TRUE, n.report = 100, ...){
+msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
+		    priors, n.omp.threads = 1, verbose = TRUE, n.report = 100, ...){
  
     # Make it look nice
     cat("----------------------------------------\n");
@@ -18,16 +18,71 @@ msPGOcc <- function(y, X, X.p, starting, n.rep, n.samples, priors,
     cl <- match.call()
 
     # Some initial checks -------------------------------------------------
-    if (missing(y)) {
-      stop("error: data (y) must be specified") 
+    if (missing(data)) {
+      stop("error: data must be specified")
     }
-    if (missing(X)) {
-      message("X is not specified. Assuming intercept only occupancy model.\n")
-      X <- matrix(1, J, 1)
+    if (!is.list(data)) {
+      stop("error: data must be a list")
     }
-    if (missing(X.p)) { 
-      message("X.p is not specified. Assuming intercept only detection model.\n")
-      X.p <- array(1, dim = c(J, dim(y)[3], 1))
+    names(data) <- tolower(names(data))
+    if (!'y' %in% names(data)) {
+      stop("error: detection-nondetection data y must be specified in data")
+    }
+    if (length(dim(data$y)) != 3) {
+      stop("error: detection-nondetection data y must be a three-dimensional array with dimensions corresponding to species, sites, and replicates.")
+    }
+    y <- data$y
+    sp.names <- attr(y, 'dimnames')[[1]]
+    if (!'occ.covs' %in% names(data)) {
+      if (occ.formula == ~ 1) {
+        message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+        data$occ.covs <- matrix(1, dim(y)[2], 1)
+      } else {
+        stop("error: occ.covs must be specified in data for an occupancy model with covariates")
+      }
+    }
+    if (!'det.covs' %in% names(data)) {
+      if (det.formula == ~ 1) {
+        message("detection covariates (det.covs) not specified in data. Assuming interept only detection model.")
+        data$det.covs <- list(int = matrix(1, dim(y)[2], dim(y)[3]))
+      } else {
+        stop("error: det.covs must be specified in data for a detection model with covariates")
+      }
+    }
+    # Make both covariates a data frame. Unlist is necessary for when factors
+    # are supplied. 
+    data$det.covs <- data.frame(lapply(data$det.covs, function(a) unlist(c(a))))
+    # Replicate det.covs if only covariates are at the site level. 
+    if (nrow(data$det.covs) == nrow(y)) {
+      data$det.covs <- data.frame(sapply(data$det.covs, rep, times = dim(y)[2]))
+    }
+    data$occ.covs <- as.data.frame(data$occ.covs)
+
+    # Formula -------------------------------------------------------------
+    # Occupancy -----------------------
+    if (missing(occ.formula)) {
+      stop("error: occ.formula must be specified")
+    }
+
+    if (class(occ.formula) == 'formula') {
+      tmp <- parseFormula(occ.formula, data$occ.covs)
+      X <- as.matrix(tmp[[1]])
+      x.names <- tmp[[2]]
+    } else {
+      stop("error: occ.formula is misspecified")
+    }
+
+    # Detection -----------------------
+    if (missing(det.formula)) {
+      stop("error: det.formula must be specified")
+    }
+
+    if (class(det.formula) == 'formula') {
+      tmp <- parseFormula(det.formula, data$det.covs)
+      X.p <- as.matrix(tmp[[1]])
+      x.p.names <- tmp[[2]]
+    } else {
+      stop("error: det.formula is misspecified")
     }
 
     # Extract data from inputs --------------------------------------------
@@ -36,41 +91,16 @@ msPGOcc <- function(y, X, X.p, starting, n.rep, n.samples, priors,
     # Number of occupancy parameters 
     p.occ <- ncol(X)
     # Number of detection parameters
-    p.det <- dim(X.p)[3]
+    p.det <- ncol(X.p)
+    # Number of pseudoreplicates
+    n.obs <- nrow(X.p)
     # Number of sites
     J <- nrow(X)
     # Number of repeat visits
-    if (missing(n.rep)) {
-      stop("error: number of replicates (n.rep) must be specified")
-    }
-    if (length(n.rep) == 1) {
-      n.rep <- rep(n.rep, J) 
-    } else if (length(n.rep) != J) {
-      stop("error: n.rep must be of length 1 or J")
-    }
+    n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
     K.max <- max(n.rep)
+    # Because I like K better than n.rep
     K <- n.rep
-    # Get names for occupancy covariates
-    if (length(colnames(X)) == 0) {
-      x.names <- paste('x', 1:p.occ, sep = '')
-    } else {
-      x.names <- colnames(X)
-    }
-    # Assign names for use later
-    X.p <- matrix(X.p, nrow = dim(X.p)[1] * dim(X.p)[2], 
-		  ncol = dim(X.p)[3])
-    rownames(X.p) <- 1:nrow(X.p)
-    # Remove missing values in design matrix
-    tmp <- apply(X.p, 1, function (a) sum(is.na(a)))
-    X.p <- X.p[tmp == 0, ]
-    # Get names of detection covariates
-    if (length(colnames(X.p)) == 0) {
-      x.p.names <- paste('x.p', 1:p.det, sep = '')
-    } else {
-      x.p.names <- colnames(X.p)
-    }
-    n.obs <- nrow(X.p)
-    names.long <- as.numeric(rownames(X.p))
     if (missing(n.samples)) {
       stop("error: must specify number of MCMC samples")
     }
@@ -82,6 +112,12 @@ msPGOcc <- function(y, X, X.p, starting, n.rep, n.samples, priors,
     # y is stored in the following order: species, site, visit
     y.big <- y
     y <- c(y)
+    # Assumes the missing data are constant across species, which seems likely, 
+    # but may eventually need some updating. 
+    names.long <- which(!is.na(c(y.big[1, , ])))
+    if (nrow(X.p) == length(y) / N) {
+      X.p <- X.p[!is.na(c(y.big[1, , ])), ]
+    }
     y <- y[!is.na(y)]
 
     # Starting values -----------------------------------------------------
@@ -318,27 +354,33 @@ msPGOcc <- function(y, X, X.p, starting, n.rep, n.samples, priors,
     colnames(out$tau.beta.samples) <- x.names
     out$tau.alpha.samples <- mcmc(t(out$tau.alpha.samples))
     colnames(out$tau.alpha.samples) <- x.p.names
-    names.1 <- rep(paste("sp", 1:N, sep = ''), p.occ)
-    names.2 <- rep(paste('x', 1:p.occ, sep = ''), each = N)
-    coef.names <- paste(names.1, names.2, sep = '-')
+    if (is.null(sp.names)) {
+      sp.names <- paste('sp', 1:N, sep = '')
+    }
+    coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
     out$beta.samples <- mcmc(t(out$beta.samples))
     colnames(out$beta.samples) <- coef.names
     out$alpha.samples <- mcmc(t(out$alpha.samples))
-    names.1.det <- rep(paste("sp", 1:N, sep = ''), p.det)
-    names.2.det <- rep(paste('x', 1:p.det, sep = ''), each = N)
-    coef.names.det <- paste(names.1.det, names.2.det, sep = '-')
+    coef.names.det <- paste(rep(x.p.names, each = N), sp.names, sep = '-')
     colnames(out$alpha.samples) <- coef.names.det
     out$z.samples <- array(out$z.samples, dim = c(N, J, n.samples))
+    out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
     out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.samples))
+    out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
     tmp <- array(NA, dim = c(N, J * K.max, n.samples))
     tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.samples))
     out$y.rep.samples <- array(tmp, dim = c(N, J, K.max, n.samples))
-    out$X.occ <- X
+    out$y.rep.samples <- aperm(out$y.rep.samples, c(4, 1, 2, 3))
+    out$X <- X
     out$X.p <- X.p
     out$y <- y.big
     out$call <- cl
+    out$n.samples <- n.samples
+    out$x.names <- x.names
+    out$sp.names <- sp.names
+    out$x.p.names <- x.p.names
 
-    # class(out) <- "PGOcc"
+    class(out) <- "msPGOcc"
     
     out
 }

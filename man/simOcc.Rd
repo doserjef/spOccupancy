@@ -40,11 +40,10 @@ simOcc(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
   \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
   \item{D}{a \eqn{J \times J}{J x J} numeric matrix consisting of the distances between all occupancy sites.}
-  \item{R}{a \eqn{J \times J}{J x J} numeric matrix. The spatial correlation matrix used to simulate spatial data when \code{sp = TRUE}.}
   \item{w}{a \eqn{J \times 1}{J x 1} matrix of the spatial random effects. Only used to simulate data when \code{sp = TRUE}.}
   \item{psi}{a \eqn{J \times 1}{J x 1} matrix of the occupancy probabilities for each site.}
   \item{z}{a length \eqn{J}{J} vector of the latent occupancy states at each site.}
-  \item{p}{a \code{J x max(n.rep)} matrix of the detection probabilities for each site and replicate combination.}
+  \item{p}{a \code{J x max(n.rep)} matrix of the detection probabilities for each site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
   \item{y}{a \code{J x max(n.rep)} matrix of the raw detection-nondetection data for each site and replicate combination.}
 }
 

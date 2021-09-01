@@ -23,6 +23,11 @@ S3method("print", "spPGOcc")
 S3method("fitted", "spPGOcc")
 S3method("summary", "spPGOcc")
 
+S3method("predict", "msPGOcc")
+S3method("print", "msPGOcc")
+S3method("fitted", "msPGOcc")
+S3method("summary", "msPGOcc")
+
 importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", "is.empty.model", "model.matrix", "model.response", "terms", "runif", "quantile")
 importFrom("coda", "mcmc")
 importFrom("abind", "abind")

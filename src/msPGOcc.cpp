@@ -40,11 +40,8 @@ extern "C" {
     /**********************************************************************
      * Get Inputs
      * *******************************************************************/
-    // Sorted by visit, then by site, then by species. 
-    // (e.g., visit 1, site 1, sp 1, v1, s1, sp2, 
     double *y = REAL(y_r);
     double *X = REAL(X_r);
-    // Xp is sorted by parameter then site, then visit (parameter 1 site 1, p1 site 2, etc) 
     double *Xp = REAL(Xp_r);
     double *muBetaComm = REAL(muBetaComm_r); 
     double *muAlphaComm = REAL(muAlphaComm_r); 
@@ -69,7 +66,6 @@ extern "C" {
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
     int status = 0; 
-    // Sorted by site, then species (e.g., site 1 sp 1, site 1 sp2, ...)
     double *z = REAL(zStarting_r); 
 
 #ifdef _OPENMP
@@ -85,7 +81,6 @@ extern "C" {
      * Print Information 
      * *******************************************************************/
     if(verbose){
-      // Rprintf allows you to print messages and value on the R console screen. 
       Rprintf("----------------------------------------\n");
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
@@ -130,7 +125,6 @@ extern "C" {
     /**********************************************************************
      * Parameters
      * *******************************************************************/
-    // Community level
     double *betaComm = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dcopy)(&pOcc, REAL(betaCommStarting_r), &inc, betaComm, &inc);
     double *tauBeta = (double *) R_alloc(pOcc, sizeof(double)); 
@@ -139,15 +133,11 @@ extern "C" {
     F77_NAME(dcopy)(&pDet, REAL(alphaCommStarting_r), &inc, alphaComm, &inc);
     double *tauAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dcopy)(&pDet, REAL(tauAlphaStarting_r), &inc, tauAlpha, &inc);
-    // Species level
     double *beta = (double *) R_alloc(pOccN, sizeof(double));   
     F77_NAME(dcopy)(&pOccN, REAL(betaStarting_r), &inc, beta, &inc);
-    // Detection covariates
     double *alpha = (double *) R_alloc(pDetN, sizeof(double));   
     F77_NAME(dcopy)(&pDetN, REAL(alphaStarting_r), &inc, alpha, &inc);
     // Auxiliary variables
-    // Only need to set aside J locations since you don't save these 
-    // for each species
     double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
     double *omegaOcc = (double *) R_alloc(J, sizeof(double));
     double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
@@ -196,14 +186,13 @@ extern "C" {
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaCommInv failed\n");}
     double *SigmaBetaCommInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
     F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, SigmaBetaCommInvMuBeta, &inc); 	  
     // Detection regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
-    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pOcc, sizeof(double)); 
+    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, SigmaAlphaCommInvMuAlpha, &inc); 
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
@@ -227,8 +216,6 @@ extern "C" {
     GetRNGstate();
 
     for (s = 0; s < nSamples; s++) {
-    // for (s = 0; s < 10; s++) {
-    // for (s = 0; s < 1; s++) {
       /********************************************************************
        Update Community level Occupancy Coefficients
        *******************************************************************/
@@ -253,13 +240,9 @@ extern "C" {
       if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
       F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotri ABetaComm failed\n");}
-      // A.beta.inv %*% b.beta
-      // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2  = tmp_pOcc2
       F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-      // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
       F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
-      // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
       mvrnorm(betaComm, tmp_pOcc2, tmp_ppOcc, pOcc);
       /********************************************************************
        Update Community level Detection Coefficients
@@ -494,7 +477,7 @@ extern "C" {
       F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[s*pOcc], &inc);
       F77_NAME(dcopy)(&pDet, alphaComm, &inc, &REAL(alphaCommSamples_r)[s*pDet], &inc);
       F77_NAME(dcopy)(&pOcc, tauBeta, &inc, &REAL(tauBetaSamples_r)[s*pOcc], &inc);
-      F77_NAME(dcopy)(&pOcc, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[s*pDet], &inc);
+      F77_NAME(dcopy)(&pDet, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[s*pDet], &inc);
       F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[s*pOccN], &inc); 
       F77_NAME(dcopy)(&pDetN, alpha, &inc, &REAL(alphaSamples_r)[s*pDetN], &inc); 
       F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[s*JN], &inc); 

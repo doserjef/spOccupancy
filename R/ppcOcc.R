@@ -138,7 +138,94 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$end <- end
     out$thin <- thin
     out$sample.size <- length(s.indx)
+  } else {
+    y <- object$y
+    X.p <- object$X.p
+    p.det <- dim(X.p)[2]
+    n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
+    J <- dim(y)[2]
+    N <- dim(y)[1]
+    y.rep.samples <- object$y.rep.samples[s.indx, , , , drop = FALSE]
+    z.samples <- object$z.samples[s.indx, , , drop = FALSE]
+    alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
+    # Get detection probability
+    det.prob <- array(NA, dim = c(n.samples, N, nrow(X.p)))
+    sp.indx <- rep(1:N, ncol(X.p))
+    for (i in 1:N) {
+      det.prob[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    }
+    det.prob <- array(det.prob, dim(y.rep.samples))
+    fit.y <- matrix(NA, n.samples, N)
+    fit.y.rep <- matrix(NA, n.samples, N)
+    e <- 0.0001
+    # Do the stuff 
+    if (group == 1) {
+      y.grouped <- apply(y, c(1, 2), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2, 3), sum, na.rm = TRUE)
+      fit.big.y.rep <- array(NA, dim = c(n.samples, N, J))
+      fit.big.y <- array(NA, dim = c(n.samples, N, J))
+      for (i in 1:N) {
+        print(paste("Currently on species ", i, " out of ", N, sep = ''))
+        if (fit.stat == 'chi-square') {
+            for (j in 1:n.samples) {
+              E.grouped <- apply(det.prob[j, i, , ] * z.samples[j, i, ], 1, sum, na.rm = TRUE)
+              fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y[j, i] <- sum(fit.big.y[j, i, ])
+              fit.big.y.rep[j, i, ] <- (y.rep.grouped[j, i, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y.rep[j, i] <- sum(fit.big.y.rep[j, i, ])
+            }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, i, , ] * z.samples[j, i, ], 1, sum, na.rm = TRUE)
+            fit.big.y[j, i, ] <- (sqrt(y.grouped[i, ]) - sqrt(E.grouped))^2 
+            fit.y[j, i] <- sum(fit.big.y[j, i, ])
+            fit.big.y.rep[j, i, ] <- (sqrt(y.rep.grouped[j, i, ]) - sqrt(E.grouped))^2 
+            fit.y.rep[j, i] <- sum(fit.big.y.rep[j, i, ])
+          }
+        }
+      }
+    } else if (group == 2) {
+      y.grouped <- apply(y, c(1, 3), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2, 4), sum, na.rm = TRUE)
+      fit.big.y <- array(NA, dim = c(n.samples, N, max(n.rep)))
+      fit.big.y.rep <- array(NA, dim = c(n.samples, N, max(n.rep)))
+      for (i in 1:N) {
+        print(paste("Currently on species ", i, " out of ", N, sep = ''))
+        if (fit.stat == 'chi-square') {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, i, , ] * z.samples[j, i, ], 2, sum, na.rm = TRUE)
+            fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
+            fit.y[j, i] <- sum(fit.big.y[j, i, ])
+            fit.big.y.rep[j, i, ] <- (y.rep.grouped[j, i, ] - E.grouped)^2 / (E.grouped + e)
+            fit.y.rep[j, i] <- sum(fit.big.y.rep[j, i, ])
+          }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, i, , ] * z.samples[j, i, ], 2, sum, na.rm = TRUE)
+            fit.big.y[j, i, ] <- (sqrt(y.grouped[i, ]) - sqrt(E.grouped))^2 
+            fit.y[j, i] <- sum(fit.big.y[j, i, ])
+            fit.big.y.rep[j, i, ] <- (sqrt(y.rep.grouped[j, i, ]) - sqrt(E.grouped))^2 
+            fit.y.rep[j, i] <- sum(fit.big.y.rep[j, i, ])
+          }
+        }
+      }
+    }
+    out$fit.y <- mcmc(fit.y)
+    out$fit.y.rep <- mcmc(fit.y.rep)
+    out$fit.y.group.quants <- apply(fit.big.y, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    out$fit.y.rep.group.quants <- apply(fit.big.y.rep, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    # For summaries
+    out$group <- group
+    out$fit.stat <- fit.stat
+    out$class <- class(object)
+    out$call <- cl
+    out$start <- start
+    out$end <- end
+    out$thin <- thin
+    out$sample.size <- length(s.indx)
+    out$sp.names <- object$sp.names
   }
+
 
   class(out) <- 'ppcOcc'
 

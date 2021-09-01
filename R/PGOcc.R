@@ -18,7 +18,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     # specified by their full names.
     cl <- match.call()
 
-
     # Some initial checks -------------------------------------------------
     if (missing(data)) {
       stop("error: data must be specified")
