@@ -64,7 +64,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      warning("n.omp.threads > 1, but source not compiled with OpenMP support.");
       nThreads = 1;
     }
 #endif
@@ -130,7 +130,7 @@ extern "C" {
     double *tmp_pOcc2 = (double *) R_alloc(pOcc, sizeof(double));
     int *tmp_J = (int *) R_alloc(J, sizeof(int));
     for (j = 0; j < J; j++) {
-      tmp_J[j] = zero; 
+      tmp_J[j] = 0; 
     }
     double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double)); 
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
@@ -141,8 +141,10 @@ extern "C" {
     double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
     double *psi = (double *) R_alloc(J, sizeof(double)); 
+    zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
-    int *ySum = (int *) R_alloc(J, sizeof(int)); 
+    ones(piProd, J); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); 
     int *yRep = (int *) R_alloc(nObs, sizeof(int)); 
 
     // For normal priors
@@ -152,14 +154,14 @@ extern "C" {
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
+    F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
     // Detection regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
     double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
-    F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, SigmaAlphaInvMuAlpha, &inc); 	  
+    F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, SigmaAlphaInvMuAlpha, &inc); 	  
 
 
     for (s = 0; s < nSamples; s++) {
@@ -230,7 +232,6 @@ extern "C" {
         kappaDet[i] = (y[i] - 1.0/2.0) * z[zLongIndx[i]];
       } // i
       
-      // Xp * kappaDet + 0 * tmp_pDet. Output is stored in tmp_pDet
       F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, kappaDet, &inc, &zero, tmp_pDet, &inc); 	  
       for (j = 0; j < pDet; j++) {
         tmp_pDet[j] += SigmaAlphaInvMuAlpha[j]; 
@@ -245,8 +246,6 @@ extern "C" {
         } // i
       } // j
 
-      // This finishes off A.alpha
-      // 1 * Xp * tmp_nObspDet + 0 * tmp_ppDet = tmp_ppDet
       F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet);
 
       for (j = 0; j < ppDet; j++) {
@@ -284,11 +283,9 @@ extern "C" {
         } else {
           z[j] = one; 
         }
-        // Save z samples along the way. 
-        REAL(zSamples_r)[s * J + j] = z[j]; 
         piProd[j] = one;
         ySum[j] = zero; 
-	tmp_J[j] = 0; 
+        tmp_J[j] = 0; 
       } // j
 
       /********************************************************************
@@ -296,7 +293,7 @@ extern "C" {
        *******************************************************************/
       for (i = 0; i < nObs; i++) {
         yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
-	INTEGER(yRepSamples_r)[s * nObs + i] = yRep[i]; 
+        INTEGER(yRepSamples_r)[s * nObs + i] = yRep[i]; 
       } // i
 
       /********************************************************************
@@ -305,6 +302,7 @@ extern "C" {
       F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[s*pOcc], &inc);
       F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[s*pDet], &inc);
       F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[s*J], &inc); 
+      F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[s*J], &inc); 
 
       /********************************************************************
        * Report
@@ -326,7 +324,6 @@ extern "C" {
     }
     PutRNGstate();
 
-    //make return object (which is a list)
     SEXP result_r, resultName_r;
     int nResultListObjs = 5;
 
@@ -348,7 +345,6 @@ extern "C" {
    
     namesgets(result_r, resultName_r);
     
-    //unprotect
     UNPROTECT(nProtect);
     
     return(result_r);

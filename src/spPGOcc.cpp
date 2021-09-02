@@ -171,8 +171,10 @@ extern "C" {
     double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
     double *psi = (double *) R_alloc(J, sizeof(double)); 
+    zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
-    int *ySum = (int *) R_alloc(J, sizeof(int)); 
+    ones(piProd, J); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); 
     int *yRep = (int *) R_alloc(nObs, sizeof(int)); 
 
     // For normal priors
@@ -483,8 +485,6 @@ extern "C" {
           } else {
             z[j] = one; 
           }
-          // Save z samples along the way. 
-          REAL(zSamples_r)[q * J + j] = z[j]; 
           piProd[j] = one;
           ySum[j] = zero; 
           tmp_J[j] = 0; 
@@ -507,6 +507,7 @@ extern "C" {
         F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[q*J], &inc); 
         F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[q*J], &inc); 
 	F77_NAME(dcopy)(&nTheta, theta, &inc, &REAL(thetaSamples_r)[q*nTheta], &inc); 
+	F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[q*J], &inc); 
 
         // This allows for users to interrupt the C code when running, 
         // which is not normally allowed. 

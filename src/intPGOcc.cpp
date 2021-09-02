@@ -155,8 +155,10 @@ extern "C" {
     double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
     double *psi = (double *) R_alloc(J, sizeof(double)); 
+    zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
-    int *ySum = (int *) R_alloc(J, sizeof(int)); 
+    ones(piProd, J); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); 
     int *yRep = (int *) R_alloc(nObs, sizeof(int)); 
 
     // For normal priors
