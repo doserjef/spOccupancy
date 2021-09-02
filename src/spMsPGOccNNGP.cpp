@@ -295,7 +295,7 @@ extern "C" {
     if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
-    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pOcc, sizeof(double)); 
+    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, SigmaAlphaCommInvMuAlpha, &inc); 
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
@@ -329,9 +329,6 @@ extern "C" {
     }
     int nThetaN = nTheta * N; 
     double *theta = (double *) R_alloc(nThetaN, sizeof(double));
-    // theta is not returned, so its just overwritten each time
-    // Create covariance matrix for first species. 
-    // Initiate spatial values with the first species. 
     for (i = 0; i < N; i++) {
       theta[sigmaSqIndx * N + i] = sigmaSq[i]; 
       theta[phiIndx * N + i] = phi[i]; 
@@ -401,7 +398,7 @@ extern "C" {
           F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc); 
         } // i
         for (q = 0; q < pOcc; q++) {
-          tmp_pOcc[j] += SigmaBetaCommInvMuBeta[j];  
+          tmp_pOcc[q] += SigmaBetaCommInvMuBeta[q];  
         } // j
 
         /********************************
@@ -433,7 +430,7 @@ extern "C" {
            F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc); 
          } // i
          for (q = 0; q < pDet; q++) {
-           tmp_pDet[j] += SigmaAlphaCommInvMuAlpha[j];  
+           tmp_pDet[q] += SigmaAlphaCommInvMuAlpha[q];  
          } // j
         /********************************
          * Compute A.alpha.comm
@@ -536,8 +533,8 @@ extern "C" {
           // This finishes off A.beta
           // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
           F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
-          for (j = 0; j < ppOcc; j++) {
-            tmp_ppOcc[j] += TauBetaInv[j]; 
+          for (q = 0; q < ppOcc; q++) {
+            tmp_ppOcc[q] += TauBetaInv[q]; 
           } // j
           F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
           if(info != 0){error("c++ error: dpotrf ABeta failed\n");}

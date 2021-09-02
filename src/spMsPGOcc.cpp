@@ -244,7 +244,7 @@ extern "C" {
     if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
-    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pOcc, sizeof(double)); 
+    double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, SigmaAlphaCommInvMuAlpha, &inc); 
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
@@ -278,15 +278,18 @@ extern "C" {
     }
     int nThetaN = nTheta * N; 
     double *theta = (double *) R_alloc(nThetaN, sizeof(double));
-    // Need to organize theta by species then parameter, which differs
-    // from NNGP code. 
+    double *currTheta = (double *) R_alloc(nTheta, sizeof(double)); 
     for (i = 0; i < N; i++) {
-      theta[i * nTheta + sigmaSqIndx] = sigmaSq[i]; 
-      theta[i * nTheta + phiIndx] = phi[i]; 
+      theta[sigmaSqIndx * N + i] = sigmaSq[i]; 
+      theta[phiIndx * N + i] = phi[i]; 
       if (corName == "matern") {
-        theta[i * nTheta * nuIndx] = nu[i]; 
+        theta[nuIndx * N + i] = nu[i]; 
       } 
     } // i
+    // Initiate currTheta with first species
+    for (q = 0; q < nTheta; q++) {
+      currTheta[q] = theta[q * N];   
+    }
     // Currently copying over the covariance matrix for each species. This
     // will require an additional inverse of the matrix, but only requires 
     // storage of JJ instead of JJN. 
@@ -296,9 +299,9 @@ extern "C" {
     double *tmp_JD = (double *) R_alloc(J, sizeof(double));
     double *tmp_JD2 = (double *) R_alloc(J, sizeof(double));
     // Get spatial correlation matrix for first species
-    spCorLT(coordsD, J, &theta[0], corName, R); 
+    spCorLT(coordsD, J, currTheta, corName, R); 
     // Get spatial covariance matrix 
-    spCovLT(coordsD, J, &theta[0], corName, C); 
+    spCovLT(coordsD, J, currTheta, corName, C); 
     F77_NAME(dpotrf)(lower, &J, C, &J, &info); 
     if(info != 0){error("c++ error: Cholesky failed in initial covariance matrix\n");}
     F77_NAME(dpotri)(lower, &J, C, &J, &info); 
@@ -328,8 +331,6 @@ extern "C" {
 
     for (s = 0, a = 0; s < nBatch; s++) {
       for (b = 0; b < batchLength; b++, a++) {
-    // for (s = 0, a = 0; s < 1; s++) {
-    //   for (b = 0; b < 1; b++, a++) {
 
         /********************************************************************
          Update Community level Occupancy Coefficients
@@ -342,7 +343,7 @@ extern "C" {
           F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc); 
         } // i
         for (q = 0; q < pOcc; q++) {
-          tmp_pOcc[j] += SigmaBetaCommInvMuBeta[j];  
+          tmp_pOcc[q] += SigmaBetaCommInvMuBeta[q];  
         } // j
 
         /********************************
@@ -374,7 +375,7 @@ extern "C" {
            F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc); 
          } // i
          for (q = 0; q < pDet; q++) {
-           tmp_pDet[j] += SigmaAlphaCommInvMuAlpha[j];  
+           tmp_pDet[q] += SigmaAlphaCommInvMuAlpha[q];  
          } // j
         /********************************
          * Compute A.alpha.comm
@@ -484,8 +485,8 @@ extern "C" {
           // This finishes off A.beta
           // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
           F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
-          for (j = 0; j < ppOcc; j++) {
-            tmp_ppOcc[j] += TauBetaInv[j]; 
+          for (q = 0; q < ppOcc; q++) {
+            tmp_ppOcc[q] += TauBetaInv[q]; 
           } // j
           F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
           if(info != 0){error("c++ error: dpotrf ABeta failed\n");}
@@ -555,8 +556,12 @@ extern "C" {
 	  /********************************************************************
            *Update sigmaSq
            *******************************************************************/
+	  // Update the current theta parameters
+	  for (q = 0; q < nTheta; q++) {
+            currTheta[q] = theta[q * N + i];
+          }
 	  // Get inverse correlation matrix
-          spCorLT(coordsD, J, &theta[i * nTheta], corName, R); 
+          spCorLT(coordsD, J, currTheta, corName, R); 
 	  fillUTri(R, J); 
 	  // Save R in tmp_JJ
           F77_NAME(dcopy)(&JJ, R, &inc, tmp_JJ, &inc); 
@@ -576,27 +581,30 @@ extern "C" {
 	  bSigmaSqPost /= 2.0; 
 	  bSigmaSqPost += sigmaSqB[i]; 
 	  aSigmaSqPost = 0.5 * J + sigmaSqA[i]; 
-	  theta[i * nTheta + sigmaSqIndx] = rigamma(aSigmaSqPost, bSigmaSqPost); 
+	  theta[sigmaSqIndx * N + i] = rigamma(aSigmaSqPost, bSigmaSqPost); 
+	  currTheta[sigmaSqIndx] = theta[sigmaSqIndx * N + i]; 
 	  // Get inverse covariance matrix from correlation matrix
 	  for (j = 0; j < JJ; j++) {
-            C[j] = 1.0 / theta[i * nTheta + sigmaSqIndx] * R[j]; 
-	    tmp_JJ[j] = theta[i * nTheta + sigmaSqIndx] * tmp_JJ[j]; 
+            C[j] = 1.0 / currTheta[sigmaSqIndx] * R[j]; 
+	    tmp_JJ[j] = currTheta[sigmaSqIndx] * tmp_JJ[j]; 
           }
 
           /********************************************************************
            *Update phi (and nu if matern)
            *******************************************************************/
 	  if (corName == "matern") {
-            nu[i] = theta[i * nTheta + nuIndx]; 
-	    nuCand = logitInv(rnorm(logit(theta[i * nTheta + nuIndx], nuA[i], nuB[i]), exp(tuning[i * nTheta + nuIndx])), nuA[i], nuB[i]); 
+            nu[i] = currTheta[nuIndx]; 
+	    nuCand = logitInv(rnorm(logit(currTheta[nuIndx], nuA[i], nuB[i]), exp(tuning[nuIndx * N + i])), nuA[i], nuB[i]); 
           }
-	  phi[i] = theta[i * nTheta + phiIndx]; 
-	  phiCand = logitInv(rnorm(logit(theta[i * nTheta + phiIndx], phiA[i], phiB[i]), exp(tuning[i * nTheta + phiIndx])), phiA[i], phiB[i]);
-	  theta[i * nTheta + phiIndx] = phiCand; 
-	  theta[i * nTheta + nuIndx] = nuCand; 
+	  phi[i] = currTheta[phiIndx]; 
+	  phiCand = logitInv(rnorm(logit(currTheta[phiIndx], phiA[i], phiB[i]), exp(tuning[phiIndx * N + i])), phiA[i], phiB[i]);
+	  currTheta[phiIndx] = phiCand; 
+	  if (corName == "matern") {
+	    currTheta[nuIndx] = nuCand; 
+          }
 
 	  // Construct proposal covariance matrix (stored in CCand). 
-	  spCovLT(coordsD, J, &theta[i * nTheta], corName, CCand); 
+	  spCovLT(coordsD, J, currTheta, corName, CCand); 
 
           /********************************
            * Proposal
@@ -626,8 +634,6 @@ extern "C" {
           /********************************
            * Current
            *******************************/
-	  theta[i * nTheta + phiIndx] = phi[i]; 
-	  theta[i * nTheta + nuIndx] = nu[i]; 
 	  // Get logdetCov
           detCurr = 0.0;
 	  // tmp_JJ has the current covariance matrix
@@ -652,12 +658,14 @@ extern "C" {
 	  // MH Accept/Reject
 	  logMHRatio = logPostCand - logPostCurr; 
 	  if (runif(0.0, 1.0) <= exp(logMHRatio)) {
-            theta[i * nTheta + phiIndx] = phiCand; 
-	    accept[i * nTheta + phiIndx]++; 
+            theta[phiIndx * N + i] = phiCand; 
+	    currTheta[phiIndx] = phiCand;
+	    accept[phiIndx * N + i]++; 
             if (corName == "matern") {
               nu[i] = nuCand; 
-	      theta[i * nTheta + nuIndx] = nu[i]; 
-              accept[i * nTheta + nuIndx]++; 
+	      currTheta[nuIndx] = nuCand; 
+	      theta[nuIndx * N + i] = nu[i]; 
+              accept[nuIndx * N + i]++; 
             }
 	    F77_NAME(dcopy)(&JJ, CCand, &inc, C, &inc); 
           }
@@ -749,14 +757,14 @@ extern "C" {
        *******************************************************************/
       for (i = 0; i < N; i++) {
         for (k = 0; k < nTheta; k++) {
-          REAL(acceptSamples_r)[s * nThetaN + k * N + i] = accept[i * nTheta + k]/batchLength; 
-          REAL(tuningSamples_r)[s * nThetaN + k * N + i] = tuning[i * nTheta + k]; 
-          if (accept[i * nTheta + k] / batchLength > acceptRate) {
-            tuning[i * nTheta + k] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
+          REAL(acceptSamples_r)[s * nThetaN + k * N + i] = accept[k * N + i]/batchLength; 
+          REAL(tuningSamples_r)[s * nThetaN + k * N + i] = tuning[k * N + i]; 
+          if (accept[k * N + i] / batchLength > acceptRate) {
+            tuning[k * N + i] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
           } else{
-              tuning[i * nTheta + k] -= std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
+              tuning[k * N + i] -= std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
             }
-          accept[i * nTheta + k] = 0.0;
+          accept[k * N + i] = 0.0;
         } // k
       } // i
 
@@ -768,9 +776,9 @@ extern "C" {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
 	  Rprintf("\tparameter\tacceptance\ttuning\n");	  
 	  for (i = 0; i < N; i++) {
-	    Rprintf("\tphi[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[i * nTheta + phiIndx]));
+	    Rprintf("\tphi[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
 	    if (corName == "matern") {
-	    Rprintf("\tnu[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[i * nTheta + nuIndx]));
+	    Rprintf("\tnu[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[nuIndx * N + i]));
 	      Rprintf("-------------------------------------------------\n");
 	    }
 	  } // i

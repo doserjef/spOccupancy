@@ -13,7 +13,7 @@
 
 extern "C" {
 
-  SEXP spPGOccPredict(SEXP J_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
+  SEXP spMsPGOccPredict(SEXP J_r, SEXP N_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
 		      SEXP thetaSamples_r, SEXP wSamples_r, 
 		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
@@ -40,9 +40,13 @@ extern "C" {
     *****************************************/
 
     int J = INTEGER(J_r)[0];
+    int N = INTEGER(N_r)[0]; 
+    int JN = J * N; 
     int pOcc = INTEGER(pOcc_r)[0];
+    int pOccN = N * pOcc; 
     double *X0 = REAL(X0_r);
     int q = INTEGER(q_r)[0];
+    int qN = q * N; 
 
     double *obsD = REAL(obsD_r);
     double *obsPredD = REAL(obsPredD_r);
@@ -64,7 +68,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > 1, but source not compiled with OpenMP support.");
+      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
       nThreads = 1;
     }
 #endif
@@ -73,7 +77,7 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("\tPrediction description\n");
       Rprintf("----------------------------------------\n");
-      Rprintf("Spatial Multi-species Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
+      Rprintf("Spatial Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
       Rprintf("Number of covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Number of MCMC samples %i.\n\n", nSamples);
@@ -89,7 +93,7 @@ extern "C" {
          Set-up sample matrices etc.
     *****************************************/
     // parameters
-    int nTheta, sigmaSqIndx,  phiIndx, nuIndx;
+    int nTheta, sigmaSqIndx, phiIndx, nuIndx;
 
     if (corName != "matern") {
       nTheta = 2; //sigma^2, phi
@@ -98,18 +102,19 @@ extern "C" {
 	nTheta = 3; //sigma^2, phi, nu
 	sigmaSqIndx = 0; phiIndx = 1; nuIndx = 2;
       }
+    int nThetaN = nTheta * N; 
     double *theta = (double *) R_alloc(nTheta, sizeof(double));
-    double JJ = J * J; 
-    double qJ = q * J; 
+    int JJ = J * J; 
+    int qJ = q * J; 
     
     SEXP w0_r, psi0_r, z0_r;
 
-    PROTECT(w0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++; 
+    PROTECT(w0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *w0 = REAL(w0_r);
 
-    PROTECT(psi0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++; 
+    PROTECT(psi0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *psi0 = REAL(psi0_r);
-    PROTECT(z0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++; 
+    PROTECT(z0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *z0 = REAL(z0_r);
     
     double *S_obs = (double *) R_alloc(JJ, sizeof(double));
@@ -126,64 +131,68 @@ extern "C" {
     int status = 0;
     
     GetRNGstate();
-    
-    for(s = 0; s < nSamples; s++){
+
+    // TODO: probably add some parralelization here
+
+    for (i = 0; i < N; i++) { 
+      for(s = 0; s < nSamples; s++){
       
-      F77_NAME(dcopy)(&pOcc, &betaSamples[s*pOcc], &inc, beta, &inc);
-      phi = thetaSamples[s * nTheta + phiIndx]; 
-      if (corName == "matern") {
-        nu = thetaSamples[s * nTheta + nuIndx]; 
-      }
-      sigmaSq = thetaSamples[s * nTheta + sigmaSqIndx]; 
-      theta[sigmaSqIndx] = sigmaSq; 
-      theta[phiIndx] = phi; 
-      theta[nuIndx] = nu; 
+        F77_NAME(dcopy)(&pOcc, &betaSamples[s*pOccN + i], &N, beta, &inc);
+        phi = thetaSamples[s * nThetaN + phiIndx * N + i]; 
+        if (corName == "matern") {
+          nu = thetaSamples[s * nThetaN + nuIndx * N + i]; 
+        }
+        sigmaSq = thetaSamples[s * nThetaN + sigmaSqIndx * N + i]; 
+        theta[sigmaSqIndx] = sigmaSq; 
+        theta[phiIndx] = phi; 
+        theta[nuIndx] = nu; 
 
-      // Get covariance matrices
-      spCov(obsD, JJ, theta, corName, S_obs); 
-      spCov(obsPredD, qJ, theta, corName, S_obsPred); 
-      F77_NAME(dpotrf)(lower, &J, S_obs, &J, &info); 
-      if(info != 0){error("c++ error: dpotrf failed\n");}
-      F77_NAME(dpotri)(lower, &J, S_obs, &J, &info); 
-      if(info != 0){error("c++ error: dpotri failed\n");}	 
+        // Get covariance matrices
+        spCov(obsD, JJ, theta, corName, S_obs); 
+        spCov(obsPredD, qJ, theta, corName, S_obsPred); 
+        F77_NAME(dpotrf)(lower, &J, S_obs, &J, &info); 
+        if(info != 0){error("c++ error: dpotrf failed\n");}
+        F77_NAME(dpotri)(lower, &J, S_obs, &J, &info); 
+        if(info != 0){error("c++ error: dpotri failed\n");}	 
 
-      F77_NAME(dgemv)(ntran, &q, &pOcc, &one, X0, &q, beta, &inc, &zero, tmp_q, &inc);
+        F77_NAME(dgemv)(ntran, &q, &pOcc, &one, X0, &q, beta, &inc, &zero, tmp_q, &inc);
    
-      // Predicting each element one at a time, instead of doing joint prediction.  
-      for(j = 0; j < q; j++){
+        // Predicting each element one at a time, instead of doing joint prediction.  
+        for(j = 0; j < q; j++){
 
-	//get Mu
-	F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J);
-	F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*J], &inc, &zero, tmp_one, &inc);
-	
-	//get Sigma
-	F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc);
-	
-        tmp_one2[0] = sigmaSq - tmp_one2[0];
+          //get Mu
+          F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J);
+          F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*JN + i], &N, &zero, tmp_one, &inc);
+          
+          //get Sigma
+          F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc);
+          
+          tmp_one2[0] = sigmaSq - tmp_one2[0];
 
-	w0[s * q + j] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
-	psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j], zero, one); 
-	z0[s * q + j] = rbinom(one, psi0[s * q + j]);
-      }
+          w0[s * qN + j * N + i] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
+          psi0[s * qN + j * N + i] = logitInv(tmp_q[j] + w0[s * qN + j * N + i], zero, one); 
+          z0[s * qN + j * N + i] = rbinom(one, psi0[s * qN + j * N + i]);
+        }
 
-      //report
-      if(verbose){
-	if(status == nReport){
-	  Rprintf("Samples: %i of %i, %3.2f%%\n", s, nSamples, 100.0*s/nSamples);
-          #ifdef Win32
-	  R_FlushConsole();
-          #endif
-	  status = 0;
-	}
-      }
-      status++;
+        //report
+        if(verbose){
+          if(status == nReport){
+            Rprintf("Species: %i of %i, %3.2f%%\n", i, N, 100.0*i/N);
+            #ifdef Win32
+            R_FlushConsole();
+            #endif
+            status = 0;
+          }
+        }
+        status++;
+        
+        R_CheckUserInterrupt();
       
-      R_CheckUserInterrupt();
-      
-     } //end sample loop
+      } //end sample loop
+    } // end species loop 
 
      if(verbose){
-       Rprintf("Samples: %i of %i, %3.2f%%\n", s, nSamples, 100.0*s/nSamples);
+       Rprintf("Species: %i of %i, %3.2f%%\n", i, N, 100.0*i/N);
        #ifdef Win32
        R_FlushConsole();
        #endif

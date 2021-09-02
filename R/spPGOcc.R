@@ -341,9 +341,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   phi.tuning <- 0
   nu.tuning <- 0
   if (missing(tuning)) {
-    phi.tuning <- exp(1)
+    phi.tuning <- 1
     if (cov.model == 'matern') {
-      nu.tuning <- exp(1)
+      nu.tuning <- 1
     }
   } else {
     names(tuning) <- tolower(names(tuning))
