@@ -64,7 +64,7 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
 
   out <- list()
   # For single species models
-  if (class(object) %in% c('PGOcc', 'spPGOcc', 'intPGOcc', 'spIntPGOcc')) {
+  if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     y <- object$y
     X.p <- object$X.p
     p.det <- dim(X.p)[2]
@@ -138,7 +138,9 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$end <- end
     out$thin <- thin
     out$sample.size <- length(s.indx)
-  } else {
+  } 
+  # Multispecies models
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
     y <- object$y
     X.p <- object$X.p
     p.det <- dim(X.p)[2]
@@ -225,7 +227,97 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$sample.size <- length(s.indx)
     out$sp.names <- object$sp.names
   }
+  # For integrated models
+  if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
+    y <- object$y
+    n.data <- length(y)
+    sites <- object$sites
+    X.p <- object$X.p
+    p.det.long <- sapply(X.p, function(a) dim(a)[2])
+    n.rep <- sapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
+    J.long <- sapply(y, nrow)
+    fit.y.list <- list()
+    fit.y.rep.list <- list()
+    fit.y.group.quants.list <- list()
+    fit.y.rep.group.quants.list <- list()
 
+    for (q in 1:n.data) {
+      y.rep.samples <- object$y.rep.samples[[q]][s.indx, , , drop = FALSE]
+      z.samples <- object$z.samples[s.indx, sites[[q]], drop = FALSE]
+      alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
+      alpha.samples <- object$alpha.samples[s.indx, alpha.indx.r == q, drop = FALSE]
+      # Get detection probability
+      det.prob <- logit.inv(X.p[[q]] %*% t(alpha.samples))
+      det.prob <- array(det.prob, dim(y.rep.samples))
+      fit.y <- rep(NA, n.samples)
+      fit.y.rep <- rep(NA, n.samples)
+      e <- 0.0001
+      # Do the stuff 
+      if (group == 1) {
+        y.grouped <- apply(y[[q]], 1, sum, na.rm = TRUE)
+        y.rep.grouped <- apply(y.rep.samples, c(1, 2), sum, na.rm = TRUE)
+        fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
+        fit.big.y <- matrix(NA, length(y.grouped), n.samples)
+        if (fit.stat == 'chi-square') {
+          for (i in 1:n.samples) {
+            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+            fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
+            fit.y[i] <- sum(fit.big.y[, i])
+            fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
+            fit.y.rep[i] <- sum(fit.big.y.rep[, i])
+          }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (i in 1:n.samples) {
+            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+            fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
+            fit.y[i] <- sum(fit.big.y[, i])
+            fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
+            fit.y.rep[i] <- sum(fit.big.y.rep[, i])
+          }
+        }
+      } else if (group == 2) {
+        y.grouped <- apply(y[[q]], 2, sum, na.rm = TRUE)
+        y.rep.grouped <- apply(y.rep.samples, c(1, 3), sum, na.rm = TRUE)
+        fit.big.y <- matrix(NA, length(y.grouped), n.samples)
+        fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
+        if (fit.stat == 'chi-square') {
+          for (i in 1:n.samples) {
+            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+            fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
+            fit.y[i] <- sum(fit.big.y[, i])
+            fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
+            fit.y.rep[i] <- sum(fit.big.y.rep[, i])
+          }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (i in 1:n.samples) {
+            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+            fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
+            fit.y[i] <- sum(fit.big.y[, i])
+            fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
+            fit.y.rep[i] <- sum(fit.big.y.rep[, i])
+          }
+        }
+      }
+      fit.y.list[[q]] <- mcmc(fit.y)
+      fit.y.rep.list[[q]] <- mcmc(fit.y.rep)
+      fit.y.group.quants.list[[q]] <- apply(fit.big.y, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+      fit.y.rep.group.quants.list[[q]] <- apply(fit.big.y.rep, 1, 
+					      quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    }
+    out$fit.y <- fit.y.list
+    out$fit.y.rep <- fit.y.rep.list
+    out$fit.y.group.quants <- fit.y.group.quants.list
+    out$fit.y.rep.group.quants <- fit.y.rep.group.quants.list
+    # For summaries
+    out$group <- group
+    out$fit.stat <- fit.stat
+    out$class <- class(object)
+    out$call <- cl
+    out$start <- start
+    out$end <- end
+    out$thin <- thin
+    out$sample.size <- length(s.indx)
+  }
 
   class(out) <- 'ppcOcc'
 

@@ -1,4 +1,4 @@
-simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha, 
+simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, 
 		      sigma.sq = 2, phi = 3/0.5, sp = FALSE) {
 
   # Subroutines -----------------------------------------------------------
@@ -17,10 +17,10 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
   # Form occupancy covariates (if any) ------------------------------------
   J <- J.x * J.y
   n.beta <- length(beta)
-  X.psi <- matrix(1, nrow = J, ncol = n.beta) 
+  X <- matrix(1, nrow = J, ncol = n.beta) 
   if (n.beta > 1) {
     for (i in 2:n.beta) {
-      X.psi[, i] <- rnorm(J)
+      X[, i] <- rnorm(J)
     } # i
   }
 
@@ -35,7 +35,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
   X.p <- list()
   for (i in 1:n.data) {
     n.alpha.curr <- length(alpha[[i]])
-    K.curr <- K.obs[[i]]
+    K.curr <- n.rep[[i]]
     J.curr <- J.obs[[i]]
     X.p[[i]] <- array(NA, dim = c(J.curr, max(K.curr), n.alpha.curr))
     X.p[[i]][, , 1] <- 1
@@ -62,9 +62,9 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
 
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {
-    psi <- logit.inv(X.psi %*% as.matrix(beta) + w)
+    psi <- logit.inv(X %*% as.matrix(beta) + w)
   } else {
-      psi <- logit.inv(X.psi %*% as.matrix(beta))
+      psi <- logit.inv(X %*% as.matrix(beta))
     }
   z <- rbinom(J, 1, psi)
 
@@ -72,7 +72,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
   p <- list()
   y <- list()
   for (i in 1:n.data) {
-    K.curr <- K.obs[[i]]
+    K.curr <- n.rep[[i]]
     J.curr <- J.obs[[i]]
     p[[i]] <- matrix(NA, nrow = J.curr, ncol = max(K.curr))
     y[[i]] <- matrix(NA, nrow = J.curr, ncol = max(K.curr))
@@ -88,8 +88,8 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
   # Split up into observed and predicted ----------------------------------
   sites.obs <- sort(unique(unlist(sites))) 
   sites.pred <- (1:J)[!(1:J %in% sites.obs)]
-  X.psi.obs <- X.psi[sites.obs, , drop = FALSE]
-  X.psi.pred <- X.psi[sites.pred, , drop = FALSE]
+  X.obs <- X[sites.obs, , drop = FALSE]
+  X.pred <- X[sites.pred, , drop = FALSE]
   z.obs <- z[sites.obs]
   z.pred <- z[sites.pred]
   D.obs <- D[sites.obs, sites.obs, drop = FALSE]
@@ -116,10 +116,9 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, K.obs, beta, alpha,
   }
 
   return(
-    list(X.psi.obs = X.psi.obs, X.psi.pred = X.psi.pred, X.p = X.p, 
+    list(X.obs = X.obs, X.pred = X.pred, X.p = X.p, 
 	 coords.obs = coords.obs, coords.pred = coords.pred, 
-	 D.obs = D.obs, D.pred = D.pred, R.obs = R.obs, 
-	 R.pred = R.pred,  w.obs = w.obs, w.pred = w.pred, 
+	 D.obs = D.obs, D.pred = D.pred, w.obs = w.obs, w.pred = w.pred, 
 	 psi.obs = psi.obs, psi.pred = psi.pred, z.obs = z.obs, 
 	 z.pred = z.pred, p = p, y = y, sites = sites.return
 	)

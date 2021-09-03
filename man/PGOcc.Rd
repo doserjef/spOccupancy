@@ -110,6 +110,7 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 }
 
 \examples{
+\dontrun{
 set.seed(400)
 J.x <- 10
 J.y <- 10
@@ -152,4 +153,5 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     verbose = TRUE,
 	     n.report = n.report)
 summary(out)
+}
 }

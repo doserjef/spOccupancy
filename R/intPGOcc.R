@@ -1,4 +1,4 @@
-intPGOcc <- function(y, X, X.p, sites, n.data, starting, n.rep, n.samples, 
+intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
 		     priors, n.omp.threads = 1, verbose = TRUE, 
 		     n.report = 1000, ...){
  
@@ -19,95 +19,127 @@ intPGOcc <- function(y, X, X.p, sites, n.data, starting, n.rep, n.samples,
     cl <- match.call()
 
     # Some initial checks -------------------------------------------------
-    if (missing(y)) {
-      stop("error: data (y) must be specified") 
+    if (missing(data)) {
+      stop("error: data must be specified")
     }
-    if (missing(sites)) {
-      stop("error: site ids must be specified for each data source.\n")
+    if (!is.list(data)) {
+      stop("error: data must be a list")
     }
-    # Number of sites with at least one data source. 
+    names(data) <- tolower(names(data))
+    if (!'y' %in% names(data)) {
+      stop("error: detection-nondetection data y must be specified in data")
+    }
+    if (!is.list(y)) {
+      stop("error: y must be a list of detection-nondetection data sets")
+    }
+    y <- data$y
+    n.data <- length(y)
+    if (!'sites' %in% names(data)) {
+      stop("error: site ids must be specified in data")
+    }
+    sites <- data$sites
+    # Number of sites with at least one data source
     J <- length(unique(unlist(sites)))
     # Number of sites for each data set
     J.long <- sapply(y, function(a) dim(a)[[1]])
-    if (missing(X)) {
-      message("X is not specified. Assuming intercept only occupancy model.\n")
-      X <- matrix(1, J, 1)
-    }
-    # Total number of sites
-    J.all <- nrow(X)
-    if (missing(n.data)) {
-      message(paste("n.data is not specified. Assuming a total of ", length(y), " datasets.\n", 
-	      sep = ''))
-      n.data <- length(y)
-    }
-    if (missing(X.p)) { 
-      message("X.p is not specified. Assuming intercept only detection model for all data sources.\n")
-      X.p <- list()
-      for (q in 1:n.data) {
-        X.p[[q]] <- array(1, dim = c(J.long[[q]], dim(y[[q]])[2], 1))
+    if (!'occ.covs' %in% names(data)) {
+      if (occ.formula == ~ 1) {
+        message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+        data$occ.covs <- matrix(1, J, 1)
+      } else {
+        stop("error: occ.covs must be specified in data for an occupancy model with covariates")
       }
     }
+    if (!'det.covs' %in% names(data)) {
+      data$det.covs <- list()
+      for (i in 1:n.data) {
+        message("detection covariates (det.covs) not specified in data. Assuming interept only detection model for each data source.")
+        det.formula.curr <- det.formula[[i]]
+        if (det.formula.curr == ~ 1) {
+          for (i in 1:n.data) {
+            data$det.covs[[i]] <- list(int = matrix(1, dim(y[[i]])[1], dim(y[[i]])[2]))
+          }
+        } else {
+          stop("error: det.covs must be specified in data for a detection model with covariates")
+        }
+      }
+    }
+    # Make all covariates a data frame. Unlist is necessary for when factors
+    # are supplied. 
+    for (i in 1:n.data) {
+      data$det.covs[[i]] <- data.frame(lapply(data$det.covs[[i]], function(a) unlist(c(a))))
+      # Replicate det.covs if only covariates are at the site level. 
+      if (nrow(data$det.covs[[i]]) == nrow(y[[i]])) {
+        data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep, times = dim(y[[i]][2])))
+      }
+    }
+    data$occ.covs <- as.data.frame(data$occ.covs)
+
+    # Formula -------------------------------------------------------------
+    # Occupancy -----------------------
+    if (missing(occ.formula)) {
+      stop("error: occ.formula must be specified")
+    }
+
+    if (class(occ.formula) == 'formula') {
+      tmp <- parseFormula(occ.formula, data$occ.covs)
+      X <- as.matrix(tmp[[1]])
+      x.names <- tmp[[2]]
+    } else {
+      stop("error: occ.formula is misspecified")
+    }
+
+    # Detection -----------------------
+    if (missing(det.formula)) {
+      stop("error: det.formula must be specified")
+    }
+    if (!is.list(det.formula)) {
+      stop(paste("error: det.formula must be a list of ", n.data, " formulas", sep = ''))
+    }
+    X.p <- list()
+    x.p.names <- list()
+    for (i in 1:n.data) {
+      if (class(det.formula[[i]]) == 'formula') {
+        tmp <- parseFormula(det.formula[[i]], data$det.covs[[i]])
+        X.p[[i]] <- as.matrix(tmp[[1]])
+        x.p.names[[i]] <- tmp[[2]]
+      } else {
+        stop(paste("error: det.formula for data source ", i, " is misspecified", sep = ''))
+      }
+    }
+    x.p.names <- unlist(x.p.names)
+
+    # Get basic info from inputs ------------------------------------------
+    # Total number of sites
+    J.all <- nrow(X)
     if (length(X.p) != n.data | length(y) != n.data) {
       stop(paste("error: y and X.p must be lists of length ", n.data, ".", sep = ''))
     }
-
-    # Extract data from inputs --------------------------------------------
     # Number of occupancy parameters 
     p.occ <- ncol(X)
     # Number of detection parameters for each data set
-    p.det.long <- sapply(X.p, function(a) dim(a)[[3]])
+    p.det.long <- sapply(X.p, function(a) dim(a)[[2]])
     # Total number of detection parameters
     p.det <- sum(p.det.long)
-    if (missing(n.rep)) {
-      stop("error: number of replicates (n.rep) must be specified")
-    }
-    if (length(n.rep) != n.data | !is.list(n.rep)) {
-      stop(paste("error: n.rep must be a list of length ", n.data, ".", sep = ""))
-    }
-    for (q in 1:n.data) {
-      if (length(n.rep[[q]]) == 1) {
-        n.rep[[q]] <- rep(n.rep[[q]], J.long[[q]])
-      } else if (length(n.rep[[q]]) != J.long[[q]]) {
-        stop(paste("error: n.rep[[", q, "]] must be of length ", J.long[[q]], 
-      	     " or 1", sep = ''))
-      }
-    } # q
-    # Number of repeat visits for each data set
+    n.rep <- lapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
+    # Max number of repeat visits for each data set
     K.long.max <- sapply(n.rep, max)
     # Number of repeat visits for each data set site. 
     K <- unlist(n.rep)
 
-    # Get covariate names for later ---------------------------------------
-    if (length(colnames(X)) == 0) {
-      x.names <- paste('x', 1:p.occ, sep = '')
-    } else {
-      x.names <- colnames(X)
-    }
-    x.p.names <- rep(NA, p.det)
-    curr.indx <- 1
-    for (i in 1:n.data) {
-      if (length(colnames(X.p[[i]])) == 0) {
-        x.p.names[curr.indx:(curr.indx + p.det.long[i] - 1)] <- 
-	  paste('x.p', 1:p.det.long[i], '-D', i, sep = '')
-      } else {
-        x.p.names[curr.indx:(curr.indx + p.det.long[i] - 1)] <- 
-	  paste(colnames(X.p), '-D', i, sep = '')
-      }
-      curr.indx <- curr.indx + p.det.long[i]
-    } # i
-
-    # Get detection covariates into n.obs x p.det matrices ----------------
+    # Get indics to map z to y --------------------------------------------
     X.p.orig <- X.p
     y.big <- y
-    X.p <- lapply(X.p, function(a) matrix(a, dim(a)[1] * dim(a)[2], dim(a)[3]))
+    names.long <- list()
+    # Remove missing observations when the covariate data are available but
+    # there are missing detection-nondetection data
     for (i in 1:n.data) {
-      rownames(X.p[[i]]) <- 1:nrow(X.p[[i]])
-      tmp <- c(apply(y[[i]], c(1, 2), function(a) sum(is.na(a))))
-      X.p[[i]] <- X.p[[i]][tmp == 0, , drop = FALSE]
+      if (nrow(X.p[[i]]) == length(y[[1]])) {
+        X.p[[i]] <- X.p[[i]][!is.na(y[[i]]), , drop = FALSE]
+      }
+      # Need these for later on
+      names.long[[i]] <- which(!is.na(y[[i]]))
     }
-    names.long <- lapply(X.p, function(a) as.numeric(rownames(a)))
-
-    # Get data all organized for C ----------------------------------------
     n.obs.long <- sapply(X.p, nrow)
     n.obs <- sum(n.obs.long)
     z.long.indx.r <- list()
@@ -304,15 +336,18 @@ intPGOcc <- function(y, X, X.p, sites, n.data, starting, n.rep, n.samples,
       tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.samples))
       tmp[[q]][names.long[[q]], ] <- out$y.rep.samples[indx:(indx + n.obs.long[q] - 1), ] 
       tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.samples))
+      tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
       indx <- indx + n.obs.long[q]
     }
     out$y.rep.samples <- tmp
-    out$X.occ <- X
+    out$X <- X
     out$X.p <- X.p.orig
     out$y <- y.big
+    out$n.samples <- n.samples
     out$call <- cl
+    out$sites <- sites
 
-    # class(out) <- "PGOcc"
+    class(out) <- "intPGOcc"
     
     out
 }

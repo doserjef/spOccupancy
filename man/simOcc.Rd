@@ -48,6 +48,7 @@ simOcc(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 }
 
 \examples{
+set.seed(400)
 J.x <- 10
 J.y <- 10
 n.rep <- rep(4, J.x * J.y)
