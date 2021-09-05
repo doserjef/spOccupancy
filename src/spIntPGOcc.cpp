@@ -581,7 +581,7 @@ extern "C" {
          *******************************************************************/
         for (i = 0; i < nObs; i++) {
           yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
-          INTEGER(yRepSamples_r)[s * nObs + i] = yRep[i]; 
+          INTEGER(yRepSamples_r)[t * nObs + i] = yRep[i]; 
         } // i
 
 
