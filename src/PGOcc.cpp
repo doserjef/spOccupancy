@@ -164,6 +164,8 @@ extern "C" {
     F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, SigmaAlphaInvMuAlpha, &inc); 	  
 
 
+    GetRNGstate(); 
+
     for (s = 0; s < nSamples; s++) {
       /********************************************************************
        *Update Occupancy Auxiliary Variables 

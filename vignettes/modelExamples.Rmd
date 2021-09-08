@@ -1,0 +1,120 @@
+---
+title: "Fitting single species occupancy models with `spOccupancy`"
+author: "Jeffrey W. Doser"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: rmarkdown::html_vignette
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{modelExamples}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = ""
+)
+```
+
+## Introduction
+
+This vignette provides numerous worked examples on fitting single species occupancy models available in the `spOccupancy` R package. We will provide step by step examples on how to fit the following models: 
+
+1. Occupancy model using `PGOcc`. 
+2. Spatial occupancy model using `spPGOcc`. 
+3. Integrated occupancy model using `intPGOcc`. 
+4. Spatial integrated occupancy model using `spIntPGOcc`. 
+
+Statistical details of each model can be found in the Gibbs sampler vignette. Step by step examples on multispecies occupancy models are provided in a separate vignette.  
+
+To get started, we load the `spOccupancy` package. 
+
+```{r setup}
+library(spOccupancy)
+```
+
+## Example data set: Foliage-gleaning birds at Hubbard Brook
+
+As an example data set, we will use data from twelve foliage-gleaning birds collected from point count surveys at Hubbard Brook Experimental Forest (HBEF) in New Hampshire, USA. Specific details on the data set are available on the [Hubbard Brook website](https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) and @doser2021ICOM. The data are provided in the `spOccupancy` package and are loaded with `data(hbef2015)`. 
+
+```{r}
+data(hbef2015)
+str(hbef2015)
+```
+
+The object `hbef2015` is a list comprised of the detection-nondetection data (`y`), covariates on the occupancy portion of the model (`occ.covs`), covariates on the detection portion of the model (`det.covs`), and the spatial coordinates of each site for use in spatially-explicit models. `hbef2015` contains data on 12 species in the three-dimensional array `y`. Here we will use data on the Ovenbird (OVEN) to display single species models, so let's go ahead and subset the `hbef2015` list to only include data from OVEN. 
+
+```{r}
+sp.names <- attr(hbef2015$y, "dimnames")[[1]]
+hbef2015$y <- hbef2015$y[sp.names == "OVEN", , ]
+table(hbef2015$y)
+```
+
+We see OVEN is detected at around half of all site-replicate combinations.
+
+## `PGOcc`: Single species occupancy models
+
+The `PGOcc` function fits single species occupancy models using Polya-Gamma latent variables, which should make it faster than other implementations of occupancy models using a logit link function [@clark2019]. `PGOcc` has the following arguments: 
+
+```{r, eval = FALSE}
+PGOcc(occ.formula, det.formula, data, starting, n.samples, priors, 
+      n.omp.threads = 1, verbose = TRUE, n.report = 100)
+```
+
+The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to denote the covariates included in the occupancy and detection portions of the model, respectively. Only the left hand side of the formulas are included. The names of variables given in the formulas should correspond to those found in `data`, which is a list consisting of the following tags: `y` (detection-nondetection data), `occ.covs` (occupancy covariates), `det.covs` (detection covariates). `y` should be stored as a sites x replicate matrix, `occ.covs` as a matrix or data frame with site-specific covariate values, and `det.covs` is a list with each list element corresponding to a covariate to include in the detection portion of the model. Covariates on detection can vary by site and/or survey. The `hbef2015` data are already in the required format. Here we will fit a single covariate (Elevation) on occupancy and will include three observational covariates (linear and quadratic day of survey, time of day of survey) on the detection portion of the model. We specify the formulas below 
+
+```{r}
+oven.occ.formula <- ~ Elevation + Elevation.2
+oven.det.formula <- ~ day + day.2 + tod
+str(hbef2015)
+```
+
+Next, we specify the starting values in `starting`. `PGOcc` will set starting values by default (and report what these values are), but here we will do this explicitly. Starting values are specified in a list with the following tags: `z` (latent occupancy values), `alpha` (detection regression coefficients), `beta` (occupancy regression coefficients). Below we specify lazy starting values for the regression coefficients and set them all to 0, and set starting values for `z` based on the detection-nondetection data matrix.
+
+```{r}
+# Number of detection and occupancy parameters 
+# + 1 is needed to count the intercept
+p.det <- length(hbef2015$det.covs) + 1
+p.occ <- ncol(hbef2015$occ.covs) + 1
+oven.starting <- list(alpha = rep(0, p.det), 
+		      beta = rep(0, p.occ), 
+		      z = apply(hbef2015$y, 1, max, na.rm = TRUE))
+```
+
+We will next specify the priors for the occupancy and detection regression coefficients. The Polya-Gamma data augmentation algorithm employed by `spOccupancy` assumes normal priors for both the detection and occupancy regression coefficients. These priors are specified in a list with tags `beta.normal` for occupancy and `alpha.normal` for detection parameters. Each list element is then itself a list, with the first element of the list consisting of the hypermeans for each coefficient to be estimated and the second element of the list consisting of the hypervariances for each coefficient. By default, `spOccupancy` will set the hypermeans to 0 and the hypervariances to 2.72, which corresponds to a relatively flat prior on the probability scale (0, 1) [@broms2016model]. We will use these priors here, but specify them explicitly below
+
+```{r}
+oven.priors <- list(alpha.normal = list(mean = rep(0, p.det), 
+					var = rep(2.72, p.det)), 
+		    beta.normal = list(mean = rep(0, p.occ), 
+				       var = rep(2.72, p.occ)))
+```
+
+We are now set to run the occupancy model. We run the model for 5000 iterations as specified in the `n.samples` argument. Single species occupancy models are fast, and so we set `n.omp.threads = 1` to indicate we won't use multiple threads to run the model. We set `verbose = TRUE` and `n.report = 1000` to report progress every 1000th MCMC iteration. 
+
+```{r}
+out <- PGOcc(occ.formula = oven.occ.formula, 
+	     det.formula = oven.det.formula, 
+	     data = hbef2015, 
+	     starting = oven.starting, 
+	     n.samples = 5000, 
+	     priors = oven.priors, 
+	     n.omp.threads = 1, 
+	     verbose = TRUE, 
+	     n.report = 1000)
+str(out)
+```
+
+You may see a slightly different message depending on whether or not your computer compiled `spOccupancy` with OpenMP support. We see `PGOcc` returns a list of class `PGOcc` with a suite of different objects, most of them being `coda::mcmc` objects of posterior samples. We can use the `summary` function to get a quick summary of the parameters.
+
+```{r}
+summary(out)
+```
+
+
+
+
+## References {-}
+

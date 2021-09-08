@@ -1,0 +1,5 @@
+#!/bin/bash
+
+Rscript -e "rmarkdown::render('$1.Rmd')"
+Rscript -e "knitr::purl('$1.Rmd', output = '$1.R')"
+xdg-open "$1.html"
