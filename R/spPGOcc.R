@@ -6,9 +6,11 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 		    n.report = 100, ...){
 
   # Make it look nice
-  cat("----------------------------------------\n");
-  cat("\tPreparing the data\n");
-  cat("----------------------------------------\n");
+  if (verbose) {
+    cat("----------------------------------------\n");
+    cat("\tPreparing the data\n");
+    cat("----------------------------------------\n");
+  }
   # Check for unused arguments ------------------------------------------	
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -35,7 +37,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   y <- as.matrix(data$y)
   if (!'occ.covs' %in% names(data)) {
     if (occ.formula == ~ 1) {
-      message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+      if (verbose) {
+        message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+      }
       data$occ.covs <- matrix(1, dim(y)[1], 1)
     } else {
       stop("error: occ.covs must be specified in data for an occupancy model with covariates")
@@ -43,7 +47,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   }
   if (!'det.covs' %in% names(data)) {
     if (det.formula == ~ 1) {
-      message("detection covariates (det.covs) not specified in data. Assuming interept only detection model.")
+      if (verbose) {
+        message("detection covariates (det.covs) not specified in data. Assuming interept only detection model.")
+      }
       data$det.covs <- list(int = matrix(1, dim(y)[1], dim(y)[2]))
     } else {
       stop("error: det.covs must be specified in data for a detection model with covariates")
@@ -200,7 +206,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
   } else {
     phi.starting <- 3 / mean(range(coords))
-    message("phi is not specified in starting values. Setting starting value to 3/mean(range(coords))\n")
+    if (verbose) {
+      message("phi is not specified in starting values. Setting starting value to 3/mean(range(coords))\n")
+    }
   }
   # sigma.sq ------------------------
   if ("sigma.sq" %in% names(starting)) {
@@ -210,7 +218,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
   } else {
     sigma.sq.starting <- 2
-    message("sigma.sq is not specified in starting values. Setting starting value to 2\n")
+    if (verbose) {
+      message("sigma.sq is not specified in starting values. Setting starting value to 2\n")
+    }
   }
   # w -----------------------------00
   if ("w" %in% names(starting)) {
@@ -225,7 +235,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
   } else {
     w.starting <- rep(0, J)
-    message("w is not specified in starting values. Setting starting value to 0\n")
+    if (verbose) {
+      message("w is not specified in starting values. Setting starting value to 0\n")
+    }
   }
   # nu ------------------------
   if ("nu" %in% names(starting)) {
@@ -235,7 +247,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
   } else {
     if (cov.model == 'matern') {
-      message("nu is not specified in starting values. Setting starting value to 1\n")
+      if (verbose) {
+        message("nu is not specified in starting values. Setting starting value to 1\n")
+      }
       nu.starting <- 1
     } else {
       nu.starting <- 0
@@ -264,7 +278,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
     Sigma.beta <- sigma.beta * diag(p.occ)
   } else {
-    message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+    if (verbose) {
+      message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+    }
     mu.beta <- rep(0, p.occ)
     Sigma.beta <- diag(p.occ) * 2.73
   }
@@ -285,7 +301,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
     Sigma.alpha <- sigma.alpha * diag(p.det)
   } else {
-    message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+    if (verbose) {
+      message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+    }
     mu.alpha <- rep(0, p.det)
     Sigma.alpha <- diag(p.det) * 2.73
   }

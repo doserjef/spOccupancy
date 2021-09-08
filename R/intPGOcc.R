@@ -3,9 +3,11 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		     n.report = 1000, ...){
  
     # Make it look nice
-    cat("----------------------------------------\n");
-    cat("\tPreparing the data\n");
-    cat("----------------------------------------\n");
+    if (verbose) {
+      cat("----------------------------------------\n");
+      cat("\tPreparing the data\n");
+      cat("----------------------------------------\n");
+    }
     # Check for unused arguments ------------------------------------------	
     formal.args <- names(formals(sys.function(sys.parent())))
     elip.args <- names(list(...))
@@ -44,7 +46,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     J.long <- sapply(y, function(a) dim(a)[[1]])
     if (!'occ.covs' %in% names(data)) {
       if (occ.formula == ~ 1) {
-        message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+        if (verbose) {
+          message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+	}
         data$occ.covs <- matrix(1, J, 1)
       } else {
         stop("error: occ.covs must be specified in data for an occupancy model with covariates")
@@ -53,7 +57,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     if (!'det.covs' %in% names(data)) {
       data$det.covs <- list()
       for (i in 1:n.data) {
-        message("detection covariates (det.covs) not specified in data. Assuming interept only detection model for each data source.")
+        if (verbose) {
+          message("detection covariates (det.covs) not specified in data. Assuming interept only detection model for each data source.")
+        }
         det.formula.curr <- det.formula[[i]]
         if (det.formula.curr == ~ 1) {
           for (i in 1:n.data) {
@@ -213,7 +219,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       }
       alpha.starting <- unlist(alpha.starting)
     } else {
-      message("alpha is not specified in starting values. Setting starting value to 0\n")
+      if (verbose) {
+        message("alpha is not specified in starting values. Setting starting value to 0\n")
+      }
       alpha.starting <- rep(0, p.det)
     }
 
@@ -242,7 +250,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       }
       Sigma.beta <- sigma.beta * diag(p.occ)
     } else {
-      message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      if (verbose) {
+        message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      }
       mu.beta <- rep(0, p.occ)
       Sigma.beta <- diag(p.occ) * 2.73
     }
@@ -277,7 +287,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       }
       sigma.alpha <- unlist(sigma.alpha)
     } else {
-      message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      if (verbose) {
+        message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      }
       mu.alpha <- rep(0, p.det)
       sigma.alpha <- rep(2.73, p.det) 
     }

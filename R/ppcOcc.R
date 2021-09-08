@@ -125,8 +125,8 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
         }
       }
     }
-    out$fit.y <- mcmc(fit.y)
-    out$fit.y.rep <- mcmc(fit.y.rep)
+    out$fit.y <- fit.y
+    out$fit.y.rep <- fit.y.rep
     out$fit.y.group.quants <- apply(fit.big.y, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     out$fit.y.rep.group.quants <- apply(fit.big.y.rep, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     # For summaries
@@ -212,8 +212,8 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
         }
       }
     }
-    out$fit.y <- mcmc(fit.y)
-    out$fit.y.rep <- mcmc(fit.y.rep)
+    out$fit.y <- fit.y
+    out$fit.y.rep <- fit.y.rep
     out$fit.y.group.quants <- apply(fit.big.y, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     out$fit.y.rep.group.quants <- apply(fit.big.y.rep, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     # For summaries
@@ -298,8 +298,8 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
           }
         }
       }
-      fit.y.list[[q]] <- mcmc(fit.y)
-      fit.y.rep.list[[q]] <- mcmc(fit.y.rep)
+      fit.y.list[[q]] <- fit.y
+      fit.y.rep.list[[q]] <- fit.y.rep
       fit.y.group.quants.list[[q]] <- apply(fit.big.y, 1, quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
       fit.y.rep.group.quants.list[[q]] <- apply(fit.big.y.rep, 1, 
 					      quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))

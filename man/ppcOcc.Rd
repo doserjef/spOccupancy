@@ -46,10 +46,10 @@ column (replicate).}
 \value{
   An object of class \code{ppcOcc} that is a list comprised of: 
 
-  \item{fit.y}{a \code{coda} object of posterior samples for the 
+  \item{fit.y}{a numeric vector of posterior samples for the 
   fit statistic calculated on the observed data.}
 
-  \item{fit.y.rep}{a \code{coda} object of posterior samples for the 
+  \item{fit.y.rep}{a numeric vector of posterior samples for the 
   fit statistic calculated on a replicate data set generated from the 
   model.}
 
