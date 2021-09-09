@@ -323,9 +323,12 @@ sq.cex=2.1
 par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
 layout(matrix(1:2,1,2))
 plot(coords,type="n",xlab="",ylab="",asp=TRUE,main="Simulated")
-points(coords,pch=15,cex=sq.cex,col=rgb(0,0,0,(psi.true-min(psi.true))/diff(range(psi.true))))
+points(coords,pch=15,cex=sq.cex,
+       col=rgb(0,0,0,(psi.true-min(psi.true))/diff(range(psi.true))))
 plot(coords,type="n",xlab="",ylab="",asp=TRUE,main="Spatial")
-points(coords,pch=15,cex=sq.cex,col=rgb(0,0,0,(psi.quants[2,]-min(psi.quants[2,]))/diff(range(psi.quants[2,]))))
+points(coords,pch=15,cex=sq.cex,
+       col=rgb(0,0,0,(psi.quants[2,]-min(psi.quants[2,]))/
+	       diff(range(psi.quants[2,]))))
 
 }
 }

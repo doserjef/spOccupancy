@@ -67,8 +67,8 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to denote the covariates included in the occupancy and detection portions of the model, respectively. Only the left hand side of the formulas are included. The names of variables given in the formulas should correspond to those found in `data`, which is a list consisting of the following tags: `y` (detection-nondetection data), `occ.covs` (occupancy covariates), `det.covs` (detection covariates). `y` should be stored as a sites x replicate matrix, `occ.covs` as a matrix or data frame with site-specific covariate values, and `det.covs` is a list with each list element corresponding to a covariate to include in the detection portion of the model. Covariates on detection can vary by site and/or survey. The `hbef2015` data are already in the required format. Here we will fit a single covariate (Elevation) on occupancy and will include three observational covariates (linear and quadratic day of survey, time of day of survey) on the detection portion of the model. We specify the formulas below 
 
 ```{r}
-oven.occ.formula <- ~ 1
-oven.det.formula <- ~ 1
+oven.occ.formula <- ~ Elevation + Elevation.2
+oven.det.formula <- ~ day + tod + day.2
 str(hbef2015)
 ```
 
@@ -77,10 +77,8 @@ Next, we specify the starting values in `starting`. `PGOcc` will set starting va
 ```{r}
 # Number of detection and occupancy parameters 
 # + 1 is needed to count the intercept
-#p.det <- length(hbef2015$det.covs) + 1
-p.det <- 1
-#p.occ <- ncol(hbef2015$occ.covs) + 1
-p.occ <- 1
+p.det <- length(hbef2015$det.covs) + 1
+p.occ <- ncol(hbef2015$occ.covs) + 1
 oven.starting <- list(alpha = rep(0, p.det), 
 		      beta = rep(0, p.occ), 
 		      z = apply(hbef2015$y, 1, max, na.rm = TRUE))
@@ -125,10 +123,10 @@ We see OVEN is fairly prominent in the forest given the large intercept value, a
 
 The posterior samples in the `PGOcc` object are `coda::mcmc` objects, which we can quickly assess for convergence visually using trace plots. 
 
-```{r, fig.height = 4, fig.width = 4}
+```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
 plot(out$beta.samples, density = FALSE)
 ```
-```{r, fig.height = 4, fig.width = 4}
+```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
 plot(out$alpha.samples, density = FALSE)
 ```
 
@@ -185,7 +183,7 @@ summary(ppc.out)
 
 The Bayesian p-value is the proportion of the posterior samples of the fit statistic of the model generated data that are greater than the corresponding fit statistic of the true data, summed across all "grouped" data points. We can create a visual representation of the Bayesian p-value as follows, which is highly motivated by kery and royle. 
 
-```{r, fig.width = 6, fig.height = 6}
+```{r, fig.width = 4, fig.height = 4, fig.align = 'center'}
 ppc.df <- data.frame(fit = ppc.out$fit.y, 
 		     fit.rep = ppc.out$fit.y.rep, 
 		     color = 'lightskyblue1')
@@ -197,7 +195,7 @@ lines(ppc.df$fit, ppc.df$fit, col = 'black')
 
 However, relying solely on the Bayesian p-value as an assessment of model fit is not always a great option, as individual data points can have an overbearing influence on the resulting summary value. Instead of summing across all data points for a single discrepancy measure, `ppcOcc` also allows you to explore discrepancy measures on a "grouped" point by point basis, which allows us to better figure out where our model fits well and where it does not. The resulting `ppcOcc` object will contain the objects `fit.y.group.quants` and `fit.y.rep.group.quants`, which contains quantiles of the posterior distributions for the discrepancy measures of each grouped data point. Below we plot the difference in the discrepancy measure between the fitted and true data across each of the sites. 
 
-```{r}
+```{r, fig.width = 4, fig.height = 4, fig.align = 'center'}
 diff.fit <- ppc.out$fit.y.rep.group.quants[3, ] - ppc.out$fit.y.group.quants[3, ]
 plot(diff.fit, pch = 19, xlab = 'Site ID', ylab = 'Fitted - True Discrepancy')
 ```
