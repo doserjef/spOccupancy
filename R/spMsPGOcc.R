@@ -1,9 +1,11 @@
 spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch, 
 		      batch.length, accept.rate = 0.43, priors, 
 		      cov.model = 'exponential', tuning,
-		      n.omp.threads = 1, verbose = TRUE, NNGP = FALSE, 
+		      n.omp.threads = 1, verbose = TRUE, NNGP = TRUE, 
 		      n.neighbors = 15, search.type = "cb",
-		      n.report = 100, ...){
+		      n.report = 100, 
+		      n.burn = round(.10 * n.batch * batch.length), 
+		      n.thin = 1, ...){
     
   # Make it look nice
   if (verbose) {
@@ -572,6 +574,12 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
     storage.mode(cov.model.indx) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ####################################################
     ##Other stuff
@@ -591,7 +599,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 		 tau.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx, 
 		 n.batch, batch.length, accept.rate, 
-		 n.omp.threads, verbose, n.report)
+		 n.omp.threads, verbose, n.report, n.burn, n.thin, 
+		 n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -619,15 +628,15 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
       theta.names <- paste(rep(c('sigma.sq', 'phi', 'nu'), each = N), sp.names, sep = '-')
     } 
     colnames(out$theta.samples) <- theta.names
-    out$z.samples <- array(out$z.samples, dim = c(N, J, n.samples))
+    out$z.samples <- array(out$z.samples, dim = c(N, J, n.post.samples))
     out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
-    out$w.samples <- array(out$w.samples, dim = c(N, J, n.samples))
+    out$w.samples <- array(out$w.samples, dim = c(N, J, n.post.samples))
     out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
-    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.samples))
+    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.post.samples))
     out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
-    tmp <- array(NA, dim = c(N, J * K.max, n.samples))
-    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.samples))
-    out$y.rep.samples <- array(tmp, dim = c(N, J, K.max, n.samples))
+    tmp <- array(NA, dim = c(N, J * K.max, n.post.samples))
+    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.post.samples))
+    out$y.rep.samples <- array(tmp, dim = c(N, J, K.max, n.post.samples))
     out$y.rep.samples <- aperm(out$y.rep.samples, c(4, 1, 2, 3))
     out$X <- X
     out$X.p <- X.p
@@ -641,6 +650,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$type <- "GP"
     out$coords <- coords
     out$cov.model.indx <- cov.model.indx
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "spMsPGOcc"
     
@@ -735,6 +747,12 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(ui.indx) <- "integer"
     storage.mode(n.neighbors) <- "integer"
     storage.mode(cov.model.indx) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -750,7 +768,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 		 tau.beta.a, tau.beta.b, tau.alpha.a, 
 		 tau.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx, n.batch, 
-		 batch.length, accept.rate, n.omp.threads, verbose, n.report)
+		 batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+		 n.burn, n.thin, n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -779,13 +798,13 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     } 
     colnames(out$theta.samples) <- theta.names
     # Return things back in the original order. 
-    out$z.samples <- array(out$z.samples, dim = c(N, J, n.samples))
+    out$z.samples <- array(out$z.samples, dim = c(N, J, n.post.samples))
     out$z.samples <- out$z.samples[, order(ord), ]
     out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
-    out$w.samples <- array(out$w.samples, dim = c(N, J, n.samples))
+    out$w.samples <- array(out$w.samples, dim = c(N, J, n.post.samples))
     out$w.samples <- out$w.samples[, order(ord), ]
     out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
-    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.samples))
+    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.post.samples))
     out$psi.samples <- out$psi.samples[, order(ord), ]
     out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
     tmp <- matrix(NA, J * K.max, p.det)
@@ -798,9 +817,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$y <- y.big[, order(ord), , drop = FALSE]
     out$call <- cl
     out$n.samples <- n.samples
-    tmp <- array(NA, dim = c(N, J * K.max, n.samples))
-    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.samples))
-    tmp <- array(tmp, dim = c(N, J, K.max, n.samples))
+    tmp <- array(NA, dim = c(N, J * K.max, n.post.samples))
+    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.post.samples))
+    tmp <- array(tmp, dim = c(N, J, K.max, n.post.samples))
     out$y.rep.samples <- tmp[, order(ord), , ]
     out$y.rep.samples <- aperm(out$y.rep.samples, c(4, 1, 2, 3))
     out$x.names <- x.names
@@ -811,6 +830,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$coords <- coords[order(ord), ]
     out$cov.model.indx <- cov.model.indx
     out$n.neighbors <- n.neighbors
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
    
     class(out) <- "spMsPGOcc"
     

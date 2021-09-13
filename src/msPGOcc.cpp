@@ -20,7 +20,8 @@ extern "C" {
 	       SEXP zLongIndx_r, SEXP muBetaComm_r, SEXP muAlphaComm_r, 
 	       SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauBetaA_r, 
 	       SEXP tauBetaB_r, SEXP tauAlphaA_r, SEXP tauAlphaB_r, 
-	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r){
+	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+	       SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r){
    
     /**********************************************************************
      * Initial constants
@@ -65,8 +66,13 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int nThin = INTEGER(nThin_r)[0]; 
+    int nBurn = INTEGER(nBurn_r)[0]; 
+    int nPost = INTEGER(nPost_r)[0]; 
     int status = 0; 
     double *z = REAL(zStarting_r); 
+    int thinIndx = 0;
+    int sPost = 0;  
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -85,7 +91,10 @@ extern "C" {
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
       Rprintf("Multi-species Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i species.\n\n", J, N);
-      Rprintf("Number of MCMC samples %i.\n\n", nSamples);
+      Rprintf("Number of MCMC samples: %i\n", nSamples);
+      Rprintf("Burn-in: %i \n", nBurn); 
+      Rprintf("Thinning Rate: %i \n", nThin); 
+      Rprintf("Total Posterior Samples: %i \n\n", nPost); 
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
@@ -148,24 +157,24 @@ extern "C" {
      * *******************************************************************/
     // Community level
     SEXP betaCommSamples_r; 
-    PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++;
+    PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     SEXP alphaCommSamples_r;
-    PROTECT(alphaCommSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++;
+    PROTECT(alphaCommSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     SEXP tauBetaSamples_r; 
-    PROTECT(tauBetaSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++; 
+    PROTECT(tauBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
     SEXP tauAlphaSamples_r; 
-    PROTECT(tauAlphaSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++; 
+    PROTECT(tauAlphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
     // Species level
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nSamples)); nProtect++;
+    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDetN, nSamples)); nProtect++;
+    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDetN, nPost)); nProtect++;
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nSamples)); nProtect++; 
+    PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nSamples)); nProtect++; 
+    PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     SEXP yRepSamples_r; 
-    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObsN, nSamples)); nProtect++; 
+    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObsN, nPost)); nProtect++; 
     
     /**********************************************************************
      * Additional Sampler Prep
@@ -431,27 +440,34 @@ extern "C" {
           tmp_J[j] = 0; 
         } // j
 
-        /********************************************************************
-         *Replicate data set for GoF
-         *******************************************************************/
-        for (r = 0; r < nObs; r++) {
-          yRep[r * N + i] = rbinom(one, detProb[i] * z[zLongIndx[r] * N + i]);
-          INTEGER(yRepSamples_r)[s * nObsN + r * N + i] = yRep[r * N + i]; 
-        } // r
     } // i
 
 
      /********************************************************************
       *Save samples
       *******************************************************************/
-      F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[s*pOcc], &inc);
-      F77_NAME(dcopy)(&pDet, alphaComm, &inc, &REAL(alphaCommSamples_r)[s*pDet], &inc);
-      F77_NAME(dcopy)(&pOcc, tauBeta, &inc, &REAL(tauBetaSamples_r)[s*pOcc], &inc);
-      F77_NAME(dcopy)(&pDet, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[s*pDet], &inc);
-      F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[s*pOccN], &inc); 
-      F77_NAME(dcopy)(&pDetN, alpha, &inc, &REAL(alphaSamples_r)[s*pDetN], &inc); 
-      F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[s*JN], &inc); 
-      F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[s*JN], &inc); 
+      if (s >= nBurn) {
+        thinIndx++; 
+	if (thinIndx == nThin) {
+          F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[sPost*pOcc], &inc);
+          F77_NAME(dcopy)(&pDet, alphaComm, &inc, &REAL(alphaCommSamples_r)[sPost*pDet], &inc);
+          F77_NAME(dcopy)(&pOcc, tauBeta, &inc, &REAL(tauBetaSamples_r)[sPost*pOcc], &inc);
+          F77_NAME(dcopy)(&pDet, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[sPost*pDet], &inc);
+          F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[sPost*pOccN], &inc); 
+          F77_NAME(dcopy)(&pDetN, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDetN], &inc); 
+          F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[sPost*JN], &inc); 
+          F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[sPost*JN], &inc); 
+	  // Replicate data set for GoF
+	  for (i = 0; i < N; i++) {
+            for (r = 0; r < nObs; r++) {
+              yRep[r * N + i] = rbinom(one, detProb[i] * z[zLongIndx[r] * N + i]);
+              INTEGER(yRepSamples_r)[sPost * nObsN + r * N + i] = yRep[r * N + i]; 
+            }
+	  }
+	  sPost++; 
+	  thinIndx = 0; 
+	}
+      }
 
       /********************************************************************
        * Report

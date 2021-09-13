@@ -24,7 +24,8 @@ extern "C" {
 		  SEXP phiA_r, SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r, 
 		  SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
 		  SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
-		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r){
+		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r){
    
     /**********************************************************************
      * Initial constants
@@ -81,6 +82,9 @@ extern "C" {
     int nBatch = INTEGER(nBatch_r)[0]; 
     int batchLength = INTEGER(batchLength_r)[0]; 
     int nSamples = nBatch * batchLength; 
+    int nThin = INTEGER(nThin_r)[0];
+    int nBurn = INTEGER(nBurn_r)[0]; 
+    int nPost = INTEGER(nPost_r)[0]; 
     double acceptRate = REAL(acceptRate_r)[0];
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
@@ -91,6 +95,8 @@ extern "C" {
     // For looping through data sets
     int stNObs = 0; 
     int stAlpha = 0; 
+    int thinIndx = 0; 
+    int sPost = 0; 
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -110,7 +116,10 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("Spatial Integrated Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
       Rprintf("Integrating %i occupancy data sets.\n\n", nData); 
-      Rprintf("Number of MCMC samples %i (%i batches of length %i)\n\n", nSamples, nBatch, batchLength);
+      Rprintf("Number of MCMC samples: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
+      Rprintf("Burn-in: %i \n", nBurn); 
+      Rprintf("Thinning Rate: %i \n", nThin); 
+      Rprintf("Total Posterior Samples: %i \n\n", nPost); 
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
@@ -145,17 +154,17 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++;
+    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++;
+    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nSamples)); nProtect++; 
+    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nSamples)); nProtect++; 
+    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP yRepSamples_r; 
-    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObs, nSamples)); nProtect++; 
+    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObs, nPost)); nProtect++; 
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, J, nSamples)); nProtect++; 
+    PROTECT(wSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     
     /**********************************************************************
      * Other initial starting stuff
@@ -257,7 +266,7 @@ extern "C" {
     SEXP tuningSamples_r; 
     PROTECT(tuningSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP thetaSamples_r; 
-    PROTECT(thetaSamples_r = allocMatrix(REALSXP, nTheta, nSamples)); nProtect++; 
+    PROTECT(thetaSamples_r = allocMatrix(REALSXP, nTheta, nPost)); nProtect++; 
     // Initiate spatial values
     theta[sigmaSqIndx] = REAL(sigmaSqStarting_r)[0]; 
     double phi = REAL(phiStarting_r)[0]; 
@@ -576,24 +585,28 @@ extern "C" {
           tmp_J[j] = 0; 
         } // j
 
-        /********************************************************************
-         *Replicate data set for GoF
-         *******************************************************************/
-        for (i = 0; i < nObs; i++) {
-          yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
-          INTEGER(yRepSamples_r)[t * nObs + i] = yRep[i]; 
-        } // i
-
 
         /********************************************************************
          *Save samples
          *******************************************************************/
-        F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[t*pOcc], &inc);
-        F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[t*pDet], &inc);
-        F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[t*J], &inc); 
-        F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[t*J], &inc); 
-        F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[t*J], &inc); 
-	F77_NAME(dcopy)(&nTheta, theta, &inc, &REAL(thetaSamples_r)[t*nTheta], &inc); 
+	if (t >= nBurn) {
+          thinIndx++; 
+	  if (thinIndx == nThin) {
+            F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[sPost*pOcc], &inc);
+            F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
+            F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[sPost*J], &inc); 
+            F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[sPost*J], &inc); 
+	    F77_NAME(dcopy)(&nTheta, theta, &inc, &REAL(thetaSamples_r)[sPost*nTheta], &inc); 
+	    F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[sPost*J], &inc); 
+	    // Replicate data set for GoF
+            for (i = 0; i < nObs; i++) {
+              yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
+              INTEGER(yRepSamples_r)[sPost * nObs + i] = yRep[i]; 
+            } // i
+	    sPost++; 
+	    thinIndx = 0; 
+	  }
+	}
 
         R_CheckUserInterrupt();
       } // end batch

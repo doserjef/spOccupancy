@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{intPGOcc}(object, X.0, sub.sample, ...)
+\method{predict}{intPGOcc}(object, X.0, ...)
 }
 
 \arguments{
@@ -15,8 +15,6 @@
   \item{object}{an object of class intPGOcc}
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in the composition sampling algorithm. Valid tags are \code{start}, \code{end}, and \code{thin}. Given the values associated with tags, the sample subset is selected using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
   \item{...}{currently no additional arguments}
 }
@@ -129,16 +127,17 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		priors = prior.list, 
 		n.omp.threads = 1, 
 		verbose = TRUE, 
-		n.report = 1000)
+		n.report = 1000, 
+		n.burn = 1000, 
+		thin = 1)
 
 summary(out)
 
 # Prediction
 X.0 <- dat$X.pred
 psi.0 <- dat$psi.pred
-sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
-out.pred <- predict(out, X.0, sub.sample)
+out.pred <- predict(out, X.0)
 psi.hat.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 plot(psi.0, psi.hat.quants[2, ], pch = 19, xlab = 'True', 
      ylab = 'Fitted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)))

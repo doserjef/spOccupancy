@@ -8,7 +8,7 @@
 }
 
 \usage{
-\method{predict}{spPGOcc}(object, X.0, coords.0, sub.sample, 
+\method{predict}{spPGOcc}(object, X.0, coords.0,  
 	                  n.omp.threads = 1, verbose = TRUE, 
 			  n.report = 100, ...)
 }
@@ -21,12 +21,6 @@
     include a column of 1s for the intercept if an intercept is included in the original model fit.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
-
-  \item{sub.sample}{an optional list that specifies the samples to 
-    include in the composition sampling algorithm. Valid tags are 
-    \code{start}, \code{end}, and \code{thin}. Given the values 
-    associated with tags, the sample subset is selected 
-    using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -150,7 +144,7 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 summary(out) 
 
 # Predict at new locations ------------------------------------------------
-out.pred <- predict(out, X.0, coords.0, sub.sample, verbose = TRUE)
+out.pred <- predict(out, X.0, coords.0, verbose = TRUE)
 psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 
 # Plot of predicted psi vs true psi

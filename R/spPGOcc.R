@@ -1,9 +1,11 @@
 spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch, 
 		    batch.length, accept.rate = 0.43, priors, 
 		    cov.model = "exponential", tuning, 
-		    n.omp.threads = 1, verbose = TRUE, NNGP = FALSE, 
+		    n.omp.threads = 1, verbose = TRUE, NNGP = TRUE, 
 		    n.neighbors = 15, search.type = "cb", 
-		    n.report = 100, ...){
+		    n.report = 100, 
+		    n.burn = round(.10 * n.batch * batch.length), 
+		    n.thin = 1, ...){
 
   # Make it look nice
   if (verbose) {
@@ -425,6 +427,13 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
+
 
     ptm <- proc.time()
 
@@ -436,7 +445,8 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
    	         Sigma.beta, Sigma.alpha, phi.a, phi.b, 
    	         sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, cov.model.indx,
    	         n.batch, batch.length, 
-   	         accept.rate, n.omp.threads, verbose, n.report)
+   	         accept.rate, n.omp.threads, verbose, n.report, n.burn, n.thin, 
+		 n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -452,9 +462,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
     out$z.samples <- mcmc(t(out$z.samples))
     out$psi.samples <- mcmc(t(out$psi.samples))
-    tmp <- array(NA, dim = c(J * K.max, n.samples))
+    tmp <- array(NA, dim = c(J * K.max, n.post.samples))
     tmp[names.long, ] <- out$y.rep.samples
-    out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.samples))
+    out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
     out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
     out$w.samples <- mcmc(t(out$w.samples))
     out$X <- X
@@ -465,6 +475,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$cov.model.indx <- cov.model.indx
     out$type <- "GP"
     out$coords <- coords
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "spPGOcc"
     
@@ -553,6 +566,12 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(u.indx.lu) <- "integer"
     storage.mode(ui.indx) <- "integer"
     storage.mode(n.neighbors) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     # Run the model in C --------------------------------------------------
     ptm <- proc.time()
@@ -565,7 +584,8 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     	         Sigma.beta, Sigma.alpha, phi.a, phi.b, 
     	         sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, 
 		 cov.model.indx, n.batch, batch.length, 
-    	         accept.rate, n.omp.threads, verbose, n.report)
+    	         accept.rate, n.omp.threads, verbose, n.report, 
+		 n.burn, n.thin, n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -582,9 +602,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$X.p <- matrix(tmp, J * K.max, p.det)
     out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
     out$y <- y.big[order(ord), , drop = FALSE]
-    tmp <- array(NA, dim = c(J * K.max, n.samples))
+    tmp <- array(NA, dim = c(J * K.max, n.post.samples))
     tmp[names.long, ] <- out$y.rep.samples
-    tmp <- array(tmp, dim = c(J, K.max, n.samples))
+    tmp <- array(tmp, dim = c(J, K.max, n.post.samples))
     out$y.rep.samples <- tmp[order(ord), , ]
     out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
 
@@ -604,6 +624,9 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$n.neighbors <- n.neighbors
     out$cov.model.indx <- cov.model.indx
     out$type <- "NNGP"
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "spPGOcc"
     

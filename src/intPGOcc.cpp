@@ -19,7 +19,8 @@ extern "C" {
 		SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
 		SEXP zLongIndx_r, SEXP dataIndx_r, SEXP alphaIndx_r, 
 		SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP sigmaAlpha_r, 
-		SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r){
+		SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+		SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r){
    
     /**********************************************************************
      * Initial constants
@@ -63,6 +64,9 @@ extern "C" {
     int *dataIndx = INTEGER(dataIndx_r); 
     int *alphaIndx = INTEGER(alphaIndx_r); 
     int nSamples = INTEGER(nSamples_r)[0];
+    int nThin = INTEGER(nThin_r)[0]; 
+    int nBurn = INTEGER(nBurn_r)[0]; 
+    int nPost = INTEGER(nPost_r)[0]; 
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0]; 
@@ -72,6 +76,8 @@ extern "C" {
     // For looping through data sets
     int stNObs = 0; 
     int stAlpha = 0; 
+    int thinIndx = 0;
+    int sPost = 0;  
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -91,7 +97,10 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("Integrated Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
       Rprintf("Integrating %i occupancy data sets.\n\n", nData); 
-      Rprintf("Number of MCMC samples %i.\n\n", nSamples);
+      Rprintf("Number of MCMC samples: %i\n", nSamples);
+      Rprintf("Burn-in: %i \n", nBurn); 
+      Rprintf("Thinning Rate: %i \n", nThin); 
+      Rprintf("Total Posterior Samples: %i \n\n", nPost); 
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
@@ -119,15 +128,15 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nSamples)); nProtect++;
+    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nSamples)); nProtect++;
+    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nSamples)); nProtect++; 
+    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nSamples)); nProtect++; 
+    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP yRepSamples_r; 
-    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObs, nSamples)); nProtect++; 
+    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObs, nPost)); nProtect++; 
     
     /**********************************************************************
      * Other initial starting stuff
@@ -364,22 +373,25 @@ extern "C" {
         tmp_J[j] = 0; 
       } // j
 
-      /********************************************************************
-       *Replicate data set for GoF
-       *******************************************************************/
-      for (i = 0; i < nObs; i++) {
-        yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
-        INTEGER(yRepSamples_r)[s * nObs + i] = yRep[i]; 
-      } // i
-
-
      /********************************************************************
       *Save samples
       *******************************************************************/
-      F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[s*pOcc], &inc);
-      F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[s*pDet], &inc);
-      F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[s*J], &inc); 
-      F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[s*J], &inc); 
+      if (s >= nBurn) {
+        thinIndx++; 
+	if (thinIndx == nThin) {
+          F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[sPost*pOcc], &inc);
+          F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
+          F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[sPost*J], &inc); 
+          F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[sPost*J], &inc); 
+	  // Replicate data set for GoF
+          for (i = 0; i < nObs; i++) {
+            yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
+            INTEGER(yRepSamples_r)[sPost * nObs + i] = yRep[i]; 
+          } // i
+          sPost++; 
+	  thinIndx = 0; 
+	}
+      }
 
       // This allows for users to interrupt the C code when running, 
       // which is not normally allowed. 

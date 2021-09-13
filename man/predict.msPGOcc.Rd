@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{msPGOcc}(object, X.0, sub.sample, ...)
+\method{predict}{msPGOcc}(object, X.0, ...)
 }
 
 \arguments{
@@ -15,8 +15,6 @@
   \item{object}{an object of class msPGOcc}
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in the composition sampling algorithm. Valid tags are \code{start}, \code{end}, and \code{thin}. Given the values associated with tags, the sample subset is selected using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
   \item{...}{currently no additional arguments}
 }
@@ -120,9 +118,8 @@ out <- msPGOcc(occ.formula = ~ occ.cov,
 summary(out, level = 'community')
 
 # Predict at new locations ------------------------------------------------
-sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
-out.pred <- predict(out, X.0, sub.sample)
+out.pred <- predict(out, X.0)
 # Create a plot one species at a time: 
 for (i in 1:N) {
   psi.hat.quants <- apply(out.pred$psi.0.samples[,i, ], 

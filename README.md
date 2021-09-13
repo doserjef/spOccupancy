@@ -14,6 +14,7 @@ Fits single-species and multi-species non-spatial and spatial occupancy models u
 ## Additional Functionality
 
 + `ppcOcc`: function for performing posterior predictive checks on `spOccupancy` model objects.
++ `waicOcc`: function for computing the Widely Applicable Information Criterion on `spOccupancy` model objects for model comparison and selection.
 + `simOcc`: simulates single-species occupancy data. Data can be optionally simulated with a spatial Gaussian process following an exponential correlation function. 
 + `simMsOcc`: simulates multi-species occupancy data. Data can be optionally simulated with a spatial Gaussian process following an exponential correlation function.
 + `simIntOcc`: simulates single-species occupancy data from multiple data sources. Data can be optionally simulated with a spatial Gaussian process following an exponential correlation function.

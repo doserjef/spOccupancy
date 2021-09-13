@@ -10,8 +10,10 @@
 spPGOcc(occ.formula, det.formula, data, starting, n.batch, 
 	batch.length, accept.rate = 0.43, priors, 
 	cov.model = "exponential", tuning, n.omp.threads = 1, 
-	verbose = TRUE, NNGP = FALSE, n.neighbors = 15, 
-	search.type = "cb", n.report = 100, ...)
+	verbose = TRUE, NNGP = TRUE, n.neighbors = 15, 
+	search.type = "cb", n.report = 100, 
+	n.burn = round(.10 * n.batch * batch.length), 
+	n.thin = 1, ...)
 }
 
 \arguments{
@@ -117,6 +119,13 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
+
+  \item{n.burn}{the number of samples out of the total \code{n.batch * batch.length} 
+    samples to discard as burn-in. By default, the first 10\% of samples is discarded.}
+  
+  \item{n.thin}{the thinning interval for collection of MCMC samples. The
+    thinning occurs after the \code{n.burn} samples are discarded. Default 
+    value is set to 1.}
   
   \item{...}{currently no additional arguments}
 }

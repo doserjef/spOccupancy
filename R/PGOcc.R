@@ -1,6 +1,7 @@
 PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		  priors, n.omp.threads = 1, verbose = TRUE,
-		  n.report = 100, ...){
+		  n.report = 100, n.burn = round(.10 * n.samples), n.thin = 1, 
+		  ...){
 
     # Make it look nice
     if (verbose) {
@@ -233,6 +234,12 @@ PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -241,7 +248,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		 beta.starting, alpha.starting, z.starting,
 		 z.long.indx, mu.beta, mu.alpha,
 		 Sigma.beta, Sigma.alpha, n.samples,
-		 n.omp.threads, verbose, n.report)
+		 n.omp.threads, verbose, n.report, n.burn, n.thin, 
+		 n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -251,15 +259,18 @@ PGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     colnames(out$alpha.samples) <- x.p.names
     out$z.samples <- mcmc(t(out$z.samples))
     out$psi.samples <- mcmc(t(out$psi.samples))
-    tmp <- array(NA, dim = c(J * K.max, n.samples))
+    tmp <- array(NA, dim = c(J * K.max, n.post.samples))
     tmp[names.long, ] <- out$y.rep.samples
-    out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.samples))
+    out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
     out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
     out$X <- X
     out$X.p <- X.p
     out$y <- y.big
     out$n.samples <- n.samples
     out$call <- cl
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "PGOcc"
 

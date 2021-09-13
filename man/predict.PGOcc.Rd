@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{PGOcc}(object, X.0, sub.sample, ...)
+\method{predict}{PGOcc}(object, X.0, ...)
 }
 
 \arguments{
@@ -15,8 +15,6 @@
   \item{object}{an object of class PGOcc}
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in the composition sampling algorithm. Valid tags are \code{start}, \code{end}, and \code{thin}. Given the values associated with tags, the sample subset is selected using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
   \item{...}{currently no additional arguments}
 }
@@ -40,6 +38,7 @@
 }
 
 \examples{
+\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 10
@@ -90,15 +89,15 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     priors = prior.list,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
-	     n.report = n.report)
+	     n.report = n.report, 
+	     n.burn = 1000, 
+	     n.thin = 1)
 
 summary(out)
 
 # Predict at new locations ------------------------------------------------
-sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
-out.pred <- predict(out, X.0, sub.sample)
-\dontrun{
+out.pred <- predict(out, X.0)
 psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 plot(dat$psi[pred.indx], psi.0.quants[2, ], pch = 19, xlab = 'True', 
      ylab = 'Fitted', ylim = c(min(psi.0.quants), max(psi.0.quants)))

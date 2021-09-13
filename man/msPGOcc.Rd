@@ -9,7 +9,8 @@ Function for fitting multi-species occupancy models using Polya-Gamma latent var
 
 \usage{
 msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors, 
-	n.omp.threads = 1, verbose = TRUE, n.report = 100, ...)
+	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+	n.burn = round(.10 * n.samples), n.thin = 1, ...)
 }
 
 \arguments{
@@ -73,6 +74,13 @@ msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   preparation phase are printed.}
 
 \item{n.report}{the interval to report MCMC progress.}
+
+\item{n.burn}{the number of samples out of the total \code{n.samples} to 
+  discard as burn-in. By default, the first 10\% of samples is discarded.}
+
+\item{n.thin}{the thinning interval for collection of MCMC samples. The
+  thinning occurs after the \code{n.burn} samples are discarded. Default 
+  value is set to 1.}
 
 \item{...}{currently no additional arguments}
 
@@ -165,7 +173,6 @@ sp = FALSE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
 		sp = FALSE)
-n.samples <- 5000
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
@@ -197,6 +204,10 @@ starting.list <- list(alpha.comm = rep(0, p.det),
 		      tau.alpha = rep(1, p.det), 
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
+n.samples <- 5000
+n.burn <- 1000
+n.thin <- 2
+
 out <- msPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1 + det.cov.2, 
 	       data = data.list, 
@@ -205,7 +216,9 @@ out <- msPGOcc(occ.formula = ~ occ.cov,
 	       priors = prior.list, 
                n.omp.threads = 1, 
 	       verbose = TRUE, 
-	       n.report = 1000)
+	       n.report = 1000, 
+	       n.burn = n.burn, 
+	       n.thin = n.thin)
 
 summary(out, level = 'community')
 }

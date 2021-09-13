@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{spIntPGOcc}(object, X.0, coords.0, sub.sample, 
+\method{predict}{spIntPGOcc}(object, X.0, coords.0,
 	                     n.omp.threads = 1, verbose = TRUE, 
 			     n.report = 100, ...)
 }
@@ -19,8 +19,6 @@
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in the composition sampling algorithm. Valid tags are \code{start}, \code{end}, and \code{thin}. Given the values associated with tags, the sample subset is selected using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -173,14 +171,15 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
 		  NNGP = TRUE, 
 		  n.neighbors = 15, 
 		  search.type = 'cb', 
-		  n.report = 50)
+		  n.report = 50, 
+		  n.burn = 1000, 
+		  n.thin = 1)
 
 summary(out)
 
 # Predict at new locations ------------------------------------------------
-sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
-out.pred <- predict(out, X.0, coords.0, sub.sample)
+out.pred <- predict(out, X.0, coords.0)
 psi.hat.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 
 sq.cex=2.1

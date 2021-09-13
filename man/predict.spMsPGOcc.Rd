@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{spMsPGOcc}(object, X.0, coords.0, sub.sample, 
+\method{predict}{spMsPGOcc}(object, X.0, coords.0,
 	                    n.omp.threads = 1, verbose = TRUE, 
 			    n.report = 100, ...)
 }
@@ -19,8 +19,6 @@
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in the composition sampling algorithm. Valid tags are \code{start}, \code{end}, and \code{thin}. Given the values associated with tags, the sample subset is selected using \code{seq(as.integer(start), as.integer(end), by = as.integer(thin))}}
 
   \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -172,14 +170,15 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
 		 NNGP = FALSE, 
 		 n.neighbors = 15, 
 		 search.type = 'cb', 
-	         n.report = 25)
+	         n.report = 25, 
+		 n.burn = 1000, 
+		 n.thin = 1)
 
 summary(out, level = 'both')
 
 # Predict at new locations ------------------------------------------------
-sub.sample <- list(start = 4001, end = 5000, thin = 1)
 
-out.pred <- predict(out, X.0, coords.0, sub.sample)
+out.pred <- predict(out, X.0, coords.0)
 
 # Create a plot one species at a time: 
 for (i in 1:N) {

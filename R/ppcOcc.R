@@ -1,4 +1,4 @@
-ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
+ppcOcc <- function(object, fit.stat, group, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -27,30 +27,6 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     stop("error: fit.stat must be either 'chi-square' or 'freeman-tukey'")
   }
   fit.stat <- tolower(fit.stat)
-  # Sub samples -----------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for posterior predictive check.")
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
   # Group -----------------------------
   if (missing(group)) {
     stop("error: group must be specified")
@@ -70,12 +46,13 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     p.det <- dim(X.p)[2]
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     J <- nrow(y)
-    y.rep.samples <- object$y.rep.samples[s.indx, , , drop = FALSE]
-    z.samples <- object$z.samples[s.indx, , drop = FALSE]
-    alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
+    y.rep.samples <- object$y.rep.samples
+    z.samples <- object$z.samples
+    alpha.samples <- object$alpha.samples
     # Get detection probability
     det.prob <- logit.inv(X.p %*% t(alpha.samples))
     det.prob <- array(det.prob, dim(y.rep.samples))
+    n.samples <- object$n.post
     fit.y <- rep(NA, n.samples)
     fit.y.rep <- rep(NA, n.samples)
     e <- 0.0001
@@ -134,10 +111,10 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$fit.stat <- fit.stat
     out$class <- class(object)
     out$call <- cl
-    out$start <- start
-    out$end <- end
-    out$thin <- thin
-    out$sample.size <- length(s.indx)
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
   } 
   # Multispecies models
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
@@ -147,10 +124,11 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
     J <- dim(y)[2]
     N <- dim(y)[1]
-    y.rep.samples <- object$y.rep.samples[s.indx, , , , drop = FALSE]
-    z.samples <- object$z.samples[s.indx, , , drop = FALSE]
-    alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
+    y.rep.samples <- object$y.rep.samples
+    z.samples <- object$z.samples
+    alpha.samples <- object$alpha.samples
     # Get detection probability
+    n.samples <- object$n.post
     det.prob <- array(NA, dim = c(n.samples, N, nrow(X.p)))
     sp.indx <- rep(1:N, ncol(X.p))
     for (i in 1:N) {
@@ -221,10 +199,10 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$fit.stat <- fit.stat
     out$class <- class(object)
     out$call <- cl
-    out$start <- start
-    out$end <- end
-    out$thin <- thin
-    out$sample.size <- length(s.indx)
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
     out$sp.names <- object$sp.names
   }
   # For integrated models
@@ -242,13 +220,14 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     fit.y.rep.group.quants.list <- list()
 
     for (q in 1:n.data) {
-      y.rep.samples <- object$y.rep.samples[[q]][s.indx, , , drop = FALSE]
-      z.samples <- object$z.samples[s.indx, sites[[q]], drop = FALSE]
+      y.rep.samples <- object$y.rep.samples[[q]]
+      z.samples <- object$z.samples[, sites[[q]], drop = FALSE]
       alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
-      alpha.samples <- object$alpha.samples[s.indx, alpha.indx.r == q, drop = FALSE]
+      alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
       # Get detection probability
       det.prob <- logit.inv(X.p[[q]] %*% t(alpha.samples))
       det.prob <- array(det.prob, dim(y.rep.samples))
+      n.samples <- object$n.post
       fit.y <- rep(NA, n.samples)
       fit.y.rep <- rep(NA, n.samples)
       e <- 0.0001
@@ -313,10 +292,10 @@ ppcOcc <- function(object, fit.stat, sub.sample, group, ...) {
     out$fit.stat <- fit.stat
     out$class <- class(object)
     out$call <- cl
-    out$start <- start
-    out$end <- end
-    out$thin <- thin
-    out$sample.size <- length(s.indx)
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
   }
 
   class(out) <- 'ppcOcc'

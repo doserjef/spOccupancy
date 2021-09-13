@@ -1,4 +1,4 @@
-waicOcc <- function(object, sub.sample, ...) {
+waicOcc <- function(object, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -19,31 +19,8 @@ waicOcc <- function(object, sub.sample, ...) {
 			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc')) {
     stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc\n")
   }
-  # Sub samples -----------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for WAIC calculation.")
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
 
+  n.post <- object$n.post
   # Functions -------------------------------------------------------------
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
@@ -58,8 +35,8 @@ waicOcc <- function(object, sub.sample, ...) {
     z.long.indx <- z.long.indx[!is.na(c(y))]
     y <- c(y)
     y <- y[!is.na(y)]
-    psi.samples <- object$psi.samples[s.indx, , drop = FALSE]
-    alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
+    psi.samples <- object$psi.samples
+    alpha.samples <- object$alpha.samples
     det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
     p.psi.samples <- det.prob.samples * psi.samples[, z.long.indx]
     n.obs <- length(y)
@@ -90,11 +67,11 @@ waicOcc <- function(object, sub.sample, ...) {
     z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
     y <- matrix(y, N, J * K.max)
     y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
-    psi.samples <- object$psi.samples[s.indx, , , drop = FALSE]
-    alpha.samples <- object$alpha.samples[s.indx, , drop = FALSE]
+    psi.samples <- object$psi.samples
+    alpha.samples <- object$alpha.samples
     # Get detection probability
     n.obs <- nrow(X.p)
-    det.prob.samples <- array(NA, dim = c(n.samples, N, n.obs))
+    det.prob.samples <- array(NA, dim = c(n.post, N, n.obs))
     sp.indx <- rep(1:N, ncol(X.p))
     for (i in 1:N) {
       det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
@@ -138,8 +115,8 @@ waicOcc <- function(object, sub.sample, ...) {
       z.long.indx <- z.long.indx[!is.na(c(y[[q]]))]
       y[[q]] <- c(y[[q]])
       y[[q]] <- y[[q]][!is.na(y[[q]])]
-      psi.samples <- object$psi.samples[s.indx, , drop = FALSE]
-      alpha.samples <- object$alpha.samples[s.indx, alpha.indx.r == q, drop = FALSE]
+      psi.samples <- object$psi.samples
+      alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
       det.prob.samples <- t(logit.inv(X.p[[q]] %*% t(alpha.samples)))
       p.psi.samples <- det.prob.samples * psi.samples[, z.long.indx]
       n.obs <- length(y[[q]])

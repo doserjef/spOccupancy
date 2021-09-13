@@ -1,9 +1,11 @@
 spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch, 
 		       batch.length, accept.rate = 0.43, priors, 
 		       cov.model = "exponential", tuning, 
-		       n.omp.threads = 1, verbose = TRUE, NNGP = FALSE, 
+		       n.omp.threads = 1, verbose = TRUE, NNGP = TRUE, 
 		       n.neighbors = 15, search.type = "cb", 
-		       n.report = 100, ...){
+		       n.report = 100, 
+		       n.burn = round(.10 * n.batch * batch.length),
+		       n.thin = 1, ...){
 
   # Make it look nice
   if (verbose) {
@@ -159,6 +161,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     K.long.max <- sapply(n.rep, max)
     # Number of repeat visits for each data set site. 
     K <- unlist(n.rep)
+    n.samples <- n.batch * batch.length
 
     # Get indics to map z to y --------------------------------------------
     X.p.orig <- X.p
@@ -504,6 +507,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -516,7 +525,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 		 Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx, 
 		 n.batch, batch.length, accept.rate,  
-		 n.omp.threads, verbose, n.report)
+		 n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -542,11 +551,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     # corresponds to a different data set. 
     tmp <- list()
     indx <- 1
-    n.samples <- batch.length * n.batch
     for (q in 1:n.data) {
-      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.samples))
+      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples))
       tmp[[q]][names.long[[q]], ] <- out$y.rep.samples[indx:(indx + n.obs.long[q] - 1), ] 
-      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.samples))
+      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples))
       tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
       indx <- indx + n.obs.long[q]
     }
@@ -560,6 +568,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$cov.model.indx <- cov.model.indx
     out$type <- "GP"
     out$coords <- coords
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "spIntPGOcc"
     
@@ -655,7 +666,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     storage.mode(u.indx.lu) <- "integer"
     storage.mode(ui.indx) <- "integer"
     storage.mode(n.neighbors) <- "integer"
-
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -669,7 +685,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 		 Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx,
 		 n.batch, batch.length, accept.rate,  
-		 n.omp.threads, verbose, n.report)
+		 n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -693,11 +709,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     # Get y in a useful format. 
     tmp <- list()
     indx <- 1
-    n.samples <- batch.length * n.batch
     for (q in 1:n.data) {
-      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.samples))
+      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples))
       tmp[[q]][names.long[[q]], ] <- out$y.rep.samples[indx:(indx + n.obs.long[q] - 1), ] 
-      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.samples))
+      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples))
       tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
       indx <- indx + n.obs.long[q]
     }
@@ -710,6 +725,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     out$n.neighbors <- n.neighbors
     out$cov.model.indx <- cov.model.indx
     out$type <- "NNGP"
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "spIntPGOcc"
     

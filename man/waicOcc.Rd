@@ -3,7 +3,7 @@
 \title{Compute Widely Applicable Information Criterion for spOccupancy Model Objects}
 
 \usage{
-waicOcc(object, sub.sample, ...)
+waicOcc(object, ...)
 }
 
 \description{
@@ -14,12 +14,6 @@ waicOcc(object, sub.sample, ...)
 \arguments{
   \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{intPGOcc}, or \code{spIntPGOcc}.}
-
-  \item{sub.sample}{an optional list that specifies the samples to include in
-  the WAIC calculation. Valid tags are \code{start}, \code{end}, and \code{thin}. 
-  Given the value associated with the tags, the sample subset is selected using 
-  \code{seq(as.integer(start), as.integer(end), by=as.integer(thin))}. 
-  If not specified, the entire posterior sample is used.}
 
 \item{...}{currently no additional arguments}
 
@@ -102,10 +96,12 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     priors = prior.list,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
-	     n.report = n.report)
+	     n.report = n.report, 
+	     n.burn = 1000, 
+	     n.thin = 1)
 
 # Calculate WAIC
-waicOcc(out, sub.sample = list(start = 4001, end = 5000, thin = 1))
+waicOcc(out)
 }
 }
 

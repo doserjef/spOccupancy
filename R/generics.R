@@ -1,5 +1,5 @@
 # PGOcc -------------------------------------------------------------------
-predict.PGOcc <- function(object, X.0, sub.sample, ...) {
+predict.PGOcc <- function(object, X.0, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -22,28 +22,6 @@ predict.PGOcc <- function(object, X.0, sub.sample, ...) {
     stop("error: requires an output object of class PGOcc\n")
   }
 
-  # Get samples for composition sampling ----------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
   # Check X.0 -------------------------------------------------------------
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -57,13 +35,12 @@ predict.PGOcc <- function(object, X.0, sub.sample, ...) {
   }
 
   # Composition sampling --------------------------------------------------
-  beta.samples <- as.matrix(object$beta.samples[s.indx, , drop = FALSE])
+  beta.samples <- as.matrix(object$beta.samples)
+  n.post <- object$n.post
   out <- list()
   out$psi.0.samples <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
   out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)), 
-		      nrow = n.samples, ncol = nrow(X.0)))
-  out$sub.sample <- sub.sample
-  out$s.indx <- s.indx
+		      nrow = n.post, ncol = nrow(X.0)))
   out$call <- cl
 
   class(out) <- "predict.PGOcc"
@@ -79,63 +56,50 @@ fitted.PGOcc <- function(object, ...) {
   return(object$y.rep.samples)
 }
 
-summary.PGOcc <- function(object, sub.sample, 
+summary.PGOcc <- function(object,
 			  quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
 			  digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
-  n.samples <- nrow(object$beta.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
   
   # Occupancy
   cat("Occupancy: \n")
-  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$beta.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
   # Detection
   cat("Detection: \n")
-  print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$alpha.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
 }
 
+# ppcOcc ------------------------------------------------------------------ 
 summary.ppcOcc <- function(object, level, 
 			   digits = max(3L, getOption("digits") - 3L), ...) {
 
   cat("\nCall:", deparse(object$call, width.cutoff = floor(getOption("width") * 0.75)), 
       "", sep = "\n")
 
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",object$start,"\n", sep=""))
-  cat(paste("end = ",object$end,"\n", sep=""))
-  cat(paste("thin = ",object$thin,"\n", sep=""))
-  cat(paste("sample size = ",object$sample.size,"\n\n", sep=""))
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
+
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
 
   if (object$class %in% c('PGOcc', 'spPGOcc')) {
     cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
@@ -198,7 +162,7 @@ summary.ppcOcc <- function(object, level,
 
 # spPGOcc -----------------------------------------------------------------
 
-predict.spPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads = 1, 
+predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1, 
 			    verbose = TRUE, n.report = 100, ...) {
 
   # Check for unused arguments ------------------------------------------
@@ -223,30 +187,8 @@ predict.spPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads = 1
     stop("error: requires an output object of class spPGOcc\n")
   }
 
-  # Get samples for predictive sampler ------------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-
   # Data prep -------------------------------------------------------------
+  n.samples <- object$n.post
   X <- object$X
   coords <- object$coords 
   J <- nrow(X)
@@ -259,9 +201,9 @@ predict.spPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads = 1
   type <- object$type
 
   # Sub-sample previous 
-  theta.samples <- t(theta.samples[s.indx, , drop = FALSE])
-  beta.samples <- t(beta.samples[s.indx, , drop = FALSE])
-  w.samples <- t(w.samples[s.indx, , drop = FALSE])
+  theta.samples <- t(theta.samples)
+  beta.samples <- t(beta.samples)
+  w.samples <- t(w.samples)
 
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -375,55 +317,36 @@ print.spPGOcc <- function(x, ...) {
       "", sep = "\n")
 }
 
-summary.spPGOcc <- function(object, sub.sample, 
+summary.spPGOcc <- function(object,
 			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
 			    digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
-  n.samples <- nrow(object$beta.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
   
   # Occupancy
   cat("Occupancy: \n")
-  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$beta.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
   # Detection
   cat("Detection: \n")
-  print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$alpha.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
   cat("\n")
   # Covariance
   cat("Covariance: \n")
-  print(noquote(round(t(apply(object$theta.samples[s.indx, , drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$theta.samples, 2, 
 			      function(x) quantile(x, prob = quantiles))), digits)))
 }
 
@@ -434,7 +357,7 @@ fitted.spPGOcc <- function(object, ...) {
 
 # msPGOcc -----------------------------------------------------------------
 
-predict.msPGOcc <- function(object, X.0, sub.sample, ...) {
+predict.msPGOcc <- function(object, X.0, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -457,28 +380,6 @@ predict.msPGOcc <- function(object, X.0, sub.sample, ...) {
     stop("error: requires an output object of class msPGOcc\n")
   }
 
-  # Get samples for composition sampling ----------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
   # Check X.0 -------------------------------------------------------------
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -494,18 +395,17 @@ predict.msPGOcc <- function(object, X.0, sub.sample, ...) {
   # Composition sampling --------------------------------------------------
   N <- dim(object$y)[1]
   sp.indx <- rep(1:N, p.occ)
-  beta.samples <- as.matrix(object$beta.samples[s.indx, , drop = FALSE])
+  n.post <- object$n.post
+  beta.samples <- as.matrix(object$beta.samples)
   out <- list()
-  out$psi.0.samples <- array(NA, dim = c(n.samples, N, nrow(X.0)))
-  out$z.0.samples <- array(NA, dim = c(n.samples, N, nrow(X.0)))
+  out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+  out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
   for (i in 1:N) {
     out$psi.0.samples[, i, ] <- logit.inv(t(as.matrix(X.0) %*% t(beta.samples[, sp.indx == i])))
-    out$z.0.samples[, i, ] <- matrix(rbinom(n.samples * nrow(X.0), 1, 
+    out$z.0.samples[, i, ] <- matrix(rbinom(n.post * nrow(X.0), 1, 
 					    c(out$psi.0.samples[, i, ])), 
-				     nrow = n.samples, ncol = nrow(X.0))
+				     nrow = n.post, ncol = nrow(X.0))
   }
-  out$sub.sample <- sub.sample
-  out$s.indx <- s.indx
   out$call <- cl
 
   class(out) <- "predict.msPGOcc"
@@ -517,7 +417,7 @@ print.msPGOcc <- function(x, ...) {
       "", sep = "\n")
 }
 
-summary.msPGOcc <- function(object, sub.sample,
+summary.msPGOcc <- function(object,
 			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			    level,
 			    digits = max(3L, getOption("digits") - 3L), ...) {
@@ -528,35 +428,16 @@ summary.msPGOcc <- function(object, sub.sample,
 
   print(object)
 
-  n.samples <- nrow(object$beta.comm.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)
-    if (!is.numeric(start) || start >= n.samples){
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
 
   if (tolower(level) == 'community') {
 
@@ -566,18 +447,18 @@ summary.msPGOcc <- function(object, sub.sample,
 
     # Occupancy
     cat("Occupancy Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccupancy Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
   }
@@ -587,12 +468,12 @@ summary.msPGOcc <- function(object, sub.sample,
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
     cat("Occupancy: \n")
-    print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
 
   }
@@ -605,18 +486,18 @@ summary.msPGOcc <- function(object, sub.sample,
 
     # Occupancy
     cat("Occupancy Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccupancy Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
     cat("\n")
@@ -624,12 +505,12 @@ summary.msPGOcc <- function(object, sub.sample,
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
     cat("Occupancy: \n")
-    print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples, 2,
   			        function(x) quantile(x, prob=quantiles))), digits)))
   }
 
@@ -640,7 +521,7 @@ fitted.msPGOcc <- function(object, ...) {
 }
 
 # spMsPGOcc ---------------------------------------------------------------
-summary.spMsPGOcc <- function(object, sub.sample,
+summary.spMsPGOcc <- function(object, 
 			      quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			      level,
 			      digits = max(3L, getOption("digits") - 3L), ...) {
@@ -651,35 +532,16 @@ summary.spMsPGOcc <- function(object, sub.sample,
 
   print(object)
 
-  n.samples <- nrow(object$beta.comm.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)
-    if (!is.numeric(start) || start >= n.samples){
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
 
   if (tolower(level) == 'community') {
 
@@ -689,18 +551,18 @@ summary.spMsPGOcc <- function(object, sub.sample,
 
     # Occupancy
     cat("Occupancy Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccupancy Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
   }
@@ -710,18 +572,18 @@ summary.spMsPGOcc <- function(object, sub.sample,
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
     cat("Occupancy: \n")
-    print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
 
     cat("\n")
     # Covariance
     cat("Covariance: \n")
-    print(noquote(round(t(apply(object$theta.samples[s.indx, , drop = FALSE], 2, 
+    print(noquote(round(t(apply(object$theta.samples, 2, 
   			        function(x) quantile(x, prob = quantiles))), digits)))
 
   }
@@ -734,18 +596,18 @@ summary.spMsPGOcc <- function(object, sub.sample,
 
     # Occupancy
     cat("Occupancy Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccupancy Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
     cat("\n")
@@ -753,18 +615,18 @@ summary.spMsPGOcc <- function(object, sub.sample,
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
     cat("Occupancy: \n")
-    print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
     cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,, drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples, 2,
   			        function(x) quantile(x, prob=quantiles))), digits)))
 
     cat("\n")
     # Covariance
     cat("Covariance: \n")
-    print(noquote(round(t(apply(object$theta.samples[s.indx, , drop = FALSE], 2, 
+    print(noquote(round(t(apply(object$theta.samples, 2, 
   			        function(x) quantile(x, prob = quantiles))), digits)))
   }
 
@@ -780,7 +642,7 @@ print.spMsPGOcc <- function(x, ...) {
 }
 
 
-predict.spMsPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads = 1, 
+predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1, 
 			      verbose = TRUE, n.report = 100, ...) {
 
   # Check for unused arguments ------------------------------------------
@@ -805,30 +667,8 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads =
     stop("error: requires an output object of class spMsPGOcc\n")
   }
 
-  # Get samples for predictive sampler ------------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-
   # Data prep -------------------------------------------------------------
+  n.samples <- object$n.post
   X <- object$X
   y <- object$y
   coords <- object$coords 
@@ -843,9 +683,9 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads =
   type <- object$type
 
   # Sub-sample previous 
-  theta.samples <- t(theta.samples[s.indx, , drop = FALSE])
-  beta.samples <- t(beta.samples[s.indx, , drop = FALSE])
-  w.samples <- aperm(w.samples[s.indx, , , drop = FALSE], c(2, 3, 1))
+  theta.samples <- t(theta.samples)
+  beta.samples <- t(beta.samples)
+  w.samples <- aperm(w.samples, c(2, 3, 1))
 
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -963,7 +803,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads =
 }
 
 # intPGOcc ----------------------------------------------------------------
-predict.intPGOcc <- function(object, X.0, sub.sample, ...) {
+predict.intPGOcc <- function(object, X.0, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -986,28 +826,6 @@ predict.intPGOcc <- function(object, X.0, sub.sample, ...) {
     stop("error: requires an output object of class intPGOcc\n")
   }
 
-  # Get samples for composition sampling ----------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)
-    if (!is.numeric(start) || start >= n.samples){
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
   # Check X.0 -------------------------------------------------------------
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -1021,13 +839,12 @@ predict.intPGOcc <- function(object, X.0, sub.sample, ...) {
   }
 
   # Composition sampling --------------------------------------------------
-  beta.samples <- as.matrix(object$beta.samples[s.indx, , drop = FALSE])
+  n.post <- object$n.post
+  beta.samples <- as.matrix(object$beta.samples)
   out <- list()
   out$psi.0.samples <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
   out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)),
-		      nrow = n.samples, ncol = nrow(X.0)))
-  out$sub.sample <- sub.sample
-  out$s.indx <- s.indx
+		      nrow = n.post, ncol = nrow(X.0)))
   out$call <- cl
 
   class(out) <- "predict.intPGOcc"
@@ -1043,53 +860,35 @@ fitted.intPGOcc <- function(object, ...) {
   return(object$y.rep.samples)
 }
 
-summary.intPGOcc <- function(object, sub.sample,
+summary.intPGOcc <- function(object,
 			     quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			     digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
-  n.samples <- nrow(object$beta.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
+
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)
-    if (!is.numeric(start) || start >= n.samples){
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
-
   # Occupancy
   cat("Occupancy: \n")
-  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+  print(noquote(round(t(apply(object$beta.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
   # Detection
   indx <- 1
   for (i in 1:n.data) {
     cat(paste("Data source ", i, " Detection: \n", sep = ""))
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
@@ -1106,67 +905,49 @@ fitted.spIntPGOcc <- function(object, ...) {
   return(object$y.rep.samples)
 }
 
-summary.spIntPGOcc <- function(object, sub.sample,
+summary.spIntPGOcc <- function(object,
 			       quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			       digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
-  n.samples <- nrow(object$beta.samples)
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
+
+  cat("Chain Information:\n")
+  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thin: ",n.thin,"\n", sep=""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  if (missing(sub.sample)) {
-    s.indx <- 1:n.samples
-    start <- 1
-    end <- n.samples
-    thin <- 1
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)
-    if (!is.numeric(start) || start >= n.samples){
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
-  cat("Chain sub.sample:\n")
-  cat(paste("start = ",start,"\n", sep=""))
-  cat(paste("end = ",end,"\n", sep=""))
-  cat(paste("thin = ",thin,"\n", sep=""))
-  cat(paste("sample size = ",length(s.indx),"\n\n", sep=""))
-
   # Occupancy
   cat("Occupancy: \n")
-  print(noquote(round(t(apply(object$beta.samples[s.indx,, drop = FALSE], 2,
+  print(noquote(round(t(apply(object$beta.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
   # Detection
   indx <- 1
   for (i in 1:n.data) {
     cat(paste("Data source ", i, " Detection: \n", sep = ""))
-    print(noquote(round(t(apply(object$alpha.samples[s.indx,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
+    print(noquote(round(t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
   }
   # Covariance
   cat("Covariance: \n")
-  print(noquote(round(t(apply(object$theta.samples[s.indx, , drop = FALSE], 2, 
+  print(noquote(round(t(apply(object$theta.samples, 2, 
 			      function(x) quantile(x, prob = quantiles))), digits)))
 
 }
 
-predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads = 1, 
+predict.spIntPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 			       verbose = TRUE, n.report = 100, ...) {
-  # NOTE: this is the same as predict.spPGOcc
+
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -1186,35 +967,13 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
     stop("error: predict expects object\n")
   }
   if (class(object) != "spIntPGOcc") {
-    stop("error: requires an output object of class spPGOcc\n")
+    stop("error: requires an output object of class spIntPGOcc\n")
   }
-
-  # Get samples for predictive sampler ------------------------------------
-  n.samples <- object$n.samples
-  if (missing(sub.sample)) {
-    message("sub.sample is not specified. Using all posterior samples for prediction.")
-    s.indx <- 1:n.samples
-  } else {
-    start <- ifelse(!"start" %in% names(sub.sample), 1, sub.sample$start)
-    end <- ifelse(!"end" %in% names(sub.sample), n.samples, sub.sample$end)
-    thin <- ifelse(!"thin" %in% names(sub.sample), 1, sub.sample$thin)   
-    if (!is.numeric(start) || start >= n.samples){ 
-      stop("invalid start")
-    }
-    if (!is.numeric(end) || end > n.samples){ 
-      stop("invalid end")
-    }
-    if (!is.numeric(thin) || thin >= n.samples){ 
-      stop("invalid thin")
-    }
-    s.indx <- seq(as.integer(start), as.integer(end), by=as.integer(thin))
-    n.samples <- length(s.indx)
-  }
-
 
   # Data prep -------------------------------------------------------------
+  n.samples <- object$n.post
   X <- object$X
-  coords <- object$coords 
+  coords <- object$coords
   J <- nrow(X)
   p.occ <- ncol(X)
   theta.samples <- object$theta.samples
@@ -1224,10 +983,10 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
   cov.model.indx <- object$cov.model.indx
   type <- object$type
 
-  # Sub-sample previous 
-  theta.samples <- t(theta.samples[s.indx, , drop = FALSE])
-  beta.samples <- t(beta.samples[s.indx, , drop = FALSE])
-  w.samples <- t(w.samples[s.indx, , drop = FALSE])
+  # Sub-sample previous
+  theta.samples <- t(theta.samples)
+  beta.samples <- t(beta.samples)
+  w.samples <- t(w.samples)
 
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
@@ -1239,7 +998,7 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
     stop(paste("error: X.0 must have ", p.occ," columns\n"))
   }
   X.0 <- as.matrix(X.0)
-  
+
   if (missing(coords.0)) {
     stop("error: coords.0 must be specified\n")
   }
@@ -1250,14 +1009,14 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
     stop("error: coords.0 must have two columns\n")
   }
   coords.0 <- as.matrix(coords.0)
-  
+
   q <- nrow(X.0)
 
   if (type == 'GP') {
-  
+
     obs.pred.D <- iDist(coords, coords.0)
     obs.D <- iDist(coords)
-    
+
     storage.mode(obs.pred.D) <- "double"
     storage.mode(obs.D) <- "double"
     storage.mode(J) <- "integer"
@@ -1273,29 +1032,29 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
     storage.mode(n.omp.threads) <- "integer"
-    
+
     ptm <- proc.time()
 
-    out <- .Call("spPGOccPredict", J, p.occ, X.0, q, obs.D, 
-		 obs.pred.D, beta.samples, theta.samples, 
-		 w.samples, n.samples, cov.model.indx, verbose, 
+    out <- .Call("spPGOccPredict", J, p.occ, X.0, q, obs.D,
+		 obs.pred.D, beta.samples, theta.samples,
+		 w.samples, n.samples, cov.model.indx, verbose,
 		 n.omp.threads, n.report)
 
     out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))  
+    out$w.0.samples <- mcmc(t(out$w.0.samples))
     out$psi.0.samples <- mcmc(t(out$psi.0.samples))
     out$run.time <- proc.time() - ptm
     out$call <- cl
     out$object.class <- class(object)
 
-    class(out) <- "predict.spIntPGOcc"
+    class(out) <- "predict.spPGOcc"
 
     out
 
-  } else { 
-    # Get nearest neighbors 
-    # nn2 is a function from RANN. 
-    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1 
+  } else {
+    # Get nearest neighbors
+    # nn2 is a function from RANN.
+    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
 
     storage.mode(coords) <- "double"
     storage.mode(J) <- "integer"
@@ -1313,25 +1072,26 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, sub.sample, n.omp.threads 
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
-    
+
     ptm <- proc.time()
 
-    out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors, 
-                 X.0, coords.0, q, nn.indx.0, beta.samples, 
-                 theta.samples, w.samples, n.samples, 
+    out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors,
+                 X.0, coords.0, q, nn.indx.0, beta.samples,
+                 theta.samples, w.samples, n.samples,
                  cov.model.indx, n.omp.threads, verbose, n.report)
 
     out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))  
+    out$w.0.samples <- mcmc(t(out$w.0.samples))
     out$psi.0.samples <- mcmc(t(out$psi.0.samples))
     out$run.time <- proc.time() - ptm
     out$call <- cl
     out$object.class <- class(object)
 
-    class(out) <- "predict.spIntPGOcc"
+    class(out) <- "predict.spPGOcc"
 
     out
 
   }
 
 }
+

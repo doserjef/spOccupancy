@@ -3,7 +3,7 @@
 \title{Function for performing posterior predictive checks}
 
 \usage{
-ppcOcc(object, fit.stat, sub.sample, group, ...)
+ppcOcc(object, fit.stat, group, ...)
 }
 
 \description{
@@ -17,13 +17,6 @@ ppcOcc(object, fit.stat, sub.sample, group, ...)
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
 \code{"freeman-tukey"} and \code{"chi-square"}.}
-
-\item{sub.sample}{an optional list that specifies the samples to include in
-the posterior predictive check. Valid tags are \code{start},
-\code{end}, and \code{thin}. Given the value associated with the tags,
-the sample subset is selected using \code{seq(as.integer(start),
-as.integer(end), by=as.integer(thin))}. If not specified, the entire posterior
-sample is used.}
 
 \item{group}{a positive integer indicating the way to group the
 detection-nondetection data for the posterior predictive check. Value 
@@ -69,6 +62,7 @@ column (replicate).}
 }
 
 \examples{
+\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 8
@@ -113,6 +107,7 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     n.report = n.report)
 
 # Posterior predictive check
-ppc.out <- ppcOcc(out, 'chi-square', list(start = 4001, end = 5000, thin = 1), 1)
+ppc.out <- ppcOcc(out, fit.stat = 'chi-square', group = 1)
 summary(ppc.out)
+}
 }

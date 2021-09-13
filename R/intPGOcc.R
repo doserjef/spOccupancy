@@ -1,6 +1,7 @@
 intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
 		     priors, n.omp.threads = 1, verbose = TRUE, 
-		     n.report = 1000, ...){
+		     n.report = 1000, n.burn = round(.10 * n.samples), 
+		     n.thin = 1, ...){
  
     # Make it look nice
     if (verbose) {
@@ -321,6 +322,12 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -330,7 +337,8 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		 beta.starting, alpha.starting, z.starting,
 		 z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
 		 Sigma.beta, sigma.alpha, n.samples, 
-		 n.omp.threads, verbose, n.report)
+		 n.omp.threads, verbose, n.report, n.burn, n.thin, 
+		 n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -345,9 +353,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     tmp <- list()
     indx <- 1
     for (q in 1:n.data) {
-      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.samples))
+      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples))
       tmp[[q]][names.long[[q]], ] <- out$y.rep.samples[indx:(indx + n.obs.long[q] - 1), ] 
-      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.samples))
+      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples))
       tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
       indx <- indx + n.obs.long[q]
     }
@@ -358,6 +366,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     out$n.samples <- n.samples
     out$call <- cl
     out$sites <- sites
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "intPGOcc"
     

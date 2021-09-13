@@ -1,5 +1,6 @@
 msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
-		    priors, n.omp.threads = 1, verbose = TRUE, n.report = 100, ...){
+		    priors, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+		    n.burn = round(.10 * n.samples), n.thin = 1, ...){
  
     # Make it look nice
     if (verbose) {
@@ -345,6 +346,12 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
     storage.mode(n.report) <- "integer"
+    storage.mode(n.burn) <- "integer"
+    storage.mode(n.thin) <- "integer"
+    n.post.samples <- length(seq(from = n.burn + 1, 
+				 to = n.samples, 
+				 by = as.integer(n.thin)))
+    storage.mode(n.post.samples) <- "integer"
 
     ptm <- proc.time()
 
@@ -356,7 +363,8 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		 tau.alpha.starting, z.long.indx, mu.beta.comm, 
 		 mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
 		 tau.beta.a, tau.beta.b, tau.alpha.a, 
-		 tau.alpha.b, n.samples, n.omp.threads, verbose, n.report)
+		 tau.alpha.b, n.samples, n.omp.threads, verbose, n.report, 
+		 n.burn, n.thin, n.post.samples)
 
     out$run.time <- proc.time() - ptm
 
@@ -377,13 +385,13 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     out$alpha.samples <- mcmc(t(out$alpha.samples))
     coef.names.det <- paste(rep(x.p.names, each = N), sp.names, sep = '-')
     colnames(out$alpha.samples) <- coef.names.det
-    out$z.samples <- array(out$z.samples, dim = c(N, J, n.samples))
+    out$z.samples <- array(out$z.samples, dim = c(N, J, n.post.samples))
     out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
-    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.samples))
+    out$psi.samples <- array(out$psi.samples, dim = c(N, J, n.post.samples))
     out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
-    tmp <- array(NA, dim = c(N, J * K.max, n.samples))
-    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.samples))
-    out$y.rep.samples <- array(tmp, dim = c(N, J, K.max, n.samples))
+    tmp <- array(NA, dim = c(N, J * K.max, n.post.samples))
+    tmp[, names.long, ] <- array(out$y.rep.samples, dim = c(N, n.obs, n.post.samples))
+    out$y.rep.samples <- array(tmp, dim = c(N, J, K.max, n.post.samples))
     out$y.rep.samples <- aperm(out$y.rep.samples, c(4, 1, 2, 3))
     out$X <- X
     out$X.p <- X.p
@@ -393,6 +401,9 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     out$x.names <- x.names
     out$sp.names <- sp.names
     out$x.p.names <- x.p.names
+    out$n.post <- n.post.samples
+    out$n.thin <- n.thin
+    out$n.burn <- n.burn
 
     class(out) <- "msPGOcc"
     

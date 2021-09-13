@@ -158,9 +158,7 @@ extern "C" {
 	
 	//get Sigma
 	F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc);
-	
         tmp_one2[0] = sigmaSq - tmp_one2[0];
-
 	w0[s * q + j] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
 	psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j], zero, one); 
 	z0[s * q + j] = rbinom(one, psi0[s * q + j]);
