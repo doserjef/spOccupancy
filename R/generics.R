@@ -30,17 +30,39 @@ predict.PGOcc <- function(object, X.0, ...) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
   p.occ <- ncol(object$X)
-  if (ncol(X.0) != p.occ) {
-    stop(paste("error: X.0 must have ", p.occ, " columns\n", sep = ''))
+  p.design <- p.occ
+  if (object$psiRE) {
+    p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
+  }
+  if (ncol(X.0) != p.design) {
+    stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
   }
 
   # Composition sampling --------------------------------------------------
   beta.samples <- as.matrix(object$beta.samples)
   n.post <- object$n.post
   out <- list()
-  out$psi.0.samples <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
+  if (object$psiRE) {
+    beta.star.samples <- as.matrix(object$beta.star.samples)
+    # Get columns in design matrix with random effects. 
+    x.re.names <- colnames(object$X.re)
+    indx <- which(colnames(X.0) %in% x.re.names)
+    X.re <- as.matrix(X.0[, indx, drop = FALSE])
+    X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+    n.occ.re <- ncol(object$beta.star.samples)
+    # Form design matrix for random effects
+    lambda.psi <- matrix(0, nrow(X.0), n.occ.re)
+    for (i in 1:n.occ.re) {
+      lambda.psi[which(X.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
+    }
+    # Now can get the output
+    out$psi.0.samples <- mcmc(logit.inv(t(X.fix %*% t(beta.samples) + 
+					  lambda.psi %*% t(beta.star.samples))))
+  } else {
+    out$psi.0.samples <- mcmc(logit.inv(t(X.0 %*% t(beta.samples))))
+  }
   out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)), 
-		      nrow = n.post, ncol = nrow(X.0)))
+  		                 nrow = n.post, ncol = nrow(X.0)))
   out$call <- cl
 
   class(out) <- "predict.PGOcc"
@@ -76,11 +98,23 @@ summary.PGOcc <- function(object,
   cat("Occupancy: \n")
   print(noquote(round(t(apply(object$beta.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
+  if (object$psiRE) {
+    cat("\n")
+    cat("Occupancy Random Effect Variances: \n")
+    print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
+			        function(x) quantile(x, prob=quantiles))), digits)))
+  }
   cat("\n")
   # Detection
   cat("Detection: \n")
   print(noquote(round(t(apply(object$alpha.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
+  if (object$pRE) {
+    cat("\n")
+    cat("Detection Random Effect Variances: \n")
+    print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+			        function(x) quantile(x, prob=quantiles))), digits)))
+  }
 }
 
 # ppcOcc ------------------------------------------------------------------ 

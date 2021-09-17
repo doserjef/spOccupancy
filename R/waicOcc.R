@@ -37,7 +37,13 @@ waicOcc <- function(object, ...) {
     y <- y[!is.na(y)]
     psi.samples <- object$psi.samples
     alpha.samples <- object$alpha.samples
-    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+      det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) + 
+				      lambda.p %*% t(object$alpha.star.samples)))
+    } else {
+      det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
+    }
     p.psi.samples <- det.prob.samples * psi.samples[, z.long.indx]
     n.obs <- length(y)
 

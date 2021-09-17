@@ -1,0 +1,245 @@
+---
+title: "MCMC samplers for models fit in `spOccupancy`"
+author: "Jeffrey W. Doser"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{mcmcSamplers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", eval = FALSE
+)
+```
+
+\newcommand{\bm}{\boldsymbol}
+
+# Introduction
+
+This vignette provides statistical details on the MCMC algorithms used to fit each occupancy model in `spOccupancy`. We provide detailed descriptions of the joint posterior distributions for each model, how each parameter is updated in the model fitting process, and provide relevant citations to more specific documentation of the approaches where necessary. We also provide information on the composition sampling algorithms used for each model. 
+
+# Single species occupancy model
+
+## Model description
+
+Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with $j = 1, \dots, J$. We assume this latent occupancy process arises from a Bernoulli process following
+
+\begin{equation}
+\begin{split}
+&z_j \sim \text{Bernoulli}(\psi_j), \\ 
+&\text{logit}(\psi_j) = \bm{x}'_j \cdot \bm{\beta},
+\end{split}
+(\#eq:zPGOcc)
+\end{equation}
+
+where $\psi_j$ is the probability of occurrence at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of regression coefficients ($\bm{\beta}$). 
+
+
+We do not directly observe $z_j$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{j, k}$ be the observed detection (1) or nondetection (0) of a species of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+
+\begin{equation}
+\begin{split}
+&y_{j, k} \sim \text{Bernoulli}(p_{j, k} \cdot z_j), \\ 
+&\text{logit}(p_{j, k}) = \bm{v}'_{j, k} \cdot \bm{\alpha},
+\end{split}
+(\#eq:yPGOcc)
+\end{equation}
+
+where $p_{j, k}$ is the probability of detecting a species at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate specific covariates $\bm{V}$ and a vector of regression coefficients ($\bm{\alpha}$). 
+
+This model (after specifying appropriate priors), completes the standard single species occupancy model. Traditionally, when estimation occurs in a Bayesian framework, the regression coefficients for occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) must be updated using Metropolis updates, which can lead to slow convergence times and bad mixing of MCMC chains [@clark2019]. Instead, we introduce a Polya-Gamma latent variables [@polson2013] for both the occurrence and detection portions of the model, which induces Gibbs updates for all parameters in the single species occupancy model. 
+
+More specifically, let $\omega_{j, \beta} \sim \text{PG}(1, 0)$, which indicates $\omega_{j, \beta}$ is a random variable with a Polya-Gamma distribution with parameters 1 and 0. Given this latent variable, we can express the Bernoulli process of $z_j$ as 
+
+\begin{equation}
+\begin{split}
+\psi_j^{z_j} (1 - \psi_j)^{1 - z_j} &= \frac{\text{exp}(\bm{x}'_j\bm{\beta})^{z_i}}{1 + \text{exp}(\bm{x}'_j\bm{\beta})} \\
+&= \text{exp}(\kappa_j\bm{x}'_j\bm{\beta})\int \text{exp}(-\frac{\omega_{j, \beta}}{2}(\bm{x}_j'\bm{\beta})^2)p(\omega_{j, \beta} \mid 1, 0) d\omega_{j, \beta}, 
+\end{split}
+(\#eq:polyaGamma)
+\end{equation}
+
+where $\kappa_j = z_j - 0.5$ and $p(\omega_{j, \beta})$ is the probability density function of a Polya-Gamma distribution with parameters 1 and 0 [@polson2013]. We define $\omega_{j, k, \alpha} \sim \text{PG}(1, 0)$ as a Polya-Gamma latent variable for the detection portion of the occupancy model, which results in a simliar re-expression of the Bernoulli likelihood for $y_{j, k}$ as we showed above for $z_j$. These re-expressions of the Bernoulli processes results in Gibbs updates for both the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. 
+
+We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of the model. Our full joint posterior for a single species occupancy model, thus takes the following form, where N stands for the multivariate normal distribution:
+
+$$
+\begin{aligned}
+\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha} \mid \bm{Y} \rbrack \propto \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{j, k} \mid p_{j, k} \cdot z_j) \times \\
+& \text{Bernoulli}(z_j \mid \psi_j) \times \\
+& \text{PG}(\omega_{j, \beta} \mid 1, 0) \times \\
+& \text{PG}(\omega_{j, k, \alpha} \mid 1, 0) \times \\
+& N(\bm{\beta} \mid \bm{\mu}_{\beta}, \bm{\Sigma}_{\beta}) \times \\
+& N(\bm{\alpha} \mid \bm{\mu}_{\alpha}, \bm{\Sigma}_{\alpha}) \\
+\end{aligned}
+$$
+
+## MCMC sampler
+
+The Polya-Gamma data augmentation induces a Gibbs update for all parameters in the single species occupancy model. We first sample the occurrence and detection auxiliary variables from 
+
+\begin{equation}
+\begin{split}
+\omega_{j, \beta} \mid \cdot &\sim \text{PG}(1, \bm{x}_j'\bm{\beta}), \\
+\omega_{j, k, \alpha} \mid \cdot &\sim \text{PG}(1, \bm{v}_{j, k}'\bm{\alpha}), 
+\end{split}
+(\#eq:omegaPostPGOcc)
+\end{equation}
+
+respectively. We next sample the occurrence regression coefficients $\bm{\beta}$ from 
+
+\begin{equation}
+\bm{\beta} \mid \cdot \sim N\Big([\bm{\Sigma}_{\beta} + \bm{X}'\bm{S}_{\beta}\bm{X}]^{-1}[\bm{X}'(\bm{z} - 0.5 \bm{1}_J) + \bm{\Sigma}_{\beta}\bm{\mu}_{\beta}], [\bm{\Sigma}_{\beta} + \bm{X}'\bm{S}_{\beta}\bm{X}]^{-1}\Big), 
+(\#eq:betaPostPGOcc)
+\end{equation}
+
+where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent PG variable values ($\omega_{1, \beta}, \dots, \omega_{J, \beta})$.
+
+Similarly, we sample the detection regression coefficients $\bm{\alpha}$ from 
+
+\begin{equation}
+\bm{\alpha} \mid \cdot \sim N\Big([\bm{\Sigma}_{\alpha} + \bm{\tilde{V}}'\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}[\bm{\tilde{V}}'(\bm{\tilde{y}} - 0.5 \bm{1}_{J^*}) + \bm{\Sigma}_{\alpha}\bm{\mu}_{\alpha}], [\bm{\Sigma}_{\alpha} + \bm{\tilde{V}}'\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}\Big).
+(\#eq:alphaPostPGOcc)
+\end{equation}
+
+The detection regression coefficients $\bm{\alpha}$ are only informed by the locations where $z_j = 1$, since we assume no false positive detections in the standard occupancy model. We define $J^*$ as the total number of sites at the current iteration of the MCMC with $z_j = 1$. $\bm{S}_{\alpha}$ is a diagonal matrix with diagonal entries equal to the latent PG variable values ($\omega_{1, 1, \alpha}, \dots, \omega_{J^*, K_{J^*}, \alpha}$). The matrix $\bm{\tilde{V}}$ is the matrix of detection covariates associated with the sites where $z_j = 1$. Similarly, $\bm{\tilde{y}}$ is a vector of stacked detection-nondetection data values at the entries associated with $z_j = 1$. 
+
+Finally, $z_j$ is set to 1 for all sites where there is at least one detection, and thus we only need to sample $z_j$ at sites where there are no detections. Thus, for all locations with no detections, we sample $z_j$ according to 
+
+\begin{equation}
+z_j \mid \cdot \sim \text{Bernoulli}\Bigg(\frac{\psi_j \prod_{k = 1}^{K_j}(1 - p_{j, k})}{1 - \psi_j + \psi_j \prod_{k = 1}^{K_j}(1 - p_{j, k})}\Bigg).
+(\#eq:zPostPGOcc)
+\end{equation}
+
+## Prediction
+
+Prediction for a nonspatial single species occupancy model is a simple composition sampling algorithm. Given a set of occurrence covariates at a set of non-sampled locations ($\bm{X}_0$), we can derive the latent occurrence probability and the latent occurrence state at each non-sampled site $j = 1, \dots J_0$ for each posterior sample $s$ of the MCMC sampler following
+
+\begin{equation}
+\begin{split}
+&\text{logit}(\psi_{j}^{(s)}) = \bm{x}_{0, j} \cdot \bm{\beta}^{(s)}, \\
+&z^{(s)}_j \sim \text{Bernoulli}(\psi_J^{(s)}).
+\end{split}
+(\#eq:zPredPGOcc)
+\end{equation}
+
+# Single species spatial occupancy models
+
+## Gaussian Process formulation
+
+### Model description
+
+We extend the previous single species occupancy model to incorporate a spatial Gaussian Process that accounts unexplained spatial variation in species occurrence across a region of interest. The species-specific occurrence probability at site $j$, $\psi_j$, now takes the form 
+
+\begin{equation}
+\text{logit}(\psi_j) = \bm{x}'_j \cdot \bm{\beta} + \text{w}_j, 
+\end{equation}
+
+where w$_j$ is a realization from a zero-mean spatial Gaussian Process, i.e., 
+
+\begin{equation}
+\text{\textbf{w}} \sim N(\bm{0}, \bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})).
+\end{equation}
+
+We define $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ as a $J \times J$ covaraince matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta})$ that govern the spatial process. The vector $\bm{\theta}$ is equal to $\bm{\theta} = \{\sigma^2, \phi, \nu\}$, where $\sigma^2$ is a spatial variance parameter, $\phi$ is a spatial decay parameter, and $\nu$ is a spatial smoothness parameter. $\nu$ is only specified when using a Matern correlation function. 
+
+The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model and follows Equation \@ref(eq:yPGOcc). Formulation of Polya-Gamma latent variables is also exactly analogous to the nonspatial model (Equation \@ref(eq:polyaGamma)), with all references to $\psi_j$ now including the latent spatial random effects in addition to the site-level covariates. 
+
+Following standard recommendations for point-referenced spatial data [@banerjee2003], we assign an inverse-Gamma prior to the spatial variance parameter and uniform priors to the spatial decay and spatial smoothness parameters. Our full joint posterior distribution takes the following form, where IG stands for the inverse-Gamma distribution: 
+
+$$
+\begin{aligned}
+\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha}, \text{\textbf{w}}, \bm{\theta} \mid \bm{Y} \rbrack \propto \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{j, k} \mid p_{j, k} \cdot z_j) \times \\
+& \text{Bernoulli}(z_j \mid \psi_j) \times \\
+& N(\text{\textbf{w}} \mid \bm{0}, \bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})) \times \\
+& \text{PG}(\omega_{j, \beta} \mid 1, 0) \times \\
+& \text{PG}(\omega_{j, k, \alpha} \mid 1, 0) \times \\
+& N(\bm{\beta} \mid \bm{\mu}_{\beta}, \bm{\Sigma}_{\beta}) \times \\
+& N(\bm{\alpha} \mid \bm{\mu}_{\alpha}, \bm{\Sigma}_{\alpha}) \times \\
+& \text{IG}(\sigma^2 \mid a_{\sigma^2}, b_{\sigma^2}) \times \\
+& \text{Uniform}(\phi \mid a_{\phi}, b_{\phi}) \times \\
+& \text{Uniform}(\nu \mid a_{\nu}, b_{\nu}) \\
+\end{aligned}
+$$
+
+### MCMC sampler
+
+We first sample the occurrence and detection auxiliary variables from 
+
+\begin{equation}
+\begin{split}
+\omega_{j, \beta} \mid \cdot &\sim \text{PG}(1, \bm{x}_j'\bm{\beta} + \text{w}_j), \\
+\omega_{j, k, \alpha} \mid \cdot &\sim \text{PG}(1, \bm{v}_{j, k}'\bm{\alpha}), 
+\end{split}
+(\#eq:omegaPostspPGOcc)
+\end{equation}
+
+The Polya-Gamma scheme induces a Gibbs update for the occurrence regression coefficients, which are updated at each iteration according to 
+
+
+
+\begin{equation}
+\bm{\beta} \mid \cdot \sim N\Big([\bm{\Sigma}_{\beta} + \bm{X}'\bm{S}_{\beta}\bm{X}]^{-1}[\bm{X}'(\bm{z} - 0.5 \bm{1}_J - \bm{S}_{\beta}\text{\textbf{w}}) + \bm{\Sigma}_{\beta}\bm{\mu}_{\beta}], [\bm{\Sigma}_{\beta} + \bm{X}'\bm{S}_{\beta}\bm{X}]^{-1}\Big), 
+(\#eq:betaPostspPGOcc)
+\end{equation}
+
+where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent PG variable values ($\omega_{1, \beta}, \dots, \omega_{J, \beta})$.
+
+The full conditional for the detection regression coefficients is the same as in the non-spatial model shown in Equation \@ref(eq:alphaPostPGOcc). 
+
+The spatial variance parameter, $\sigma^2$, is sampled via a Gibbs update of the form 
+
+\begin{equation}
+\sigma^2 \mid \cdot \sim \text{IG}\Big(\frac{J}{2} + a_{\sigma^2}, \frac{\text{\textbf{w}}'\bm{R}^{-1}\text{\textbf{w}}}{2} + b_{\sigma^2}\Big),
+(\#eq:sigmaSqPostspPGOcc)
+\end{equation}
+
+where $\bm{R}$ is a $J \times J$ spatial correlation matrix. 
+
+The full conditional distributions for the spatial range parameter, $\phi$, and spatial smoothness parameter, $\nu$, are not available in closed form, and thus we use random walk Metropolis updates (e.g., @robert2013monte) to update the parameters. We use a random-walk Metroplis step with a multivariate normal proposal distribution (either of dimension 1 or of dimension 2 if Matern covariance function is used). To use the normal distribution as a proposal distribution, we transform the parameters to have a support spanning the entire real line, including a Jacobian adjustment for the Metropolis step. Tuning parameters are adaptively updated using Adaptive MCMC following @roberts2009examples.  
+
+The Polya-Gamma data augmentation scheme also enables a Gibbs update for the latent spatial Gaussian process (\textbf{w}), as opposed to a traditional spatial occupancy model that requires a Metropolis update for the latent spatial process. The spatial process is updated according to 
+
+\begin{equation}
+\text{\textbf{w}} \mid \cdot \sim N\Big([\bm{S}_{\beta} + \bm{\Sigma}^{-1}]^{-1} [\bm{z} - 0.5\bm{1}_J - \bm{S}_{\beta}\bm{X}\bm{\beta}], [\bm{S}_{\beta} + \bm{\Sigma}^{-1}]^{-1}\Big).
+(\#eq:wPostspPGOcc)
+\end{equation}
+
+Finally, for all sites with no detections, the latent occurrence values $z_j$ are updated following Equation \@ref(eq:zPostPGOcc). 
+
+### Prediction 
+
+Prediction for spatial occupancy models requires use of standard results for conditional multivariate normal distributions [@banerjee2003]. To predict latent occurrence and occurrence probability at non-sampled sites, we first need to predict the spatial process at the unobserved locations. Let \textbf{w}$_0$ denote the spatial process at $J_0$ non-sampled locations. We assume that \textbf{w}$_0$ and \textbf{w} (the spatial process at observed locations) arise from a multivariate normal distribution following
+
+\begin{equation}
+\begin{bmatrix} \text{\textbf{w}} \\ \text{\textbf{w}}_0 \end{bmatrix} \mid \cdot \sim N\Bigg(\begin{bmatrix} \bm{0} \\ \bm{0} \end{bmatrix}, \begin{bmatrix} \bm{\Sigma}_{11} & \bm{\Sigma}_{12} \\ \bm{\Sigma}_{12}' & \bm{\Sigma}_{22} \end{bmatrix}\Bigg), 
+(\#eq:mvn)
+\end{equation}
+
+where $\bm{\Sigma}_{11} = \bm{\Sigma}$, $\bm{\Sigma}_{12}$ is the $J \times J_0$ cross-covariance matrix between \textbf{w} and \textbf{w}$_0$, and $\bm{\Sigma}_{22}$ is the variance-covariance matrix for \textbf{w}$_0$. Using conditional multivariate normal theory, this results in the following posterior predictive distribution for the spatial process at nonsampled locations
+
+\begin{equation}
+\text{\textbf{w}}_0 \sim N(\bm{\Sigma}_{12}'\bm{\Sigma}_{11}^{-1}\text{\textbf{w}}, \bm{\Sigma}_{22} - \bm{\Sigma}_{12}'\bm{\Sigma}_{11}^{-1}\bm{\Sigma}_{12}).
+(\#eq:wPredspPGOcc)
+\end{equation}
+
+We can use composition sampling to sample from this posterior predictive distribution by using the values for \textbf{w} at each sample $q$ of the posterior distribution. This will generate a full predictive posterior sample which we can summarize with full uncertainty quantification. 
+
+Predicting all $J_0$ locations jointly can be expensive when $J_0$ is large. Thus, we perform independent individual predictions of the spatial process at each non-sampled location $j = 1, \dots, J_0$. Thus, to predict the latent occurrence and latent occurrence probability at each non-sampled site $j$, we perform the following steps for each posterior sample $q$. 
+
+1. Sample w$_{0, j}^{(q)}$ from Equation \@ref(eq:wPredspPGOcc), substituting in the current values at sample $q$ of the spatial parameters and latent spatial process at the observed locations. 
+2. Compute the latent occurrence probability $\psi_j^{(q)}$ as $\text{logit}^{-1}(\bm{x}_{0, j}\bm{\beta}^{(q)} + \text{\textbf{w}}_{0, j}^{(q)})$.
+3. Sample the latent occurrence from $z_{j}^{(q)} \sim \text{Bernoulli}(\psi_j^{(q)})$. 
+
+# References {-}
+

@@ -1,4 +1,13 @@
 parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
+
+    # Find random effect terms
+    bars <- findbars(formula)
+    re.terms <- NULL
+    if (!is.null(bars)) {
+      re.terms <- mkReTrms(bars, data)
+    }
+
+    formula <- nobars(formula)
     
     # extract Y, X, and variable names for model formula and frame
     mt <- terms(formula, data=data)
@@ -12,11 +21,21 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
       attributes(mt)$intercept <- 0
     }
 
+
     # null model support
     X <- if (!is.empty.model(mt)) model.matrix(mt, mf)
     X <- as.matrix(X)         # X matrix
     xvars <- dimnames(X)[[2]] # X variable names
     xobs  <- dimnames(X)[[1]] # X observation names
-    return(list(X, xvars, xobs))
+
+    # Get random effects 
+    X.re <- matrix(NA, nrow(X), length(re.terms$Ztlist))
+    if (ncol(X.re) > 0) {
+      for (j in 1:ncol(X.re)) {
+        X.re[, j] <- as.vector(re.terms$Ztlist[[j]]@i)
+      }
+      colnames(X.re) <- names(re.terms$flist)
+    }
+    return(list(X, xvars, xobs, X.re))
   }
 

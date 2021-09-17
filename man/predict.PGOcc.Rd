@@ -3,7 +3,7 @@
 \title{Function for prediction at new locations for single species occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `PGOcc`. 
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `PGOcc`. When non-spatial random effects are included in the occurrence portion of the model, \code{predict} only allows prediction at random effect levels that are included in the fitted data.
 }
 
 \usage{
@@ -14,7 +14,7 @@
 
   \item{object}{an object of class PGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data.}
 
   \item{...}{currently no additional arguments}
 }

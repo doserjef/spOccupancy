@@ -6,6 +6,9 @@
 
 static const R_CallMethodDef CallEntries[] = {
     {"PGOcc", (DL_FUNC) &PGOcc, 19},
+    {"PGOccREDet", (DL_FUNC) &PGOccREDet, 32},
+    {"PGOccREOcc", (DL_FUNC) &PGOccREOcc, 32},
+    {"PGOccREBoth", (DL_FUNC) &PGOccREBoth, 42},
     {"spPGOcc", (DL_FUNC) &spPGOcc, 34}, 
     {"spPGOccNNGP", (DL_FUNC) &spPGOccNNGP, 39},
     {"msPGOcc", (DL_FUNC) &msPGOcc, 28},

@@ -48,3 +48,4 @@ importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", "is.empty.
 importFrom("coda", "mcmc")
 importFrom("abind", "abind")
 importFrom("RANN", "nn2")
+importFrom("lme4", "findbars", "mkReTrms", "nobars")

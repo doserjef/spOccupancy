@@ -50,7 +50,13 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
     # Get detection probability
-    det.prob <- logit.inv(X.p %*% t(alpha.samples))
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+      det.prob <- logit.inv(X.p %*% t(alpha.samples) + 
+		            lambda.p %*% t(object$alpha.star.samples))
+    } else {
+      det.prob <- logit.inv(X.p %*% t(alpha.samples))
+    }
     det.prob <- array(det.prob, dim(y.rep.samples))
     n.samples <- object$n.post
     fit.y <- rep(NA, n.samples)

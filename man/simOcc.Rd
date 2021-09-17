@@ -3,11 +3,12 @@
 \title{Simulate Single-Species Occupancy Data}
 
 \description{
-  The function \code{simOcc} simulates single-species occupancy data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process following an exponential correlation function.
+  The function \code{simOcc} simulates single-species occupancy data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model following an exponential correlation function. Random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
-simOcc(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
+simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
+       p.RE = list(), sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 }
 
 \arguments{
@@ -20,6 +21,10 @@ simOcc(J.x, J.y, n.rep, beta, alpha, sigma.sq = 2, phi = 3/0.5, sp = FALSE)
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occupancy portion of the single-species occupancy model.}
 
 \item{alpha}{a numeric vector containing the intercept and regression coefficient parameters for the detection portion of the single-species occupancy model.}
+
+\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the occupancy portion of the model.}
+
+\item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
 
@@ -56,6 +61,11 @@ beta <- c(0.5, -0.15)
 alpha <- c(0.7, 0.4)
 phi <- 3 / .6
 sigma.sq <- 2
+psi.RE <- list(levels = 10, 
+	       sigma.sq.psi = 1.2)
+p.RE <- list(levels = 15, 
+	     sigma.sq.p = 0.8)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-             sigma.sq = sigma.sq, phi = phi, sp = TRUE)
+	      psi.RE = psi.RE, p.RE = p.RE, sigma.sq = sigma.sq, 
+	      phi = phi, sp = TRUE)
 }

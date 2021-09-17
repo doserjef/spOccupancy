@@ -3,7 +3,7 @@ title: "Fitting occupancy models with `spOccupancy`"
 author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
-  rmarkdown::html_vignette:
+  rmarkdown::pdf_document:
     toc: true
     toc_depth: 3
 bibliography: [references.bib]

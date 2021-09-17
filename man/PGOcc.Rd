@@ -15,11 +15,13 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 \arguments{
 \item{occ.formula}{a symbolic description of the model to be fit
   for the occupancy portion of the model using R's model syntax. Only
-  right-hand side of formula is specified. See example below.}
+  right-hand side of formula is specified. See example below. Random intercepts
+  are allowed using lme4 syntax (Bates et al. 2015).}
 
 \item{det.formula}{a symbolic description of the model to be fit
   for the detection portion of the model using R's model syntax. Only
-  right-hand side of formula is specified. See example below.}
+  right-hand side of formula is specified. See example below. Random intercepts
+  are allowed using lme4 syntax (Bates et al. 2015).}
 
 \item{data}{a list containing data necessary for model fitting.
   Valid tags are \code{y}, \code{occ.covs}, and \code{det.covs}. \code{y}
@@ -84,6 +86,11 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables. 
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
+
+  Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015).
+  Fitting Linear Mixed-Effects Models Using lme4. Journal of
+  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+
 }
 
 \author{
@@ -108,6 +115,24 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 
   \item{y.rep.samples}{a three-dimensional array of fitted values
     for use in Goodness of Fit assessments.}
+
+  \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
+    for variances of random intercepts included in the occupancy portion
+    of the model. Only included if random intercepts are specified in 
+    \code{occ.formula}.}
+
+  \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
+    for variances of random intercpets included in the detection portion 
+    of the model. Only included if random intercepts are specified in 
+    \code{det.formula}.}
+
+  \item{beta.star.samples}{a \code{coda} object of posterior samples
+    for the occurrence random effects. Only included if random intercepts
+    are specified in \code{occ.formula}.}
+
+  \item{alpha.star.samples}{a \code{coda} object of posterior samples
+    for the detection random effects. Only included if random intercepts 
+    are specified in \code{det.formula}.}
 
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
