@@ -24,7 +24,8 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
   
   \item{det.formula}{a symbolic description of the model to be fit
   for the detection portion of the model using R's model syntax. Only
-  right-hand side of formula is specified. See example below.}
+  right-hand side of formula is specified. See example below. Random intercepts
+  are allowed using lme4 syntax (Bates et al. 2015).}
 
   \item{data}{a list containing data necessary for model fitting.
     Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, and \code{coords}. 
@@ -147,6 +148,11 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
 
   Roberts, G.O. and Rosenthal J.S. (2009) Examples  of adaptive MCMC. 
   \emph{Journal of Computational and Graphical Statistics}, 18(2):349-367.
+
+  Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
+  Fitting Linear Mixed-Effects Models Using lme4. Journal of
+  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+
 }
 
 \author{
@@ -177,6 +183,15 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
 
   \item{w.samples}{a \code{coda} object of posterior samples
     for latent spatial random effects.}
+
+  \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
+    for variances of random intercpets included in the detection portion 
+    of the model. Only included if random intercepts are specified in 
+    \code{det.formula}.}
+
+  \item{alpha.star.samples}{a \code{coda} object of posterior samples
+    for the detection random effects. Only included if random intercepts 
+    are specified in \code{det.formula}.}
 
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}. 
     This time does not include nearest neighbor search time for building

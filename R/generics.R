@@ -377,6 +377,13 @@ summary.spPGOcc <- function(object,
   print(noquote(round(t(apply(object$alpha.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
 
+  if (object$pRE) {
+    cat("\n")
+    cat("Detection Random Effect Variances: \n")
+    print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+			        function(x) quantile(x, prob=quantiles))), digits)))
+  }
+
   cat("\n")
   # Covariance
   cat("Covariance: \n")
@@ -422,10 +429,13 @@ predict.msPGOcc <- function(object, X.0, ...) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
   p.occ <- ncol(object$X)
-  if (ncol(X.0) != p.occ) {
-    stop(paste("error: X.0 must have ", p.occ, " columns\n", sep = ''))
+  p.design <- p.occ
+  if (object$psiRE) {
+    p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
   }
-
+  if (ncol(X.0) != p.design) {
+    stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+  }
   # Composition sampling --------------------------------------------------
   N <- dim(object$y)[1]
   sp.indx <- rep(1:N, p.occ)
@@ -434,11 +444,34 @@ predict.msPGOcc <- function(object, X.0, ...) {
   out <- list()
   out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
   out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
-  for (i in 1:N) {
-    out$psi.0.samples[, i, ] <- logit.inv(t(as.matrix(X.0) %*% t(beta.samples[, sp.indx == i])))
-    out$z.0.samples[, i, ] <- matrix(rbinom(n.post * nrow(X.0), 1, 
-					    c(out$psi.0.samples[, i, ])), 
-				     nrow = n.post, ncol = nrow(X.0))
+  if (object$psiRE) {
+    beta.star.samples <- as.matrix(object$beta.star.samples)
+    # Get columns in design matrix with random effects. 
+    x.re.names <- colnames(object$X.re)
+    indx <- which(colnames(X.0) %in% x.re.names)
+    X.re <- as.matrix(X.0[, indx, drop = FALSE])
+    X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+    n.occ.re <- ncol(object$beta.star.samples) / N
+    # Form design matrix for random effects
+    lambda.psi <- matrix(0, nrow(X.0), n.occ.re)
+    for (i in 1:n.occ.re) {
+      lambda.psi[which(X.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
+    }
+    sp.re.indx <- rep(1:N, each = n.occ.re)
+    for (i in 1:N) {
+      out$psi.0.samples[, i, ] <- logit.inv(t(X.fix %*% t(beta.samples[, sp.indx == i]) + 
+          				  lambda.psi %*% t(beta.star.samples[, sp.re.indx == i])))
+      out$z.0.samples[, i, ] <- matrix(rbinom(n.post * nrow(X.0), 1, 
+          				    c(out$psi.0.samples[, i, ])), 
+          			     nrow = n.post, ncol = nrow(X.0))
+    }
+  } else {
+    for (i in 1:N) {
+      out$psi.0.samples[, i, ] <- logit.inv(t(as.matrix(X.0) %*% t(beta.samples[, sp.indx == i])))
+      out$z.0.samples[, i, ] <- matrix(rbinom(n.post * nrow(X.0), 1, 
+  					    c(out$psi.0.samples[, i, ])), 
+  				     nrow = n.post, ncol = nrow(X.0))
+    }
   }
   out$call <- cl
 
@@ -486,6 +519,12 @@ summary.msPGOcc <- function(object,
     cat("\nOccupancy Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
+    if (object$psiRE) {
+      cat("\n")
+      cat("Occupancy Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
     cat("\n")
     # Detection
     cat("Detection Means: \n")
@@ -494,6 +533,12 @@ summary.msPGOcc <- function(object,
     cat("\nDetection Variances: \n")
     print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
+    if (object$pRE) {
+      cat("\n")
+      cat("Detection Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
 
   }
 
@@ -525,6 +570,12 @@ summary.msPGOcc <- function(object,
     cat("\nOccupancy Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
+    if (object$psiRE) {
+      cat("\n")
+      cat("Occupancy Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
     cat("\n")
     # Detection
     cat("Detection Means: \n")
@@ -533,6 +584,12 @@ summary.msPGOcc <- function(object,
     cat("\nDetection Variances: \n")
     print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
+    if (object$pRE) {
+      cat("\n")
+      cat("Detection Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
 
     cat("\n")
     cat("----------------------------------------\n");
@@ -598,6 +655,12 @@ summary.spMsPGOcc <- function(object,
     cat("\nDetection Variances: \n")
     print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
+    if (object$pRE) {
+      cat("\n")
+      cat("Detection Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
 
   }
 
@@ -643,7 +706,12 @@ summary.spMsPGOcc <- function(object,
     cat("\nDetection Variances: \n")
     print(noquote(round(t(apply(object$tau.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
-
+    if (object$pRE) {
+      cat("\n")
+      cat("Detection Random Effect Variances: \n")
+      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
+          		        function(x) quantile(x, prob=quantiles))), digits)))
+    }
     cat("\n")
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");

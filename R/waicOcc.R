@@ -68,8 +68,6 @@ waicOcc <- function(object, ...) {
     J <- dim(y)[2]
     N <- dim(y)[1]
     z.long.indx <- rep(1:J, K.max)
-    z.long.indx <- z.long.indx[!is.na(c(y))]
-    z.long.indx <- rep(1:J, K.max)
     z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
     y <- matrix(y, N, J * K.max)
     y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
@@ -79,8 +77,17 @@ waicOcc <- function(object, ...) {
     n.obs <- nrow(X.p)
     det.prob.samples <- array(NA, dim = c(n.post, N, n.obs))
     sp.indx <- rep(1:N, ncol(X.p))
-    for (i in 1:N) {
-      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    if (object$pRE) {
+      sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+      lambda.p <- object$lambda.p
+      for (i in 1:N) {
+        det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
+  					   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
+      }
+    } else {
+      for (i in 1:N) {
+        det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+      }
     }
 
     p.psi.samples <- det.prob.samples * psi.samples[, , z.long.indx]
@@ -88,11 +95,13 @@ waicOcc <- function(object, ...) {
     elpd <- 0
     pD <- 0
 
-    for (i in 1:n.obs) {
-      prob <- p.psi.samples[, , i] 
-      L <- c(dbinom(y[, i], 1, prob, log = FALSE))
-      elpd <- elpd + log(mean(L))
-      pD <- pD + var(log(L))
+    for (i in 1:N) {
+      for (j in 1:n.obs) {
+        prob <- p.psi.samples[, i, j] 
+        L <- dbinom(y[i, j], 1, prob, log = FALSE)
+        elpd <- elpd + log(mean(L))
+        pD <- pD + sum(var(log(L)))
+      }
     }
 
     out <- c(elpd, pD, -2 * (elpd - pD))

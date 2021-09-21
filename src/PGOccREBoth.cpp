@@ -90,7 +90,6 @@ extern "C" {
     double *z = REAL(zStarting_r); 
     int thinIndx = 0;
     int sPost = 0;  
-    int currIndx = 0; 
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);

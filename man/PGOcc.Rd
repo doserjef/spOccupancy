@@ -87,7 +87,7 @@ PGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   Logistic Models Using Polya-Gamma Latent Variables. 
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
 
-  Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015).
+  Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
 

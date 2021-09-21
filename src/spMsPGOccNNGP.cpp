@@ -283,7 +283,7 @@ extern "C" {
     // For latent occupancy
     double psiNum; 
     double psiNew; 
-    double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
+    double *detProb = (double *) R_alloc(nObsN, sizeof(double)); 
     double *psi = (double *) R_alloc(JN, sizeof(double)); 
     zeros(psi, JN); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
@@ -752,11 +752,11 @@ extern "C" {
            *******************************************************************/
           // Compute detection probability 
           for (r = 0; r < nObs; r++) {
-            detProb[r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N), zero, one);
+            detProb[i * nObs + r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N), zero, one);
             if (tmp_J[zLongIndx[r]] == 0) {
               psi[zLongIndx[r] * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[r]], &J, &beta[i], &N) + w[zLongIndx[r] * N + i], zero, one); 
             }
-            piProd[zLongIndx[r]] *= (1.0 - detProb[r]);
+            piProd[zLongIndx[r]] *= (1.0 - detProb[i * nObs + r]);
             ySum[zLongIndx[r]] += y[r * N + i]; 	
             tmp_J[zLongIndx[r]]++;
           } // r
@@ -773,13 +773,6 @@ extern "C" {
             tmp_J[j] = 0; 
           } // j
 
-          /********************************************************************
-           *Replicate data set for GoF
-           *******************************************************************/
-          for (r = 0; r < nObs; r++) {
-            yRep[r * N + i] = rbinom(one, detProb[i] * z[zLongIndx[r] * N + i]);
-            INTEGER(yRepSamples_r)[s * nObsN + r * N + i] = yRep[r * N + i]; 
-          } // r
         } // i
 
         /********************************************************************
@@ -801,7 +794,7 @@ extern "C" {
 	    // Replicate data set for GoF
 	    for (i = 0; i < N; i++) {
               for (r = 0; r < nObs; r++) {
-                yRep[r * N + i] = rbinom(one, detProb[i] * z[zLongIndx[r] * N + i]);
+                yRep[r * N + i] = rbinom(one, detProb[i * nObs + r] * z[zLongIndx[r] * N + i]);
                 INTEGER(yRepSamples_r)[sPost * nObsN + r * N + i] = yRep[r * N + i]; 
               }
 	    }

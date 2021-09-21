@@ -113,6 +113,8 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     tmp <- parseFormula(det.formula, data$det.covs)
     X.p <- as.matrix(tmp[[1]])
     x.p.names <- tmp[[2]]
+    X.p.re <- as.matrix(tmp[[4]])
+    x.p.re.names <- colnames(X.p.re)
   } else {
     stop("error: det.formula is misspecified")
   }
@@ -124,6 +126,11 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   p.occ <- ncol(X)
   # Number of detection parameters
   p.det <- dim(X.p)[2]
+  # Number of detection random effect parameters
+  p.det.re <- ncol(X.p.re)
+  # Number of latent detection random effect values
+  n.det.re <- length(unlist(apply(X.p.re, 2, unique)))
+  n.det.re.long <- apply(X.p.re, 2, function(a) length(unique(a)))
   # Number of pseudoreplicates
   n.obs <- nrow(X.p)
   # Number of replicates at each site
@@ -153,8 +160,22 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   # there are missing detection-nondetection data. 
   if (nrow(X.p) == length(y)) {
     X.p <- X.p[!is.na(y), , drop = FALSE]  
+    X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
   }
   y <- y[!is.na(y)]
+
+  # Get random effect matrices all set ----------------------------------
+  if (p.det.re > 1) {
+    for (j in 2:p.det.re) {
+      X.p.re[, j] <- X.p.re[, j] + max(X.p.re[, j - 1]) + 1
+    }
+  }
+  lambda.p <- matrix(0, n.obs, n.det.re)
+  if (p.det.re > 0) {
+    for (i in 1:n.det.re) {
+      lambda.p[which(X.p.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
+    }
+  }
 
   # Starting values -----------------------------------------------------
   if (missing(starting)) {
@@ -258,6 +279,24 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
     }
   }
 
+  # sigma.sq.p ------------------
+  if (p.det.re > 0) {
+    if ("sigma.sq.p" %in% names(starting)) {
+      sigma.sq.p.starting <- starting[["sigma.sq.p"]]
+      if (length(sigma.sq.p.starting) != p.det.re) {
+        stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
+      	     sep = ""))
+      }
+    } else {
+      sigma.sq.p.starting <- rep(1, p.det.re)
+      if (verbose) {
+        message("sigma.sq.p is not specified in starting values. Setting starting value to 1\n")
+      }
+    }
+    alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
+    alpha.star.starting <- rnorm(n.det.re, sqrt(sigma.sq.p.starting[alpha.star.indx + 1]))
+  }
+
   # Priors --------------------------------------------------------------
   if (missing(priors)) {
     stop("error: prior list for the parameters must be specified")
@@ -340,6 +379,31 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
   } else {
     nu.a <- 0
     nu.b <- 0
+  }
+
+  # sigma.sq.p --------------------
+  if (p.det.re > 0) {
+    if ("sigma.sq.p.ig" %in% names(priors)) {
+      sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
+      sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
+      if (!is.list(priors$sigma.sq.p.ig) | length(priors$sigma.sq.p.ig) != 2) {
+        stop("error: sigma.sq.p.ig must be a list of length 2")
+      }
+      if (length(sigma.sq.p.a) != p.det.re) {
+        stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+        	   p.det.re, " with elements corresponding to sigma.sq.ps' shape", sep = ""))
+      }
+      if (length(sigma.sq.p.b) != p.det.re) {
+        stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+        	   p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
+      }
+  }   else {
+      if (verbose) {	    
+        message("No prior specified for sigma.sq.p.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
+      }
+      sigma.sq.p.a <- rep(0.1, p.det.re)
+      sigma.sq.p.b <- rep(0.1, p.det.re)
+    }
   }
 
   # Covariance Model ----------------------------------------------------
@@ -434,54 +498,127 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 				 by = as.integer(n.thin)))
     storage.mode(n.post.samples) <- "integer"
 
+    if (p.det.re > 0) {
+      ptm <- proc.time()
 
-    ptm <- proc.time()
+      storage.mode(p.det.re) <- "integer"
+      storage.mode(X.p.re) <- "integer"
+      storage.mode(n.det.re) <- "integer"
+      storage.mode(n.det.re.long) <- "integer"
+      storage.mode(sigma.sq.p.starting) <- "double"
+      storage.mode(sigma.sq.p.a) <- "double"
+      storage.mode(sigma.sq.p.b) <- "double"
+      storage.mode(alpha.star.starting) <- "double"
+      storage.mode(alpha.star.indx) <- "integer"
+      storage.mode(lambda.p) <- "double"
 
-    # Run the model in C    
-    out <- .Call("spPGOcc", y, X, X.p, coords.D, p.occ, p.det, J, K, 
-   	         beta.starting, alpha.starting, z.starting,
-   	         w.starting, phi.starting, sigma.sq.starting, nu.starting, z.long.indx, 
-   	         mu.beta, mu.alpha, 
-   	         Sigma.beta, Sigma.alpha, phi.a, phi.b, 
-   	         sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, cov.model.indx,
-   	         n.batch, batch.length, 
-   	         accept.rate, n.omp.threads, verbose, n.report, n.burn, n.thin, 
-		 n.post.samples)
+      # Run the model in C    
+      out <- .Call("spPGOccRE", y, X, X.p, coords.D, X.p.re, lambda.p, p.occ, p.det, 
+		   p.det.re, J, K, n.det.re, n.det.re.long, 
+                   beta.starting, alpha.starting, sigma.sq.p.starting, 
+		   alpha.star.starting, z.starting,
+                   w.starting, phi.starting, sigma.sq.starting, nu.starting, z.long.indx, 
+                   alpha.star.indx, mu.beta, mu.alpha, 
+                   Sigma.beta, Sigma.alpha, phi.a, phi.b, 
+                   sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.p.a, sigma.sq.p.b, 
+		   tuning.c, cov.model.indx,
+                   n.batch, batch.length, 
+                   accept.rate, n.omp.threads, verbose, n.report, n.burn, n.thin, 
+          	   n.post.samples)
 
-    out$run.time <- proc.time() - ptm
+      out$run.time <- proc.time() - ptm
 
-    out$beta.samples <- mcmc(t(out$beta.samples))
-    colnames(out$beta.samples) <- x.names
-    out$alpha.samples <- mcmc(t(out$alpha.samples))
-    colnames(out$alpha.samples) <- x.p.names
-    out$theta.samples <- mcmc(t(out$theta.samples))
-    if (cov.model != 'matern') {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi')
-    } else {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      out$beta.samples <- mcmc(t(out$beta.samples))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(t(out$alpha.samples))
+      colnames(out$alpha.samples) <- x.p.names
+      out$theta.samples <- mcmc(t(out$theta.samples))
+      if (cov.model != 'matern') {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi')
+      } else {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      }
+      out$z.samples <- mcmc(t(out$z.samples))
+      out$psi.samples <- mcmc(t(out$psi.samples))
+      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
+      tmp[names.long, ] <- out$y.rep.samples
+      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
+      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
+      out$sigma.sq.p.samples <- mcmc(t(out$sigma.sq.p.samples))
+      colnames(out$sigma.sq.p.samples) <- x.p.re.names
+      out$alpha.star.samples <- mcmc(t(out$alpha.star.samples))
+      tmp.names <- unlist(sapply(n.det.re.long, function(a) 1:a))
+      alpha.star.names <- paste(rep(x.p.re.names, n.det.re.long), tmp.names, sep = '-')
+      colnames(out$alpha.star.samples) <- alpha.star.names
+      out$w.samples <- mcmc(t(out$w.samples))
+      out$X <- X
+      out$X.p <- X.p
+      out$X.p.re <- X.p.re
+      out$lambda.p <- lambda.p
+      out$y <- y.big
+      out$call <- cl
+      out$n.samples <- batch.length * n.batch
+      out$cov.model.indx <- cov.model.indx
+      out$type <- "GP"
+      out$coords <- coords
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$pRE <- TRUE
+
+      class(out) <- "spPGOcc"
+
     }
-    out$z.samples <- mcmc(t(out$z.samples))
-    out$psi.samples <- mcmc(t(out$psi.samples))
-    tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-    tmp[names.long, ] <- out$y.rep.samples
-    out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
-    out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
-    out$w.samples <- mcmc(t(out$w.samples))
-    out$X <- X
-    out$X.p <- X.p
-    out$y <- y.big
-    out$call <- cl
-    out$n.samples <- batch.length * n.batch
-    out$cov.model.indx <- cov.model.indx
-    out$type <- "GP"
-    out$coords <- coords
-    out$n.post <- n.post.samples
-    out$n.thin <- n.thin
-    out$n.burn <- n.burn
 
-    class(out) <- "spPGOcc"
-    
-    out
+
+    if (p.det.re == 0) {   
+      ptm <- proc.time()
+
+      # Run the model in C    
+      out <- .Call("spPGOcc", y, X, X.p, coords.D, p.occ, p.det, J, K, 
+                   beta.starting, alpha.starting, z.starting,
+                   w.starting, phi.starting, sigma.sq.starting, nu.starting, z.long.indx, 
+                   mu.beta, mu.alpha, 
+                   Sigma.beta, Sigma.alpha, phi.a, phi.b, 
+                   sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, cov.model.indx,
+                   n.batch, batch.length, 
+                   accept.rate, n.omp.threads, verbose, n.report, n.burn, n.thin, 
+          	 n.post.samples)
+
+      out$run.time <- proc.time() - ptm
+
+      out$beta.samples <- mcmc(t(out$beta.samples))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(t(out$alpha.samples))
+      colnames(out$alpha.samples) <- x.p.names
+      out$theta.samples <- mcmc(t(out$theta.samples))
+      if (cov.model != 'matern') {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi')
+      } else {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      }
+      out$z.samples <- mcmc(t(out$z.samples))
+      out$psi.samples <- mcmc(t(out$psi.samples))
+      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
+      tmp[names.long, ] <- out$y.rep.samples
+      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
+      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
+      out$w.samples <- mcmc(t(out$w.samples))
+      out$X <- X
+      out$X.p <- X.p
+      out$y <- y.big
+      out$call <- cl
+      out$n.samples <- batch.length * n.batch
+      out$cov.model.indx <- cov.model.indx
+      out$type <- "GP"
+      out$coords <- coords
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$pRE <- FALSE
+
+      class(out) <- "spPGOcc"
+    }
   } else {
 
     # Nearest Neighbor Search ---------------------------------------------
@@ -573,63 +710,162 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, n.batch,
 				 by = as.integer(n.thin)))
     storage.mode(n.post.samples) <- "integer"
 
-    # Run the model in C --------------------------------------------------
-    ptm <- proc.time()
+    if (p.det.re > 0) {
 
-    out <- .Call("spPGOccNNGP", y, X, X.p, coords, p.occ, p.det, J, K, 
-		 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
-    	         beta.starting, alpha.starting, z.starting,
-    	         phi.starting, sigma.sq.starting, nu.starting, 
-		 z.long.indx, mu.beta, mu.alpha, 
-    	         Sigma.beta, Sigma.alpha, phi.a, phi.b, 
-    	         sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, 
-		 cov.model.indx, n.batch, batch.length, 
-    	         accept.rate, n.omp.threads, verbose, n.report, 
-		 n.burn, n.thin, n.post.samples)
+      # Run the model in C --------------------------------------------------
+      ptm <- proc.time()
 
-    out$run.time <- proc.time() - ptm
+      storage.mode(p.det.re) <- "integer"
+      storage.mode(X.p.re) <- "integer"
+      storage.mode(n.det.re) <- "integer"
+      storage.mode(n.det.re.long) <- "integer"
+      storage.mode(sigma.sq.p.starting) <- "double"
+      storage.mode(sigma.sq.p.a) <- "double"
+      storage.mode(sigma.sq.p.b) <- "double"
+      storage.mode(alpha.star.starting) <- "double"
+      storage.mode(alpha.star.indx) <- "integer"
+      storage.mode(lambda.p) <- "double"
 
-    # Get everything back in the original order
-    out$coords <- coords[order(ord), ]
-    out$z.samples <- mcmc(t(out$z.samples[order(ord), , drop = FALSE]))
-    out$X <- X[order(ord), , drop = FALSE]
-    out$w.samples <- mcmc(t(out$w.samples[order(ord), , drop = FALSE]))
-    out$psi.samples <- mcmc(t(out$psi.samples[order(ord), , drop = FALSE]))
-    tmp <- matrix(NA, J * K.max, p.det)
-    tmp[names.long, ] <- X.p
-    tmp <- array(tmp, dim = c(J, K.max, p.det))
-    tmp <- tmp[order(ord), , ]
-    out$X.p <- matrix(tmp, J * K.max, p.det)
-    out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
-    out$y <- y.big[order(ord), , drop = FALSE]
-    tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-    tmp[names.long, ] <- out$y.rep.samples
-    tmp <- array(tmp, dim = c(J, K.max, n.post.samples))
-    out$y.rep.samples <- tmp[order(ord), , ]
-    out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
+      out <- .Call("spPGOccNNGPRE", y, X, X.p, coords, X.p.re, lambda.p, 
+		   p.occ, p.det, p.det.re, J, K, n.det.re, n.det.re.long, 
+          	   n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
+      	           beta.starting, alpha.starting, sigma.sq.p.starting, 
+		   alpha.star.starting, z.starting,
+      	           phi.starting, sigma.sq.starting, nu.starting, 
+          	   z.long.indx, alpha.star.indx, mu.beta, mu.alpha, 
+      	           Sigma.beta, Sigma.alpha, phi.a, phi.b, 
+      	           sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.p.a, 
+		   sigma.sq.p.b, tuning.c, 
+          	   cov.model.indx, n.batch, batch.length, 
+      	           accept.rate, n.omp.threads, verbose, n.report, 
+          	   n.burn, n.thin, n.post.samples)
 
-    # Return all the other good stuff. 
-    out$beta.samples <- mcmc(t(out$beta.samples))
-    colnames(out$beta.samples) <- x.names
-    out$alpha.samples <- mcmc(t(out$alpha.samples))
-    colnames(out$alpha.samples) <- x.p.names
-    out$theta.samples <- mcmc(t(out$theta.samples))
-    if (cov.model != 'matern') {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi')
-    } else {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      out$run.time <- proc.time() - ptm
+
+      # Get everything back in the original order
+      out$coords <- coords[order(ord), ]
+      out$z.samples <- mcmc(t(out$z.samples[order(ord), , drop = FALSE]))
+      out$X <- X[order(ord), , drop = FALSE]
+      out$w.samples <- mcmc(t(out$w.samples[order(ord), , drop = FALSE]))
+      out$psi.samples <- mcmc(t(out$psi.samples[order(ord), , drop = FALSE]))
+      tmp <- matrix(NA, J * K.max, p.det)
+      tmp[names.long, ] <- X.p
+      tmp <- array(tmp, dim = c(J, K.max, p.det))
+      tmp <- tmp[order(ord), , ]
+      out$X.p <- matrix(tmp, J * K.max, p.det)
+      out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
+      tmp <- matrix(NA, J * K.max, p.det.re)
+      tmp[names.long, ] <- X.p.re
+      tmp <- array(tmp, dim = c(J, K.max, p.det.re))
+      tmp <- tmp[order(ord), , ]
+      out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
+      out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, ]
+      tmp <- matrix(NA, J * K.max, n.det.re)
+      tmp[names.long, ] <- lambda.p
+      tmp <- array(tmp, dim = c(J, K.max, n.det.re))
+      tmp <- tmp[order(ord), , ]
+      out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
+      out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, ]
+      out$y <- y.big[order(ord), , drop = FALSE]
+      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
+      tmp[names.long, ] <- out$y.rep.samples
+      tmp <- array(tmp, dim = c(J, K.max, n.post.samples))
+      out$y.rep.samples <- tmp[order(ord), , ]
+      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
+      out$sigma.sq.p.samples <- mcmc(t(out$sigma.sq.p.samples))
+      colnames(out$sigma.sq.p.samples) <- x.p.re.names
+      out$alpha.star.samples <- mcmc(t(out$alpha.star.samples))
+      tmp.names <- unlist(sapply(n.det.re.long, function(a) 1:a))
+      alpha.star.names <- paste(rep(x.p.re.names, n.det.re.long), tmp.names, sep = '-')
+      colnames(out$alpha.star.samples) <- alpha.star.names
+
+      # Return all the other good stuff. 
+      out$beta.samples <- mcmc(t(out$beta.samples))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(t(out$alpha.samples))
+      colnames(out$alpha.samples) <- x.p.names
+      out$theta.samples <- mcmc(t(out$theta.samples))
+      if (cov.model != 'matern') {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi')
+      } else {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      }
+      out$call <- cl
+      out$n.samples <- batch.length * n.batch
+      out$n.neighbors <- n.neighbors
+      out$cov.model.indx <- cov.model.indx
+      out$type <- "NNGP"
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$pRE <- TRUE
+
+      class(out) <- "spPGOcc"
+      
     }
-    out$call <- cl
-    out$n.samples <- batch.length * n.batch
-    out$n.neighbors <- n.neighbors
-    out$cov.model.indx <- cov.model.indx
-    out$type <- "NNGP"
-    out$n.post <- n.post.samples
-    out$n.thin <- n.thin
-    out$n.burn <- n.burn
 
-    class(out) <- "spPGOcc"
-    
-    out
+    if (p.det.re == 0) {
+
+      # Run the model in C --------------------------------------------------
+      ptm <- proc.time()
+
+      out <- .Call("spPGOccNNGP", y, X, X.p, coords, p.occ, p.det, J, K, 
+          	 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
+      	         beta.starting, alpha.starting, z.starting,
+      	         phi.starting, sigma.sq.starting, nu.starting, 
+          	 z.long.indx, mu.beta, mu.alpha, 
+      	         Sigma.beta, Sigma.alpha, phi.a, phi.b, 
+      	         sigma.sq.a, sigma.sq.b, nu.a, nu.b, tuning.c, 
+          	 cov.model.indx, n.batch, batch.length, 
+      	         accept.rate, n.omp.threads, verbose, n.report, 
+          	 n.burn, n.thin, n.post.samples)
+
+      out$run.time <- proc.time() - ptm
+
+      # Get everything back in the original order
+      out$coords <- coords[order(ord), ]
+      out$z.samples <- mcmc(t(out$z.samples[order(ord), , drop = FALSE]))
+      out$X <- X[order(ord), , drop = FALSE]
+      out$w.samples <- mcmc(t(out$w.samples[order(ord), , drop = FALSE]))
+      out$psi.samples <- mcmc(t(out$psi.samples[order(ord), , drop = FALSE]))
+      tmp <- matrix(NA, J * K.max, p.det)
+      tmp[names.long, ] <- X.p
+      tmp <- array(tmp, dim = c(J, K.max, p.det))
+      tmp <- tmp[order(ord), , ]
+      out$X.p <- matrix(tmp, J * K.max, p.det)
+      out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
+      out$y <- y.big[order(ord), , drop = FALSE]
+      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
+      tmp[names.long, ] <- out$y.rep.samples
+      tmp <- array(tmp, dim = c(J, K.max, n.post.samples))
+      out$y.rep.samples <- tmp[order(ord), , ]
+      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
+
+      # Return all the other good stuff. 
+      out$beta.samples <- mcmc(t(out$beta.samples))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(t(out$alpha.samples))
+      colnames(out$alpha.samples) <- x.p.names
+      out$theta.samples <- mcmc(t(out$theta.samples))
+      if (cov.model != 'matern') {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi')
+      } else {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      }
+      out$call <- cl
+      out$n.samples <- batch.length * n.batch
+      out$n.neighbors <- n.neighbors
+      out$cov.model.indx <- cov.model.indx
+      out$type <- "NNGP"
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$pRE <- FALSE
+
+      class(out) <- "spPGOcc"
+      
+    }
   }
+
+  return(out)
 }

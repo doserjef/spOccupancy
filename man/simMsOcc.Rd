@@ -7,8 +7,8 @@
 }
 
 \usage{
-simMsOcc(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = rep(2, N), 
-	 phi = rep(3/0.5, N), sp = FALSE)
+simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
+	 p.RE = list(), sigma.sq = rep(2, N), phi = rep(3/0.5, N), sp = FALSE)
 }
 
 \arguments{
@@ -24,6 +24,10 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = rep(2, N),
 \item{beta}{a numeric matrix with \eqn{N}{N} rows containing the intercept and regression coefficient parameters for the occupancy portion of the multispecies occupancy model. Each row corresponds to the regression coefficients for a given species.} 
 
 \item{alpha}{a numeric matrix with \eqn{N}{N} rows containing the intercept and regression coefficient parameters for the detection portion of the multispecies occupancy model. Each row corresponds to the regression coefficients for a given species.}
+
+\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the occupancy portion of the model.}
+
+\item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
 \item{sigma.sq}{a numeric vector of length \eqn{N}{N} containing the spatial variance parameter for each species. Ignored when \code{sp = FALSE}. }
 
@@ -49,6 +53,10 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, sigma.sq = rep(2, N),
   \item{z}{a \eqn{N \times J}{N x J} matrix of the latent occupancy states for each species at each site.}
   \item{p}{a \code{N x J x max(n.rep)} array of the detection probabilities for each species at each site site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
   \item{y}{a \code{N x J x max(n.rep)} array of the raw detection-nondetection data for each species at each site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
+  \item{X.p.re}{a three-dimensional numeric array containing the levels of any detection random effect included in the model. Only relevant when detection random effects are specified in \code{p.RE}.}
+  \item{X.lambda.re}{a numeric matrix containing the levels of any occurrence random effect included in the model. Only relevant when occurrence random effects are specified in \code{psi.RE}.}
+  \item{alpha.star}{a numeric matrix where each row contains the simulated detection random effects for each given level of the random effects included in the detection model. Only relevant when detection random effects are included in the model.}
+  \item{beta.star}{a numeric matrix where each row contains the simulated occurrence random effects for each given level of the random effects included in the occurrence model. Only relevant when occurrence random effects are included in the model.}
 
 
 }
@@ -68,6 +76,10 @@ tau.sq.beta <- c(0.6, 0.3)
 alpha.mean <- c(0.5, 0.2)
 tau.sq.alpha <- c(0.2, 0.3)
 p.det <- length(alpha.mean)
+psi.RE <- list(levels = c(10), 
+	       sigma.sq.psi = c(1.5))
+p.RE <- list(levels = c(15), 
+	     sigma.sq.p = 0.8)
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
@@ -82,6 +94,7 @@ phi <- runif(N, 3/1, 3/.1)
 sigma.sq <- runif(N, 0.3, 3)
 sp <- TRUE
 
-dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		phi = phi, sigma.sq = sigma.sq, sp = sp)
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, 
+		alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, phi = phi, 
+		sigma.sq = sigma.sq, sp = sp)
 }

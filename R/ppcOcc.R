@@ -137,8 +137,17 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     n.samples <- object$n.post
     det.prob <- array(NA, dim = c(n.samples, N, nrow(X.p)))
     sp.indx <- rep(1:N, ncol(X.p))
-    for (i in 1:N) {
-      det.prob[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    if (object$pRE) {
+      sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+      lambda.p <- object$lambda.p
+      for (i in 1:N) {
+        det.prob[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
+  					   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
+      }
+    } else {
+      for (i in 1:N) {
+        det.prob[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+      }
     }
     det.prob <- array(det.prob, dim(y.rep.samples))
     fit.y <- matrix(NA, n.samples, N)
