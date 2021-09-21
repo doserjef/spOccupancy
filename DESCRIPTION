@@ -15,5 +15,5 @@ BugReports: https://github.com/doserjef/spOccupancy/issues
 Imports: 
     stats, coda, abind, RANN, lme4
 Suggests: 
-    rmarkdown, knitr, raster, sp, bookdown
+    rmarkdown, knitr, stars, ggplot2, bookdown
 VignetteBuilder: knitr

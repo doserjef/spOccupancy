@@ -94,13 +94,13 @@ summary.PGOcc <- function(object,
   cat(paste("Thin: ",n.thin,"\n", sep=""))
   cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
   
-  # Occupancy
-  cat("Occupancy: \n")
+  # Occurrence
+  cat("Occurrence: \n")
   print(noquote(round(t(apply(object$beta.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
   if (object$psiRE) {
     cat("\n")
-    cat("Occupancy Random Effect Variances: \n")
+    cat("Occurrence Random Effect Variances: \n")
     print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
 			        function(x) quantile(x, prob=quantiles))), digits)))
   }
@@ -367,8 +367,8 @@ summary.spPGOcc <- function(object,
   cat(paste("Thin: ",n.thin,"\n", sep=""))
   cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
   
-  # Occupancy
-  cat("Occupancy: \n")
+  # Occurrence
+  cat("Occurrence: \n")
   print(noquote(round(t(apply(object$beta.samples, 2, 
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
@@ -512,16 +512,16 @@ summary.msPGOcc <- function(object,
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
-    # Occupancy
-    cat("Occupancy Means: \n")
+    # Occurrence
+    cat("Occurrence Means: \n")
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccupancy Variances: \n")
+    cat("\nOccurrence Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$psiRE) {
       cat("\n")
-      cat("Occupancy Random Effect Variances: \n")
+      cat("Occurrence Random Effect Variances: \n")
       print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
           		        function(x) quantile(x, prob=quantiles))), digits)))
     }
@@ -546,7 +546,7 @@ summary.msPGOcc <- function(object,
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occupancy: \n")
+    cat("Occurrence: \n")
     print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -563,16 +563,16 @@ summary.msPGOcc <- function(object,
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
-    # Occupancy
-    cat("Occupancy Means: \n")
+    # Occurrence
+    cat("Occurrence Means: \n")
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccupancy Variances: \n")
+    cat("\nOccurrence Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$psiRE) {
       cat("\n")
-      cat("Occupancy Random Effect Variances: \n")
+      cat("Occurrence Random Effect Variances: \n")
       print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
           		        function(x) quantile(x, prob=quantiles))), digits)))
     }
@@ -595,7 +595,7 @@ summary.msPGOcc <- function(object,
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occupancy: \n")
+    cat("Occurrence: \n")
     print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -640,11 +640,11 @@ summary.spMsPGOcc <- function(object,
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
-    # Occupancy
-    cat("Occupancy Means: \n")
+    # Occurrence
+    cat("Occurrence Means: \n")
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccupancy Variances: \n")
+    cat("\nOccurrence Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -668,7 +668,7 @@ summary.spMsPGOcc <- function(object,
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occupancy: \n")
+    cat("Occurrence: \n")
     print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -691,11 +691,11 @@ summary.spMsPGOcc <- function(object,
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
-    # Occupancy
-    cat("Occupancy Means: \n")
+    # Occurrence
+    cat("Occurrence Means: \n")
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccupancy Variances: \n")
+    cat("\nOccurrence Variances: \n")
     print(noquote(round(t(apply(object$tau.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -716,7 +716,7 @@ summary.spMsPGOcc <- function(object,
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occupancy: \n")
+    cat("Occurrence: \n")
     print(noquote(round(t(apply(object$beta.samples, 2,
   			      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
@@ -981,8 +981,8 @@ summary.intPGOcc <- function(object,
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  # Occupancy
-  cat("Occupancy: \n")
+  # Occurrence
+  cat("Occurrence: \n")
   print(noquote(round(t(apply(object$beta.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")
@@ -1026,8 +1026,8 @@ summary.spIntPGOcc <- function(object,
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  # Occupancy
-  cat("Occupancy: \n")
+  # Occurrence
+  cat("Occurrence: \n")
   print(noquote(round(t(apply(object$beta.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
   cat("\n")

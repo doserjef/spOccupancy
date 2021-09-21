@@ -938,6 +938,17 @@ extern "C" {
       status++;        
 
     } // all batches
+    if (verbose) {
+      Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
+      Rprintf("\tparameter\tacceptance\ttuning\n");	  
+      for (i = 0; i < N; i++) {
+        Rprintf("\tphi[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
+        if (corName == "matern") {
+          Rprintf("\tnu[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[nuIndx * N + i]));
+          Rprintf("-------------------------------------------------\n");
+        }
+      } // i
+    }
   
     // This is necessary when generating random numbers in C.     
     PutRNGstate();

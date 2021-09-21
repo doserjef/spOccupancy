@@ -415,6 +415,9 @@ extern "C" {
 
 
     }
+    if (verbose) {
+      Rprintf("Sampled: %i of %i, %3.2f%%\n", s, nSamples, 100.0*s/nSamples);
+    }
     // This is necessary when generating random numbers in C.     
     PutRNGstate();
 

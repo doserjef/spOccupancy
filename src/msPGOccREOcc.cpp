@@ -581,6 +581,9 @@ extern "C" {
       R_CheckUserInterrupt();
 
     }
+    if (verbose) {
+      Rprintf("Sampled: %i of %i, %3.2f%%\n", s, nSamples, 100.0*s/nSamples);
+    }
     PutRNGstate();
 
     SEXP result_r, resultName_r;
