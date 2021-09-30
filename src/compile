@@ -1,3 +1,0 @@
-#!/bin/bash
-
-R CMD SHLIB -o $1.so $1.cpp rpg.cpp util.cpp nn.cpp

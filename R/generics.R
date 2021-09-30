@@ -485,8 +485,8 @@ print.msPGOcc <- function(x, ...) {
 }
 
 summary.msPGOcc <- function(object,
-			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			    level,
+			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			    digits = max(3L, getOption("digits") - 3L), ...) {
 
   if (missing(level)) {
@@ -613,8 +613,8 @@ fitted.msPGOcc <- function(object, ...) {
 
 # spMsPGOcc ---------------------------------------------------------------
 summary.spMsPGOcc <- function(object, 
-			      quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			      level,
+			      quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
 			      digits = max(3L, getOption("digits") - 3L), ...) {
 
   if (missing(level)) {
