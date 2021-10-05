@@ -92,17 +92,17 @@ prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ),
 					   var = rep(2.72, p.occ)), 
 		   alpha.comm.normal = list(mean = rep(0, p.det), 
 					    var = rep(2.72, p.det)), 
-		   tau.beta.ig = list(a = rep(0.1, p.occ), 
+		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
 					  b = rep(0.1, p.occ)), 
-		   tau.alpha.ig = list(a = rep(0.1, p.det), 
+		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
 					   b = rep(0.1, p.det)))
 # Starting values
 starting.list <- list(alpha.comm = rep(0, p.det), 
 		      beta.comm = rep(0, p.occ), 
 		      beta = matrix(0, N, p.occ), 
 		      alpha = matrix(0, N, p.det),
-		      tau.beta = rep(1, p.occ), 
-		      tau.alpha = rep(1, p.det), 
+		      tau.sq.beta = rep(1, p.occ), 
+		      tau.sq.alpha = rep(1, p.det), 
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 out <- msPGOcc(occ.formula = ~ occ.cov, 

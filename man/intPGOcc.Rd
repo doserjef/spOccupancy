@@ -8,7 +8,7 @@ Function for fitting single species integrated occupancy models using Polya-Gamm
 }
 
 \usage{
-intPGOcc(occ.formula, det.formula, data, starting, n.samples, priors, 
+intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples, 
 	 n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
 	 n.burn = round(.10 * n.samples), n.thin = 1, ...
 )
@@ -50,8 +50,6 @@ intPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   parameters for each data source. Each element of the list should be a vector of 
   starting values for all detection parameters in the given data source.}
 
-  \item{n.samples}{the number of posterior samples to collect.}
- 
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal} and \code{alpha.normal}. Occupancy 
     (\code{beta}) and detection (\code{alpha}) regression coefficients 
@@ -65,6 +63,8 @@ intPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
     of the list corresponding to the specific hyperparameters for the 
     detection parameters in a given data source. If not specified, prior means 
     are set to 0 and prior variances set to 2.73.}
+  
+  \item{n.samples}{the number of posterior samples to collect.}
 
   \item{n.omp.threads}{a positive integer indicating the number of threads
     to use for SMP parallel processing. The package must be compiled for 

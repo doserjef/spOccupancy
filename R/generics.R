@@ -288,8 +288,8 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 
     out <- .Call("spPGOccPredict", J, p.occ, X.0, q, obs.D, 
 		 obs.pred.D, beta.samples, theta.samples, 
-		 w.samples, n.samples, cov.model.indx, verbose, 
-		 n.omp.threads, n.report)
+		 w.samples, n.samples, cov.model.indx, n.omp.threads, 
+		 verbose, n.report)
 
     out$z.0.samples <- mcmc(t(out$z.0.samples))
     out$w.0.samples <- mcmc(t(out$w.0.samples))  
@@ -517,7 +517,7 @@ summary.msPGOcc <- function(object,
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$psiRE) {
       cat("\n")
@@ -531,7 +531,7 @@ summary.msPGOcc <- function(object,
     print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$pRE) {
       cat("\n")
@@ -568,7 +568,7 @@ summary.msPGOcc <- function(object,
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$psiRE) {
       cat("\n")
@@ -582,7 +582,7 @@ summary.msPGOcc <- function(object,
     print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$pRE) {
       cat("\n")
@@ -645,7 +645,7 @@ summary.spMsPGOcc <- function(object,
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
@@ -653,7 +653,7 @@ summary.spMsPGOcc <- function(object,
     print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$pRE) {
       cat("\n")
@@ -696,7 +696,7 @@ summary.spMsPGOcc <- function(object,
     print(noquote(round(t(apply(object$beta.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.beta.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\n")
     # Detection
@@ -704,7 +704,7 @@ summary.spMsPGOcc <- function(object,
     print(noquote(round(t(apply(object$alpha.comm.samples, 2,
           		      function(x) quantile(x, prob=quantiles))), digits)))
     cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.alpha.samples, 2,
+    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
 			      function(x) quantile(x, prob=quantiles))), digits)))
     if (object$pRE) {
       cat("\n")

@@ -7,13 +7,14 @@
 }
 
 \usage{
-spPGOcc(occ.formula, det.formula, data, starting, n.batch, 
-	batch.length, accept.rate = 0.43, priors, 
-	cov.model = "exponential", tuning, n.omp.threads = 1, 
-	verbose = TRUE, NNGP = TRUE, n.neighbors = 15, 
-	search.type = "cb", n.report = 100, 
+spPGOcc(occ.formula, det.formula, data, starting, priors, 
+	tuning, cov.model = "exponential", NNGP = TRUE, 
+	n.neighbors = 15, search.type = "cb", n.batch,
+	batch.length, accept.rate = 0.43, 
+	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 	n.burn = round(.10 * n.batch * batch.length), 
-	n.thin = 1, ...)
+	n.thin = 1, k.fold, k.fold.threads = 1, 
+	k.fold.seed = 100, ...)
 }
 
 \arguments{
@@ -48,15 +49,6 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
     \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
     \code{cov.model = "matern"}. The value portion of each tag is the 
     parameter's starting value.}
- 
-  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
-    sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
-    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
-    0.43. See Roberts and Rosenthal (2009) for details.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
@@ -89,17 +81,6 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
     tag defines the initial variance of the Adaptive sampler. See
     Roberts and Rosenthal (2009) for details.}
   
-  \item{n.omp.threads}{a positive integer indicating
-   the number of threads to use for SMP parallel processing. The package must
-   be compiled for OpenMP support. For most Intel-based machines, we
-   recommend setting \code{n.omp.threads} up to the number of
-   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
-   work on some systems.}
- 
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
-  
   \item{NNGP}{if \code{TRUE}, model is fit with an NNGP. If \code{FALSE}, 
     a full Gaussian process is used. See Datta et al. (2016) and 
     Finley et al. (2019) for more information.}
@@ -118,6 +99,26 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
  
+  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
+    sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
+    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
+    0.43. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{n.omp.threads}{a positive integer indicating
+   the number of threads to use for SMP parallel processing. The package must
+   be compiled for OpenMP support. For most Intel-based machines, we
+   recommend setting \code{n.omp.threads} up to the number of
+   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
+   work on some systems.}
+ 
+  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
+    is printed on the screen. Otherwise, only messages in data preparation
+    phase are printed.}
+ 
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
 
@@ -127,6 +128,26 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
   \item{n.thin}{the thinning interval for collection of MCMC samples. The
     thinning occurs after the \code{n.burn} samples are discarded. Default 
     value is set to 1.}
+
+  \item{k.fold}{specifies the number of \emph{k} folds for cross-validation. 
+    If not specified as an argument, then cross-validation is not performed
+    and \code{k.fold.threads} and \code{k.fold.seed} are ignored. In \emph{k}-fold
+    cross-validation, the data specified in \code{data} is randomly
+    partitioned into \emph{k} equal sized subsamples. Of the \emph{k} subsamples, 
+    \emph{k} - 1 subsamples are used to fit the model and the remaining \emph{k}
+    samples are used for prediction. The cross-validation process is repeated 
+    \emph{k} times (the folds). As a scoring rule, we use the model deviance 
+    as described in Hooten and Hobbs (2015). Cross-validation is performed
+    after the full model is fit using all the data. Cross-validation results
+    are reported in the \code{k.fold.deviance} object in the return list.}
+  
+  \item{k.fold.threads}{number of threads to use for cross-validation. If 
+    \code{k.fold.threads > 1} parallel processing is accomplished using the 
+    \pkg{foreach} and \pkg{doParallel} packages. Ignored if \code{k.fold}
+    is not specified.} 
+  
+  \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
+  for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
   
   \item{...}{currently no additional arguments}
 }
@@ -152,6 +173,9 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+
+  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
+  selection for ecologists. Ecological monographs, 85(1), 3-28.
 
 }
 
@@ -193,9 +217,10 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
-  \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}. 
-    This time does not include nearest neighbor search time for building
-    the neighbor set when \code{NNGP = TRUE}.}
+  \item{run.time}{execution time reported using \code{proc.time()}.}
+
+  \item{k.fold.deviance}{soring rule (deviance) from k-fold cross-validation. 
+    Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. 

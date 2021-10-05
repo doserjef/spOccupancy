@@ -8,7 +8,7 @@ Function for fitting multi-species occupancy models using Polya-Gamma latent var
 }
 
 \usage{
-msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors, 
+msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 	n.burn = round(.10 * n.samples), n.thin = 1, ...)
 }
@@ -42,14 +42,12 @@ msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
 
 \item{starting}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-  \code{alpha}, \code{tau.beta}, \code{tau.alpha}, \code{z}. 
+  \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}. 
   The value portion of each tag is the parameter's starting value.}
-
-\item{n.samples}{the number of posterior samples to collect.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.beta.ig}, and \code{tau.alpha.ig}. Community-level occupancy 
+  \code{tau.sq.beta.ig}, and \code{tau.sq.alpha.ig}. Community-level occupancy 
   (\code{beta.comm}) and detection (\code{alpha.comm}) regression coefficients 
   are assumed to follow a normal distribution. The hyperparameters of the 
   normal distribution are passed as a list of length two with the first
@@ -57,13 +55,15 @@ msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   distribution, which are each specified as vectors of 
   length equal to the number of coefficients to be estimated. If not
   specified, prior means are set to 0 and prior variances set to 2.73. 
-  Community-level variance parameters for occupancy (\code{tau.beta}) and
-  detection (\code{tau.alpha}) are assumed to follow an inverse Gamma 
+  Community-level variance parameters for occupancy (\code{tau.sq.beta}) and
+  detection (\code{tau.sq.alpha}) are assumed to follow an inverse Gamma 
   distribution. The hyperparameters of the inverse gamma distribution are 
   passed as a list of length two with the first and second elements 
   corresponding to the shape and scale parameters, which are each specified
   as vectors of length equal to the number of coefficients to be estimated. 
   If not specified, prior shape and scale parameters are set to 0.1.}
+
+\item{n.samples}{the number of posterior samples to collect.}
 
 \item{n.omp.threads}{a positive integer indicating the number of threads
   to use for SMP parallel processing. The package must be compiled for 
@@ -115,10 +115,10 @@ msPGOcc(occ.formula, det.formula, data, starting, n.samples, priors,
   \item{alpha.comm.samples}{a \code{coda} object of posterior samples
     for the community level detection regression coefficients.}
 
-  \item{tau.beta.samples}{a \code{coda} object of posterior samples
+  \item{tau.sq.beta.samples}{a \code{coda} object of posterior samples
     for the occupancy community variance parameters.}
 
-  \item{tau.alpha.samples}{a \code{coda} object of posterior samples
+  \item{tau.sq.alpha.samples}{a \code{coda} object of posterior samples
     for the detection community variance parameters.}
 
   \item{beta.samples}{a \code{coda} object of posterior samples
@@ -211,17 +211,17 @@ prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ),
 					   var = rep(2.72, p.occ)), 
 		   alpha.comm.normal = list(mean = rep(0, p.det), 
 					    var = rep(2.72, p.det)), 
-		   tau.beta.ig = list(a = rep(0.1, p.occ), 
+		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
 					  b = rep(0.1, p.occ)), 
-		   tau.alpha.ig = list(a = rep(0.1, p.det), 
+		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
 					   b = rep(0.1, p.det)))
 # Starting values
 starting.list <- list(alpha.comm = rep(0, p.det), 
 		      beta.comm = rep(0, p.occ), 
 		      beta = matrix(0, N, p.occ), 
 		      alpha = matrix(0, N, p.det),
-		      tau.beta = rep(1, p.occ), 
-		      tau.alpha = rep(1, p.det), 
+		      tau.sq.beta = rep(1, p.occ), 
+		      tau.sq.alpha = rep(1, p.det), 
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 5000

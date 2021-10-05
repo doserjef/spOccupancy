@@ -7,11 +7,11 @@
 }
 
 \usage{
-spMsPGOcc(occ.formula, det.formula, data, starting, n.batch, 
-	  batch.length, accept.rate = 0.43, priors, 
-	  cov.model = "exponential", tuning, n.omp.threads = 1, 
-	  verbose = TRUE, NNGP = TRUE, n.neighbors = 15, 
-	  search.type = "cb", n.report = 100, 
+spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning, 
+	  cov.model = 'exponential', NNGP = TRUE, 
+	  n.neighbors = 15, search.type = 'cb', n.batch, 
+	  batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+	  verbose = TRUE, n.report = 100, 
 	  n.burn = round(.10 * n.batch * batch.length), n.thin = 1, ...)
 }
 
@@ -44,23 +44,14 @@ spMsPGOcc(occ.formula, det.formula, data, starting, n.batch,
 
   \item{starting}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-    \code{alpha}, \code{tau.beta}, \code{tau.alpha}, \code{z}, \code{sigma.sq}, 
+    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, \code{sigma.sq}, 
     \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
     \code{cov.model = "matern"}. The value portion of each tag is 
     the parameter's starting value.}
 
-  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
-    sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
-    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
-    0.43. See Roberts and Rosenthal (2009) for details.}
-  
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.beta.ig}, \code{tau.alpha.ig}, \code{phi.unif}, \code{sigma.sq.ig}, 
+  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, \code{sigma.sq.ig}, 
   and \code{nu.unif}. Community-level occupancy (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
@@ -69,7 +60,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, n.batch,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated. If not specified, prior means are set 
   to 0 and prior variances set to 2.73. Community-level variance parameters 
-  for occupancy (\code{tau.beta}) and detection (\code{tau.alpha}) are 
+  for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
   assumed to follow an inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
   the first and second elements corresponding to the shape and scale parameters,
@@ -85,29 +76,18 @@ spMsPGOcc(occ.formula, det.formula, data, starting, n.batch,
   with both elements being vectors of length N corresponding to the lower and 
   upper support, respectively.}
 
-  \item{cov.model}{a quoted keyword that specifies the covariance
-    function used to model the spatial dependence structure among the
-    observations.  Supported covariance model key words are:
-    \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and
-    \code{"gaussian"}.}
-  
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each
     tag defines the initial variance of the adaptive sampler. We assume the 
     initial variance of the adaptive sampler is the same for each species, 
     although the adaptive sampler will adjust the tuning variances separately
     for each species. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{n.omp.threads}{a positive integer indicating
-   the number of threads to use for SMP parallel processing. The package must
-   be compiled for OpenMP support. For most Intel-based machines, we
-   recommend setting \code{n.omp.threads} up to the number of
-   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
-   work on some systems.}
- 
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
+
+  \item{cov.model}{a quoted keyword that specifies the covariance
+    function used to model the spatial dependence structure among the
+    observations.  Supported covariance model key words are:
+    \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and
+    \code{"gaussian"}.}
   
   \item{NNGP}{if \code{TRUE}, model is fit with an NNGP. If \code{FALSE}, 
     a full Gaussian process is used. See Datta et al. (2016) and 
@@ -126,6 +106,26 @@ spMsPGOcc(occ.formula, det.formula, data, starting, n.batch,
     for nearest neighbor ordering, then \code{"cb"} and \code{"brute"} 
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
+
+  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
+    sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
+    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
+    0.43. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{n.omp.threads}{a positive integer indicating
+   the number of threads to use for SMP parallel processing. The package must
+   be compiled for OpenMP support. For most Intel-based machines, we
+   recommend setting \code{n.omp.threads} up to the number of
+   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
+   work on some systems.}
+ 
+  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
+    is printed on the screen. Otherwise, only messages in data preparation
+    phase are printed.}
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
@@ -185,10 +185,10 @@ spMsPGOcc(occ.formula, det.formula, data, starting, n.batch,
   \item{alpha.comm.samples}{a \code{coda} object of posterior samples
     for the community level detection regression coefficients.}
 
-  \item{tau.beta.samples}{a \code{coda} object of posterior samples
+  \item{tau.sq.beta.samples}{a \code{coda} object of posterior samples
     for the occupancy community variance parameters.}
 
-  \item{tau.alpha.samples}{a \code{coda} object of posterior samples
+  \item{tau.sq.alpha.samples}{a \code{coda} object of posterior samples
     for the detection community variance parameters.}
 
   \item{beta.samples}{a \code{coda} object of posterior samples
@@ -289,9 +289,9 @@ prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ),
 					   var = rep(2.72, p.occ)), 
 		   alpha.comm.normal = list(mean = rep(0, p.det), 
 					    var = rep(2.72, p.det)), 
-		   tau.beta.ig = list(a = rep(0.1, p.occ), 
+		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
 					  b = rep(0.1, p.occ)), 
-		   tau.alpha.ig = list(a = rep(0.1, p.det), 
+		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
 					   b = rep(0.1, p.det)), 
 		   phi.unif = list(a = rep(3/1, N), 
 				   b = rep(3/.1, N)), 
@@ -304,8 +304,8 @@ starting.list <- list(alpha.comm = rep(0, p.det),
 		      beta.comm = rep(0, p.occ), 
 		      beta = matrix(0, N, p.occ), 
 		      alpha = matrix(0, N, p.det),
-		      tau.beta = rep(1, p.occ), 
-		      tau.alpha = rep(1, p.det), 
+		      tau.sq.beta = rep(1, p.occ), 
+		      tau.sq.alpha = rep(1, p.det), 
 		      phi = rep(3 / .5, N), 
 		      sigma.sq = rep(2, N),
 		      nu = rep(1, N), 

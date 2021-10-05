@@ -302,7 +302,7 @@ where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$,
 (\#eq:msBeta)
 \end{equation}
 
-where $\bm{\bar{\beta}}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
+where $\bm{\bar{\beta}}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
 
 We do not directly observe $z_{i, j}$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
 
@@ -321,13 +321,13 @@ where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ duri
 (\#eq:msAlpha)
 \end{equation}
 
-where $\bm{\bar{\alpha}}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
+where $\bm{\bar{\alpha}}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
 
-We assign multivariate normal priors for the community level occurrence ($\bm{bar{\beta}}$) and detection ($\bm{\bar{\beta}}$) means, and assign indepdent inverse-Gamma priors on the community level occurrence ($\tau_{\beta}$) and detection ($\tau_{\alpha}$) variance parameters. Analogous to the single species occupancy model, we implement the model using Polya-Gamma data augmentation which induces fully Gibbs updates for all parameters. We specify Polya-Gamma data augmented variables for each species ($\omega_{i, j, \beta}$, $\omega_{i, j, k, \alpha}$, which follow the same scheme as that for the single species model in Equation \@ref(eq:polyaGamma), except all parameters in the equation are now indexed by $i$ for each species. The full joint posterior distribution thus takes the following form: 
+We assign multivariate normal priors for the community level occurrence ($\bm{bar{\beta}}$) and detection ($\bm{\bar{\beta}}$) means, and assign indepdent inverse-Gamma priors on the community level occurrence ($\tau^2_{\beta}$) and detection ($\tau^2_{\alpha}$) variance parameters. Analogous to the single species occupancy model, we implement the model using Polya-Gamma data augmentation which induces fully Gibbs updates for all parameters. We specify Polya-Gamma data augmented variables for each species ($\omega_{i, j, \beta}$, $\omega_{i, j, k, \alpha}$, which follow the same scheme as that for the single species model in Equation \@ref(eq:polyaGamma), except all parameters in the equation are now indexed by $i$ for each species. The full joint posterior distribution thus takes the following form: 
 
 $$
 \begin{aligned}
-\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha}, \bm{\mu}_{\beta}, \bm{\mu}_{\alpha}, \bm{\tau}_{\beta}, \bm{\tau}_{\alpha} \mid \bm{y} \rbrack \propto \prod_{i = 1}^N \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{i, j, k} \mid p_{i, j, k}z_{i, j}) \times \\
+\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha}, \bm{\mu}_{\beta}, \bm{\mu}_{\alpha}, \bm{\tau}^2_{\beta}, \bm{\tau}^2_{\alpha} \mid \bm{y} \rbrack \propto \prod_{i = 1}^N \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{i, j, k} \mid p_{i, j, k}z_{i, j}) \times \\
 & \text{Bernoulli}(z_{i, j} \mid \psi_{i, j}) \times \\
 & \text{PG}(\omega_{i, j, \beta} \mid 1, 0) \times \\
 & \text{PG}(\omega_{i, j, k, \alpha} \mid 1, 0) \times \\
@@ -335,8 +335,8 @@ $$
 & \text{Normal}(\bm{\alpha} \mid \bm{\bar{\alpha}}, \bm{T}_{\alpha}) \\
 & \text{Normal}(\bm{\bar{\beta}} \mid \bm{\mu}_{\beta}, \bm{\Sigma}_{\beta}) \\
 & \text{Normal}(\bm{\bar{\alpha}} \mid \bm{\mu}_{\alpha}, \bm{\Sigma}_{\alpha}) \\
-& \prod_{r = 1}^{n_{\beta}} \text{IG}(\tau_{r, \beta} \mid a_{r, \beta}, b_{r, \beta}) \\
-& \prod_{t = 1}^{n_{\alpha}} \text{IG}(\tau_{t, \alpha} \mid a_{t, \alpha}, b_{t, \alpha}),
+& \prod_{r = 1}^{n_{\beta}} \text{IG}(\tau^2_{r, \beta} \mid a_{r, \beta}, b_{r, \beta}) \\
+& \prod_{t = 1}^{n_{\alpha}} \text{IG}(\tau^2_{t, \alpha} \mid a_{t, \alpha}, b_{t, \alpha}),
 \end{aligned}
 $$
 
@@ -359,17 +359,17 @@ Similarly, we next sample the community level regression coefficients $\bm{\bar{
 (\#eq:alphaBar)
 \end{equation}
 
-Next, we sample the community level occurrence variance parameter for each regression coefficient, $\tau_{r, \beta}$, from the following inverse-Gamma full conditional:
+Next, we sample the community level occurrence variance parameter for each regression coefficient, $\tau^2_{r, \beta}$, from the following inverse-Gamma full conditional:
 
 \begin{equation}
-\tau_{r, \beta} \mid \cdot \sim \text{IG}(a_{r, \beta} + \frac{N}{2}, a_{r, \beta} + \frac{\sum_{i = 1}^N(\beta_{i, r} - \bar{\beta}_r)^2}{2}).
+\tau^2_{r, \beta} \mid \cdot \sim \text{IG}(a_{r, \beta} + \frac{N}{2}, a_{r, \beta} + \frac{\sum_{i = 1}^N(\beta_{i, r} - \bar{\beta}_r)^2}{2}).
 (\#eq:tauBeta)
 \end{equation}
 
 Similarly, we next sample the community level detection variance parameter for each regression coefficient: 
 
 \begin{equation}
-\tau_{t, \alpha} \mid \cdot \sim \text{IG}(a_{t, \alpha} + \frac{N}{2}, a_{t, \alpha} + \frac{\sum_{i = 1}^N(\alpha_{i, t} - \bar{\alpha}_t)^2}{2}).
+\tau^2_{t, \alpha} \mid \cdot \sim \text{IG}(a_{t, \alpha} + \frac{N}{2}, a_{t, \alpha} + \frac{\sum_{i = 1}^N(\alpha_{i, t} - \bar{\alpha}_t)^2}{2}).
 (\#eq:tauAlpha)
 \end{equation}
 
@@ -453,7 +453,7 @@ Following standard recommendations for point-referenced spatial data [@banerjee2
 
 $$
 \begin{aligned}
-\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha}, \bm{\mu}_{\beta}, \bm{\mu}_{\alpha}, \bm{\tau}_{\beta}, \bm{\tau}_{\alpha} \mid \bm{y} \rbrack \propto \prod_{i = 1}^N \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{i, j, k} \mid p_{i, j, k}z_{i, j}) \times \\
+\lbrack \bm{\alpha}, \bm{\beta}, \bm{z}, \bm{\omega}_{\beta}, \bm{\omega}_{\alpha}, \bm{\mu}_{\beta}, \bm{\mu}_{\alpha}, \bm{\tau}^2_{\beta}, \bm{\tau}^2_{\alpha} \mid \bm{y} \rbrack \propto \prod_{i = 1}^N \prod_{j = 1}^J \prod_{k = 1}^{K_j} &\text{Bernoulli}(y_{i, j, k} \mid p_{i, j, k}z_{i, j}) \times \\
 & \text{Bernoulli}(z_{i, j} \mid \psi_{i, j}) \times \\
 & \text{PG}(\omega_{i, j, \beta} \mid 1, 0) \times \\
 & \text{PG}(\omega_{i, j, k, \alpha} \mid 1, 0) \times \\
@@ -462,8 +462,8 @@ $$
 & \text{Normal}(\bm{\alpha} \mid \bm{\bar{\alpha}}, \bm{T}_{\alpha}) \\
 & \text{Normal}(\bm{\bar{\beta}} \mid \bm{\mu}_{\beta}, \bm{\Sigma}_{\beta}) \\
 & \text{Normal}(\bm{\bar{\alpha}} \mid \bm{\mu}_{\alpha}, \bm{\Sigma}_{\alpha}) \\
-& \prod_{r = 1}^{n_{\beta}} \text{IG}(\tau_{r, \beta} \mid a_{r, \beta}, b_{r, \beta}) \\
-& \prod_{t = 1}^{n_{\alpha}} \text{IG}(\tau_{t, \alpha} \mid a_{t, \alpha}, b_{t, \alpha}) \\
+& \prod_{r = 1}^{n_{\beta}} \text{IG}(\tau^2_{r, \beta} \mid a_{r, \beta}, b_{r, \beta}) \\
+& \prod_{t = 1}^{n_{\alpha}} \text{IG}(\tau^2_{t, \alpha} \mid a_{t, \alpha}, b_{t, \alpha}) \\
 & \text{IG}(\sigma^2_i \mid a_{\sigma^2, i}, b_{\sigma^2, i}) \times \\
 & \text{Uniform}(\phi_i \mid a_{\phi, i}, b_{\phi, i}) \times \\
 & \text{Uniform}(\nu_i \mid a_{\nu, i}, b_{\nu, i}) \\

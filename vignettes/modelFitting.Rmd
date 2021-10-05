@@ -21,7 +21,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-\newcommand{\bm}{\boldsymbol}
+\newcommand{\bm}{\boldsymbol} 
+\newcommand{\pg}{\text{P{\'o}lya-Gamma}}
 
 # Introduction
 
@@ -34,11 +35,11 @@ This vignette provides worked examples and explanations on fitting single specie
 5. Integrated occupancy model using `intPGOcc`.
 6. Spatial integrated occupancy model using `spIntPGOcc`. 
 
-Here we will provide only a brief description of each model, with full statistical details of each model in the Gibbs sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), and out of sample predictions using standard R helper functions (i.e., `predict`). 
+In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate MCMC sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), and out of sample predictions using standard R helper functions (i.e., `predict`). 
 
 To get started, we load the `spOccupancy` package, as well as the `coda` package, which we will use for some MCMC diagnostics. We will also use the `stars` and `ggplot2` packages to create some very basic plots of our results. 
 
-```{r setup}
+```{r setup, message = FALSE, warning = FALSE}
 library(spOccupancy)
 library(coda)
 library(stars)
@@ -54,7 +55,7 @@ data(hbef2015)
 str(hbef2015)
 ```
 
-The object `hbef2015` is a list comprised of the detection-nondetection data (`y`), covariates on the occupancy portion of the model (`occ.covs`), covariates on the detection portion of the model (`det.covs`), and the spatial coordinates of each site for use in spatially-explicit models. This list is in the exact format required for input to `spOccupancy` model functions. `hbef2015` contains data on 12 species in the three-dimensional array `y`. Here we will use data on the Ovenbird (OVEN) to display single species models, so we next subset the `hbef2015` list to only include data from OVEN in a new object `ovenHBEF`. 
+The object `hbef2015` is a list comprised of the detection-nondetection data (`y`), covariates on the occupancy portion of the model (`occ.covs`), covariates on the detection portion of the model (`det.covs`), and the spatial coordinates of each site for use in spatial occupancy models and plotting. This list is in the exact format required for input to `spOccupancy` model functions. `hbef2015` contains data on 12 species in the three-dimensional array `y`, where the dimensions of `y` correspond to species (12), sites (373), and replicates (3). Here we will use data on the charming Ovenbird (OVEN) to display single species models, so we next subset the `hbef2015` list to only include data from OVEN in a new object `ovenHBEF`. 
 
 ```{r}
 sp.names <- attr(hbef2015$y, "dimnames")[[1]]
@@ -82,7 +83,7 @@ Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with
 where $\psi_j$ is the probability of occurrence at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of regression coefficients ($\bm{\beta}$).
 
 
-We do not directly observe $z_j$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{j, k}$ be the observed detection (1) or nondetection (0) of a species of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+We do not directly observe $z_j$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{j, k}$ be the observed detection (1) or nondetection (0) of a species of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
 
 \begin{equation}
 \begin{split}
@@ -94,14 +95,14 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 where $p_{j, k}$ is the probability of detecting a species at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate specific covariates $\bm{V}$ and a vector of regression coefficients ($\bm{\alpha}$).
 
-To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. To yield an efficient implementation of the occupancy model using a logit link function, we use Polya-Gamma data augmentation [@polson2013], which is described in depth in the Gibbs sampler vignette (**P**olya-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting functions). 
+To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. To yield an efficient implementation of the occupancy model using a logit link function, we use $\pg$ data augmentation [@polson2013], which is described in depth in a separate MCMC sampler vignette (**P**olya-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting functions). 
 
 ## Fitting single species occupancy models with `PGOcc`
 
-The `PGOcc` function fits single species occupancy models using Polya-Gamma latent variables, which should make it faster than other implementations of occupancy models using a logit link function [@clark2019; @polson2013]. `PGOcc` has the following arguments: 
+The `PGOcc` function fits single species occupancy models using $\pg$ latent variables, which should make it faster than other implementations of occupancy models using a logit link function [@clark2019; @polson2013]. `PGOcc` has the following arguments: 
 
 ```{r, eval = FALSE}
-PGOcc(occ.formula, det.formula, data, starting, n.samples, priors, 
+PGOcc(occ.formula, det.formula, data, starting, priors, n.samples, 
       n.omp.threads = 1, verbose = TRUE, n.report = 100, 
       n.burn = round(.10 * n.samples), n.thin = 1, ...)
 ```
@@ -111,23 +112,22 @@ The first two arguments, `occ.formula` and `det.formula`, use standard R model s
 ```{r}
 oven.occ.formula <- ~ Elevation + Elevation.2
 oven.det.formula <- ~ day + tod + day.2
-# Make sure format of ovenHBEF is correct.
+# Check out the format of ovenHBEF
 str(ovenHBEF)
 ```
 
 Next, we specify the starting values for the MCMC sampler in `starting`. `PGOcc` (and all other `spOccupancy` model fitting functions) will set starting values by default (and report what these values are), but here we will do this explicitly. Starting values are specified in a list with the following tags: `z` (latent occurrence values), `alpha` (detection regression coefficients), and `beta` (occurrence regression coefficients). Below we set all initial values of the regression coefficients to 0, and set starting values for `z` based on the detection-nondetection data matrix.
 
 ```{r}
-# Number of detection and occupancy parameters 
-# + 1 is needed to count the intercept
-p.det <- length(ovenHBEF$det.covs) + 1
-p.occ <- ncol(ovenHBEF$occ.covs) + 1
+# Number of detection and occurrence parameters (including intercept)
+p.det <- 4
+p.occ <- 3
 oven.starting <- list(alpha = rep(0, p.det), 
                       beta = rep(0, p.occ), 
                       z = apply(ovenHBEF$y, 1, max, na.rm = TRUE))
 ```
 
-We next specify the priors for the occurrence and detection regression coefficients. The Polya-Gamma data augmentation algorithm employed by `spOccupancy` assumes normal priors for both the detection and occurrence regression coefficients. These priors are specified in a list with tags `beta.normal` for occurrence and `alpha.normal` for detection parameters. Each list element is then itself a list, with the first element of the list consisting of the hypermeans for each coefficient to be estimated and the second element of the list consisting of the hypervariances for each coefficient. By default, `spOccupancy` will set the hypermeans to 0 and the hypervariances to 2.72, which corresponds to a relatively flat prior on the probability scale (0, 1) [@broms2016model]. We will use these default priors here, but we specify them explicitly below for clarity 
+We next specify the priors for the occurrence and detection regression coefficients. The $\pg$ data augmentation algorithm employed by `spOccupancy` assumes normal priors for both the detection and occurrence regression coefficients. These priors are specified in a list with tags `beta.normal` for occurrence and `alpha.normal` for detection parameters. Each list element is then itself a list, with the first element of the list consisting of the hypermeans for each coefficient to be estimated and the second element of the list consisting of the hypervariances for each coefficient. By default, `spOccupancy` will set the hypermeans to 0 and the hypervariances to 2.72, which corresponds to a relatively flat prior on the probability scale (0, 1) [@broms2016model]. We will use these default priors here, but we specify them explicitly below for clarity 
 
 ```{r, tidy = FALSE}
 oven.priors <- list(alpha.normal = list(mean = rep(0, p.det),
@@ -136,15 +136,15 @@ oven.priors <- list(alpha.normal = list(mean = rep(0, p.det),
                                        var = rep(2.72, p.occ)))
 ```
 
-Our last step is to specify the number of samples to run the MCMC (`n.samples`), the amount of burn-in (`n.burn`), and how often we want to thin the posterior samples (`n.thin`). For a simple single species occupancy model, we shouldn't need to many samples and will only need a small amount of burn-in and very minimal thinning (if any). 
+Our last step is to specify the number of samples to run the MCMC (`n.samples`), the amount of burn-in (`n.burn`), and how often we want to thin the posterior samples (`n.thin`). For a simple single species occupancy model, we shouldn't need too many samples and will only need a small amount of burn-in and very minimal thinning. 
 
 ```{r}
-n.samples <- 4000
-n.burn <- 1000
-n.thin <- 1
+n.samples <- 6000
+n.burn <- 3000
+n.thin <- 3
 ```
 
-We are now set to run the occupancy model. Single species occupancy models are fast, and so we set `n.omp.threads = 1` to indicate we won't use multiple threads to run the model. For more time consuming models, we can set `n.omp.threads` to a number greater than 1 and smaller than the number of threads on the computer you are using. Note this argument will only use multiple threads if `spOccupancy` was compiled for OpenMP support. We set `verbose = TRUE` and `n.report = 1000` to report progress after every 1000th MCMC iteration. 
+We are now set to run the occupancy model. Single species occupancy models are fast, and so we set `n.omp.threads = 1` to indicate we won't use multiple threads to run the model. For more time consuming models, we can set `n.omp.threads` to a number greater than 1 and smaller than the number of threads on the computer you are using. Note this argument will only use multiple threads if `spOccupancy` was compiled for OpenMP support. The `verbose` argument is a logical value indicating whether or not MCMC sampler progress is reported to the screen. If `verbose = TRUE`, sampler progress is reported after the specified number of iterations in the `n.report` argument. We set `verbose = TRUE` and `n.report = 1000` to report progress after every 1000th MCMC iteration. 
 
 ```{r}
 out <- PGOcc(occ.formula = oven.occ.formula, 
@@ -158,12 +158,12 @@ out <- PGOcc(occ.formula = oven.occ.formula,
              n.report = 1000, 
              n.burn = n.burn, 
              n.thin = n.thin)
-str(out)
+names(out)
 ```
 
-You may see a slightly different message depending on whether or not your computer compiled `spOccupancy` with OpenMP support. We see `PGOcc` returns a list of class `PGOcc` with a suite of different objects, most of them being `coda::mcmc` objects of posterior samples. Notice the "Preparing the data" printed section doesn't have any information shown in it. `spOccupancy` functions will present warnings when preparing the data for the model in this section, or will print out the default priors or starting values used when they are not specified in the function call. Here we specified everything explicitly so no information was reported. 
+You may see a slightly different message depending on whether or not your computer compiled `spOccupancy` with OpenMP support. `PGOcc` returns a list of class `PGOcc` with a suite of different objects, most of them being `coda::mcmc` objects of posterior samples. Notice the "Preparing the data" printed section doesn't have any information shown in it. `spOccupancy` model fitting functions will present messages when preparing the data for the model in this section, or will print out the default priors or starting values used when they are not specified in the function call. Here we specified everything explicitly so no information was reported. 
 
-For a nice summary of the regression parameters we can use the `summary` function on the resulting `PGOcc` object. 
+For a nice summary of the regression parameters we can use `summary` on the resulting `PGOcc` object. 
 
 ```{r}
 summary(out)
@@ -175,14 +175,14 @@ We see OVEN is fairly prominent in the forest given the large intercept value, a
 
 The posterior samples in the `PGOcc` object are `coda::mcmc` objects, which we can quickly assess for convergence visually using trace plots. 
 
-```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+```{r, fig.height = 4, fig.width = 6, fig.align = 'center'}
 plot(out$beta.samples, density = FALSE)
 ```
-```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+```{r, fig.height = 4, fig.width = 6, fig.align = 'center'}
 plot(out$alpha.samples, density = FALSE)
 ```
 
-For a complete analysis (i.e., in a peer-reviewed manuscript), we will likely want to more formally check for convergence, perhaps using the Gelman-Rubin R-hat diagnostic. This requires running multiple chains at largely different starting values for the regression parameters. For a single species non-spatial occupancy model, we can accomplish this by running multiple chains sequentially (since they run really fast) with different starting values, then combining the output into a `coda::mcmc.list` object for use the `coda::gelman.diag` function. Notice below we set `verbose = FALSE` to suppress the messages printed by `PGOcc`. 
+For a complete analysis (i.e., in a peer-reviewed manuscript), we will likely want to more formally check for convergence, perhaps using the Gelman-Rubin R-hat diagnostic [@brooks1998]. This requires running multiple chains at largely different starting values for the regression parameters. For a single species non-spatial occupancy model, we can accomplish this by running multiple chains sequentially (since they run really fast) with different starting values, then combining the output into a `coda::mcmc.list` object for use with the `coda::gelman.diag` function. Notice below we set `verbose = FALSE` to suppress the messages printed by `PGOcc`. 
 
 ```{r}
 oven.starting <- list(alpha = rep(2, p.det), 
@@ -197,8 +197,8 @@ out.2 <- PGOcc(occ.formula = oven.occ.formula,
                n.omp.threads = 1, 
                verbose = FALSE, 
                n.report = 1000, 
-	       n.burn = n.burn, 
-	       n.thin = n.thin)
+               n.burn = n.burn, 
+               n.thin = n.thin)
 oven.starting <- list(alpha = rep(-2, p.det), 
                       beta = rep(-2, p.occ), 
                       z = apply(ovenHBEF$y, 1, max, na.rm = TRUE))
@@ -220,6 +220,8 @@ gelman.diag(mcmc.list(out$beta.samples, out.2$beta.samples,
 gelman.diag(mcmc.list(out$alpha.samples, out.2$alpha.samples, 
                       out.3$alpha.samples))
 ```
+
+All R-hat values are less than 1.1, indicating the chains have converged and we are in good shape to proceed. 
 
 ## Posterior predictive checks
 
@@ -259,7 +261,7 @@ We see there are a few sites where the true discrepancy is much larger than the 
 
 Posterior predictive checks allow us to assess how well our model fits the data, but they are not very useful if we want to compare multiple competing models and ultimately select a final model based on some criterion. Bayesian model selection is very much a constantly changing field, especially in the ecological and environmental sciences. See @hooten2015guide for an accessible overview of Bayesian model selection for ecologists. 
 
-For Bayesian hierarchical models like occupancy models, the most common Bayesian model selection criterion, DIC, is not applicable [@hooten2015guide]. Instead, we can use the Widely Applicable Information Criterion [@watanabe2010] to compare a set of models and select the best performing model according to the WAIC for final analysis. When focused primarily on predictive performance, an out-of-sample validation approach is another attractive (but more computationally intensive) alternative to compare a series of models, especially since WAIC may not be a reliable metric for all models [@link2020model]. We will show how to perform out of sample model validation using `spOccupancy` model objects in a subsequent vignette. 
+For Bayesian hierarchical models like occupancy models, the most common Bayesian model selection criterion, DIC, is not applicable [@hooten2015guide]. Instead, we can use the Widely Applicable Information Criterion [@watanabe2010] to compare a set of models and select the best performing model according to the WAIC for final analysis. When focused primarily on predictive performance, an out-of-sample validation approach is another attractive (but more computationally intensive) alternative to compare a series of models, especially since WAIC may not be a reliable metric for all models [@link2020model]. We show how to perform out of sample model validation using `spOccupancy` model objects in a separate vignette. 
 
 The WAIC is calculated for all `spOccupancy` model objects using the function `waicOcc`. We calculate the WAIC as 
 
@@ -303,7 +305,7 @@ Smaller values of WAIC indicate models with better performance. We see the WAIC 
 
 ## Prediction
 
-All resulting model objects from `spOccupancy` model functions can be used with the `predict` function to generate a series of posterior predictive samples at non-sampled locations, given the values of all covariates used in the model fitting process. The object `hbefElev` contains elevation values at a 30x30m resolution from the National Elevation Dataset across the entire HBEF. The values are standardized using the mean and standard deviation of the elevation values used to fit the model. We load the data below
+All resulting model objects from `spOccupancy` model functions can be used with `predict` to generate a series of posterior predictive samples at non-sampled locations, given the values of all covariates used in the model fitting process. The object `hbefElev` (provided in the `spOccupancy` package) contains elevation values at a 30x30m resolution from the National Elevation Dataset across the entire HBEF. The values are standardized using the mean and standard deviation of the elevation values used to fit the model. We load the data below
 
 ```{r}
 data(hbefElev)
@@ -340,7 +342,7 @@ ggplot() +
   theme_bw()
 ```
 
-# Single species spatial occupancy models
+# Single species spatial occupancy models {#spPGOcc}
 
 ## Basic model description
 
@@ -359,13 +361,13 @@ where w$_j$ is a realization from a zero-mean spatial Gaussian Process, i.e.,
 
 We define $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ as a $J \times J$ covaraince matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta})$ that govern the spatial process. The vector $\bm{\theta}$ is equal to $\bm{\theta} = \{\sigma^2, \phi, \nu\}$, where $\sigma^2$ is a spatial variance parameter, $\phi$ is a spatial decay parameter, and $\nu$ is a spatial smoothness parameter. $\nu$ is only specified when using a Matern correlation function.
 
-The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model and follows Equation \@ref(eq:yPGOcc). Single species spatial occupancy models, like all models in `spOccupancy` are fit using Polya-Gamma data augmentation (see MCMC sampler vignette for details).
+The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model and follows Equation \@ref(eq:yPGOcc). Single species spatial occupancy models, like all models in `spOccupancy` are fit using $\pg$ data augmentation (see MCMC sampler vignette for details).
 
-When the number of sites is moderately large, say 1000, the above described spatial Gaussian process model can be drastically slow as a result of needing to take the inverse of the spatial covariance matrix $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ at each MCMC iteration. Numerous approximation methods exist to reduce this computational cost [@heaton2019case]. One attractive approach is the Nearest Neighbor Gaussian Process (NNGP, @datta2016hierarchical). Instead of modeling the spatial process using a full GP as shown in Equation \@ref(eq:fullGP), we replace the GP prior specification with a NNGP, which leads to drastic increases in run time with nearly identicial inference and prediction as the full GP specification. See @datta2016hierarchical, @finley2019efficient, and the MCMC sampler vignette for additional statistical details on NNGPs and their implementation in spatial occupancy models. 
+When the number of sites is moderately large, say 1000, the above described spatial Gaussian process model can be drastically slow as a result of needing to take the inverse of the spatial covariance matrix $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ at each MCMC iteration. Numerous approximation methods exist to reduce this computational cost [@heaton2019case]. One attractive approach is the Nearest Neighbor Gaussian Process (NNGP; @datta2016hierarchical). Instead of modeling the spatial process using a full Gaussian Process as shown in Equation \@ref(eq:fullGP), we replace the Gaussian Process prior specification with a NNGP, which leads to drastic increases in run time with nearly identicial inference and prediction as the full Gaussian Process specification. See @datta2016hierarchical, @finley2019efficient, and the MCMC sampler vignette for additional statistical details on NNGPs and their implementation in spatial occupancy models. 
 
 ## Fitting single species spatial occupancy models with `spPGOcc`
 
-The function `spPGOcc` fits single species spatial occupancy models using Polya-Gamma latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc` fits saptial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with Polya-Gamma latent variables.
+The function `spPGOcc` fits single species spatial occupancy models using $\pg$ latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc` fits saptial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with Polya-Gamma latent variables.
 
 We will fit the same occupancy model for OVEN that we fit previously using `PGOcc`, but we will now make the model spatially explicit by incorporating a spatial process with `spPGOcc`. First, let's take a look at the arguments for `spPGOcc`: 
 
@@ -379,7 +381,7 @@ spPGOcc(occ.formula, det.formula, data, starting, n.batch,
         n.thin = 1, ...)
 ```
 
-We will walk through each of the arguments to `spPGOcc` in the context of our Ovenbird example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`), take the same form as with `PGOcc`, with the exception that random intercepts can only be specified in `det.formula`. Notice the `coords` matrix in the `ovenHBEF` list of data. We did not use this for `PGOcc` but specifying the spatial coordinates in `data` is required for all spatially explicit models in `spOccupancy`. 
+We will walk through each of the arguments to `spPGOcc` in the context of our Ovenbird example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`), take the same form as we saw in `PGOcc`, with the exception that random intercepts can only be specified in `det.formula`. Notice the `coords` matrix in the `ovenHBEF` list of data. We did not use this for `PGOcc` but specifying the spatial coordinates in `data` is required for all spatially explicit models in `spOccupancy`. 
 
 ```{r}
 oven.occ.formula <- ~ Elevation + Elevation.2
@@ -387,14 +389,14 @@ oven.det.formula <- ~ day + tod + day.2
 str(ovenHBEF) # coords is required for spPGOcc.
 ```
 
-The starting values (`starting`) are again specified in a list. Valid tags for starting values now additionally include the parameters associated with the spatial random effects. These include: `sigma.sq` (spatial variance parameter), `phi` (spatial range parameter), `w` (the latent spatial random effects at each site), and `nu` (spatial smoothness parameter). `nu` is only specified if using a Matern covariance function (i.e., `cov.model = 'matern'`). `spOccupancy` supports four spatial covariance models (`exponential`, `spherical`, `gaussian`, and `matern`), which are specified in the `cov.model` argument. Here we will use an exponential covariance model. As a starting value for the spatial range parameter `phi`, we compute the mean distance between points in HBEF and then set it equal to 3 divided by this mean distance. When using an exponential covariance function, $\frac{3}{\phi}$ is the effective range, or the distance at which the residual spatial correlation between two sites is 0.05. Thus our initial guess for this effective range is the average distance betweeen sites across HBEF. 
+The starting values (`starting`) are again specified in a list. Valid tags for starting values now additionally include the parameters associated with the spatial random effects. These include: `sigma.sq` (spatial variance parameter), `phi` (spatial range parameter), `w` (the latent spatial random effects at each site), and `nu` (spatial smoothness parameter). `nu` is only specified if using a Matern covariance function (i.e., `cov.model = 'matern'`). `spOccupancy` supports four spatial covariance models (`exponential`, `spherical`, `gaussian`, and `matern`), which are specified in the `cov.model` argument. Here we will use an exponential covariance model. As a starting value for the spatial range parameter `phi`, we compute the mean distance between points in HBEF and then set it equal to 3 divided by this mean distance. When using an exponential covariance function, $\frac{3}{\phi}$ is the effective range, or the distance at which the residual spatial correlation between two sites is 0.05 [@banerjee2003]. Thus our initial guess for this effective range is the average distance betweeen sites across HBEF. 
 
 ```{r, tidy = FALSE}
 # Distances between sites
 dist.hbef <- dist(ovenHBEF$coords)
-# Number of detection and occupancy regression parameters
-p.det <- length(ovenHBEF$det.covs) + 1
-p.occ <- ncol(ovenHBEF$occ.covs) + 1
+# Number of detection and occurrence parameters (including intercept)
+p.det <- 4
+p.occ <- 3
 # Exponential covariance model
 cov.model <- "exponential"
 oven.starting <- list(alpha = rep(0, p.det), 
@@ -405,13 +407,13 @@ oven.starting <- list(alpha = rep(0, p.det),
                       w = rep(0, nrow(ovenHBEF$y)))
 ```
 
-The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler we use to fit the model. Updates for the spatial range parameter (and smoothness parameter if `cov.model = matern`) require the use of a Metropolis Hastings algorithm. We implement an adaptive Metropois-Hastings algorithm discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". We must specify the total `n.batch` batches, where each "batch" consists of `batch.length` MCMC samples. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. Here we set `n.batch = 400` for a total of 10000 MCMC samples. We will additionally specify a burn-in period of 2000 samples and a thinning rate of 4. We also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are sent as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial runs of the model.
+The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler we use to fit the model. Updates for the spatial range parameter (and smoothness parameter if `cov.model = 'matern'`) require the use of a Metropolis Hastings algorithm. We implement an adaptive Metropois-Hastings algorithm discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". We must specify the total `n.batch` batches, where each "batch" consists of `batch.length` MCMC samples. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. Here we set `n.batch = 400` for a total of 10000 MCMC samples. We will additionally specify a burn-in period of 2000 samples and a thinning rate of 8. We also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are sent as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial runs of the model.
 
 ```{r}
 batch.length <- 25
 n.batch <- 400
 n.burn <- 2000
-n.thin <- 4
+n.thin <- 8
 oven.tuning <- list(phi = 1)
 ```
 
@@ -438,7 +440,7 @@ verbose <- TRUE
 n.report <- 100
 ```
 
-The remaining parameters (`NNGP`, `n.neighbors` and `search.type`) relate to whether or not you want to fit the model with a GP or NNGP. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular GP (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial increases in run time. Even for more modest size data sets (like the HBEF data set), using an NNGP will be quite a bit faster. Unless you are concerned about the NNGP approximation for some reason, we recommend setting `NNGP = TRUE`. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as small as five neighbors, which could substantially decrease run time. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`
+The remaining parameters (`NNGP`, `n.neighbors` and `search.type`) relate to whether or not you want to fit the model with a Gaussian Process or NNGP. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial increases in run time. Even for more modest size data sets (like the HBEF data set), using an NNGP will be quite a bit faster. Unless you are concerned about the NNGP approximation for some reason, we recommend setting `NNGP = TRUE`. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as small as five neighbors, which could substantially decrease run time. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`.
 
 We now fit the model and summarize the results using `summary`. 
 
@@ -457,7 +459,8 @@ out.sp <- spPGOcc(occ.formula = oven.occ.formula,
                   n.report = n.report, 
                   n.burn = n.burn, 
                   n.thin = n.thin)
-str(out.sp)
+class(out.sp)
+names(out.sp)
 summary(out.sp)
 ```
 
@@ -467,7 +470,7 @@ We see `spPGOcc` returns a list of class `spPGOcc` and consists of posterior sam
 
 Convergence diagnostics, posterior predictive checks, model selection, and out-of-sample prediction all proceed analogously to what we saw with the non-spatial occupancy model using `PGOcc`. 
 
-```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+```{r, fig.height = 4, fig.width = 6, fig.align = 'center'}
 plot(out.sp$beta.samples, density = FALSE)
 plot(out.sp$alpha.samples, density = FALSE)
 plot(out.sp$theta.samples, density = FALSE)
@@ -477,10 +480,10 @@ We might want to run the chain for a bit longer to ensure convergence of the spa
 
 ## Posterior predictive checks
 
-For our posterior predictive check, we send the `spPGOcc` model object to the `ppcOcc` function. 
+For our posterior predictive check, we send the `spPGOcc` model object to the `ppcOcc` function, this time grouping by replicate (`group = 2`) instead of by site (`group = 1`). 
 
 ```{r}
-ppc.sp.out <- ppcOcc(out.sp, fit.stat = 'freeman-tukey', group = 1)
+ppc.sp.out <- ppcOcc(out.sp, fit.stat = 'freeman-tukey', group = 2)
 summary(ppc.sp.out)
 ```
 
@@ -500,9 +503,9 @@ We see the WAIC value for the spatial model is nearly identical to that of the n
 
 ## Prediction
 
-Finally, we can perform out of sample prediction using the `predict` function just as before. Out of sample prediction for spatial models is more computationally intensive than non-spatial models, and so the `predict` function for `spPGOcc` class objects also has options for parallelization (`n.omp.threads`) and reporting sampler progress (`verbose` and `n.report`). Note that for `spPGOcc`, you also need to supply the coordinates of the out of sample prediction locations in addition to the covariate values. 
+Finally, we can perform out of sample prediction using the `predict` function just as before. Out of sample prediction for spatial models is more computationally intensive than non-spatial models, and so the `predict` function for `spPGOcc` class objects also has options for parallelization (`n.omp.threads`) and reporting sampler progress (`verbose` and `n.report`). Note that for `spPGOcc`, you also need to supply the coordinates of the out of sample prediction locations in addition to the covariate values. We do not execute the below code, but it can be used to compare prediction results from the nonspatial to the spatial model (which are extremely similar, except the standard deviations for the spatial predictions are larger). 
 
-```{r, fig.width = 7, fig.height = 4, fig.align = 'center', warning = FALSE, message = FALSE}
+```{r, eval = FALSE}
 coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
 out.sp.pred <- predict(out.sp, X.0, coords.0, verbose = FALSE)
 plot.dat <- data.frame(x = hbefElev$Easting, 
@@ -523,8 +526,6 @@ ggplot() +
        title = 'SD OVEN occurrence probability') +
   theme_bw()
 ```
-
-The mean predictions look nearly identical to the non-spatial model. The standard deviations for the spatial predictions are larger. 
 
 # Multispecies occupancy models
 
@@ -547,9 +548,9 @@ where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$,
 (\#eq:msBeta)
 \end{equation}
 
-where $\bm{\mu}_{\beta}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
+where $\bm{\mu}_{\beta}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
 
-We do not directly observe $z_{i, j}$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+We do not directly observe $z_{i, j}$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
 
 \begin{equation}
 \begin{split}
@@ -566,9 +567,9 @@ where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ duri
 (\#eq:msAlpha)
 \end{equation}
 
-where $\bm{\mu}_{\alpha}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
+where $\bm{\mu}_{\alpha}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
 
-To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\mu}_{\beta}$) and detection ($\bm{\mu}_{\alpha}$) community-level regression coefficient means and independent inverse-Gamma priors for each element of $\bm{\tau}_{\beta}$ and $\bm{\tau^2}_{\alpha}$. We again use Polya-Gamma data augmentation to yield an efficient implementation of the multispecies occupancy model, which is described in depth in the MCMC sampler vignette. 
+To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\mu}_{\beta}$) and detection ($\bm{\mu}_{\alpha}$) community-level regression coefficient means and independent inverse-Gamma priors for each element of $\bm{\tau}^2_{\beta}$ and $\bm{\tau}^2_{\alpha}$. We again use Polya-Gamma data augmentation to yield an efficient implementation of the multispecies occupancy model, which is described in depth in the MCMC sampler vignette. 
 
 ## Fitting multispecies occupancy models with `msPGOcc`
 
@@ -594,7 +595,7 @@ det.ms.formula <- ~ day + tod + day.2
 str(hbef2015)
 ```
 
-Next we specify the starting values in `starting`. For multispecies occupancy models, we need to supply starting values for community-level and species-level parameters. In `msPGOcc`, we will supply starting values for the following parameters: `alpha.comm` (community level detection coefficients), `beta.comm` (community level occurrence coefficients), `alpha` (species level detection coefficients), `beta` (species level occurrence coefficients), `tau.beta` (community level occurrence variance parameters), `tau.alpha` (community level detection variance parameters, `z` (latent occurrence values for all species). These are all specified in a single list. Starting values for community level parameters are vectors of length corresponding to the number of community-level detection or occurrence parameters in the model (including the intercepts), while starting values for species level parameters are matrices with the number of rows indicating the number of species, and each column corresponding to a different regression parameter. The starting values for the latent occurrence matrix are specified as a matrix with $N$ rows corresponding to the number of species and $J$ columns corresponding to the number of sites. 
+Next we specify the starting values in `starting`. For multispecies occupancy models, we need to supply starting values for community-level and species-level parameters. In `msPGOcc`, we will supply starting values for the following parameters: `alpha.comm` (community level detection coefficients), `beta.comm` (community level occurrence coefficients), `alpha` (species level detection coefficients), `beta` (species level occurrence coefficients), `tau.sq.beta` (community level occurrence variance parameters), `tau.sq.alpha` (community level detection variance parameters, `z` (latent occurrence values for all species). These are all specified in a single list. Starting values for community level parameters are vectors of length corresponding to the number of community-level detection or occurrence parameters in the model (including the intercepts), while starting values for species level parameters are matrices with the number of rows indicating the number of species, and each column corresponding to a different regression parameter. The starting values for the latent occurrence matrix are specified as a matrix with $N$ rows corresponding to the number of species and $J$ columns corresponding to the number of sites. 
 
 ```{r}
 N <- dim(hbef2015$y)[1]
@@ -604,12 +605,12 @@ ms.starting <- list(alpha.comm = rep(0, p.det),
                     beta.comm = rep(0, p.occ), 
                     beta = matrix(0, N, p.occ), 
                     alpha = matrix(0, N, p.det),
-                    tau.beta = rep(1, p.occ), 
-                    tau.alpha = rep(1, p.det), 
+                    tau.sq.beta = rep(1, p.occ), 
+                    tau.sq.alpha = rep(1, p.det), 
                     z = apply(hbef2015$y, c(1, 2), max, na.rm = TRUE))
 ```
 
-In multispecies models, we specify priors on the community-level coefficients rather than the species-level effects.  For nonspatial models, these priors are specified with the following tags: `beta.comm.normal` (normal prior on the community level occurrence mean effects), `alpha.comm.normal` (normal prior on the community level detection mean effects), `tau.beta.ig` (inverse-Gamma prior on the community level occurrence variance parameters), `tau.alpha.ig` (inverse-Gamma prior on the community level detection variance parameters). Each tag consists of a list with elements corresponding to the mean and variance for normal priors and scale and shape for inverse-Gamma priors. 
+In multispecies models, we specify priors on the community-level coefficients rather than the species-level effects.  For nonspatial models, these priors are specified with the following tags: `beta.comm.normal` (normal prior on the community level occurrence mean effects), `alpha.comm.normal` (normal prior on the community level detection mean effects), `tau.sq.beta.ig` (inverse-Gamma prior on the community level occurrence variance parameters), `tau.sq.alpha.ig` (inverse-Gamma prior on the community level detection variance parameters). Each tag consists of a list with elements corresponding to the mean and variance for normal priors and scale and shape for inverse-Gamma priors. 
 
 Below we specify normal priors to be relatively non-informative on the probability scale with a mean of 0 and variance of 2.72, and specify vague inverse gamma priors on the community level variance parameters setting both the shape and scale parameters to 0.1. 
 
@@ -618,9 +619,9 @@ ms.priors <- list(beta.comm.normal = list(mean = rep(0, p.occ),
                                           var = rep(2.72, p.occ)), 
                   alpha.comm.normal = list(mean = rep(0, p.det), 
                                            var = rep(2.72, p.det)), 
-                  tau.beta.ig = list(a = rep(0.1, p.occ), 
+                  tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
                                      b = rep(0.1, p.occ)), 
-                  tau.alpha.ig = list(a = rep(0.1, p.det), 
+                  tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
                                       b = rep(0.1, p.det)))
 ```
 
@@ -637,7 +638,7 @@ out.ms <- msPGOcc(occ.formula = occ.ms.formula,
                   verbose = TRUE, 
                   n.report = 5000, 
                   n.burn = 10000,
-                  n.thin = 4)
+                  n.thin = 10)
 out.ms$run.time
 ```
 
@@ -655,7 +656,7 @@ Looking at the community level variance parameters, we see large variability in 
 
 The resulting posterior samples in the `msPGOcc` object are `coda::mcmc` samples, and so convergence diagnostics can proceed as we saw with single species models. 
 
-```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+```{r, fig.height = 4, fig.width = 6, fig.align = 'center'}
 plot(out.ms$beta.comm.samples, density = FALSE)
 # Look at the first few species-specific occurrence intercepts
 plot(out.ms$beta.samples[, 1:4], density = FALSE)
@@ -752,8 +753,8 @@ ms.starting <- list(alpha.comm = rep(0, p.det),
                     beta.comm = rep(0, p.occ), 
                     beta = matrix(0, N, p.occ), 
                     alpha = matrix(0, N, p.det),
-                    tau.beta = rep(1, p.occ), 
-                    tau.alpha = rep(1, p.det), 
+                    tau.sq.beta = rep(1, p.occ), 
+                    tau.sq.alpha = rep(1, p.det), 
                     z = apply(hbef2015$y, c(1, 2), max, na.rm = TRUE), 
                     sigma.sq = rep(2, N), 
                     phi = rep(3 / mean(dist.hbef), N), 
@@ -770,9 +771,9 @@ ms.priors <- list(beta.comm.normal = list(mean = rep(0, p.occ),
                                           var = rep(2.72, p.occ)), 
                   alpha.comm.normal = list(mean = rep(0, p.det), 
                                            var = rep(2.72, p.det)), 
-                  tau.beta.ig = list(a = rep(0.1, p.occ), 
+                  tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
                                      b = rep(0.1, p.occ)), 
-                  tau.alpha.ig = list(a = rep(0.1, p.det), 
+                  tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
                                       b = rep(0.1, p.det)), 
                   sigma.sq.ig = list(a = rep(2, N), 
                                      b = rep(2, N)), 
@@ -786,7 +787,7 @@ We next set the parameters controlling the Adaptive MCMC algorithm (see `spPGOcc
 batch.length <- 25
 n.batch <- 400
 n.burn <- 2000
-n.thin <- 4
+n.thin <- 8
 ms.tuning <- list(phi = 0.5)
 n.omp.threads <- 1
 # Values for reporting
@@ -853,9 +854,9 @@ The WAIC for the spatial model is much larger than that for the nonspatial model
 
 ## Prediction
 
-Out-of-sample prediction with `spMsPGOcc` objects again uses the `predict` function given a set of covariates and spatial coordinates of unobserved locations. Here we predict values for all 12 species at every 50th cell of the total `r #nrow(hbefElev)` cells. We show results only for OVEN for comparison to results with the nonspatial multispecies occupancy model. 
+Out-of-sample prediction with `spMsPGOcc` objects again uses the `predict` function given a set of covariates and spatial coordinates of unobserved locations. Here we predict values for all 12 species at every 50th cell of the total `r #nrow(hbefElev)` cells. Results are very similar to the nonspatial multispecies model, so we do not execute the following code. 
 
-```{r}
+```{r, eval = FALSE}
 X.0.ms <- cbind(1, hbefElev$val, hbefElev$val^2)
 X.0.ms <- X.0.ms[seq(1, nrow(X.0.ms), by = 50), ]
 coords.0 <- hbefElev[seq(1, nrow(hbefElev), by = 50), 2:3]
@@ -934,7 +935,7 @@ for (i in 1:n.data) {
   n.rep[[i]] <- sample(1:4, size = J.obs[i], replace = TRUE)
 }
 # Occupancy covariates
-beta <- c(0.5, 1, -3)
+beta <- c(0.5, 1, -2)
 p.occ <- length(beta)
 # Detection covariates
 alpha <- list()
@@ -943,14 +944,10 @@ for (i in 1:n.data) {
 }
 p.det.long <- sapply(alpha, length)
 p.det <- sum(p.det.long)
-sigma.sq <- 2
-phi <- 3 / .5
-sp <- TRUE
 
 # Simulate occupancy data. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sigma.sq = sigma.sq, 
-		 phi = phi, sp = sp)
+		 n.rep = n.rep, beta = beta, alpha = alpha)
 ```
 
 The return object `dat` is a list comprised of a series of objects related to the simulated data that we can use for fitting an integrated occupancy model, verifying the model works as we would expect, and assessing predictive performance of the model at non-sampled locations. For initial model fitting, we are primarily concerned with the objects `X.obs`, `X.p`, `sites`, and `y`. `X.obs` is a numeric matrix for the occurrence portion of the occupancy model. `X.p` is a list of design matrices for the detection portion of the occupancy model, where each element of the list corresponds to a different data source. `sites` is a list where each element is a vector of site indices for each data source. In an integrated model, data sources can be obtained at the same locations, completely different locations within a single region of interest, or a mix of the two. A key task when working with integrated models is ensuring each data point in a given data source is linked to the correct site in the occurrence portion of the model. For example, consider the simulated `sites` list below
@@ -1061,40 +1058,270 @@ n.thin <- 1
 We can now run the integrated occupancy model. Below we set the number of threads used to 1 and print out sampler progress after every 1000th iteration. 
 
 ```{r}
-out <- intPGOcc(occ.formula = sim.occ.formula,
-                det.formula = sim.det.formula, 
-		data = data.list,
-		starting = starting.list,
-		n.samples = n.samples, 
-		priors = prior.list, 
-		n.omp.threads = 1, 
-		verbose = TRUE, 
-		n.report = 1000, 
-		n.burn = n.burn, 
-		n.thin = n.thin)
+out.int <- intPGOcc(occ.formula = sim.occ.formula,
+                    det.formula = sim.det.formula, 
+		    data = data.list,
+		    starting = starting.list,
+		    n.samples = n.samples, 
+		    priors = prior.list, 
+		    n.omp.threads = 1, 
+		    verbose = TRUE, 
+		    n.report = 1000, 
+		    n.burn = n.burn, 
+		    n.thin = n.thin)
 ```
+
+We again consult the `summary` function for a concise description of the model results. 
+
+```{r}
+summary(out.int)
+```
+
+The `summary` function for integrated models returns the detection parameters separately for each detection covariate. We can compare these results to the values we used to simulate the data. It looks like our model does a pretty good job of recovering the true parameter values. 
 
 ## Convergence diagnostics
 
+Posterior samples are returned as `coda::mcmc` objects, so as with all `spOccupancy` model objects, we use standard `coda` functions like `plot` and `gelman.diag` to assess convergence. 
+
+```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+# Occurrence effects
+plot(out.int$beta.samples, density = FALSE)
+```
+
 ## Posterior predictive checks
+
+We perform posterior predictive checks using `ppcocc` as before. GoF assessment for integrated models is an active area of research. In `spOccupancy`, we compute posterior predictive checks separately for each dataset in the integrated model. 
+
+```{r}
+ppc.int.out <- ppcOcc(out.int, 'freeman-tukey', group = 2)
+summary(ppc.int.out)
+```
 
 ## Model selection using WAIC
 
+We use `waicOcc` to compute the WAIC for integrated occupancy models. Similar to the posterior predictive check, individual WAIC values are reported for each data set. These can be summed across all data sources for an overall WAIC value if desired. 
+
+```{r}
+waicOcc(out.int)
+```
+
 ## Prediction
+
+Prediction for integrated occupancy models proceeds exactly as before using `predict`. The `simIntOcc` function automatically splits the data into a set of sampled sites and nonsampled sites. We can use the simulated data from the non-sampled sites to assess the ability of our model to make accurrate out of sample predictions. 
+
+```{r}
+X.0 <- dat$X.pred
+out.int.pred <- predict(out.int, X.0)
+# Compare predictions to true simulated values
+psi.true <- dat$psi.pred
+psi.quants <- apply(out.int.pred$psi.0.samples, 2, quantile, 
+		    probs = c(0.025, 0.5, 0.975))
+plot(psi.true, psi.quants[2, ], pch = 19, ylim = c(0, 1))
+segments(psi.true, psi.quants[1, ], y1 = psi.quants[3, ])
+lines(psi.true, psi.true)
+```
 
 # Single species spatial integrated occupancy models
 
 ## Basic model description
 
-## Fitting single speices spatial integrated occupancy models using `spIntPGOcc`
+Single species spatial integrated occupancy models are identical to integrated occupancy models except the ecological process model now incorporates a spatially-structured random effect following the discussion in Section \@ref(spPGOcc). All details for the single species integrated spatial occupancy model have already been presented in previous model descriptions. 
+
+## Simulating data using `simIntOcc`
+
+Here we again use `simIntOcc` to simulate a data set to display a single species spatial integrated occupancy model. We use the `simIntOcc` function just as we did in Section \@ref(intPGOcc), except we now specify the data to be simulated with spatially structured random effects following an exponential correlation function. Notice we now specify the spatial variance (`sigma.sq`) and spatial range (`phi`) parameters that we need to simulate the spatial random effects. We also set `sp = TRUE` to include the spatial random effects in the data simulation. 
+
+```{r}
+set.seed(405)
+J.x <- 15
+J.y <- 15
+J.all <- J.x * J.y
+# Number of data sources.
+n.data <- 4
+# Sites for each data source. 
+J.obs <- sample(ceiling(0.2 * J.all):ceiling(0.5 * J.all), n.data, replace = TRUE)
+# Replicates for each data source.
+n.rep <- list()
+for (i in 1:n.data) {
+  n.rep[[i]] <- sample(1:4, size = J.obs[i], replace = TRUE)
+}
+# Occupancy covariates
+beta <- c(0.5, 0.5)
+p.occ <- length(beta)
+# Detection covariates
+alpha <- list()
+for (i in 1:n.data) {
+  # A single detection covariate effect for each data set. 
+  alpha[[i]] <- runif(2, -1, 1)
+}
+p.det.long <- sapply(alpha, length)
+p.det <- sum(p.det.long)
+sigma.sq <- 3
+phi <- 3 / .5
+sp <- TRUE
+
+# Simulate occupancy data. 
+dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
+		 n.rep = n.rep, beta = beta, alpha = alpha, sigma.sq = sigma.sq, 
+		 phi = phi, sp = sp)
+y <- dat$y
+X.p <- dat$X.p
+X <- dat$X.obs
+sites <- dat$sites
+coords <- as.matrix(dat$coords.obs)
+```
+
+## Fitting single speces spatial integrated occupancy models using `spIntPGOcc`
+
+The function `spIntPGOcc` fits single species spatial integrated occupancy models in `spOccupancy`. Syntax is very similar to single data source models and specifically takes the following form: 
+
+```{r, eval = FALSE}
+spIntPGOcc(occ.formula, det.formula, data, starting, n.batch, 
+           batch.length, accept.rate = 0.43, priors, 
+           cov.model = "exponential", tuning, n.omp.threads = 1, 
+           verbose = TRUE, NNGP = TRUE, n.neighbors = 15,
+           search.type = 'cb', n.report = 100, 
+           n.burn = round(.10 * n.batch * batch.length), 
+           n.thin = 1, ...)
+```
+
+The `occ.formula`, `det.formula`, and `data` arguments are analogous to what we saw with the nonspatial integrated occupancy model. However, as for all spatial models in `spOccupancy`, the `data` list must also contain the spatial coordinates. 
+
+```{r}
+# Occurrence covariates
+occ.covs <- X[, -1, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov.1')
+# Detection covariates
+det.covs <- list()
+# Number of covariates on detection for each data source
+lapply(alpha, function(a) length(a) - 1)
+# Add detection covariates one by one
+det.covs[[1]] <- list(det.cov.1.1 = X.p[[1]][, , 2]) 
+det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2]) 
+det.covs[[3]] <- list(det.cov.3.1 = X.p[[3]][, , 2])
+det.covs[[4]] <- list(det.cov.4.1 = X.p[[4]][, , 2])
+data.list <- list(y = y, 
+		  occ.covs = occ.covs, 
+		  det.covs = det.covs, 
+		  sites = sites, 
+		  coords = coords)
+str(data.list)
+sim.occ.formula <- ~ occ.cov.1
+sim.det.formula = list(f.1 = ~ det.cov.1.1, 
+                       f.2 = ~ det.cov.2.1, 
+                       f.3 = ~ det.cov.3.1, 
+                       f.4 = ~ det.cov.4.1) 
+```
+
+Starting values specified in `starting` and priors in `priors` are specified in the same form as for `intPGOcc` with the additional values for spatial parameters. Analogous to all other spatial models in `spOccupancy`, the spatial variance parameter takes an inverse-Gamma prior and the spatial range parameter (and the spatial smoothness parameter if `cov.model = 'matern'`) takes a uniform prior.
+
+```{r}
+J <- nrow(occ.covs)
+alpha.start <- list()
+for (q in 1:n.data) {
+  alpha.start[[q]] <- rep(0, p.det.long[q])
+}
+starting.list <- list(alpha = alpha.start, 
+		      beta = rep(0, p.occ), 
+		      z = rep(1, J), 
+		      phi = 3 / .4, 
+		      sigma.sq = 1, 
+		      w = rep(0, J))
+alpha.mu <- list()
+alpha.var <- list()
+for (q in 1:n.data) {
+  alpha.mu[[q]] <- rep(0, p.det.long[q])
+  alpha.var[[q]] <- rep(2.72, p.det.long[q])
+}
+prior.list <- list(beta.normal = list(mean = rep(0, p.occ), 
+				      var = rep(2.72, p.occ)), 
+		   alpha.normal = list(mean = alpha.mu, 
+			               var = alpha.var), 
+		   sigma.sq.ig = c(2, 2), 
+		   phi.unif = c(3/1, 3/.1))
+```
+
+Finally, we specify the remaining parameters regarding the NNGP specifications, tuning parameters, and the length of the MCMC sampler we will run. We are then all set to run the model. 
+
+```{r}
+tuning <- list(phi = 1)
+batch.length <- 25
+n.batch <- 400
+cov.model <- "exponential"
+out.sp.int <- spIntPGOcc(occ.formula = sim.occ.formula, 
+			 det.formula = sim.det.formula, 
+			 data = data.list, 
+			 starting = starting.list, 
+			 n.batch = n.batch, 
+			 batch.length = batch.length, 
+			 priors = prior.list, 
+			 cov.model = cov.model, 
+			 NNGP = TRUE, 
+			 n.neighbors = 5, 
+			 n.report = 100, 
+			 n.burn = 1000, 
+			 n.thin = 5)
+summary(out.sp.int)
+```
 
 ## Convergence diagnostics
 
+We use the `coda` package to explore the trace plots. The trace plot below suggests we may want to run the model for longer to ensure convergence. 
+
+```{r, fig.height = 4, fig.width = 4, fig.align = 'center'}
+plot(out.sp.int$beta.samples, density = FALSE)
+```
+
 ## Posterior predictive checks
+
+Below we perform a poseterior predictive check for each of the data sets included in the occupancy model using `ppcOcc`. 
+
+```{r}
+ppc.sp.int.out <- ppcOcc(out.sp.int, 'freeman-tukey', group = 2)
+summary(ppc.sp.int.out)
+```
+
+According to the Bayesian p-values, there is no lack of fit for any of the three data sets. 
 
 ## Model selection using WAIC
 
+We can perform model selection using WAIC with the `waicOcc` function as we have seen previously. Below, we reanalyze the simulated data using the `intPGOcc` function and compare the WAIC for the spatial and nonspatial integrated occupancy models
+
+```{r}
+out.no.sp.int <- intPGOcc(occ.formula = sim.occ.formula, 
+			  det.formul = sim.det.formula, 
+			  data = data.list, 
+			  starting = starting.list, 
+			  priors = prior.list, 
+			  n.samples = n.batch * batch.length, 
+			  n.report = 2000, 
+			  n.burn = 1000, 
+			  n.thin = 5, 
+			  verbose = FALSE)
+waicOcc(out.sp.int)
+waicOcc(out.no.sp.int)
+```
+
+We see for this specific set of simulated data the WAIC is smaller for all four data sources in the spatial model compared to the nonspatial model. 
+
 ## Prediction
+
+Prediction for spatial integrated occupancy models proceeds exactly analogous to our approach using nonspatial integrated occupancy models. The only difference is that now we must also provide the coordinates of the nonsampled locations. 
+
+```{r}
+X.0 <- dat$X.pred
+coords.0 <- dat$coords.pred
+out.sp.int.pred <- predict(out.sp.int, X.0, coords.0)
+# Compare predictions to true simulated values
+psi.true <- dat$psi.pred
+psi.quants <- apply(out.sp.int.pred$psi.0.samples, 2, quantile, 
+		    probs = c(0.025, 0.5, 0.975))
+plot(psi.true, psi.quants[2, ], pch = 19, ylim = c(0, 1))
+segments(psi.true, psi.quants[1, ], y1 = psi.quants[3, ])
+lines(psi.true, psi.true)
+```
+
+For this data set, the predictions seem to capture the trend in the non-sampled data, but the predictions have large amounts of uncertainty. 
 
 # References {-}
 

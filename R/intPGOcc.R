@@ -1,5 +1,5 @@
-intPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
-		     priors, n.omp.threads = 1, verbose = TRUE, 
+intPGOcc <- function(occ.formula, det.formula, data, starting, priors, 
+		     n.samples, n.omp.threads = 1, verbose = TRUE, 
 		     n.report = 1000, n.burn = round(.10 * n.samples), 
 		     n.thin = 1, ...){
  

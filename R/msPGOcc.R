@@ -1,5 +1,5 @@
-msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples, 
-		    priors, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+msPGOcc <- function(occ.formula, det.formula, data, starting, priors,  
+		    n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 		    n.burn = round(.10 * n.samples), n.thin = 1, ...){
  
     # Make it look nice
@@ -234,25 +234,25 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     } else {
       alpha.comm.starting <- apply(alpha.starting, 2, mean)
     }
-    # tau.beta ------------------------
-    if ("tau.beta" %in% names(starting)) {
-      tau.beta.starting <- starting[["tau.beta"]]
-      if (length(tau.beta.starting) != p.occ) {
-        stop(paste("error: starting values for tau.beta must be of length ", p.occ, 
+    # tau.sq.beta ------------------------
+    if ("tau.sq.beta" %in% names(starting)) {
+      tau.sq.beta.starting <- starting[["tau.sq.beta"]]
+      if (length(tau.sq.beta.starting) != p.occ) {
+        stop(paste("error: starting values for tau.sq.beta must be of length ", p.occ, 
 		   sep = ""))
       }
     } else {
-      tau.beta.starting <- runif(p.occ, 0.1, 2)
+      tau.sq.beta.starting <- runif(p.occ, 0.1, 2)
     }
-    # tau.alpha -----------------------
-    if ("tau.alpha" %in% names(starting)) {
-      tau.alpha.starting <- starting[["tau.alpha"]]
-      if (length(tau.alpha.starting) != p.det) {
-        stop(paste("error: starting values for tau.alpha must be of length ", p.det, 
+    # tau.sq.alpha -----------------------
+    if ("tau.sq.alpha" %in% names(starting)) {
+      tau.sq.alpha.starting <- starting[["tau.sq.alpha"]]
+      if (length(tau.sq.alpha.starting) != p.det) {
+        stop(paste("error: starting values for tau.sq.alpha must be of length ", p.det, 
 		   sep = ""))
       }
     } else {
-      tau.alpha.starting <- runif(p.det, 0.1, 2)
+      tau.sq.alpha.starting <- runif(p.det, 0.1, 2)
     }
 
     # sigma.sq.psi -------------------
@@ -348,50 +348,50 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     }
 
 
-    # tau.beta -----------------------
-    if ("tau.beta.ig" %in% names(priors)) {
-      tau.beta.a <- priors$tau.beta.ig[[1]]
-      tau.beta.b <- priors$tau.beta.ig[[2]]
-      if (!is.list(priors$tau.beta.ig) | length(priors$tau.beta.ig) != 2) {
-        stop("error: tau.beta.ig must be a list of length 2")
+    # tau.sq.beta -----------------------
+    if ("tau.sq.beta.ig" %in% names(priors)) {
+      tau.sq.beta.a <- priors$tau.sq.beta.ig[[1]]
+      tau.sq.beta.b <- priors$tau.sq.beta.ig[[2]]
+      if (!is.list(priors$tau.sq.beta.ig) | length(priors$tau.sq.beta.ig) != 2) {
+        stop("error: tau.sq.beta.ig must be a list of length 2")
       }
-      if (length(tau.beta.a) != p.occ) {
-        stop(paste("error: tau.beta.ig[[1]] must be a vector of length ", 
-		   p.occ, " with elements corresponding to tau.betas' shape", sep = ""))
+      if (length(tau.sq.beta.a) != p.occ) {
+        stop(paste("error: tau.sq.beta.ig[[1]] must be a vector of length ", 
+		   p.occ, " with elements corresponding to tau.sq.betas' shape", sep = ""))
       }
-      if (length(tau.beta.b) != p.occ) {
-        stop(paste("error: tau.beta.ig[[2]] must be a vector of length ", 
-		   p.occ, " with elements corresponding to tau.betas' scale", sep = ""))
+      if (length(tau.sq.beta.b) != p.occ) {
+        stop(paste("error: tau.sq.beta.ig[[2]] must be a vector of length ", 
+		   p.occ, " with elements corresponding to tau.sq.betas' scale", sep = ""))
       }
     } else {
       if (verbose) {	    
-        message("No prior specified for tau.beta.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
+        message("No prior specified for tau.sq.beta.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
       }
-      tau.beta.a <- rep(0.1, p.occ)
-      tau.beta.b <- rep(0.1, p.occ)
+      tau.sq.beta.a <- rep(0.1, p.occ)
+      tau.sq.beta.b <- rep(0.1, p.occ)
     }
 
-    # tau.alpha -----------------------
-    if ("tau.alpha.ig" %in% names(priors)) {
-      tau.alpha.a <- priors$tau.alpha.ig[[1]]
-      tau.alpha.b <- priors$tau.alpha.ig[[2]]
-      if (!is.list(priors$tau.alpha.ig) | length(priors$tau.alpha.ig) != 2) {
-        stop("error: tau.alpha.ig must be a list of length 2")
+    # tau.sq.alpha -----------------------
+    if ("tau.sq.alpha.ig" %in% names(priors)) {
+      tau.sq.alpha.a <- priors$tau.sq.alpha.ig[[1]]
+      tau.sq.alpha.b <- priors$tau.sq.alpha.ig[[2]]
+      if (!is.list(priors$tau.sq.alpha.ig) | length(priors$tau.sq.alpha.ig) != 2) {
+        stop("error: tau.sq.alpha.ig must be a list of length 2")
       }
-      if (length(tau.alpha.a) != p.det) {
-        stop(paste("error: tau.alpha.ig[[1]] must be a vector of length ", 
-		   p.det, " with elements corresponding to tau.alphas' shape", sep = ""))
+      if (length(tau.sq.alpha.a) != p.det) {
+        stop(paste("error: tau.sq.alpha.ig[[1]] must be a vector of length ", 
+		   p.det, " with elements corresponding to tau.sq.alphas' shape", sep = ""))
       }
-      if (length(tau.alpha.b) != p.det) {
-        stop(paste("error: tau.alpha.ig[[2]] must be a vector of length ", 
-		   p.det, " with elements corresponding to tau.alphas' scale", sep = ""))
+      if (length(tau.sq.alpha.b) != p.det) {
+        stop(paste("error: tau.sq.alpha.ig[[2]] must be a vector of length ", 
+		   p.det, " with elements corresponding to tau.sq.alphas' scale", sep = ""))
       }
     } else {
       if (verbose) {
-        message("No prior specified for tau.alpha.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
+        message("No prior specified for tau.sq.alpha.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
       }
-      tau.alpha.a <- rep(0.1, p.det)
-      tau.alpha.b <- rep(0.1, p.det)
+      tau.sq.alpha.a <- rep(0.1, p.det)
+      tau.sq.alpha.b <- rep(0.1, p.det)
     }
 
     # sigma.sq.psi --------------------
@@ -457,17 +457,17 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
     storage.mode(alpha.starting) <- "double"
     storage.mode(beta.comm.starting) <- "double"
     storage.mode(alpha.comm.starting) <- "double"
-    storage.mode(tau.beta.starting) <- "double"
-    storage.mode(tau.alpha.starting) <- "double"
+    storage.mode(tau.sq.beta.starting) <- "double"
+    storage.mode(tau.sq.alpha.starting) <- "double"
     storage.mode(z.long.indx) <- "integer"
     storage.mode(mu.beta.comm) <- "double"
     storage.mode(Sigma.beta.comm) <- "double"
     storage.mode(mu.alpha.comm) <- "double"
     storage.mode(Sigma.alpha.comm) <- "double"
-    storage.mode(tau.beta.a) <- "double"
-    storage.mode(tau.beta.b) <- "double"
-    storage.mode(tau.alpha.a) <- "double"
-    storage.mode(tau.alpha.b) <- "double"
+    storage.mode(tau.sq.beta.a) <- "double"
+    storage.mode(tau.sq.beta.b) <- "double"
+    storage.mode(tau.sq.alpha.a) <- "double"
+    storage.mode(tau.sq.alpha.b) <- "double"
     storage.mode(n.samples) <- "integer"
     storage.mode(n.omp.threads) <- "integer"
     storage.mode(verbose) <- "integer"
@@ -498,13 +498,13 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		   J, K, N, n.occ.re, n.occ.re.long, 
           	   beta.starting, alpha.starting, z.starting,
           	   beta.comm.starting, 
-          	   alpha.comm.starting, tau.beta.starting, 
-          	   tau.alpha.starting, sigma.sq.psi.starting, 
+          	   alpha.comm.starting, tau.sq.beta.starting, 
+          	   tau.sq.alpha.starting, sigma.sq.psi.starting, 
 		   beta.star.starting, 
 		   z.long.indx, beta.star.indx, mu.beta.comm, 
           	   mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	   tau.beta.a, tau.beta.b, tau.alpha.a, 
-          	   tau.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+          	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	   tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 		   n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
 
@@ -514,10 +514,10 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       colnames(out$beta.comm.samples) <- x.names
       out$alpha.comm.samples <- mcmc(t(out$alpha.comm.samples))
       colnames(out$alpha.comm.samples) <- x.p.names
-      out$tau.beta.samples <- mcmc(t(out$tau.beta.samples))
-      colnames(out$tau.beta.samples) <- x.names
-      out$tau.alpha.samples <- mcmc(t(out$tau.alpha.samples))
-      colnames(out$tau.alpha.samples) <- x.p.names
+      out$tau.sq.beta.samples <- mcmc(t(out$tau.sq.beta.samples))
+      colnames(out$tau.sq.beta.samples) <- x.names
+      out$tau.sq.alpha.samples <- mcmc(t(out$tau.sq.alpha.samples))
+      colnames(out$tau.sq.alpha.samples) <- x.p.names
       if (is.null(sp.names)) {
         sp.names <- paste('sp', 1:N, sep = '')
       }
@@ -580,14 +580,14 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		   J, K, N, n.det.re, n.det.re.long,
           	   beta.starting, alpha.starting, z.starting,
           	   beta.comm.starting, 
-          	   alpha.comm.starting, tau.beta.starting, 
-          	   tau.alpha.starting,  
+          	   alpha.comm.starting, tau.sq.beta.starting, 
+          	   tau.sq.alpha.starting,  
 		   sigma.sq.p.starting, alpha.star.starting, 
 		   z.long.indx,
 		   alpha.star.indx, mu.beta.comm, 
           	   mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	   tau.beta.a, tau.beta.b, tau.alpha.a, 
-          	   tau.alpha.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, 
+          	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	   tau.sq.alpha.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
 
       out$run.time <- proc.time() - ptm
@@ -596,10 +596,10 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       colnames(out$beta.comm.samples) <- x.names
       out$alpha.comm.samples <- mcmc(t(out$alpha.comm.samples))
       colnames(out$alpha.comm.samples) <- x.p.names
-      out$tau.beta.samples <- mcmc(t(out$tau.beta.samples))
-      colnames(out$tau.beta.samples) <- x.names
-      out$tau.alpha.samples <- mcmc(t(out$tau.alpha.samples))
-      colnames(out$tau.alpha.samples) <- x.p.names
+      out$tau.sq.beta.samples <- mcmc(t(out$tau.sq.beta.samples))
+      colnames(out$tau.sq.beta.samples) <- x.names
+      out$tau.sq.alpha.samples <- mcmc(t(out$tau.sq.alpha.samples))
+      colnames(out$tau.sq.alpha.samples) <- x.p.names
       if (is.null(sp.names)) {
         sp.names <- paste('sp', 1:N, sep = '')
       }
@@ -679,14 +679,14 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
 		   J, K, N, n.occ.re, n.det.re, n.occ.re.long, n.det.re.long,
           	   beta.starting, alpha.starting, z.starting,
           	   beta.comm.starting, 
-          	   alpha.comm.starting, tau.beta.starting, 
-          	   tau.alpha.starting, sigma.sq.psi.starting, 
+          	   alpha.comm.starting, tau.sq.beta.starting, 
+          	   tau.sq.alpha.starting, sigma.sq.psi.starting, 
 		   sigma.sq.p.starting, beta.star.starting, 
 		   alpha.star.starting, z.long.indx, beta.star.indx, 
 		   alpha.star.indx, mu.beta.comm, 
           	   mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	   tau.beta.a, tau.beta.b, tau.alpha.a, 
-          	   tau.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+          	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	   tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 		   sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
 
@@ -696,10 +696,10 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       colnames(out$beta.comm.samples) <- x.names
       out$alpha.comm.samples <- mcmc(t(out$alpha.comm.samples))
       colnames(out$alpha.comm.samples) <- x.p.names
-      out$tau.beta.samples <- mcmc(t(out$tau.beta.samples))
-      colnames(out$tau.beta.samples) <- x.names
-      out$tau.alpha.samples <- mcmc(t(out$tau.alpha.samples))
-      colnames(out$tau.alpha.samples) <- x.p.names
+      out$tau.sq.beta.samples <- mcmc(t(out$tau.sq.beta.samples))
+      colnames(out$tau.sq.beta.samples) <- x.names
+      out$tau.sq.alpha.samples <- mcmc(t(out$tau.sq.alpha.samples))
+      colnames(out$tau.sq.alpha.samples) <- x.p.names
       if (is.null(sp.names)) {
         sp.names <- paste('sp', 1:N, sep = '')
       }
@@ -759,11 +759,11 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       out <- .Call("msPGOcc", y, X, X.p, p.occ, p.det, J, K, N, 
           	 beta.starting, alpha.starting, z.starting,
           	 beta.comm.starting, 
-          	 alpha.comm.starting, tau.beta.starting, 
-          	 tau.alpha.starting, z.long.indx, mu.beta.comm, 
+          	 alpha.comm.starting, tau.sq.beta.starting, 
+          	 tau.sq.alpha.starting, z.long.indx, mu.beta.comm, 
           	 mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	 tau.beta.a, tau.beta.b, tau.alpha.a, 
-          	 tau.alpha.b, n.samples, n.omp.threads, verbose, n.report, 
+          	 tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	 tau.sq.alpha.b, n.samples, n.omp.threads, verbose, n.report, 
           	 n.burn, n.thin, n.post.samples)
 
       out$run.time <- proc.time() - ptm
@@ -772,10 +772,10 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, n.samples,
       colnames(out$beta.comm.samples) <- x.names
       out$alpha.comm.samples <- mcmc(t(out$alpha.comm.samples))
       colnames(out$alpha.comm.samples) <- x.p.names
-      out$tau.beta.samples <- mcmc(t(out$tau.beta.samples))
-      colnames(out$tau.beta.samples) <- x.names
-      out$tau.alpha.samples <- mcmc(t(out$tau.alpha.samples))
-      colnames(out$tau.alpha.samples) <- x.p.names
+      out$tau.sq.beta.samples <- mcmc(t(out$tau.sq.beta.samples))
+      colnames(out$tau.sq.beta.samples) <- x.names
+      out$tau.sq.alpha.samples <- mcmc(t(out$tau.sq.alpha.samples))
+      colnames(out$tau.sq.alpha.samples) <- x.p.names
       if (is.null(sp.names)) {
         sp.names <- paste('sp', 1:N, sep = '')
       }

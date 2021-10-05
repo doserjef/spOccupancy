@@ -1,8 +1,8 @@
-spIntPGOcc <- function(occ.formula, det.formula, data, starting, n.batch, 
-		       batch.length, accept.rate = 0.43, priors, 
-		       cov.model = "exponential", tuning, 
-		       n.omp.threads = 1, verbose = TRUE, NNGP = TRUE, 
-		       n.neighbors = 15, search.type = "cb", 
+spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors, 
+		       tuning, cov.model = "exponential", NNGP = TRUE, 
+		       n.neighbors = 15, search.type = "cb",
+		       n.batch, batch.length, accept.rate = 0.43, 
+		       n.omp.threads = 1, verbose = TRUE,  
 		       n.report = 100, 
 		       n.burn = round(.10 * n.batch * batch.length),
 		       n.thin = 1, ...){

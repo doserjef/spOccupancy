@@ -7,11 +7,11 @@
 }
 
 \usage{
-spIntPGOcc(occ.formula, det.formula, data, starting, n.batch, 
-	   batch.length, accept.rate = 0.43, priors, 
-	   cov.model = "exponential", tuning, n.omp.threads = 1, 
-	   verbose = TRUE, NNGP = TRUE, n.neighbors = 15,
-	   search.type = 'cb', n.report = 100, 
+spIntPGOcc(occ.formula, det.formula, data, starting, priors, 
+	   tuning, cov.model = "exponential", NNGP = TRUE, 
+	   n.neighbors = 15, search.type = 'cb', n.batch, 
+	   batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+	   verbose = TRUE, n.report = 100, 
 	   n.burn = round(.10 * n.batch * batch.length), 
 	   n.thin = 1, ...)
 }
@@ -55,15 +55,6 @@ spIntPGOcc(occ.formula, det.formula, data, starting, n.batch,
   of the starting values for the detection parameters for each data source. 
   Each element of the list should be a vector of starting values for all detection 
   parameters in the given data source.}
-
-  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
-    sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
-    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
-  
-  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
-    0.43. See Roberts and Rosenthal (2009) for details.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
@@ -87,6 +78,11 @@ spIntPGOcc(occ.formula, det.formula, data, starting, n.batch,
     of the Uniform are also passed as a vector of length two with the first 
     and second elements corresponding to the lower and upper support, 
     respectively.}
+
+  \item{tuning}{a list with each tag corresponding to a parameter
+    name. Valid tags are \code{phi} and \code{nu}. The value portion of each
+    tag defines the initial variance of the Adaptive sampler. See
+    Roberts and Rosenthal (2009) for details.}
   
   \item{cov.model}{a quoted keyword that specifies the covariance
     function used to model the spatial dependence structure among the
@@ -94,22 +90,6 @@ spIntPGOcc(occ.formula, det.formula, data, starting, n.batch,
     \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and
     \code{"gaussian"}.}
 
-  \item{tuning}{a list with each tag corresponding to a parameter
-    name. Valid tags are \code{phi} and \code{nu}. The value portion of each
-    tag defines the initial variance of the Adaptive sampler. See
-    Roberts and Rosenthal (2009) for details.}
-  
-  \item{n.omp.threads}{a positive integer indicating
-   the number of threads to use for SMP parallel processing. The package must
-   be compiled for OpenMP support. For most Intel-based machines, we
-   recommend setting \code{n.omp.threads} up to the number of
-   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
-   work on some systems.}
- 
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
-  
   \item{NNGP}{if \code{TRUE}, model is fit with an NNGP. If \code{FALSE}, 
     a full Gaussian process is used. See Datta et al. (2016) and 
     Finley et al. (2019) for more information.}
@@ -127,7 +107,27 @@ spIntPGOcc(occ.formula, det.formula, data, starting, n.batch,
     for nearest neighbor ordering, then \code{"cb"} and \code{"brute"} 
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
+
+  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
+    sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
+    MCMC sampler. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
+    0.43. See Roberts and Rosenthal (2009) for details.}
+  
+  \item{n.omp.threads}{a positive integer indicating
+   the number of threads to use for SMP parallel processing. The package must
+   be compiled for OpenMP support. For most Intel-based machines, we
+   recommend setting \code{n.omp.threads} up to the number of
+   hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
+   work on some systems.}
  
+  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
+    is printed on the screen. Otherwise, only messages in data preparation
+    phase are printed.}
+  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
 

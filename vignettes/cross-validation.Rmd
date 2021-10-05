@@ -1,0 +1,159 @@
+---
+title: "Cross validation using `spOccupancy`"
+author: "Jeffrey W. Doser"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{Cross validation using spOccupancy}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", eval = FALSE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+\newcommand{\pg}{\text{P{\'o}lya-Gamma}}
+
+# Introduction
+
+This vignette displays how to perform k-fold cross-validation using `spOccupancy` model objects. Model assessment and selection among a series of candidate models is often a key task in statistical analyses. In `spOccupancy` we provide the function `waicOcc` that computes the Widely Applicable Information Criterion (WAIC) to distinguish between different models and select a model for a final analysis. However, a k-fold cross-validation approach is typically a very adequate way to assess the predictive performance of a model [@hooten2015guide], especially given recent criticisms of the WAIC for hierarchical models often used in wildlife ecology [@link2020model]. In this vignette we will show how cross-validation can be easily achieved using `spOccupancy` model functions. For simplicity, we will display cross-validation approaches using a single species occupancy model with the `PGOcc` function. We first load the `spOccupancy` package along with the `coda` package for use with MCMC objects.
+
+```{r}
+library(spOccupancy)
+library(coda)
+```
+
+## Example data set: Ovenbird at Hubbard Brook
+
+We will use data on the Ovenbird (OVEN) collected from point counts at Hubbard Brook Experimental Forest (HBEF) in New Hampshire, USA. Specific details on the data set are available on the [Hubbard Brook website]((https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) and @doser2021ICOM. The data are provided in the `spOccupancy` package and are loaded with `data(hbef2015)`. Below, we subset the data portion of the `hbef2015` object to only include data on OVEN. 
+
+```{r}
+data(hbef2015)
+str(hbef2015)
+sp.names <- attr(hbef2015$y, "dimnames")[[1]]
+oven.hbef <- hbef2015
+oven.hbef$y <- oven.hbef$y[sp.names == 'OVEN', , ]
+```
+
+# k-fold Cross-validation
+
+Suppose $J$ denotes the number of sites in our data sets where we have replicated detection-nondetection data for a species of interest. A k-fold cross validation approach requires fitting a model $k$ times, where each time the model is fit using $J / k$ data points. Each time the model is fit, it uses a different portion of the data and then predicts the remaining $J - J/k$ hold out values. Because the data are not used to fit the model, this yields true samples from the posterior predictive distribution that we can use to assess the predictivey capability of the model. 
+
+As a measure of out-of-sample predictive performance, we used the deviance as a cross-validation score following @hooten2015guide. For K-fold cross-validation, our scoring function is computed as 
+
+\begin{equation}
+-2 \sum_{k = 1}^K \text{log}\Bigg(\frac{\sum_{q = 1}^Q \text{Bernoulli}(\bm{y}_k \mid \bm{p}^{(q)}\bm{z}_k^{(q)})}{Q}\Bigg), 
+\end{equation}
+
+where $\bm{p}^{(q)}$ and $\bm{z}_k^{(q)}$ are MCMC samples of detection probability and latent occurrence, respectively, arising from a model that is fit without the observations $\bm{y}_k$. $Q$ is the total number of posterior samples from the MCMC sampler. The -2 is used so that smaller values indicate better model fit, which aligns with most information criteria used for model fit (like the WAIC implemented using `waicOcc`). 
+
+In `spOccupancy`, we implement k-fold cross-validation directly in the functions used to fit occupancy models. The following discussion is in the context of single species occupancy models (`PGOcc`), but the exact same implementation is included in `spOccupancy` for all other model fitting functions (i.e., `spPGOcc`, `msPGOcc`, `spMsPGOcc`, `intPGOcc`, `spIntPGOcc`). 
+
+## Performing k-fold cross-validation using `PGOcc`
+
+The final three arguments (`k.fold`, `k.fold.threads`, `k.fold.seed`) in `PGOcc` control whether or not k-fold cross validation is performed following the complete fit of the model using the entire data set. The `k.fold` argument indicates the number of $k$ folds to use for cross-validation. If `k.fold` is not specified, cross-validation is not performed and `k.fold.threads` and `k.fold.seed` are ignored. The `k.fold.threads` argument indicates the number of threads to use for running the $k$ models in parallel across multiple threads. Parallel processing is accomplished using the R packages `foreach` and `doParallel`. Specifying `k.fold.threads > 1` can substantially increase run time since it allows for models to be fit simultaneously on different threads rather than sequentially. The `k.fold.seed` indicates the seed used to randomly split the data into $k$ groups. This is by default set to 100. 
+
+Below we fit an occupancy model for OVEN with linear and quadratic elevation as occurrence predictors and day of year (linear and quadratic) and time of day (linear) as detection predictors. We set `k.fold = 4` to perform 4-fold cross-validation and `k.fold.threads = 1` to run the model using 1 thread. Normally we would set `k.fold.threads = 4`, but using multiple threads leads to complications when compiling this vignette, so we leave that to you to explore the computational improvements of performing cross-validation across multiple cores. 
+
+```{r}
+# Number of detection and occurrence parameters (including intercept)
+p.det <- 4
+p.occ <- 3
+oven.starting <- list(alpha = rep(0, p.det), 
+                      beta = rep(0, p.occ), 
+                      z = apply(oven.hbef$y, 1, max, na.rm = TRUE))
+oven.priors <- list(alpha.normal = list(mean = rep(0, p.det),
+                                        var = rep(2.72, p.det)), 
+                    beta.normal = list(mean = rep(0, p.occ), 
+                                       var = rep(2.72, p.occ)))
+n.samples <- 20000
+n.burn <- 10000
+n.thin <- 20
+out.full <- PGOcc(occ.formula = ~Elevation + Elevation.2, 
+                  det.formula = ~day + tod + day.2, 
+                  data = oven.hbef, 
+                  starting = oven.starting, 
+                  n.samples = n.samples, 
+                  priors = oven.priors, 
+                  n.omp.threads = 1, 
+                  verbose = TRUE, 
+                  n.report = 5000, 
+                  n.burn = n.burn, 
+                  n.thin = n.thin, 
+		  k.fold = 4, 
+		  k.fold.threads = 1)
+names(out.full)
+```
+
+The cross-validation metric (model deviance) is stored in the `k.fold.deviance` tag of the resulting model object.
+
+```{r}
+out.full$k.fold.deviance
+```
+
+Next, we vary the occurrence portion of the occupancy model and compare the results of the cross-validation. 
+
+```{r}
+# Linear elevation only
+p.occ <- 2
+oven.starting$beta <- rep(0, p.occ)
+oven.priors$beta.normal <- list(mean = rep(0, p.occ), 
+				var = rep(2.72, p.occ))
+out.1 <- PGOcc(occ.formula = ~ Elevation, 
+               det.formula = ~day + tod + day.2, 
+               data = oven.hbef, 
+               starting = oven.starting, 
+               n.samples = n.samples, 
+               priors = oven.priors, 
+               n.omp.threads = 1, 
+               verbose = FALSE, 
+               n.report = 5000, 
+               n.burn = n.burn, 
+               n.thin = n.thin, 
+	       k.fold = 4, 
+	       k.fold.threads = 1)
+# Intercept only  
+p.occ <- 1
+oven.starting$beta <- rep(0, p.occ)
+oven.priors$beta.normal <- list(mean = rep(0, p.occ), 
+				var = rep(2.72, p.occ))
+out.2 <- PGOcc(occ.formula = ~ 1, 
+               det.formula = ~day + tod + day.2, 
+               data = oven.hbef, 
+               starting = oven.starting, 
+               n.samples = n.samples, 
+               priors = oven.priors, 
+               n.omp.threads = 1, 
+               verbose = FALSE, 
+               n.report = 5000, 
+               n.burn = n.burn, 
+               n.thin = n.thin, 
+	       k.fold = 4, 
+	       k.fold.threads = 1)
+out.full$k.fold.deviance
+out.1$k.fold.deviance
+out.2$k.fold.deviance
+```
+
+Looking at the cross-validation deviance scores, we see support for including elevation in the model given the intercept only model has the highest deviance. However, the score for the linear only effect of elevation is lower than that of the full model with linear and quadratic elevation, indicating that including a quadratic parameter for elevation may not be necessary. Let's compare this to the results from the WAIC. 
+
+```{r}
+waicOcc(out.full)
+waicOcc(out.1)
+waicOcc(out.2)
+```
+
+We see the WAIC is lowest for the model with both linear and quadratic elevation. This is not all that surprising, as different forms of model assessment will potentially provide different results [@hooten2015guide]. This clearly indicates we should carefully consider the results from model assessments using both WAIC and k-fold cross-validation, and assess their results in the context of the goals of the analysis. We recommend using both WAIC and cross-validation when performing a more formal analysis that involves the comparison of multiple competing models, as well as potentially exploring alternative approaches not currently supported by `spOccupancy` (see @hooten2015guide for an overview of Bayesian model selection in ecology). 
+
+# References {-}
+

@@ -19,13 +19,13 @@ extern "C" {
 	             SEXP nOccRE_r, SEXP nDetRE_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
 	             SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
 	             SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
-	             SEXP tauBetaStarting_r, SEXP tauAlphaStarting_r, 
+	             SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
 	             SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
 		     SEXP betaStarStarting_r, SEXP alphaStarStarting_r, 
 	             SEXP zLongIndx_r, SEXP betaStarIndx_r, SEXP alphaStarIndx_r, 
 	             SEXP muBetaComm_r, SEXP muAlphaComm_r, 
-	             SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauBetaA_r, 
-	             SEXP tauBetaB_r, SEXP tauAlphaA_r, SEXP tauAlphaB_r, 
+	             SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
+	             SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
 	             SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 	             SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	             SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
@@ -60,10 +60,10 @@ extern "C" {
     double *muAlphaComm = REAL(muAlphaComm_r); 
     double *SigmaBetaCommInv = REAL(SigmaBetaComm_r); 
     double *SigmaAlphaCommInv = REAL(SigmaAlphaComm_r); 
-    double *tauBetaA = REAL(tauBetaA_r); 
-    double *tauBetaB = REAL(tauBetaB_r); 
-    double *tauAlphaA = REAL(tauAlphaA_r); 
-    double *tauAlphaB = REAL(tauAlphaB_r); 
+    double *tauSqBetaA = REAL(tauSqBetaA_r); 
+    double *tauSqBetaB = REAL(tauSqBetaB_r); 
+    double *tauSqAlphaA = REAL(tauSqAlphaA_r); 
+    double *tauSqAlphaB = REAL(tauSqAlphaB_r); 
     double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
     double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
     double *sigmaSqPA = REAL(sigmaSqPA_r); 
@@ -164,12 +164,12 @@ extern "C" {
      * *******************************************************************/
     double *betaComm = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dcopy)(&pOcc, REAL(betaCommStarting_r), &inc, betaComm, &inc);
-    double *tauBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    F77_NAME(dcopy)(&pOcc, REAL(tauBetaStarting_r), &inc, tauBeta, &inc);
+    double *tauSqBeta = (double *) R_alloc(pOcc, sizeof(double)); 
+    F77_NAME(dcopy)(&pOcc, REAL(tauSqBetaStarting_r), &inc, tauSqBeta, &inc);
     double *alphaComm = (double *) R_alloc(pDet, sizeof(double));   
     F77_NAME(dcopy)(&pDet, REAL(alphaCommStarting_r), &inc, alphaComm, &inc);
-    double *tauAlpha = (double *) R_alloc(pDet, sizeof(double)); 
-    F77_NAME(dcopy)(&pDet, REAL(tauAlphaStarting_r), &inc, tauAlpha, &inc);
+    double *tauSqAlpha = (double *) R_alloc(pDet, sizeof(double)); 
+    F77_NAME(dcopy)(&pDet, REAL(tauSqAlphaStarting_r), &inc, tauSqAlpha, &inc);
     double *beta = (double *) R_alloc(pOccN, sizeof(double));   
     F77_NAME(dcopy)(&pOccN, REAL(betaStarting_r), &inc, beta, &inc);
     double *alpha = (double *) R_alloc(pDetN, sizeof(double));   
@@ -200,10 +200,10 @@ extern "C" {
     PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     SEXP alphaCommSamples_r;
     PROTECT(alphaCommSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
-    SEXP tauBetaSamples_r; 
-    PROTECT(tauBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
-    SEXP tauAlphaSamples_r; 
-    PROTECT(tauAlphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
+    SEXP tauSqBetaSamples_r; 
+    PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    SEXP tauSqAlphaSamples_r; 
+    PROTECT(tauSqAlphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
     // Species level
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
@@ -256,7 +256,7 @@ extern "C" {
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
-      TauBetaInv[i * pOcc + i] = tauBeta[i]; 
+      TauBetaInv[i * pOcc + i] = tauSqBeta[i]; 
     } // i
     F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
@@ -265,7 +265,7 @@ extern "C" {
     // Put community level variances in a pDet x pDet matrix. 
     double *TauAlphaInv = (double *) R_alloc(ppDet, sizeof(double)); zeros(TauAlphaInv, ppDet); 
     for (i = 0; i < pDet; i++) {
-      TauAlphaInv[i * pDet + i] = tauAlpha[i]; 
+      TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
     } // i
     F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
@@ -376,10 +376,10 @@ extern "C" {
           tmp_0 += (beta[q * N + i] - betaComm[q]) * (beta[q * N + i] - betaComm[q]);
         } // i
         tmp_0 *= 0.5;
-        tauBeta[q] = rigamma(tauBetaA[q] + N / 2.0, tauBetaB[q] + tmp_0); 
+        tauSqBeta[q] = rigamma(tauSqBetaA[q] + N / 2.0, tauSqBetaB[q] + tmp_0); 
       } // q
       for (q = 0; q < pOcc; q++) {
-        TauBetaInv[q * pOcc + q] = tauBeta[q]; 
+        TauBetaInv[q * pOcc + q] = tauSqBeta[q]; 
       } // q
       F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
       if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
@@ -394,10 +394,10 @@ extern "C" {
           tmp_0 += (alpha[q * N + i] - alphaComm[q]) * (alpha[q * N + i] - alphaComm[q]);
         } // i
         tmp_0 *= 0.5;
-        tauAlpha[q] = rigamma(tauAlphaA[q] + N / 2.0, tauAlphaB[q] + tmp_0); 
+        tauSqAlpha[q] = rigamma(tauSqAlphaA[q] + N / 2.0, tauSqAlphaB[q] + tmp_0); 
       } // q
       for (q = 0; q < pDet; q++) {
-        TauAlphaInv[q * pDet + q] = tauAlpha[q]; 
+        TauAlphaInv[q * pDet + q] = tauSqAlpha[q]; 
       } // q
       F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
       if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
@@ -628,8 +628,8 @@ extern "C" {
 	if (thinIndx == nThin) {
           F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[sPost*pOcc], &inc);
           F77_NAME(dcopy)(&pDet, alphaComm, &inc, &REAL(alphaCommSamples_r)[sPost*pDet], &inc);
-          F77_NAME(dcopy)(&pOcc, tauBeta, &inc, &REAL(tauBetaSamples_r)[sPost*pOcc], &inc);
-          F77_NAME(dcopy)(&pDet, tauAlpha, &inc, &REAL(tauAlphaSamples_r)[sPost*pDet], &inc);
+          F77_NAME(dcopy)(&pOcc, tauSqBeta, &inc, &REAL(tauSqBetaSamples_r)[sPost*pOcc], &inc);
+          F77_NAME(dcopy)(&pDet, tauSqAlpha, &inc, &REAL(tauSqAlphaSamples_r)[sPost*pDet], &inc);
           F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[sPost*pOccN], &inc); 
           F77_NAME(dcopy)(&pDetN, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDetN], &inc); 
           F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[sPost*JN], &inc); 
@@ -682,8 +682,8 @@ extern "C" {
 
     SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
     SET_VECTOR_ELT(result_r, 1, alphaCommSamples_r);
-    SET_VECTOR_ELT(result_r, 2, tauBetaSamples_r);
-    SET_VECTOR_ELT(result_r, 3, tauAlphaSamples_r);
+    SET_VECTOR_ELT(result_r, 2, tauSqBetaSamples_r);
+    SET_VECTOR_ELT(result_r, 3, tauSqAlphaSamples_r);
     SET_VECTOR_ELT(result_r, 4, betaSamples_r);
     SET_VECTOR_ELT(result_r, 5, alphaSamples_r);
     SET_VECTOR_ELT(result_r, 6, zSamples_r);
@@ -695,8 +695,8 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 12, alphaStarSamples_r);
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
     SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.comm.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("tau.beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, mkChar("tau.alpha.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, mkChar("tau.sq.beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 3, mkChar("tau.sq.alpha.samples")); 
     SET_VECTOR_ELT(resultName_r, 4, mkChar("beta.samples")); 
     SET_VECTOR_ELT(resultName_r, 5, mkChar("alpha.samples")); 
     SET_VECTOR_ELT(resultName_r, 6, mkChar("z.samples")); 

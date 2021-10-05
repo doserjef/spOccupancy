@@ -13,7 +13,7 @@ RoxygenNote: 7.1.1
 URL: https://github.com/doserjef/spOccupancy
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Imports: 
-    stats, coda, abind, RANN, lme4
+    stats, coda, abind, RANN, lme4, foreach, doParallel
 Suggests: 
     rmarkdown, knitr, stars, ggplot2, bookdown
 VignetteBuilder: knitr
