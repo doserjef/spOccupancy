@@ -1,6 +1,12 @@
 msPGOcc <- function(occ.formula, det.formula, data, starting, priors,  
 		    n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-		    n.burn = round(.10 * n.samples), n.thin = 1, ...){
+		    n.burn = round(.10 * n.samples), n.thin = 1, 
+		    k.fold, k.fold.threads = 1, k.fold.seed = 100, ...){
+
+    ptm <- proc.time()
+
+    logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+    logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
  
     # Make it look nice
     if (verbose) {
@@ -113,8 +119,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Number of latent detection random effect values
     n.det.re <- length(unlist(apply(X.p.re, 2, unique)))
     n.det.re.long <- apply(X.p.re, 2, function(a) length(unique(a)))
-    # Number of pseudoreplicates
-    n.obs <- nrow(X.p)
     # Number of sites
     J <- nrow(X)
     # Number of repeat visits
@@ -137,10 +141,14 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # but may eventually need some updating. 
     names.long <- which(!is.na(c(y.big[1, , ])))
     if (nrow(X.p) == length(y) / N) {
-      X.p <- X.p[!is.na(c(y.big[1, , ])), ]
-      X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
+      X.p <- X.p[!is.na(c(y.big[1, , ])), , drop = FALSE]
+      if (p.det.re > 0) {
+        X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
+      }
     }
     y <- y[!is.na(y)]
+    # Number of pseudoreplicates
+    n.obs <- nrow(X.p)
 
     # Get random effect matrices all set ----------------------------------
     if (p.occ.re > 1) {
@@ -479,6 +487,9 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 				 by = as.integer(n.thin)))
     storage.mode(n.post.samples) <- "integer"
 
+    # Set model.deviance to NA for returning when no cross-validation
+    model.deviance <- NA
+
     if (p.occ.re > 0 & p.det.re == 0) {
       storage.mode(p.occ.re) <- "integer"
       storage.mode(X.re) <- "integer"
@@ -490,8 +501,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(beta.star.starting) <- "double"
       storage.mode(beta.star.indx) <- "integer"
       storage.mode(lambda.psi) <- "double"
-
-      ptm <- proc.time()
 
       out <- .Call("msPGOccREOcc", y, X, X.p, X.re, 
 		   lambda.psi, p.occ, p.det, p.occ.re, 
@@ -507,8 +516,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           	   tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 		   n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
-
-      out$run.time <- proc.time() - ptm
 
       out$beta.comm.samples <- mcmc(t(out$beta.comm.samples))
       colnames(out$beta.comm.samples) <- x.names
@@ -556,6 +563,155 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       out$n.burn <- n.burn
       out$pRE <- FALSE
       out$psiRE <- TRUE
+
+      # K-fold cross-validation -------
+      if (!missing(k.fold)) {
+	if (verbose) {      
+          cat("----------------------------------------\n");
+          cat("\tCross-validation\n");
+          cat("----------------------------------------\n");
+          message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
+		      " thread(s).", sep = ''))
+	}
+        # Currently implemented without parellization. 
+	set.seed(k.fold.seed)
+	# Number of sites in each hold out data set. 
+	sites.random <- sample(1:J)    
+        sites.k.fold <- split(sites.random, sites.random %% k.fold)
+	registerDoParallel(k.fold.threads)
+	model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+          curr.set <- sort(sites.k.fold[[i]])
+	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+	  y.fit <- c(y.big[, -curr.set, , drop = FALSE])
+	  y.fit <- y.fit[!is.na(y.fit)]
+	  y.0 <- c(y.big[, curr.set, , drop = FALSE])
+	  y.0 <- y.0[!is.na(y.0)]
+	  z.starting.fit <- z.starting[-curr.set]
+	  X.p.fit <- X.p[y.indx, , drop = FALSE]
+	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
+	  X.fit <- X[-curr.set, , drop = FALSE]
+	  X.0 <- X[curr.set, , drop = FALSE]
+	  J.fit <- nrow(X.fit)
+	  K.fit <- K[-curr.set]
+	  K.0 <- K[curr.set]
+	  lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
+	  X.re.fit <- X.re[-curr.set, , drop = FALSE]
+	  X.re.0 <- X.re[curr.set, , drop = FALSE]
+	  # Gotta be a better way, but will do for now. 
+	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	  for (j in 1:J.fit) {
+            z.long.indx.fit[j, 1:K.fit[j]] <- j  
+          }
+	  z.long.indx.fit <- c(z.long.indx.fit)
+	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	  for (j in 1:nrow(X.0)) {
+            z.0.long.indx[j, 1:K.0[j]] <- j  
+          }
+	  z.0.long.indx <- c(z.0.long.indx)
+	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  verbose.fit <- FALSE
+	  n.omp.threads.fit <- 1
+
+          storage.mode(y.fit) <- "double"
+          storage.mode(z.starting.fit) <- "double"
+          storage.mode(X.p.fit) <- "double"
+          storage.mode(X.fit) <- "double"
+          storage.mode(p.det) <- "integer"
+          storage.mode(p.occ) <- "integer"
+          storage.mode(J.fit) <- "integer"
+          storage.mode(K.fit) <- "integer"
+          storage.mode(N) <- "integer"
+          storage.mode(beta.starting) <- "double"
+          storage.mode(alpha.starting) <- "double"
+          storage.mode(beta.comm.starting) <- "double"
+          storage.mode(alpha.comm.starting) <- "double"
+          storage.mode(tau.sq.beta.starting) <- "double"
+          storage.mode(tau.sq.alpha.starting) <- "double"
+          storage.mode(z.long.indx.fit) <- "integer"
+          storage.mode(mu.beta.comm) <- "double"
+          storage.mode(Sigma.beta.comm) <- "double"
+          storage.mode(mu.alpha.comm) <- "double"
+          storage.mode(Sigma.alpha.comm) <- "double"
+          storage.mode(tau.sq.beta.a) <- "double"
+          storage.mode(tau.sq.beta.b) <- "double"
+          storage.mode(tau.sq.alpha.a) <- "double"
+          storage.mode(tau.sq.alpha.b) <- "double"
+          storage.mode(n.samples) <- "integer"
+          storage.mode(n.omp.threads.fit) <- "integer"
+          storage.mode(verbose.fit) <- "integer"
+          storage.mode(n.report) <- "integer"
+          storage.mode(n.burn) <- "integer"
+          storage.mode(n.thin) <- "integer"
+          storage.mode(p.occ.re) <- "integer"
+          storage.mode(X.re.fit) <- "integer"
+          storage.mode(n.occ.re) <- "integer"
+          storage.mode(n.occ.re.long) <- "integer"
+          storage.mode(sigma.sq.psi.starting) <- "double"
+          storage.mode(sigma.sq.psi.a) <- "double"
+          storage.mode(sigma.sq.psi.b) <- "double"
+          storage.mode(beta.star.starting) <- "double"
+          storage.mode(beta.star.indx) <- "integer"
+          storage.mode(lambda.psi.fit) <- "double"
+
+          # Run the model in C
+          out.fit <- .Call("msPGOccREOcc", y.fit, X.fit, X.p.fit, X.re.fit, 
+		           lambda.psi.fit, p.occ, p.det, p.occ.re, 
+		           J.fit, K.fit, N, n.occ.re, n.occ.re.long, 
+          	           beta.starting, alpha.starting, z.starting.fit,
+          	           beta.comm.starting, 
+          	           alpha.comm.starting, tau.sq.beta.starting, 
+          	           tau.sq.alpha.starting, sigma.sq.psi.starting, 
+		           beta.star.starting, 
+		           z.long.indx.fit, beta.star.indx, mu.beta.comm, 
+          	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+          	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	           tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+		           n.samples, n.omp.threads.fit, 
+		           verbose.fit, n.report, n.burn, n.thin, n.post.samples)
+
+          if (is.null(sp.names)) {
+            sp.names <- paste('sp', 1:N, sep = '')
+          }
+          coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
+          out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
+          colnames(out.fit$beta.samples) <- coef.names
+          out.fit$sigma.sq.psi.samples <- mcmc(t(out.fit$sigma.sq.psi.samples))
+          colnames(out.fit$sigma.sq.psi.samples) <- x.re.names
+          out.fit$beta.star.samples <- mcmc(t(out.fit$beta.star.samples))
+          tmp.names <- unlist(sapply(n.occ.re.long, function(a) 1:a))
+          beta.star.names <- paste(rep(x.re.names, n.occ.re.long), tmp.names, sep = '-')
+          beta.star.names <- paste(beta.star.names, rep(sp.names, each = n.occ.re), sep = '-')
+          colnames(out.fit$beta.star.samples) <- beta.star.names
+          out.fit$X <- X
+	  out.fit$X.re <- X.re
+          out.fit$y <- y.big
+          out.fit$n.post <- n.post.samples
+          out.fit$psiRE <- TRUE
+	  class(out.fit) <- "msPGOcc"
+
+	  # Predict occurrence at new sites. 
+	  out.pred <- predict.msPGOcc(out.fit, cbind(X.0, X.re.0))
+
+	  # Detection 
+          sp.indx <- rep(1:N, ncol(X.p.0))
+	  like.samples <- matrix(NA, N, nrow(X.p.0))
+	  p.0.samples <- array(NA, dim = c(nrow(X.p.0), N, n.post.samples))
+	  for (q in 1:N) {
+            p.0.samples[, q, ] <- logit.inv(X.p.0 %*% out.fit$alpha.samples[sp.indx == q, ])
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[q, j] <- mean(dbinom(y.0[N * (j - 1) + q], 1,  
+						p.0.samples[j, q, ] * 
+					        out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+            }
+          }
+	  apply(like.samples, 1, function(a) sum(log(a)))
+        }
+	model.deviance <- -2 * model.deviance
+	# Return objects from cross-validation
+	out$k.fold.deviance <- model.deviance
+	stopImplicitCluster()
+      }
 
       class(out) <- "msPGOcc"
 
@@ -573,8 +729,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(alpha.star.indx) <- "integer"
       storage.mode(lambda.p) <- "double"
 
-      ptm <- proc.time()
-
       out <- .Call("msPGOccREDet", y, X, X.p, X.p.re, 
 		   lambda.p, p.occ, p.det, p.det.re, 
 		   J, K, N, n.det.re, n.det.re.long,
@@ -589,8 +743,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	   tau.sq.alpha.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
-
-      out$run.time <- proc.time() - ptm
 
       out$beta.comm.samples <- mcmc(t(out$beta.comm.samples))
       colnames(out$beta.comm.samples) <- x.names
@@ -640,16 +792,154 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       out$pRE <- TRUE
       out$psiRE <- FALSE
 
+      # K-fold cross-validation -------
+      if (!missing(k.fold)) {
+	if (verbose) {      
+          cat("----------------------------------------\n");
+          cat("\tCross-validation\n");
+          cat("----------------------------------------\n");
+          message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
+		      " thread(s).", sep = ''))
+	}
+        # Currently implemented without parellization. 
+	set.seed(k.fold.seed)
+	# Number of sites in each hold out data set. 
+	sites.random <- sample(1:J)    
+        sites.k.fold <- split(sites.random, sites.random %% k.fold)
+	registerDoParallel(k.fold.threads)
+	model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+          curr.set <- sort(sites.k.fold[[i]])
+	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+	  y.fit <- c(y.big[, -curr.set, , drop = FALSE])
+	  y.fit <- y.fit[!is.na(y.fit)]
+	  y.0 <- c(y.big[, curr.set, , drop = FALSE])
+	  y.0 <- y.0[!is.na(y.0)]
+	  z.starting.fit <- z.starting[-curr.set]
+	  X.p.fit <- X.p[y.indx, , drop = FALSE]
+	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
+	  X.fit <- X[-curr.set, , drop = FALSE]
+	  X.0 <- X[curr.set, , drop = FALSE]
+	  J.fit <- nrow(X.fit)
+	  K.fit <- K[-curr.set]
+	  K.0 <- K[curr.set]
+	  lambda.p.fit <- lambda.p[y.indx, , drop = FALSE]
+	  lambda.p.0 <- lambda.p[!y.indx, , drop = FALSE]
+	  X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
+	  X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
+	  # Gotta be a better way, but will do for now. 
+	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	  for (j in 1:J.fit) {
+            z.long.indx.fit[j, 1:K.fit[j]] <- j  
+          }
+	  z.long.indx.fit <- c(z.long.indx.fit)
+	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	  for (j in 1:nrow(X.0)) {
+            z.0.long.indx[j, 1:K.0[j]] <- j  
+          }
+	  z.0.long.indx <- c(z.0.long.indx)
+	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  verbose.fit <- FALSE
+	  n.omp.threads.fit <- 1
+
+          storage.mode(y.fit) <- "double"
+          storage.mode(z.starting.fit) <- "double"
+          storage.mode(X.p.fit) <- "double"
+          storage.mode(X.fit) <- "double"
+          storage.mode(p.det) <- "integer"
+          storage.mode(p.occ) <- "integer"
+          storage.mode(J.fit) <- "integer"
+          storage.mode(K.fit) <- "integer"
+          storage.mode(N) <- "integer"
+          storage.mode(beta.starting) <- "double"
+          storage.mode(alpha.starting) <- "double"
+          storage.mode(beta.comm.starting) <- "double"
+          storage.mode(alpha.comm.starting) <- "double"
+          storage.mode(tau.sq.beta.starting) <- "double"
+          storage.mode(tau.sq.alpha.starting) <- "double"
+          storage.mode(z.long.indx.fit) <- "integer"
+          storage.mode(mu.beta.comm) <- "double"
+          storage.mode(Sigma.beta.comm) <- "double"
+          storage.mode(mu.alpha.comm) <- "double"
+          storage.mode(Sigma.alpha.comm) <- "double"
+          storage.mode(tau.sq.beta.a) <- "double"
+          storage.mode(tau.sq.beta.b) <- "double"
+          storage.mode(tau.sq.alpha.a) <- "double"
+          storage.mode(tau.sq.alpha.b) <- "double"
+          storage.mode(n.samples) <- "integer"
+          storage.mode(n.omp.threads.fit) <- "integer"
+          storage.mode(verbose.fit) <- "integer"
+          storage.mode(n.report) <- "integer"
+          storage.mode(n.burn) <- "integer"
+          storage.mode(n.thin) <- "integer"
+          storage.mode(p.det.re) <- "integer"
+          storage.mode(X.p.re.fit) <- "integer"
+          storage.mode(n.det.re) <- "integer"
+          storage.mode(n.det.re.long) <- "integer"
+          storage.mode(sigma.sq.p.starting) <- "double"
+          storage.mode(sigma.sq.p.a) <- "double"
+          storage.mode(sigma.sq.p.b) <- "double"
+          storage.mode(alpha.star.starting) <- "double"
+          storage.mode(alpha.star.indx) <- "integer"
+          storage.mode(lambda.p.fit) <- "double"
+
+          out.fit <- .Call("msPGOccREDet", y.fit, X.fit, X.p.fit, X.p.re.fit, 
+		           lambda.p.fit, p.occ, p.det, p.det.re, 
+		           J.fit, K.fit, N, n.det.re, n.det.re.long,
+          	           beta.starting, alpha.starting, z.starting.fit,
+          	           beta.comm.starting, 
+          	           alpha.comm.starting, tau.sq.beta.starting, 
+          	           tau.sq.alpha.starting,  
+		           sigma.sq.p.starting, alpha.star.starting, 
+		           z.long.indx.fit,
+		           alpha.star.indx, mu.beta.comm, 
+          	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+          	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	           tau.sq.alpha.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads.fit, 
+		           verbose.fit, n.report, n.burn, n.thin, n.post.samples)
+
+          if (is.null(sp.names)) {
+            sp.names <- paste('sp', 1:N, sep = '')
+          }
+          coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
+          out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
+          colnames(out.fit$beta.samples) <- coef.names
+          out.fit$X <- X
+          out.fit$y <- y.big
+          out.fit$n.post <- n.post.samples
+          out.fit$psiRE <- FALSE
+	  class(out.fit) <- "msPGOcc"
+
+	  # Predict occurrence at new sites. 
+	  out.pred <- predict.msPGOcc(out.fit, X.0)
+
+	  # Detection 
+          sp.indx <- rep(1:N, ncol(X.p.0))
+	  like.samples <- matrix(NA, N, nrow(X.p.0))
+	  p.0.samples <- array(NA, dim = c(nrow(X.p.0), N, n.post.samples))
+          sp.re.indx <- rep(1:N, each = nrow(out.fit$alpha.star.samples) / N)
+	  for (q in 1:N) {
+            p.0.samples[, q, ] <- logit.inv(X.p.0 %*% out.fit$alpha.samples[sp.indx == q, ] + 
+					    lambda.p.0 %*% out.fit$alpha.star.samples[sp.re.indx == q, ])
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[q, j] <- mean(dbinom(y.0[N * (j - 1) + q], 1,  
+						p.0.samples[j, q, ] * 
+					        out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+            }
+          }
+	  apply(like.samples, 1, function(a) sum(log(a)))
+        }
+	model.deviance <- -2 * model.deviance
+	# Return objects from cross-validation
+	out$k.fold.deviance <- model.deviance
+	stopImplicitCluster()
+      }
+
       class(out) <- "msPGOcc"
 
     }
 
     if (p.occ.re > 0 & p.det.re > 0) {
-
-      # Testing
-      #alpha.star.starting <- c(dat$alpha.star)
-      #sigma.sq.p.starting <- p.RE$sigma.sq.p 
-      #alpha.starting <- alpha.true
 
       storage.mode(p.occ.re) <- "integer"
       storage.mode(p.det.re) <- "integer"
@@ -672,8 +962,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(lambda.psi) <- "double"
       storage.mode(lambda.p) <- "double"
 
-      ptm <- proc.time()
-
       out <- .Call("msPGOccREBoth", y, X, X.p, X.re, X.p.re, 
 		   lambda.psi, lambda.p, p.occ, p.det, p.occ.re, p.det.re, 
 		   J, K, N, n.occ.re, n.det.re, n.occ.re.long, n.det.re.long,
@@ -689,8 +977,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           	   tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 		   sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, 
 		   verbose, n.report, n.burn, n.thin, n.post.samples)
-
-      out$run.time <- proc.time() - ptm
 
       out$beta.comm.samples <- mcmc(t(out$beta.comm.samples))
       colnames(out$beta.comm.samples) <- x.names
@@ -748,13 +1034,175 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       out$pRE <- TRUE
       out$psiRE <- TRUE
 
+
+      # K-fold cross-validation -------
+      if (!missing(k.fold)) {
+	if (verbose) {      
+          cat("----------------------------------------\n");
+          cat("\tCross-validation\n");
+          cat("----------------------------------------\n");
+          message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
+		      " thread(s).", sep = ''))
+	}
+        # Currently implemented without parellization. 
+	set.seed(k.fold.seed)
+	# Number of sites in each hold out data set. 
+	sites.random <- sample(1:J)    
+        sites.k.fold <- split(sites.random, sites.random %% k.fold)
+	registerDoParallel(k.fold.threads)
+	model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+          curr.set <- sort(sites.k.fold[[i]])
+	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+	  y.fit <- c(y.big[, -curr.set, , drop = FALSE])
+	  y.fit <- y.fit[!is.na(y.fit)]
+	  y.0 <- c(y.big[, curr.set, , drop = FALSE])
+	  y.0 <- y.0[!is.na(y.0)]
+	  z.starting.fit <- z.starting[-curr.set]
+	  X.p.fit <- X.p[y.indx, , drop = FALSE]
+	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
+	  X.fit <- X[-curr.set, , drop = FALSE]
+	  X.0 <- X[curr.set, , drop = FALSE]
+	  J.fit <- nrow(X.fit)
+	  K.fit <- K[-curr.set]
+	  K.0 <- K[curr.set]
+	  lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
+	  lambda.psi.0 <- lambda.psi[curr.set, , drop = FALSE]
+	  X.re.fit <- X.re[-curr.set, , drop = FALSE]
+	  X.re.0 <- X.re[curr.set, , drop = FALSE]
+	  lambda.p.fit <- lambda.p[y.indx, , drop = FALSE]
+	  lambda.p.0 <- lambda.p[!y.indx, , drop = FALSE]
+	  X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
+	  X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
+	  # Gotta be a better way, but will do for now. 
+	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	  for (j in 1:J.fit) {
+            z.long.indx.fit[j, 1:K.fit[j]] <- j  
+          }
+	  z.long.indx.fit <- c(z.long.indx.fit)
+	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	  for (j in 1:nrow(X.0)) {
+            z.0.long.indx[j, 1:K.0[j]] <- j  
+          }
+	  z.0.long.indx <- c(z.0.long.indx)
+	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  verbose.fit <- FALSE
+	  n.omp.threads.fit <- 1
+
+          storage.mode(y.fit) <- "double"
+          storage.mode(z.starting.fit) <- "double"
+          storage.mode(X.p.fit) <- "double"
+          storage.mode(X.fit) <- "double"
+          storage.mode(p.det) <- "integer"
+          storage.mode(p.occ) <- "integer"
+          storage.mode(J.fit) <- "integer"
+          storage.mode(K.fit) <- "integer"
+          storage.mode(N) <- "integer"
+          storage.mode(beta.starting) <- "double"
+          storage.mode(alpha.starting) <- "double"
+          storage.mode(beta.comm.starting) <- "double"
+          storage.mode(alpha.comm.starting) <- "double"
+          storage.mode(tau.sq.beta.starting) <- "double"
+          storage.mode(tau.sq.alpha.starting) <- "double"
+          storage.mode(z.long.indx.fit) <- "integer"
+          storage.mode(mu.beta.comm) <- "double"
+          storage.mode(Sigma.beta.comm) <- "double"
+          storage.mode(mu.alpha.comm) <- "double"
+          storage.mode(Sigma.alpha.comm) <- "double"
+          storage.mode(tau.sq.beta.a) <- "double"
+          storage.mode(tau.sq.beta.b) <- "double"
+          storage.mode(tau.sq.alpha.a) <- "double"
+          storage.mode(tau.sq.alpha.b) <- "double"
+          storage.mode(n.samples) <- "integer"
+          storage.mode(n.omp.threads.fit) <- "integer"
+          storage.mode(verbose.fit) <- "integer"
+          storage.mode(n.report) <- "integer"
+          storage.mode(n.burn) <- "integer"
+          storage.mode(n.thin) <- "integer"
+          storage.mode(p.det.re) <- "integer"
+          storage.mode(X.p.re.fit) <- "integer"
+          storage.mode(n.det.re) <- "integer"
+          storage.mode(n.det.re.long) <- "integer"
+          storage.mode(sigma.sq.p.starting) <- "double"
+          storage.mode(sigma.sq.p.a) <- "double"
+          storage.mode(sigma.sq.p.b) <- "double"
+          storage.mode(alpha.star.starting) <- "double"
+          storage.mode(alpha.star.indx) <- "integer"
+          storage.mode(lambda.p.fit) <- "double"
+          storage.mode(sigma.sq.psi.starting) <- "double"
+          storage.mode(sigma.sq.psi.a) <- "double"
+          storage.mode(sigma.sq.psi.b) <- "double"
+          storage.mode(beta.star.starting) <- "double"
+          storage.mode(beta.star.indx) <- "integer"
+          storage.mode(lambda.psi.fit) <- "double"
+
+          # Run the model in C
+          out.fit <- .Call("msPGOccREBoth", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.fit, 
+		           lambda.psi.fit, lambda.p.fit, p.occ, p.det, p.occ.re, p.det.re, 
+		           J.fit, K.fit, N, n.occ.re, n.det.re, n.occ.re.long, n.det.re.long,
+          	           beta.starting, alpha.starting, z.starting.fit,
+          	           beta.comm.starting, 
+          	           alpha.comm.starting, tau.sq.beta.starting, 
+          	           tau.sq.alpha.starting, sigma.sq.psi.starting, 
+		           sigma.sq.p.starting, beta.star.starting, 
+		           alpha.star.starting, z.long.indx.fit, beta.star.indx, 
+		           alpha.star.indx, mu.beta.comm, 
+          	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+          	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	           tau.sq.alpha.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+		           sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads.fit, 
+		           verbose.fit, n.report, n.burn, n.thin, n.post.samples)
+
+          if (is.null(sp.names)) {
+            sp.names <- paste('sp', 1:N, sep = '')
+          }
+          coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
+          out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
+          colnames(out.fit$beta.samples) <- coef.names
+          out.fit$sigma.sq.psi.samples <- mcmc(t(out.fit$sigma.sq.psi.samples))
+          colnames(out.fit$sigma.sq.psi.samples) <- x.re.names
+          out.fit$beta.star.samples <- mcmc(t(out.fit$beta.star.samples))
+          tmp.names <- unlist(sapply(n.occ.re.long, function(a) 1:a))
+          beta.star.names <- paste(rep(x.re.names, n.occ.re.long), tmp.names, sep = '-')
+          beta.star.names <- paste(beta.star.names, rep(sp.names, each = n.occ.re), sep = '-')
+          colnames(out.fit$beta.star.samples) <- beta.star.names
+          out.fit$X <- X
+	  out.fit$X.re <- X.re
+          out.fit$y <- y.big
+          out.fit$n.post <- n.post.samples
+          out.fit$psiRE <- TRUE
+	  class(out.fit) <- "msPGOcc"
+
+	  # Predict occurrence at new sites. 
+	  out.pred <- predict.msPGOcc(out.fit, cbind(X.0, X.re.0))
+
+	  # Detection 
+          sp.indx <- rep(1:N, ncol(X.p.0))
+	  like.samples <- matrix(NA, N, nrow(X.p.0))
+	  p.0.samples <- array(NA, dim = c(nrow(X.p.0), N, n.post.samples))
+          sp.re.indx <- rep(1:N, each = nrow(out.fit$alpha.star.samples) / N)
+	  for (q in 1:N) {
+            p.0.samples[, q, ] <- logit.inv(X.p.0 %*% out.fit$alpha.samples[sp.indx == q, ] + 
+					    lambda.p.0 %*% out.fit$alpha.star.samples[sp.re.indx == q, ])
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[q, j] <- mean(dbinom(y.0[N * (j - 1) + q], 1,  
+						p.0.samples[j, q, ] * 
+					        out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+            }
+          }
+	  apply(like.samples, 1, function(a) sum(log(a)))
+        }
+	model.deviance <- -2 * model.deviance
+	# Return objects from cross-validation
+	out$k.fold.deviance <- model.deviance
+	stopImplicitCluster()
+      }
+
       class(out) <- "msPGOcc"
 
     }
 
     if (p.occ.re == 0 & p.det.re == 0) {
-      ptm <- proc.time()
-
       # Run the model in C    
       out <- .Call("msPGOcc", y, X, X.p, p.occ, p.det, J, K, N, 
           	 beta.starting, alpha.starting, z.starting,
@@ -765,8 +1213,6 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           	 tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	 tau.sq.alpha.b, n.samples, n.omp.threads, verbose, n.report, 
           	 n.burn, n.thin, n.post.samples)
-
-      out$run.time <- proc.time() - ptm
 
       out$beta.comm.samples <- mcmc(t(out$beta.comm.samples))
       colnames(out$beta.comm.samples) <- x.names
@@ -807,10 +1253,131 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       out$pRE <- FALSE
       out$psiRE <- FALSE
 
+      # K-fold cross-validation -------
+      if (!missing(k.fold)) {
+	if (verbose) {      
+          cat("----------------------------------------\n");
+          cat("\tCross-validation\n");
+          cat("----------------------------------------\n");
+          message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
+		      " thread(s).", sep = ''))
+	}
+        # Currently implemented without parellization. 
+	set.seed(k.fold.seed)
+	# Number of sites in each hold out data set. 
+	sites.random <- sample(1:J)    
+        sites.k.fold <- split(sites.random, sites.random %% k.fold)
+	registerDoParallel(k.fold.threads)
+	model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+          curr.set <- sort(sites.k.fold[[i]])
+	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+	  y.fit <- c(y.big[, -curr.set, , drop = FALSE])
+	  y.fit <- y.fit[!is.na(y.fit)]
+	  y.0 <- c(y.big[, curr.set, , drop = FALSE])
+	  y.0 <- y.0[!is.na(y.0)]
+	  z.starting.fit <- z.starting[-curr.set]
+	  X.p.fit <- X.p[y.indx, , drop = FALSE]
+	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
+	  X.fit <- X[-curr.set, , drop = FALSE]
+	  X.0 <- X[curr.set, , drop = FALSE]
+	  J.fit <- nrow(X.fit)
+	  K.fit <- K[-curr.set]
+	  K.0 <- K[curr.set]
+	  # Gotta be a better way, but will do for now. 
+	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	  for (j in 1:J.fit) {
+            z.long.indx.fit[j, 1:K.fit[j]] <- j  
+          }
+	  z.long.indx.fit <- c(z.long.indx.fit)
+	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	  for (j in 1:nrow(X.0)) {
+            z.0.long.indx[j, 1:K.0[j]] <- j  
+          }
+	  z.0.long.indx <- c(z.0.long.indx)
+	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  verbose.fit <- FALSE
+	  n.omp.threads.fit <- 1
+
+          storage.mode(y.fit) <- "double"
+          storage.mode(z.starting.fit) <- "double"
+          storage.mode(X.p.fit) <- "double"
+          storage.mode(X.fit) <- "double"
+          storage.mode(p.det) <- "integer"
+          storage.mode(p.occ) <- "integer"
+          storage.mode(J.fit) <- "integer"
+          storage.mode(K.fit) <- "integer"
+          storage.mode(N) <- "integer"
+          storage.mode(beta.starting) <- "double"
+          storage.mode(alpha.starting) <- "double"
+          storage.mode(beta.comm.starting) <- "double"
+          storage.mode(alpha.comm.starting) <- "double"
+          storage.mode(tau.sq.beta.starting) <- "double"
+          storage.mode(tau.sq.alpha.starting) <- "double"
+          storage.mode(z.long.indx.fit) <- "integer"
+          storage.mode(mu.beta.comm) <- "double"
+          storage.mode(Sigma.beta.comm) <- "double"
+          storage.mode(mu.alpha.comm) <- "double"
+          storage.mode(Sigma.alpha.comm) <- "double"
+          storage.mode(tau.sq.beta.a) <- "double"
+          storage.mode(tau.sq.beta.b) <- "double"
+          storage.mode(tau.sq.alpha.a) <- "double"
+          storage.mode(tau.sq.alpha.b) <- "double"
+          storage.mode(n.samples) <- "integer"
+          storage.mode(n.omp.threads.fit) <- "integer"
+          storage.mode(verbose.fit) <- "integer"
+          storage.mode(n.report) <- "integer"
+          storage.mode(n.burn) <- "integer"
+          storage.mode(n.thin) <- "integer"
+
+          # Run the model in C
+          out.fit <- .Call("msPGOcc", y.fit, X.fit, X.p.fit, p.occ, p.det, J.fit, K.fit, N, 
+          	           beta.starting, alpha.starting, z.starting.fit,
+          	           beta.comm.starting, 
+          	           alpha.comm.starting, tau.sq.beta.starting, 
+          	           tau.sq.alpha.starting, z.long.indx.fit, mu.beta.comm, 
+          	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+          	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+          	           tau.sq.alpha.b, n.samples, n.omp.threads.fit, verbose.fit, n.report, 
+          	           n.burn, n.thin, n.post.samples)
+          if (is.null(sp.names)) {
+            sp.names <- paste('sp', 1:N, sep = '')
+          }
+          coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
+          out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
+          colnames(out.fit$beta.samples) <- coef.names
+          out.fit$X <- X
+          out.fit$y <- y.big
+          out.fit$n.post <- n.post.samples
+          out.fit$psiRE <- FALSE
+	  class(out.fit) <- "msPGOcc"
+
+	  # Predict occurrence at new sites. 
+	  out.pred <- predict.msPGOcc(out.fit, X.0)
+
+	  # Detection 
+          sp.indx <- rep(1:N, ncol(X.p.0))
+	  like.samples <- matrix(NA, N, nrow(X.p.0))
+	  p.0.samples <- array(NA, dim = c(nrow(X.p.0), N, n.post.samples))
+	  for (q in 1:N) {
+            p.0.samples[, q, ] <- logit.inv(X.p.0 %*% out.fit$alpha.samples[sp.indx == q, ])
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[q, j] <- mean(dbinom(y.0[N * (j - 1) + q], 1,  
+						p.0.samples[j, q, ] * 
+					        out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+            }
+          }
+	  apply(like.samples, 1, function(a) sum(log(a)))
+        }
+	model.deviance <- -2 * model.deviance
+	# Return objects from cross-validation
+	out$k.fold.deviance <- model.deviance
+	stopImplicitCluster()
+      }
+
       class(out) <- "msPGOcc"
 
     }
-
-    
+    out$run.time <- proc.time() - ptm
     out
 }

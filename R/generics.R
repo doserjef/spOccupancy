@@ -839,8 +839,8 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 
     out <- .Call("spMsPGOccPredict", J, N, p.occ, X.0, q, obs.D, 
 		 obs.pred.D, beta.samples, theta.samples, 
-		 w.samples, n.samples, cov.model.indx, verbose, 
-		 n.omp.threads, n.report)
+		 w.samples, n.samples, cov.model.indx, n.omp.threads, 
+		 verbose, n.report)
 
     out$z.0.samples <- array(out$z.0.samples, dim = c(N, q, n.samples))
     out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))

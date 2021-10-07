@@ -60,6 +60,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop("error: det.covs must be specified in data for a detection model with covariates")
       }
     }
+
     # Make both covariates a data frame. Unlist is necessary for when factors
     # are supplied. 
     data$det.covs <- data.frame(lapply(data$det.covs, function(a) unlist(c(a))))
@@ -68,6 +69,18 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       data$det.covs <- data.frame(sapply(data$det.covs, rep, times = dim(y)[2]))
     }
     data$occ.covs <- as.data.frame(data$occ.covs)
+
+    # Checking missing values ---------------------------------------------
+    y.na.test <- apply(y, 1, function(a) sum(!is.na(a)))
+    if (sum(y.na.test == 0) > 0) {
+      message("Some sites in y have all missing detection histories. Removing these sites for analysis.")
+    }
+    y.no.na.indx <- which(y.na.test != 0)
+    y <- y[y.no.na.indx, , drop = FALSE]
+    data$occ.covs <- data$occ.covs[y.no.na.indx, , drop = FALSE]
+    y.no.na.long.indx <- matrix(y.no.na.indx, nrow(y), ncol(y)) 
+    y.no.na.long.indx <- c(y.no.na.long.indx + (length(y.na.test) * (col(y.no.na.long.indx) - 1)))
+    data$det.covs <- data$det.covs[y.no.na.long.indx, , drop = FALSE]
 
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------

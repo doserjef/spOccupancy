@@ -159,7 +159,7 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   \item{run.time}{execution time reported using \code{proc.time()}.}
 
-  \item{k.fold.deviance}{soring rule (deviance) from k-fold cross-validation. 
+  \item{k.fold.deviance}{scoring rule (deviance) from k-fold cross-validation. 
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 

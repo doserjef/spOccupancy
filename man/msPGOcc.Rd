@@ -10,7 +10,9 @@ Function for fitting multi-species occupancy models using Polya-Gamma latent var
 \usage{
 msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-	n.burn = round(.10 * n.samples), n.thin = 1, ...)
+	n.burn = round(.10 * n.samples), n.thin = 1,
+        k.fold, k.fold.threads = 1, k.fold.seed, ...)
+
 }
 
 \arguments{
@@ -84,6 +86,26 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   thinning occurs after the \code{n.burn} samples are discarded. Default 
   value is set to 1.}
 
+\item{k.fold}{specifies the number of \emph{k} folds for cross-validation. 
+  If not specified as an argument, then cross-validation is not performed
+  and \code{k.fold.threads} and \code{k.fold.seed} are ignored. In \emph{k}-fold
+  cross-validation, the data specified in \code{data} is randomly
+  partitioned into \emph{k} equal sized subsamples. Of the \emph{k} subsamples, 
+  \emph{k} - 1 subsamples are used to fit the model and the remaining \emph{k}
+  samples are used for prediction. The cross-validation process is repeated 
+  \emph{k} times (the folds). As a scoring rule, we use the model deviance 
+  as described in Hooten and Hobbs (2015). Cross-validation is performed
+  after the full model is fit using all the data. Cross-validation results
+  are reported in the \code{k.fold.deviance} object in the return list.}
+
+\item{k.fold.threads}{number of threads to use for cross-validation. If 
+  \code{k.fold.threads > 1} parallel processing is accomplished using the 
+  \pkg{foreach} and \pkg{doParallel} packages. Ignored if \code{k.fold}
+  is not specified.} 
+
+\item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
+  for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
+
 \item{...}{currently no additional arguments}
 
 }
@@ -99,6 +121,13 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables.
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
+
+  Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
+  Fitting Linear Mixed-Effects Models Using lme4. Journal of
+  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+
+  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
+  selection for ecologists. Ecological monographs, 85(1), 3-28.
 }
 
 \author{
@@ -155,6 +184,10 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
     are specified in \code{det.formula}.}
 
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
+
+  \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
+    A separate value is reported for each species. 
+    Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. 

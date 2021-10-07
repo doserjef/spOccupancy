@@ -29,6 +29,8 @@ waicOcc <- function(object, ...) {
     X.p <- object$X.p
     y <- object$y
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
+    y.sum <- apply(y, 1, sum, na.rm = TRUE)
+    y.ind <- as.numeric(y.sum == 0)
     K.max <- max(n.rep)
     J <- nrow(y)
     z.long.indx <- rep(1:J, K.max)
@@ -44,15 +46,17 @@ waicOcc <- function(object, ...) {
     } else {
       det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
     }
-    p.psi.samples <- det.prob.samples * psi.samples[, z.long.indx]
+    # Convert det.prob.samples to likelihood form. 
+    det.prob.samples[, y == 0] <- 1 - det.prob.samples[, y == 0]
     n.obs <- length(y)
 
     elpd <- 0
     pD <- 0
 
-    for (i in 1:n.obs) {
-      prob <- p.psi.samples[, i] 
-      L <- dbinom(y[i], 1, prob, log = FALSE)
+    for (i in 1:J) {
+      long.indx <- which(z.long.indx == i)
+      L <- apply(det.prob.samples[, long.indx, drop = FALSE], 1, prod)  * 
+	      psi.samples[, i] + y.ind[i] * (1 - psi.samples[, i])
       elpd <- elpd + log(mean(L))
       pD <- pD + var(log(L))
     }
@@ -63,6 +67,7 @@ waicOcc <- function(object, ...) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
     X.p <- object$X.p
     y <- object$y
+    y.ind <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) == 0))
     n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
     K.max <- max(n.rep)
     J <- dim(y)[2]
@@ -75,7 +80,7 @@ waicOcc <- function(object, ...) {
     alpha.samples <- object$alpha.samples
     # Get detection probability
     n.obs <- nrow(X.p)
-    det.prob.samples <- array(NA, dim = c(n.post, N, n.obs))
+    det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
     sp.indx <- rep(1:N, ncol(X.p))
     if (object$pRE) {
       sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
@@ -83,24 +88,29 @@ waicOcc <- function(object, ...) {
       for (i in 1:N) {
         det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
   					   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
+        # Convert for likelihood
+        det.prob.samples[y[i, ] == 0, i, ] <- 1 - det.prob.samples[y[i, ] == 0, i, ]
       }
     } else {
       for (i in 1:N) {
         det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+        # Convert for likelihood
+        det.prob.samples[y[i, ] == 0, i, ] <- 1 - det.prob.samples[y[i, ] == 0, i, ]
       }
     }
-
-    p.psi.samples <- det.prob.samples * psi.samples[, , z.long.indx]
+    det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+    n.obs <- length(y)
 
     elpd <- 0
     pD <- 0
 
-    for (i in 1:N) {
-      for (j in 1:n.obs) {
-        prob <- p.psi.samples[, i, j] 
-        L <- dbinom(y[i, j], 1, prob, log = FALSE)
+    for (j in 1:J) {
+      long.indx <- which(z.long.indx == j)
+      for (i in 1:N) {
+        L <- apply(det.prob.samples[, i, long.indx, drop = FALSE], 1, prod)  * 
+	      psi.samples[, i, j] + y.ind[i, j] * (1 - psi.samples[, i, j])
         elpd <- elpd + log(mean(L))
-        pD <- pD + sum(var(log(L)))
+        pD <- pD + var(log(L))
       }
     }
 
@@ -111,6 +121,8 @@ waicOcc <- function(object, ...) {
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     X.p <- object$X.p
     y <- object$y
+    y.sum <- lapply(y, function(q) apply(q, 1, sum, na.rm = TRUE))
+    y.ind <- lapply(y, function(q) as.numeric(q == 0))
     n.data <- length(y)
     sites <- object$sites
     p.det.long <- sapply(X.p, function(a) dim(a)[2])
@@ -133,12 +145,17 @@ waicOcc <- function(object, ...) {
       psi.samples <- object$psi.samples
       alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
       det.prob.samples <- t(logit.inv(X.p[[q]] %*% t(alpha.samples)))
-      p.psi.samples <- det.prob.samples * psi.samples[, z.long.indx]
       n.obs <- length(y[[q]])
+      curr.sites <- object$sites[[q]]
 
-      for (i in 1:n.obs) {
-        prob <- p.psi.samples[, i] 
-        L <- dbinom(y[[q]][i], 1, prob, log = FALSE)
+      # Convert det.prob.samples to likelihood form. 
+      det.prob.samples[, y[[q]] == 0] <- 1 - det.prob.samples[, y[[q]] == 0]
+
+
+      for (j in 1:J) {
+        long.indx <- which(z.long.indx == j)
+        L <- apply(det.prob.samples[, long.indx, drop = FALSE], 1, prod)  * 
+                psi.samples[, curr.sites[j]] + y.ind[[q]][j] * (1 - psi.samples[, curr.sites[j]])
         elpd[q] <- elpd[q] + log(mean(L))
         pD[q] <- pD[q] + var(log(L))
       }

@@ -132,8 +132,6 @@ extern "C" {
     
     GetRNGstate();
 
-    // TODO: probably add some parralelization here
-
     for (i = 0; i < N; i++) { 
       for(s = 0; s < nSamples; s++){
       
