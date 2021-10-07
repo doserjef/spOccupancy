@@ -20,3 +20,4 @@ Fits single-species and multi-species non-spatial and spatial occupancy models u
 + `simIntOcc`: simulates single-species occupancy data from multiple data sources. Data can be optionally simulated with a spatial Gaussian process following an exponential correlation function.
 + All model objects from the core functions have a set of standard extractor functions including the following: `summary`, `print`, `fitted`. 
 + Out of sample predictions are possible for all model objects using `predict`. 
++ All `spOccupancy` model fitting functions have options for k-fold cross-validation with options for parallelization.
