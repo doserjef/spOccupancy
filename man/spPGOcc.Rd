@@ -46,29 +46,38 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
   
   \item{starting}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, 
-    \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}. The value portion of each tag is the 
-    parameter's starting value.}
+    \code{phi}, \code{w}, \code{nu}, and \code{sigma.sq.p}. 
+    \code{nu} is only specified if \code{cov.model = "matern"} and \code{sigma.sq.p}
+    is only specified if there are random effects in \code{det.formula}. 
+    The value portion of each tag is the parameter's starting value.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, and \code{nu.unif}. Occupancy 
+    \code{sigma.sq.ig}, \code{nu.unif}, and \code{sigma.sq.p.ig}. Occupancy 
     (\code{beta}) and detection (\code{alpha}) regression coefficients 
     are assumed to follow a normal distribution. The hyperparameters of the 
     normal distribution are passed as a list of length two with the first
     and second elements corresponding to the mean and variance of the normal
     distribution, which are each specified as vectors of 
-    length equal to the number of coefficients to be estimated. If not
+    length equal to the number of coefficients to be estimated or of length
+    one if priors are the same for all coefficients. If not
     specified, prior means are set to 0 and prior variances set to 2.73. The 
     spatial variance parameter, \code{sigma.sq}, is assumed to follow an 
     inverse-Gamma distribution, whereas the spatial decay \code{phi} and 
     smoothness \code{nu} parameters are assumed to follow Uniform 
-    distributions. The hyperparameters of the inverse-Gamma are passed as 
-    a vector of length two, with the first and second elements corresponding
-    to the \emph{shape} and \emph{scale}, respectively. The hyperparameters
-    of the Uniform are also passed as a vector of length two with the first 
-    and second elements corresponding to the lower and upper support, 
-    respectively.}
+    distributions. The hyperparameters of the inverse-Gamma for \code{sigma.sq} 
+    are passed as a vector of length two, with the first and second 
+    elements corresponding to the \emph{shape} and \emph{scale}, respectively. 
+    The hyperparameters of the Uniform are also passed as a vector of 
+    length two with the first and second elements corresponding to 
+    the lower and upper support, respectively. \code{sigma.sq.p} is the random 
+    effect variance for any detection random effects and is assumed to follow an 
+    inverse-Gamma distribution. For \code{sigma.sq.p}, the hyperparameters of
+    the inverse-Gamma distribution are passed as a list of length two with the 
+    first and second elements corresponding to the shape and scale parameters, 
+    respectively, which are each specified as vectors of length equal to the 
+    number of random intercepts or of length one if priors are the same for all
+    random effect variances.}
  
   \item{cov.model}{a quoted keyword that specifies the covariance
     function used to model the spatial dependence structure among the

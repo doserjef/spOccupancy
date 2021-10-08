@@ -39,18 +39,29 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   number of columns equal to the maximum number of replicates at a given site.}
 
 \item{starting}{a list with each tag corresponding to a parameter name.
-  Valid tags are \code{z}, \code{beta}, and \code{alpha}. The value portion
-  of each tag is the parameter's starting value.}
+  Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq.psi},
+  and \code{sigma.sq.p}. The value portion of each tag is the 
+  parameter's starting value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
+  only relevant when including random effects in the occurrence and 
+  detection portion of the occupancy model, respectively.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
-  Valid tags are \code{beta.normal} and \code{alpha.normal}. Occupancy 
-  (\code{beta}) and detection (\code{alpha}) regression coefficients 
-  are assumed to follow a normal distribution. The hyperparameters of the 
-  normal distribution are passed as a list of length two with the first
-  and second elements corresponding to the mean and variance of the normal
-  distribution, which are each specified as vectors of 
-  length equal to the number of coefficients to be estimated. If not
-  specified, prior means are set to 0 and prior variances set to 2.73.}
+  Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{sigma.sq.psi.ig}, 
+  and \code{sigma.sq.p.ig}. Occupancy (\code{beta}) and detection (\code{alpha}) 
+  regression coefficients are assumed to follow a normal distribution. 
+  The hyperparameters of the normal distribution are passed as a list of 
+  length two with the first and second elements corresponding to the mean 
+  and variance of the normal distribution, which are each specified as vectors of 
+  length equal to the number of coefficients to be estimated or of length one
+  if priors are the same for all coefficients. If not specified, prior means 
+  are set to 0 and prior variances set to 2.73. \code{sigma.sq.psi} and 
+  \code{sigma.sq.p} are the random effect variances for any occurrence or 
+  detection random effects, respectively, and are assumed to follow an inverse
+  Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding
+  to the shape and scale parameters, respectively, which are each specified as
+  vectors of length equal to the number of random intercepts or of length one 
+  if priors are the same for all random effect variances.}
 
 \item{n.samples}{the number of posterior samples to collect.}
 

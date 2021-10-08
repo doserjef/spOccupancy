@@ -47,7 +47,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   if (!'occ.covs' %in% names(data)) {
     if (occ.formula == ~ 1) {
       if (verbose) {
-        message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+        message("occupancy covariates (occ.covs) not specified in data.\nAssuming intercept only occupancy model.\n")
       }
       data$occ.covs <- matrix(1, dim(y)[1], 1)
     } else {
@@ -57,7 +57,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   if (!'det.covs' %in% names(data)) {
     if (det.formula == ~ 1) {
       if (verbose) {
-        message("detection covariates (det.covs) not specified in data. Assuming interept only detection model.")
+        message("detection covariates (det.covs) not specified in data.\nAssuming interept only detection model.\n")
       }
       data$det.covs <- list(int = matrix(1, dim(y)[1], dim(y)[2]))
     } else {
@@ -68,6 +68,12 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
   coords <- data$coords
+
+  # Checking missing values ---------------------------------------------
+  y.na.test <- apply(y, 1, function(a) sum(!is.na(a)))
+  if (sum(y.na.test == 0) > 0) {
+    stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
+  }
 
 
   # Neighbors and Ordering ----------------------------------------------
@@ -139,8 +145,6 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   # Number of latent detection random effect values
   n.det.re <- length(unlist(apply(X.p.re, 2, unique)))
   n.det.re.long <- apply(X.p.re, 2, function(a) length(unique(a)))
-  # Number of pseudoreplicates
-  n.obs <- nrow(X.p)
   # Number of replicates at each site
   n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
   # Max number of repeat visits
@@ -168,9 +172,13 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   # there are missing detection-nondetection data. 
   if (nrow(X.p) == length(y)) {
     X.p <- X.p[!is.na(y), , drop = FALSE]  
+  }
+  if (nrow(X.p.re) == length(y)) {
     X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
   }
   y <- y[!is.na(y)]
+  # Number of pseudoreplicates
+  n.obs <- nrow(X.p)
 
   # Get random effect matrices all set ----------------------------------
   if (p.det.re > 1) {
@@ -187,7 +195,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   # Starting values -----------------------------------------------------
   if (missing(starting)) {
-    stop("error: starting value list for the parameters must be specified.")
+    starting <- list()
   }
   names(starting) <- tolower(names(starting))
   # z -------------------------------
@@ -208,26 +216,52 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   } else {
     # In correct order since you reordered y.
     z.starting <- apply(y.big, 1, max, na.rm = TRUE)
+    if (verbose) {
+      message("z.starting is not specified in starting values.\nSetting starting values based on observed data\n")
+    }
   }
   # beta -----------------------
   if ("beta" %in% names(starting)) {
     beta.starting <- starting[["beta"]]
+    if (length(beta.starting) != p.occ & length(beta.starting) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: starting values for beta must be of length ", p.occ,
+      	     sep = ""))
+
+      } else {
+        stop(paste("error: starting values for beta must be of length ", p.occ, " or 1",
+        	     sep = ""))
+      }
+    }
     if (length(beta.starting) != p.occ) {
-      stop(paste("error: starting values for beta must be of length ", p.occ,
-      	   sep = ""))
+      beta.starting <- rep(beta.starting, p.occ)
     }
   } else {
     beta.starting <- coefficients(glm((z.starting)~X-1, family="binomial"))
+    if (verbose) {
+      message('beta is not specified in starting values.\nSetting starting values using glm\n')
+    }
   }
   # alpha -----------------------
   if ("alpha" %in% names(starting)) {
     alpha.starting <- starting[["alpha"]]
-    if (length(alpha.starting) != p.det) {
+    if (length(alpha.starting) != p.det & length(alpha.starting) != 1) {
+      if (p.det == 1) {
       stop(paste("error: starting values for alpha must be of length ", p.det,
       	   sep = ""))
+      } else {
+        stop(paste("error: starting values for alpha must be of length ", p.det, " or 1",
+      	     sep = ""))
+      }
+    }
+    if (length(alpha.starting) != p.det) {
+      alpha.starting <- rep(alpha.starting, p.det)
     }
   } else {
     alpha.starting <- coefficients(glm((y)~X.p-1, family = 'binomial'))
+    if (verbose) {
+      message("alpha is not specified in starting values.\nSetting starting values using glm\n")
+    }
   }
   # phi -----------------------------
   if ("phi" %in% names(starting)) {
@@ -238,7 +272,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   } else {
     phi.starting <- 3 / mean(range(coords))
     if (verbose) {
-      message("phi is not specified in starting values. Setting starting value to 3/mean(range(coords))\n")
+      message("phi is not specified in starting values.\nSetting starting value to 3/mean(range(coords))\n")
     }
   }
   # sigma.sq ------------------------
@@ -250,10 +284,10 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   } else {
     sigma.sq.starting <- 2
     if (verbose) {
-      message("sigma.sq is not specified in starting values. Setting starting value to 2\n")
+      message("sigma.sq is not specified in starting values.\nSetting starting value to 2\n")
     }
   }
-  # w -----------------------------00
+  # w -----------------------------
   if ("w" %in% names(starting)) {
     w.starting <- starting[["w"]]
     if (!is.vector(w.starting)) {
@@ -267,7 +301,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   } else {
     w.starting <- rep(0, J)
     if (verbose) {
-      message("w is not specified in starting values. Setting starting value to 0\n")
+      message("w is not specified in starting values.\nSetting starting value to 0\n")
     }
   }
   # nu ------------------------
@@ -279,26 +313,34 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   } else {
     if (cov.model == 'matern') {
       if (verbose) {
-        message("nu is not specified in starting values. Setting starting value to 1\n")
+        message("nu is not specified in starting values.\nSetting starting value to 1\n")
       }
       nu.starting <- 1
     } else {
       nu.starting <- 0
     }
   }
-
   # sigma.sq.p ------------------
   if (p.det.re > 0) {
     if ("sigma.sq.p" %in% names(starting)) {
       sigma.sq.p.starting <- starting[["sigma.sq.p"]]
-      if (length(sigma.sq.p.starting) != p.det.re) {
-        stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
+      if (length(sigma.sq.p.starting) != p.det.re & length(sigma.sq.p.starting) != 1) {
+        if (p.det.re == 1) {
+          stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
       	     sep = ""))
+        } else {
+          stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
+      	       " or 1", sep = ""))
+          
+        }
+      }
+      if (length(sigma.sq.p.starting) != p.det.re) {
+        sigma.sq.p.starting <- rep(sigma.sq.p.starting, p.det.re)
       }
     } else {
       sigma.sq.p.starting <- rep(1, p.det.re)
       if (verbose) {
-        message("sigma.sq.p is not specified in starting values. Setting starting value to 1\n")
+        message("sigma.sq.p is not specified in starting values.\nSetting starting value to 1\n")
       }
     }
     alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
@@ -307,73 +349,118 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   # Priors --------------------------------------------------------------
   if (missing(priors)) {
-    stop("error: prior list for the parameters must be specified")
+    priors <- list()
   }
   names(priors) <- tolower(names(priors))
   # beta -----------------------
   if ("beta.normal" %in% names(priors)) {
-    mu.beta <- priors$beta.normal[[1]]
-    sigma.beta <- priors$beta.normal[[2]]
     if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
       stop("error: beta.normal must be a list of length 2")
     }
-    if (length(mu.beta) != p.occ) {
-      stop(paste("error: beta.normal[[1]] must be a vector of length ", 
-      	   p.occ, " with elements corresponding to betas' mean", sep = ""))
+    mu.beta <- priors$beta.normal[[1]]
+    sigma.beta <- priors$beta.normal[[2]]
+    if (length(mu.beta) != p.occ & length(mu.beta) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: beta.normal[[1]] must be a vector of length ",
+        	     p.occ, " with elements corresponding to betas' mean", sep = ""))
+      } else {
+        stop(paste("error: beta.normal[[1]] must be a vector of length ",
+        	     p.occ, " or 1 with elements corresponding to betas' mean", sep = ""))
+      }
+    }
+    if (length(sigma.beta) != p.occ & length(sigma.beta) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: beta.normal[[2]] must be a vector of length ",
+      	   p.occ, " with elements corresponding to betas' variance", sep = ""))
+      } else {
+        stop(paste("error: beta.normal[[2]] must be a vector of length ",
+      	   p.occ, " or 1 with elements corresponding to betas' variance", sep = ""))
+      }
     }
     if (length(sigma.beta) != p.occ) {
-      stop(paste("error: beta.normal[[2]] must be a vector of length ", 
-      	   p.occ, " with elements corresponding to betas' variance", sep = ""))
+      sigma.beta <- rep(sigma.beta, p.occ)
+    }
+    if (length(mu.beta) != p.occ) {
+      mu.beta <- rep(mu.beta, p.occ)
     }
     Sigma.beta <- sigma.beta * diag(p.occ)
   } else {
     if (verbose) {
-      message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
     }
     mu.beta <- rep(0, p.occ)
     Sigma.beta <- diag(p.occ) * 2.73
   }
   # alpha -----------------------
   if ("alpha.normal" %in% names(priors)) {
-    mu.alpha <- priors$alpha.normal[[1]]
-    sigma.alpha <- priors$alpha.normal[[2]]
     if (!is.list(priors$alpha.normal) | length(priors$alpha.normal) != 2) {
       stop("error: alpha.normal must be a list of length 2")
     }
-    if (length(mu.alpha) != p.det) {
-      stop(paste("error: alpha.normal[[1]] must be a vector of length ", 
-      	   p.det, " with elements corresponding to alphas' mean", sep = ""))
+    mu.alpha <- priors$alpha.normal[[1]]
+    sigma.alpha <- priors$alpha.normal[[2]]
+    if (length(mu.alpha) != p.det & length(mu.alpha) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+        	     p.det, " with elements corresponding to alphas' mean", sep = ""))
+      } else {
+        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+        	     p.det, " or 1 with elements corresponding to alphas' mean", sep = ""))
+      }
+    }
+    if (length(sigma.alpha) != p.det & length(sigma.alpha) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+      	   p.det, " with elements corresponding to alphas' variance", sep = ""))
+      } else {
+        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+      	   p.det, " or 1 with elements corresponding to alphas' variance", sep = ""))
+      }
     }
     if (length(sigma.alpha) != p.det) {
-      stop(paste("error: alpha.normal[[2]] must be a vector of length ", 
-      	   p.det, " with elements corresponding to alphas.comms' variance", sep = ""))
+      sigma.alpha <- rep(sigma.alpha, p.det)
+    }
+    if (length(mu.alpha) != p.det) {
+      mu.alpha <- rep(mu.alpha, p.det)
     }
     Sigma.alpha <- sigma.alpha * diag(p.det)
   } else {
     if (verbose) {
-      message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+      message("No prior specified for alpha.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
     }
     mu.alpha <- rep(0, p.det)
     Sigma.alpha <- diag(p.det) * 2.73
   }
+
   # phi -----------------------------
-  if (!"phi.unif" %in% names(priors)) {
-    stop("error: phi.unif must be specified in priors value list")
+  # Get distance matrix which is used if priors are not specified
+  coords.D <- iDist(coords)
+  if ("phi.unif" %in% names(priors)) {
+    if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
+      stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
+    }
+    phi.a <- priors$phi.unif[1]
+    phi.b <- priors$phi.unif[2]
+  } else {
+    if (verbose) {
+      message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
+    }
+    phi.a <- 3 / max(coords.D)
+    phi.b <- 3 / sort(unique(c(coords.D)))[2]
   }
-  if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
-    stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
-  }
-  phi.a <- priors$phi.unif[1]
-  phi.b <- priors$phi.unif[2]
   # sigma.sq -----------------------------
-  if (!"sigma.sq.ig" %in% names(priors)) {
-    stop("error: sigma.sq.ig must be specified in priors value list")
+  if ("sigma.sq.ig" %in% names(priors)) {
+    if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+      stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+    }
+    sigma.sq.a <- priors$sigma.sq.ig[1]
+    sigma.sq.b <- priors$sigma.sq.ig[2]
+  } else {
+    if (verbose) {
+      message("No prior specified for sigma.sq.ig.\nSetting the shape and scale parameters to 2.\n")
+      sigma.sq.a <- 2
+      sigma.sq.b <- 2
+    }
   }
-  if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-    stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
-  }
-  sigma.sq.a <- priors$sigma.sq.ig[1]
-  sigma.sq.b <- priors$sigma.sq.ig[2]
   # nu -----------------------------
   if (cov.model == 'matern') {
     if (!"nu.unif" %in% names(priors)) {
@@ -392,22 +479,38 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   # sigma.sq.p --------------------
   if (p.det.re > 0) {
     if ("sigma.sq.p.ig" %in% names(priors)) {
-      sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
-      sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
       if (!is.list(priors$sigma.sq.p.ig) | length(priors$sigma.sq.p.ig) != 2) {
         stop("error: sigma.sq.p.ig must be a list of length 2")
       }
-      if (length(sigma.sq.p.a) != p.det.re) {
-        stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+      sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
+      sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
+      if (length(sigma.sq.p.a) != p.det.re & length(sigma.sq.p.a) != 1) {
+        if (p.det.re == 1) {
+          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
         	   p.det.re, " with elements corresponding to sigma.sq.ps' shape", sep = ""))
+        } else {
+          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+        	   p.det.re, " or 1 with elements corresponding to sigma.sq.ps' shape", sep = ""))
+        }
+      }
+      if (length(sigma.sq.p.b) != p.det.re & length(sigma.sq.p.b) != 1) {
+        if (p.det.re == 1) {
+          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+        	     p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
+        } else {
+          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+        	     p.det.re, " or 1 with elements corresponding to sigma.sq.ps' scale", sep = ""))
+        }
+      }
+      if (length(sigma.sq.p.a) != p.det.re) {
+        sigma.sq.p.a <- rep(sigma.sq.p.a, p.det.re)
       }
       if (length(sigma.sq.p.b) != p.det.re) {
-        stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
-        	   p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
+        sigma.sq.p.b <- rep(sigma.sq.p.b, p.det.re)
       }
   }   else {
       if (verbose) {	    
-        message("No prior specified for sigma.sq.p.ig. Setting prior shape to 0.1 and prior scale to 0.1\n")
+        message("No prior specified for sigma.sq.p.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
       }
       sigma.sq.p.a <- rep(0.1, p.det.re)
       sigma.sq.p.b <- rep(0.1, p.det.re)
@@ -464,8 +567,6 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   model.deviance <- NA
 
   if (!NNGP) {
-    # Get distance matrix for full GP -------------------------------------
-    coords.D <- iDist(coords)
 
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"

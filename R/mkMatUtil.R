@@ -8,7 +8,7 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
     }
 
     formula <- nobars(formula)
-    
+
     # extract Y, X, and variable names for model formula and frame
     mt <- terms(formula, data=data)
     if(missing(data)) data <- sys.frame(sys.parent())
@@ -28,9 +28,14 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
     xvars <- dimnames(X)[[2]] # X variable names
     xobs  <- dimnames(X)[[1]] # X observation names
 
-    # Get random effects 
+    # Get random effects
     X.re <- matrix(NA, nrow(X), length(re.terms$Ztlist))
     if (ncol(X.re) > 0) {
+      # Support for RE only model
+      if (ncol(X) == 1) {
+        X.re <- matrix(NA, length(re.terms$Ztlist[[1]]@i), 
+		       length(re.terms$Ztlist)) 
+      }
       for (j in 1:ncol(X.re)) {
         X.re[, j] <- as.vector(re.terms$Ztlist[[j]]@i)
       }

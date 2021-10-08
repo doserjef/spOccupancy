@@ -54,7 +54,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     if (!'occ.covs' %in% names(data)) {
       if (occ.formula == ~ 1) {
         if (verbose) {
-          message("occupancy covariates (occ.covs) not specified in data. Assuming intercept only occupancy model.")
+          message("occupancy covariates (occ.covs) not specified in data.\nAssuming intercept only occupancy model.\n")
 	}
         data$occ.covs <- matrix(1, J, 1)
       } else {
@@ -65,7 +65,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       data$det.covs <- list()
       for (i in 1:n.data) {
         if (verbose) {
-          message("detection covariates (det.covs) not specified in data. Assuming interept only detection model for each data source.")
+          message("detection covariates (det.covs) not specified in data.\nAssuming interept only detection model for each data source.\n")
         }
         det.formula.curr <- det.formula[[i]]
         if (det.formula.curr == ~ 1) {
@@ -87,6 +87,14 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       }
     }
     data$occ.covs <- as.data.frame(data$occ.covs)
+
+    # Checking missing values ---------------------------------------------
+    for (q in 1:n.data) {
+      y.na.test <- apply(y[[q]], 1, function(a) sum(!is.na(a)))
+      if (sum(y.na.test == 0) > 0) {
+        stop(paste("error: some sites in data source ", q, " in y have all missing detection histories.\n Remove these sites from y and all objects in the 'data' argument if the site is not surveyed by another data source\n, then use 'predict' to obtain predictions at these locations if desired.", sep = ''))
+      }
+    }
 
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------
@@ -183,7 +191,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Starting values -----------------------------------------------------
     if (missing(starting)) {
-      stop("error: starting value list for the parameters must be specified.")
+      starting <- list()
     }
     names(starting) <- tolower(names(starting))
     # z -------------------------------
@@ -199,17 +207,31 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       }
     } else {
       z.starting <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
+      if (verbose) {
+        message("z is not specified in starting values.\nSetting starting values based on observed data\n")
+      }
     }
     # beta -----------------------
     if ("beta" %in% names(starting)) {
       beta.starting <- starting[["beta"]]
+      if (length(beta.starting) != p.occ & length(beta.starting) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: starting values for beta must be of length ", p.occ,
+		     sep = ""))
+
+        } else {
+          stop(paste("error: starting values for beta must be of length ", p.occ, " or 1",
+	  	     sep = ""))
+        }
+      }
       if (length(beta.starting) != p.occ) {
-        stop(paste("error: starting values for beta must be of length ", p.occ,
-		   sep = ""))
+        beta.starting <- rep(beta.starting, p.occ)
       }
     } else {
-      y.max <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
-      beta.starting <- coefficients(glm((y.max)~X-1, family="binomial"))
+      beta.starting <- coefficients(glm((z.starting)~X-1, family="binomial"))
+      if (verbose) {
+        message('beta is not specified in starting values.\nSetting starting values using glm\n')
+      }
     }
     # alpha -----------------------
     if ("alpha" %in% names(starting)) {
@@ -219,15 +241,23 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 		   sep = ""))
       }
       for (q in 1:n.data) {
-        if (length(alpha.starting[[q]]) != p.det.long[q] | !is.vector(alpha.starting[[q]])) {
-          stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
+        if (length(alpha.starting[[q]]) != p.det.long[q] & length(alpha.starting[[q]]) != 1) {
+          if (p.det.long[q] == 1) {
+            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
 		     p.det.long[q], sep = ""))
+	  } else {
+            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
+		       p.det.long[q], " or 1", sep = ""))
+          }
+        }
+        if (length(alpha.starting[[q]]) != p.det.long[q]) {
+          alpha.starting[[q]] <- rep(alpha.starting, p.det.long[q])
         }
       }
       alpha.starting <- unlist(alpha.starting)
     } else {
       if (verbose) {
-        message("alpha is not specified in starting values. Setting starting value to 0\n")
+        message("alpha is not specified in starting values.\nSetting starting value to 0\n")
       }
       alpha.starting <- rep(0, p.det)
     }
@@ -237,28 +267,44 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Priors --------------------------------------------------------------
     if (missing(priors)) {
-      stop("error: prior list for the parameters must be specified")
+      priors <- list()
     }
     names(priors) <- tolower(names(priors))
     # beta -----------------------
     if ("beta.normal" %in% names(priors)) {
-      mu.beta <- priors$beta.normal[[1]]
-      sigma.beta <- priors$beta.normal[[2]]
       if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
         stop("error: beta.normal must be a list of length 2")
       }
-      if (length(mu.beta) != p.occ) {
-        stop(paste("error: beta.normal[[1]] must be a vector of length ", 
-		   p.occ, " with elements corresponding to betas' mean", sep = ""))
+      mu.beta <- priors$beta.normal[[1]]
+      sigma.beta <- priors$beta.normal[[2]]
+      if (length(mu.beta) != p.occ & length(mu.beta) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: beta.normal[[1]] must be a vector of length ",
+	  	     p.occ, " with elements corresponding to betas' mean", sep = ""))
+	} else {
+          stop(paste("error: beta.normal[[1]] must be a vector of length ",
+	  	     p.occ, " or 1 with elements corresponding to betas' mean", sep = ""))
+        }
+      }
+      if (length(sigma.beta) != p.occ & length(sigma.beta) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: beta.normal[[2]] must be a vector of length ",
+		   p.occ, " with elements corresponding to betas' variance", sep = ""))
+        } else {
+          stop(paste("error: beta.normal[[2]] must be a vector of length ",
+		   p.occ, " or 1 with elements corresponding to betas' variance", sep = ""))
+        }
       }
       if (length(sigma.beta) != p.occ) {
-        stop(paste("error: beta.normal[[2]] must be a vector of length ", 
-		   p.occ, " with elements corresponding to betas' variance", sep = ""))
+        sigma.beta <- rep(sigma.beta, p.occ)
+      }
+      if (length(mu.beta) != p.occ) {
+        mu.beta <- rep(mu.beta, p.occ)
       }
       Sigma.beta <- sigma.beta * diag(p.occ)
     } else {
       if (verbose) {
-        message("No prior specified for beta.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+        message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
       }
       mu.beta <- rep(0, p.occ)
       Sigma.beta <- diag(p.occ) * 2.73
@@ -266,19 +312,27 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # alpha -----------------------
     if ("alpha.normal" %in% names(priors)) {
-      mu.alpha <- priors$alpha.normal[[1]]
-      sigma.alpha <- priors$alpha.normal[[2]]
       if (!is.list(priors$alpha.normal) | length(priors$alpha.normal) != 2) {
         stop("error: alpha.normal must be a list of length 2")
       }
+      mu.alpha <- priors$alpha.normal[[1]]
+      sigma.alpha <- priors$alpha.normal[[2]]
       if (length(mu.alpha) != n.data | !is.list(mu.alpha)) {
         stop(paste("error: alpha.normal[[1]] must be a list of length ", 
 		   n.data, " with elements corresponding to alphas' mean for each data set", sep = ""))
       }
       for (q in 1:n.data) {
-        if (length(mu.alpha[[q]]) != p.det.long[q] | !is.vector(mu.alpha[[q]])) {
-          stop(paste("error: prior means for alpha.normal[['mean']][[", q, "]] must be a vector of length ", 
+        if (length(mu.alpha[[q]]) != p.det.long[q] & length(mu.alpha[[q]]) != 1) {
+          if (p.det.long[q] == 1) {
+            stop(paste("error: prior means for alpha.normal[[1]][[", q, "]] must be a vector of length ", 
 		     p.det.long[q], sep = ""))
+	  } else {
+            stop(paste("error: prior means for alpha.normal[[1]][[", q, "]] must be a vector of length ", 
+		     p.det.long[q], "or 1", sep = ""))
+          }
+        }
+        if (length(mu.alpha[[q]]) != p.det.long[q]) {
+          mu.alpha[[q]] <- rep(mu.alpha[[q]], p.det.long[q])
         }
       }
       mu.alpha <- unlist(mu.alpha)
@@ -287,15 +341,24 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 		   n.data, " with elements corresponding to alphas' variance for each data set", sep = ""))
       }
       for (q in 1:n.data) {
-        if (length(sigma.alpha[[q]]) != p.det.long[q] | !is.vector(sigma.alpha[[q]])) {
-          stop(paste("error: prior variances for alpha.normal[['var']][[", q, "]] must be a vector of length ", 
+        if (length(sigma.alpha[[q]]) != p.det.long[q] & length(sigma.alpha[[q]]) != 1) {
+          if (p.det.long[q] == 1) {
+          stop(paste("error: prior variances for alpha.normal[[2]][[", q, "]] must be a vector of length ", 
 		     p.det.long[q], sep = ""))
+	  } else {
+          stop(paste("error: prior variances for alpha.normal[[2]][[", q, "]] must be a vector of length ", 
+		     p.det.long[q], " or 1", sep = ""))
+
+          }
         }
+      if (length(sigma.alpha[[q]]) != p.det.long[q]) {
+        sigma.alpha[[q]] <- rep(sigma.alpha[[q]], p.det.long[q])
+      }
       }
       sigma.alpha <- unlist(sigma.alpha)
     } else {
       if (verbose) {
-        message("No prior specified for alpha.normal. Setting prior mean to 0 and prior variance to 2.73\n")
+        message("No prior specified for alpha.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
       }
       mu.alpha <- rep(0, p.det)
       sigma.alpha <- rep(2.73, p.det) 
