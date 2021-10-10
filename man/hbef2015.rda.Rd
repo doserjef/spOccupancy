@@ -40,19 +40,17 @@ data(hbef2015)
    \code{y}: a three-dimensional array of detection-nondetection data with 
      dimensions of species (12), sites (373) and replicates (3). 
 
-   \code{occ.covs}: a numeric matrix with 373 rows and two column consisting
-     of the standardized elevation of each point in the first column and its
-     square in the second column.
+   \code{occ.covs}: a numeric matrix with 373 rows and one column consisting of the 
+     elevation at each site.
 
-   \code{det.covs}: a list of three numeric matrices with 373 rows and 3 columns. 
-     The first element is the standardized day of year when the survey was 
+   \code{det.covs}: a list of two numeric matrices with 373 rows and 3 columns. 
+     The first element is the day of year when the survey was 
      conducted for a given site and replicate. The second element is the
-     standardized time of day when the survey was conducted. The third element
-     is the squared standardized day of survey. 
+     time of day when the survey was conducted. 
 
    \code{coords}: a numeric matrix with 373 rows and two columns containing the 
      site coordinates (Easting and Northing) in UTM Zone 19. The proj4string is
-     proj4string(neon.covs) <- CRS("+proj=utm +zone=19 +units=m +datum=NAD83")
+     "+proj=utm +zone=19 +units=m +datum=NAD83".
 }
 
 \keyword{datasets}

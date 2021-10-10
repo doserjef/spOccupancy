@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.11.20)  7 OCT 2021 17:04
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.11.20)  9 OCT 2021 17:27
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1035,234 +1035,231 @@ LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 160.
 [2] [3]
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <12> not available
-(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 251.
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 252.
 [4] [5] [6]
-<modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf, id=154, 433.62pt x 289
+<modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf, id=156, 433.62pt x 289
 .08pt>
 File: modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf Graphic file (type
  pdf)
 <use modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf>
 Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf
-  used on input line 444.
+  used on input line 438.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
 [7]
-<modelFitting_files/figure-latex/unnamed-chunk-12-1.pdf, id=161, 433.62pt x 289
+<modelFitting_files/figure-latex/unnamed-chunk-12-1.pdf, id=163, 433.62pt x 289
 .08pt>
 File: modelFitting_files/figure-latex/unnamed-chunk-12-1.pdf Graphic file (type
  pdf)
 <use modelFitting_files/figure-latex/unnamed-chunk-12-1.pdf>
 Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-12-1.pdf
-  used on input line 452.
+  used on input line 446.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
 [8 <./modelFitting_files/figure-latex/unnamed-chunk-11-1.pdf> <./modelFitting_f
 iles/figure-latex/unnamed-chunk-12-1.pdf>] [9]
-LaTeX Font Info:    Try loading font information for TS1+lmtt on input line 540
+LaTeX Font Info:    Try loading font information for TS1+lmtt on input line 534
 .
 (/usr/share/texmf/tex/latex/lm/ts1lmtt.fd
 File: ts1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
 ) [10]
-<modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf, id=189, 289.08pt x 289
+<modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf, id=191, 289.08pt x 289
 .08pt>
 File: modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf Graphic file (type
  pdf)
 <use modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf>
 Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf
-  used on input line 573.
+  used on input line 567.
 (pdftex.def)             Requested size: 289.09251pt x 289.09251pt.
-<modelFitting_files/figure-latex/unnamed-chunk-16-1.pdf, id=190, 289.08pt x 289
+<modelFitting_files/figure-latex/unnamed-chunk-16-1.pdf, id=192, 289.08pt x 289
 .08pt>
 File: modelFitting_files/figure-latex/unnamed-chunk-16-1.pdf Graphic file (type
  pdf)
 <use modelFitting_files/figure-latex/unnamed-chunk-16-1.pdf>
 Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-16-1.pdf
-  used on input line 584.
+  used on input line 578.
 (pdftex.def)             Requested size: 289.09251pt x 289.09251pt.
 [11 <./modelFitting_files/figure-latex/unnamed-chunk-15-1.pdf>] [12 <./modelFit
-ting_files/figure-latex/unnamed-chunk-16-1.pdf>] [13]
-<modelFitting_files/figure-latex/unnamed-chunk-21-1.pdf, id=216, 505.89pt x 289
+ting_files/figure-latex/unnamed-chunk-16-1.pdf>] [13] [14] [15]
+<modelFitting_files/figure-latex/unnamed-chunk-23-1.pdf, id=229, 505.89pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-21-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-23-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-21-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-21-1.pdf
-  used on input line 696.
+<use modelFitting_files/figure-latex/unnamed-chunk-23-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-23-1.pdf
+  used on input line 834.
 (pdftex.def)             Requested size: 469.76265pt x 268.43579pt.
-
-Underfull \vbox (badness 1728) detected at line 707
- []
-
-[14 <./modelFitting_files/figure-latex/unnamed-chunk-21-1.pdf>]
-<modelFitting_files/figure-latex/unnamed-chunk-21-2.pdf, id=230, 505.89pt x 289
+[16]
+<modelFitting_files/figure-latex/unnamed-chunk-23-2.pdf, id=235, 505.89pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-21-2.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-23-2.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-21-2.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-21-2.pdf
-  used on input line 709.
+<use modelFitting_files/figure-latex/unnamed-chunk-23-2.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-23-2.pdf
+  used on input line 847.
 (pdftex.def)             Requested size: 469.76265pt x 268.43579pt.
-[15 <./modelFitting_files/figure-latex/unnamed-chunk-21-2.pdf>] [16] [17] [18] 
-[19]
-<modelFitting_files/figure-latex/unnamed-chunk-29-1.pdf, id=271, 433.62pt x 289
+[17 <./modelFitting_files/figure-latex/unnamed-chunk-23-1.pdf> <./modelFitting_
+files/figure-latex/unnamed-chunk-23-2.pdf>] [18] [19] [20] [21] [22]
+<modelFitting_files/figure-latex/unnamed-chunk-31-1.pdf, id=288, 433.62pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-29-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-31-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-29-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-29-1.pdf
-  used on input line 989.
+<use modelFitting_files/figure-latex/unnamed-chunk-31-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-31-1.pdf
+  used on input line 1124.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
-[20]
-<modelFitting_files/figure-latex/unnamed-chunk-29-2.pdf, id=277, 433.62pt x 289
+<modelFitting_files/figure-latex/unnamed-chunk-31-2.pdf, id=289, 433.62pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-29-2.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-31-2.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-29-2.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-29-2.pdf
-  used on input line 997.
+<use modelFitting_files/figure-latex/unnamed-chunk-31-2.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-31-2.pdf
+  used on input line 1132.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
-<modelFitting_files/figure-latex/unnamed-chunk-29-3.pdf, id=278, 433.62pt x 289
+[23 <./modelFitting_files/figure-latex/unnamed-chunk-31-1.pdf>]
+<modelFitting_files/figure-latex/unnamed-chunk-31-3.pdf, id=301, 433.62pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-29-3.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-31-3.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-29-3.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-29-3.pdf
-  used on input line 1005.
+<use modelFitting_files/figure-latex/unnamed-chunk-31-3.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-31-3.pdf
+  used on input line 1140.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
-[21 <./modelFitting_files/figure-latex/unnamed-chunk-29-1.pdf> <./modelFitting_
-files/figure-latex/unnamed-chunk-29-2.pdf>] [22 <./modelFitting_files/figure-la
-tex/unnamed-chunk-29-3.pdf>] [23] [24] [25] [26] [27] [28] [29]
-<modelFitting_files/figure-latex/unnamed-chunk-40-1.pdf, id=345, 433.62pt x 289
+[24 <./modelFitting_files/figure-latex/unnamed-chunk-31-2.pdf> <./modelFitting_
+files/figure-latex/unnamed-chunk-31-3.pdf>] [25] [26] [27] [28] [29] [30] [31]
+<modelFitting_files/figure-latex/unnamed-chunk-42-1.pdf, id=359, 433.62pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-40-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-42-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-40-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-40-1.pdf
-  used on input line 1449.
+<use modelFitting_files/figure-latex/unnamed-chunk-42-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-42-1.pdf
+  used on input line 1587.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
-<modelFitting_files/figure-latex/unnamed-chunk-40-2.pdf, id=346, 433.62pt x 289
+[32]
+<modelFitting_files/figure-latex/unnamed-chunk-42-2.pdf, id=366, 433.62pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-40-2.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-42-2.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-40-2.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-40-2.pdf
-  used on input line 1458.
+<use modelFitting_files/figure-latex/unnamed-chunk-42-2.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-42-2.pdf
+  used on input line 1596.
 (pdftex.def)             Requested size: 433.63878pt x 289.09251pt.
-[30 <./modelFitting_files/figure-latex/unnamed-chunk-40-1.pdf>] [31 <./modelFit
-ting_files/figure-latex/unnamed-chunk-40-2.pdf>] [32]
-<modelFitting_files/figure-latex/unnamed-chunk-43-1.pdf, id=377, 361.35pt x 361
+[33 <./modelFitting_files/figure-latex/unnamed-chunk-42-1.pdf> <./modelFitting_
+files/figure-latex/unnamed-chunk-42-2.pdf>] [34]
+<modelFitting_files/figure-latex/unnamed-chunk-45-1.pdf, id=388, 361.35pt x 361
 .35pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-43-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-45-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-43-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-43-1.pdf
-  used on input line 1560.
+<use modelFitting_files/figure-latex/unnamed-chunk-45-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-45-1.pdf
+  used on input line 1698.
 (pdftex.def)             Requested size: 361.34912pt x 361.34912pt.
-[33 <./modelFitting_files/figure-latex/unnamed-chunk-43-1.pdf>] [34] [35] [36] 
-[37] [38] [39] [40] [41]
-<modelFitting_files/figure-latex/unnamed-chunk-50-1.pdf, id=430, 469.755pt x 32
+[35] [36 <./modelFitting_files/figure-latex/unnamed-chunk-45-1.pdf>] [37] [38] 
+[39] [40] [41] [42] [43] [44]
+<modelFitting_files/figure-latex/unnamed-chunk-52-1.pdf, id=448, 469.755pt x 32
 5.215pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-50-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-52-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-50-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-50-1.pdf
-  used on input line 2014.
+<use modelFitting_files/figure-latex/unnamed-chunk-52-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-52-1.pdf
+  used on input line 2152.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-<modelFitting_files/figure-latex/unnamed-chunk-50-2.pdf, id=431, 469.755pt x 32
+<modelFitting_files/figure-latex/unnamed-chunk-52-2.pdf, id=449, 469.755pt x 32
 5.215pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-50-2.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-52-2.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-50-2.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-50-2.pdf
-  used on input line 2023.
+<use modelFitting_files/figure-latex/unnamed-chunk-52-2.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-52-2.pdf
+  used on input line 2161.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[42 <./modelFitting_files/figure-latex/unnamed-chunk-50-1.pdf>] [43 <./modelFit
-ting_files/figure-latex/unnamed-chunk-50-2.pdf>] [44] [45]
-LaTeX Font Info:    Try loading font information for TS1+lmr on input line 2190
+[45 <./modelFitting_files/figure-latex/unnamed-chunk-52-1.pdf>] [46 <./modelFit
+ting_files/figure-latex/unnamed-chunk-52-2.pdf>] [47] [48]
+LaTeX Font Info:    Try loading font information for TS1+lmr on input line 2328
 .
 (/usr/share/texmf/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2009/10/30 v1.6 Font defs for Latin Modern
-) [46] [47] [48] [49] [50] [51]
-<modelFitting_files/figure-latex/unnamed-chunk-67-1.pdf, id=499, 289.08pt x 289
+) [49] [50] [51] [52] [53] [54]
+<modelFitting_files/figure-latex/unnamed-chunk-69-1.pdf, id=516, 289.08pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-67-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-69-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-67-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-67-1.pdf
-  used on input line 2535.
+<use modelFitting_files/figure-latex/unnamed-chunk-69-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-69-1.pdf
+  used on input line 2673.
 (pdftex.def)             Requested size: 289.09251pt x 289.09251pt.
-[52 <./modelFitting_files/figure-latex/unnamed-chunk-67-1.pdf>]
-<modelFitting_files/figure-latex/unnamed-chunk-70-1.pdf, id=511, 469.755pt x 32
+[55 <./modelFitting_files/figure-latex/unnamed-chunk-69-1.pdf>]
+<modelFitting_files/figure-latex/unnamed-chunk-72-1.pdf, id=529, 469.755pt x 32
 5.215pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-70-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-72-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-70-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-70-1.pdf
-  used on input line 2618.
+<use modelFitting_files/figure-latex/unnamed-chunk-72-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-72-1.pdf
+  used on input line 2756.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[53]
+[56]
 
-LaTeX Warning: Reference `intPGOcc' on page 54 undefined on input line 2631.
+LaTeX Warning: Reference `intPGOcc' on page 57 undefined on input line 2769.
 
-[54 <./modelFitting_files/figure-latex/unnamed-chunk-70-1.pdf>] [55] [56] [57] 
-[58]
-<modelFitting_files/figure-latex/unnamed-chunk-76-1.pdf, id=550, 289.08pt x 289
+[57 <./modelFitting_files/figure-latex/unnamed-chunk-72-1.pdf>] [58] [59] [60] 
+[61]
+<modelFitting_files/figure-latex/unnamed-chunk-78-1.pdf, id=568, 289.08pt x 289
 .08pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-76-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-78-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-76-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-76-1.pdf
-  used on input line 2943.
+<use modelFitting_files/figure-latex/unnamed-chunk-78-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-78-1.pdf
+  used on input line 3081.
 (pdftex.def)             Requested size: 289.09251pt x 289.09251pt.
-[59] [60 <./modelFitting_files/figure-latex/unnamed-chunk-76-1.pdf>] [61]
-<modelFitting_files/figure-latex/unnamed-chunk-79-1.pdf, id=574, 469.755pt x 32
+[62] [63 <./modelFitting_files/figure-latex/unnamed-chunk-78-1.pdf>] [64]
+<modelFitting_files/figure-latex/unnamed-chunk-81-1.pdf, id=591, 469.755pt x 32
 5.215pt>
-File: modelFitting_files/figure-latex/unnamed-chunk-79-1.pdf Graphic file (type
+File: modelFitting_files/figure-latex/unnamed-chunk-81-1.pdf Graphic file (type
  pdf)
-<use modelFitting_files/figure-latex/unnamed-chunk-79-1.pdf>
-Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-79-1.pdf
-  used on input line 3085.
+<use modelFitting_files/figure-latex/unnamed-chunk-81-1.pdf>
+Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-81-1.pdf
+  used on input line 3223.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[62] [63 <./modelFitting_files/figure-latex/unnamed-chunk-79-1.pdf>]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 3156.
-[64]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 3156.
+[65] [66 <./modelFitting_files/figure-latex/unnamed-chunk-81-1.pdf>]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 3294.
+[67]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 3294.
 (./modelFitting.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 3156.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 3156.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 3294.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 3294.
 
 LaTeX Warning: There were undefined references.
 
 
 LaTeX Warning: There were multiply-defined labels.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 3156.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 3294.
  ) 
 Here is how much of TeX's memory you used:
- 14445 strings out of 494923
- 211341 string characters out of 6180741
- 314543 words of memory out of 5000000
- 17192 multiletter control sequences out of 15000+600000
- 84330 words of font info for 133 fonts, out of 8000000 for 9000
+ 14455 strings out of 494923
+ 211465 string characters out of 6180741
+ 313560 words of memory out of 5000000
+ 17194 multiletter control sequences out of 15000+600000
+ 84413 words of font info for 134 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  34i,19n,38p,2234b,457s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/share/texmf/fonts/enc/d
-vips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/shar
-e/texmf/fonts/enc/dvips/lm/lm-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-ma
-thit.enc}</usr/share/texmf/fonts/type1/public/lm/lmbsy7.pfb></usr/share/texmf/f
-onts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/type1/public/lm/lmbx12.
-pfb></usr/share/texmf/fonts/type1/public/lm/lmmi10.pfb></usr/share/texmf/fonts/
-type1/public/lm/lmmi7.pfb></usr/share/texmf/fonts/type1/public/lm/lmmib10.pfb><
-/usr/share/texmf/fonts/type1/public/lm/lmr10.pfb></usr/share/texmf/fonts/type1/
-public/lm/lmr12.pfb></usr/share/texmf/fonts/type1/public/lm/lmr17.pfb></usr/sha
-re/texmf/fonts/type1/public/lm/lmr7.pfb></usr/share/texmf/fonts/type1/public/lm
-/lmri10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy10.pfb></usr/share/texm
-f/fonts/type1/public/lm/lmsy7.pfb></usr/share/texmf/fonts/type1/public/lm/lmtk1
-0.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.pfb></usr/share/texmf/font
-s/type1/public/lm/lmtt12.pfb></usr/share/texmf/fonts/type1/public/lm/lmtti10.pf
-b>
-Output written on modelFitting.pdf (64 pages, 916404 bytes).
+vips/lm/lm-mathsy.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/shar
+e/texmf/fonts/enc/dvips/lm/lm-mathex.enc}{/usr/share/texmf/fonts/enc/dvips/lm/l
+m-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathit.enc}</usr/share/texmf/f
+onts/type1/public/lm/lmbsy7.pfb></usr/share/texmf/fonts/type1/public/lm/lmbx10.
+pfb></usr/share/texmf/fonts/type1/public/lm/lmbx12.pfb></usr/share/texmf/fonts/
+type1/public/lm/lmex10.pfb></usr/share/texmf/fonts/type1/public/lm/lmmi10.pfb><
+/usr/share/texmf/fonts/type1/public/lm/lmmi7.pfb></usr/share/texmf/fonts/type1/
+public/lm/lmmib10.pfb></usr/share/texmf/fonts/type1/public/lm/lmr10.pfb></usr/s
+hare/texmf/fonts/type1/public/lm/lmr12.pfb></usr/share/texmf/fonts/type1/public
+/lm/lmr17.pfb></usr/share/texmf/fonts/type1/public/lm/lmr7.pfb></usr/share/texm
+f/fonts/type1/public/lm/lmri10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy
+10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy7.pfb></usr/share/texmf/font
+s/type1/public/lm/lmtk10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.pfb
+></usr/share/texmf/fonts/type1/public/lm/lmtt12.pfb></usr/share/texmf/fonts/typ
+e1/public/lm/lmtti10.pfb>
+Output written on modelFitting.pdf (67 pages, 928335 bytes).
 PDF statistics:
- 868 PDF objects out of 1000 (max. 8388607)
- 735 compressed objects within 8 object streams
- 199 named destinations out of 1000 (max. 500000)
- 12755 words of extra memory for PDF output out of 14400 (max. 10000000)
+ 894 PDF objects out of 1000 (max. 8388607)
+ 757 compressed objects within 8 object streams
+ 205 named destinations out of 1000 (max. 500000)
+ 12763 words of extra memory for PDF output out of 14400 (max. 10000000)
 

@@ -18,9 +18,7 @@ data(hbefElev)
 \format{
   \code{hbefElev} is a data frame with three columns:
 
-   \code{val}: the elevation value. The value is standardized using the mean 
-   and standard deviation of the elevation values in the \code{hbef2015} that 
-   are used in the model fitting process.
+   \code{val}: the elevation value.
 
    \code{Easting}: the x coordinate of the point. The proj4string is 
    "+proj=utm +zone=19 +units=m +datum=NAD83".

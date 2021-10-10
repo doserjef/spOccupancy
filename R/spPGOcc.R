@@ -386,10 +386,10 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     Sigma.beta <- sigma.beta * diag(p.occ)
   } else {
     if (verbose) {
-      message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
+      message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.beta <- rep(0, p.occ)
-    Sigma.beta <- diag(p.occ) * 2.73
+    Sigma.beta <- diag(p.occ) * 2.72
   }
   # alpha -----------------------
   if ("alpha.normal" %in% names(priors)) {
@@ -425,10 +425,10 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     Sigma.alpha <- sigma.alpha * diag(p.det)
   } else {
     if (verbose) {
-      message("No prior specified for alpha.normal.\nSetting prior mean to 0 and prior variance to 2.73\n")
+      message("No prior specified for alpha.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.alpha <- rep(0, p.det)
-    Sigma.alpha <- diag(p.det) * 2.73
+    Sigma.alpha <- diag(p.det) * 2.72
   }
 
   # phi -----------------------------
