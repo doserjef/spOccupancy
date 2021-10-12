@@ -11,7 +11,8 @@ Function for fitting single species integrated occupancy models using Polya-Gamm
 intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples, 
 	 n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
 	 n.burn = round(.10 * n.samples), n.thin = 1, 
-	 k.fold, k.fold.threads = 1, k.fold.seed, ...
+	 k.fold, k.fold.threads = 1, k.fold.seed, 
+	 k.fold.data, ...
 )
 }
 \arguments{
@@ -106,6 +107,10 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
     for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
 
+  \item{k.fold.data}{an integer specifying the specific data set to hold out
+    values from. If not specified, data from all data set locations will 
+    be incorporated into the k-fold cross-validation.}
+
   
   \item{...}{currently no additional arguments}
 }
@@ -153,7 +158,8 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   \item{k.fold.deviance}{scoring rule (deviance) from k-fold cross-validation. A 
     separate deviance value is returned for each data source. Only included if 
-    \code{k.fold} is specified in function call.}
+    \code{k.fold} is specified in function call. Only a single value is returned
+    if \code{k.fold.data} is specified.}
 
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. 

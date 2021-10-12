@@ -122,7 +122,7 @@ waicOcc <- function(object, ...) {
     X.p <- object$X.p
     y <- object$y
     y.sum <- lapply(y, function(q) apply(q, 1, sum, na.rm = TRUE))
-    y.ind <- lapply(y, function(q) as.numeric(q == 0))
+    y.ind <- lapply(y.sum, function(q) as.numeric(q == 0))
     n.data <- length(y)
     sites <- object$sites
     p.det.long <- sapply(X.p, function(a) dim(a)[2])
@@ -157,6 +157,7 @@ waicOcc <- function(object, ...) {
         L <- apply(det.prob.samples[, long.indx, drop = FALSE], 1, prod)  * 
                 psi.samples[, curr.sites[j]] + y.ind[[q]][j] * (1 - psi.samples[, curr.sites[j]])
         elpd[q] <- elpd[q] + log(mean(L))
+	if (is.na(elpd[q])) print(j)
         pD[q] <- pD[q] + var(log(L))
       }
     }

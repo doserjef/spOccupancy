@@ -2,7 +2,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 		     n.samples, n.omp.threads = 1, verbose = TRUE, 
 		     n.report = 1000, n.burn = round(.10 * n.samples), 
 		     n.thin = 1, k.fold, k.fold.threads = 1, 
-		     k.fold.seed = 100, ...){
+		     k.fold.seed = 100, k.fold.data, ...){
 
     ptm <- proc.time()
 
@@ -38,7 +38,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     if (!'y' %in% names(data)) {
       stop("error: detection-nondetection data y must be specified in data")
     }
-    if (!is.list(y)) {
+    if (!is.list(data$y)) {
       stop("error: y must be a list of detection-nondetection data sets")
     }
     y <- data$y
@@ -83,7 +83,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       data$det.covs[[i]] <- data.frame(lapply(data$det.covs[[i]], function(a) unlist(c(a))))
       # Replicate det.covs if only covariates are at the site level. 
       if (nrow(data$det.covs[[i]]) == nrow(y[[i]])) {
-        data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep, times = dim(y[[i]][2])))
+        data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep, times = dim(y[[i]])[2]))
       }
     }
     data$occ.covs <- as.data.frame(data$occ.covs)
@@ -155,7 +155,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Remove missing observations when the covariate data are available but
     # there are missing detection-nondetection data
     for (i in 1:n.data) {
-      if (nrow(X.p[[i]]) == length(y[[1]])) {
+      if (nrow(X.p[[i]]) == length(y[[i]])) {
         X.p[[i]] <- X.p[[i]][!is.na(y[[i]]), , drop = FALSE]
       }
       # Need these for later on
@@ -447,28 +447,52 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
       	      " thread(s).", sep = ''))
       }
-      # Currently implemented without parellization. 
       set.seed(k.fold.seed)
-      # Number of sites in each hold out data set. 
-      sites.random <- sample(1:J)    
+      if (missing(k.fold.data)) {
+        k.fold.data <- NULL
+      }
+      # Check to see if only one data source should be used for hold-out evaluations
+      if (!is.null(k.fold.data)) {
+        if (!is.numeric(k.fold.data) | length(k.fold.data) != 1) {
+          stop("error: if specified, k.fold.data must be a single numeric value")
+        }
+        if (verbose) {
+          message(paste("Only holding out data from data source ", k.fold.data, ".", sep = ''))
+	}
+	sites.random <- sample(sites[[k.fold.data]])
+      } else {
+        # Number of sites in each hold out data set. 
+        sites.random <- sample(1:J)    
+      }
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])
+        curr.set.pred <- curr.set
+	curr.set.fit <- (1:J)[-curr.set]
+	if (!is.null(k.fold.data)) {
+          curr.set.fit <- sort(unique(c(curr.set.fit, unlist(sites[-k.fold.data]))))
+        }
         y.indx <- !((z.long.indx.r) %in% curr.set)
-        y.fit <- y[y.indx]
+        if (!is.null(k.fold.data)) {
+          y.indx <- ifelse(data.indx.r == k.fold.data, y.indx, TRUE)
+        } 
+	y.fit <- y[y.indx]
         y.0 <- y[!y.indx]
-        z.starting.fit <- z.starting[-curr.set]
+        z.starting.fit <- z.starting[curr.set.fit]
         X.p.fit <- X.p.all[y.indx, , drop = FALSE]
         X.p.0 <- X.p.all[!y.indx, , drop = FALSE]
-        X.fit <- X[-curr.set, , drop = FALSE]
-        X.0 <- X[curr.set, , drop = FALSE]
+        X.fit <- X[curr.set.fit, , drop = FALSE]
+        X.0 <- X[curr.set.pred, , drop = FALSE]
         J.fit <- nrow(X.fit)
 	# Site indices for fitted data
 	sites.fit <- sapply(sites, 
-			    function(a) which(as.numeric(row.names(X.fit)) %in% a[a %in% (1:J)[-curr.set]]))
-	sites.fit.vec <- unlist(sites.fit)
-	tmp <- sapply(sites, function(a) a %in% (1:J)[-curr.set])
+			    function(a) which(as.numeric(row.names(X.fit)) %in% a[a %in% curr.set.fit]))
+	tmp <- sapply(sites, function(a) a %in% curr.set.fit)
+	if (!is.null(k.fold.data)) {
+          sites.fit[[k.fold.data]] <- which(as.numeric(row.names(X.fit)) %in% sites[[k.fold.data]][sites[[k.fold.data]] %in% (1:J)[-curr.set]])
+          tmp[[k.fold.data]] <- sites[[k.fold.data]] %in% (1:J)[-curr.set]
+        }
         K.fit <- K[unlist(tmp)]
 	z.long.indx.fit <- list()
 	tmp.indx <- 1
@@ -485,20 +509,29 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	
 	# Site indices for hold out data
 	sites.0 <- sapply(sites, 
-			    function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% (1:J)[curr.set]]))
-	sites.0.vec <- unlist(sites.0)
-	tmp <- sapply(sites, function(a) a %in% (1:J)[curr.set])
+			    function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% curr.set.pred]))
+	tmp <- sapply(sites, function(a) a %in% curr.set.pred)
+	if (!is.null(k.fold.data)) {
+          sites.0[-k.fold.data] <- NA
+	  for (q in 1:n.data) {
+            if (q != k.fold.data) {
+              tmp[[q]] <- rep(FALSE, J.long[q])
+            }
+          }
+        }
         K.0 <- K[unlist(tmp)]
 	z.long.indx.0 <- list()
 	tmp.indx <- 1
 	for (q in 1:n.data) {
-          z.long.indx.0[[q]] <- matrix(NA, length(sites.0[[q]]), K.long.max[q])
-          for (j in 1:length(sites.0[[q]])) {
-            z.long.indx.0[[q]][j, 1:K.0[tmp.indx]] <- sites.0[[q]][j]
-	    tmp.indx <- tmp.indx + 1
-          }
-          z.long.indx.0[[q]] <- c(z.long.indx.0[[q]])
-          z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(z.long.indx.0[[q]])] - 1
+          if (!is.na(sites.0[[q]][1])) {
+            z.long.indx.0[[q]] <- matrix(NA, length(sites.0[[q]]), K.long.max[q])
+            for (j in 1:length(sites.0[[q]])) {
+              z.long.indx.0[[q]][j, 1:K.0[tmp.indx]] <- sites.0[[q]][j]
+	      tmp.indx <- tmp.indx + 1
+            }
+            z.long.indx.0[[q]] <- c(z.long.indx.0[[q]])
+            z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(z.long.indx.0[[q]])] - 1
+	  }
         }
 	z.long.indx.0 <- unlist(z.long.indx.0)
         verbose.fit <- FALSE
