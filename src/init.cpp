@@ -5,29 +5,29 @@
 #include "spOccupancy.h"
 
 static const R_CallMethodDef CallEntries[] = {
-    {"PGOcc", (DL_FUNC) &PGOcc, 19},
+    {"PGOcc", (DL_FUNC) &PGOcc, 22},
     {"PGOccREDet", (DL_FUNC) &PGOccREDet, 32},
     {"PGOccREOcc", (DL_FUNC) &PGOccREOcc, 32},
     {"PGOccREBoth", (DL_FUNC) &PGOccREBoth, 42},
-    {"spPGOcc", (DL_FUNC) &spPGOcc, 34}, 
+    {"spPGOcc", (DL_FUNC) &spPGOcc, 37}, 
     {"spPGOccRE", (DL_FUNC) &spPGOccRE, 47},
-    {"spPGOccNNGP", (DL_FUNC) &spPGOccNNGP, 39},
+    {"spPGOccNNGP", (DL_FUNC) &spPGOccNNGP, 42},
     {"spPGOccNNGPRE", (DL_FUNC) &spPGOccNNGPRE, 52},
     {"spPGOccPredict", (DL_FUNC) &spPGOccPredict, 14},
     {"spPGOccNNGPPredict", (DL_FUNC) &spPGOccNNGPPredict, 16},
-    {"msPGOcc", (DL_FUNC) &msPGOcc, 28},
+    {"msPGOcc", (DL_FUNC) &msPGOcc, 31},
     {"msPGOccREBoth", (DL_FUNC) &msPGOccREBoth, 51},
     {"msPGOccREDet", (DL_FUNC) &msPGOccREDet, 41},
     {"msPGOccREOcc", (DL_FUNC) &msPGOccREDet, 41},
-    {"spMsPGOcc", (DL_FUNC) &spMsPGOcc, 43},
+    {"spMsPGOcc", (DL_FUNC) &spMsPGOcc, 46},
     {"spMsPGOccRE", (DL_FUNC) &spMsPGOccRE, 56},
-    {"spMsPGOccNNGP", (DL_FUNC) &spMsPGOccNNGP, 49},
+    {"spMsPGOccNNGP", (DL_FUNC) &spMsPGOccNNGP, 52},
     {"spMsPGOccNNGPRE", (DL_FUNC) &spMsPGOccNNGPRE, 62},
     {"spMsPGOccPredict", (DL_FUNC) &spMsPGOccPredict, 15},
     {"spMsPGOccNNGPPredict", (DL_FUNC) &spMsPGOccNNGPPredict, 17},
-    {"intPGOcc", (DL_FUNC) &intPGOcc, 26},
-    {"spIntPGOcc", (DL_FUNC) &spIntPGOcc, 41},
-    {"spIntPGOccNNGP", (DL_FUNC) &spIntPGOccNNGP, 47},
+    {"intPGOcc", (DL_FUNC) &intPGOcc, 29},
+    {"spIntPGOcc", (DL_FUNC) &spIntPGOcc, 44},
+    {"spIntPGOccNNGP", (DL_FUNC) &spIntPGOccNNGP, 50},
     {NULL, NULL, 0}
 };
 

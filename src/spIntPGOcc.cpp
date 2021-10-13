@@ -13,7 +13,6 @@
 #endif
 
 extern "C" {
-  // SEXP is the type all R objects are stored at the C-level.  
   SEXP spIntPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, 
 		  SEXP pOcc_r, SEXP pDet_r, SEXP pDetLong_r, 
 	          SEXP J_r, SEXP JLong_r, SEXP K_r, SEXP nObs_r, SEXP nObsLong_r, SEXP nData_r, 
