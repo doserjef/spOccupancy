@@ -228,9 +228,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         beta.starting <- rep(beta.starting, p.occ)
       }
     } else {
-      beta.starting <- coefficients(glm((z.starting)~X-1, family="binomial"))
+      beta.starting <- rnorm(p.occ)
       if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values using glm\n')
+        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
       }
     }
     # alpha -----------------------
@@ -257,9 +257,9 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       alpha.starting <- unlist(alpha.starting)
     } else {
       if (verbose) {
-        message("alpha is not specified in starting values.\nSetting starting value to 0\n")
+        message("alpha is not specified in starting values.\nSetting starting values to random standard normal values\n")
       }
-      alpha.starting <- rep(0, p.det)
+      alpha.starting <- rnorm(p.det)
     }
 
     alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
@@ -464,7 +464,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         # Number of sites in each hold out data set. 
         sites.random <- sample(1:J)    
       }
-      sites.k.fold <- split(sites.random, sites.random %% k.fold)
+      sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
       registerDoParallel(k.fold.threads)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])

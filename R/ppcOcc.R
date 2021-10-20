@@ -43,10 +43,18 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     y <- object$y
     X.p <- object$X.p
+    if (nrow(X.p) == nrow(y)) {
+      X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
+      X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+    }
     p.det <- dim(X.p)[2]
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     J <- nrow(y)
-    y.rep.samples <- object$y.rep.samples
+    if (class(object) == 'PGOcc') {
+      y.rep.samples <- fitted.PGOcc(object)
+    } else {
+      y.rep.samples <- fitted.spPGOcc(object)
+    }
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
     # Get detection probability
@@ -126,11 +134,19 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
     y <- object$y
     X.p <- object$X.p
+    if (nrow(X.p) == dim(y)[2]) {
+      X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+      X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+    }
     p.det <- dim(X.p)[2]
     n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
     J <- dim(y)[2]
     N <- dim(y)[1]
-    y.rep.samples <- object$y.rep.samples
+    if (class(object) == 'msPGOcc') {
+      y.rep.samples <- fitted.msPGOcc(object)
+    } else {
+      y.rep.samples <- fitted.spMsPGOcc(object)
+    }
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
     # Get detection probability

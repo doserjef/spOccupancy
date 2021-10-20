@@ -75,7 +75,58 @@ print.PGOcc <- function(x, ...) {
 }
 
 fitted.PGOcc <- function(object, ...) {
-  return(object$y.rep.samples)
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (class(object) != "PGOcc") {
+    stop("error: object must be one of class PGOcc\n")
+  }
+  n.post <- object$n.post
+  X.p <- object$X.p
+  y <- object$y
+  n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
+  K.max <- max(n.rep)
+  J <- nrow(y)
+  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y))]
+  if (nrow(X.p) == nrow(y)) {
+    X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
+    X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+  }
+  y <- c(y)
+  y <- y[!is.na(y)]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  if (object$pRE) {
+    lambda.p <- object$lambda.p
+    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) +
+      			      lambda.p %*% t(object$alpha.star.samples)))
+  } else {
+    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
+  }
+  det.prob.samples <- det.prob.samples * z.samples[, z.long.indx]
+  y.rep.samples <- t(apply(det.prob.samples, 2, function(a) rbinom(n.post, 1, a)))
+  tmp <- array(NA, dim = c(J * K.max, n.post))
+  names.long <- which(!is.na(c(object$y)))
+  tmp[names.long, ] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(J, K.max, n.post))
+  y.rep.samples <- aperm(y.rep.samples, c(3, 1, 2))
+  return(y.rep.samples)
 }
 
 summary.PGOcc <- function(object,
@@ -393,7 +444,58 @@ summary.spPGOcc <- function(object,
 
 
 fitted.spPGOcc <- function(object, ...) {
-  return(object$y.rep.samples)
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (class(object) != "spPGOcc") {
+    stop("error: object must be one of class spPGOcc\n")
+  }
+  n.post <- object$n.post
+  X.p <- object$X.p
+  y <- object$y
+  n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
+  K.max <- max(n.rep)
+  J <- nrow(y)
+  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y))]
+  if (nrow(X.p) == nrow(y)) {
+    X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
+    X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+  }
+  y <- c(y)
+  y <- y[!is.na(y)]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  if (object$pRE) {
+    lambda.p <- object$lambda.p
+    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) +
+      			      lambda.p %*% t(object$alpha.star.samples)))
+  } else {
+    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
+  }
+  det.prob.samples <- det.prob.samples * z.samples[, z.long.indx]
+  y.rep.samples <- t(apply(det.prob.samples, 2, function(a) rbinom(n.post, 1, a)))
+  tmp <- array(NA, dim = c(J * K.max, n.post))
+  names.long <- which(!is.na(c(object$y)))
+  tmp[names.long, ] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(J, K.max, n.post))
+  y.rep.samples <- aperm(y.rep.samples, c(3, 1, 2))
+  return(y.rep.samples)
 }
 
 # msPGOcc -----------------------------------------------------------------
@@ -608,7 +710,71 @@ summary.msPGOcc <- function(object,
 }
 
 fitted.msPGOcc <- function(object, ...) {
-  return(object$y.rep.samples)
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (class(object) != "msPGOcc") {
+    stop("error: object must be of class msPGOcc\n")
+  }
+  n.post <- object$n.post
+  X.p <- object$X.p
+  y <- object$y
+  n.rep <- apply(y[1, ,], 1, function(a) sum(!is.na(a)))
+  K.max <- max(n.rep)
+  J <- dim(y)[2]
+  N <- dim(y)[1]
+  if (nrow(X.p) == dim(y)[2]) {
+    X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+    X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+  }
+  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  n.obs <- nrow(X.p)
+  det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
+  sp.indx <- rep(1:N, ncol(X.p))
+  y <- matrix(y, N, J * K.max)
+  y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
+  if (object$pRE) {
+    sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+    lambda.p <- object$lambda.p
+    for (i in 1:N) {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
+      				   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
+    }
+  } else {
+    for (i in 1:N) {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    }
+  }
+  # Need to be careful here that all arrays line up. 
+  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+  det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
+  y.rep.samples <- array(NA, dim = dim(det.prob.samples))
+  for (i in 1:N) {
+    y.rep.samples[, i, ] <- apply(det.prob.samples[, i, ], 2, function(a) rbinom(n.post, 1, a))
+  }
+  tmp <- array(NA, dim = c(n.post, N, J * K.max))
+  names.long <- which(!is.na(c(object$y[1, , ])))
+  tmp[, , names.long] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(n.post, N, J, K.max))
+  return(y.rep.samples)
 }
 
 # spMsPGOcc ---------------------------------------------------------------
@@ -735,7 +901,72 @@ summary.spMsPGOcc <- function(object,
 }
 
 fitted.spMsPGOcc <- function(object, ...) {
-  return(object$y.rep.samples)
+  # NOTE: this is identical to fitted.msPGOcc
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (class(object) != "spMsPGOcc") {
+    stop("error: object must be of class spMsPGOcc\n")
+  }
+  n.post <- object$n.post
+  X.p <- object$X.p
+  y <- object$y
+  n.rep <- apply(y[1, ,], 1, function(a) sum(!is.na(a)))
+  K.max <- max(n.rep)
+  J <- dim(y)[2]
+  N <- dim(y)[1]
+  if (nrow(X.p) == dim(y)[2]) {
+    X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+    X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+  }
+  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  n.obs <- nrow(X.p)
+  det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
+  sp.indx <- rep(1:N, ncol(X.p))
+  y <- matrix(y, N, J * K.max)
+  y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
+  if (object$pRE) {
+    sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+    lambda.p <- object$lambda.p
+    for (i in 1:N) {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
+      				   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
+    }
+  } else {
+    for (i in 1:N) {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    }
+  }
+  # Need to be careful here that all arrays line up. 
+  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+  det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
+  y.rep.samples <- array(NA, dim = dim(det.prob.samples))
+  for (i in 1:N) {
+    y.rep.samples[, i, ] <- apply(det.prob.samples[, i, ], 2, function(a) rbinom(n.post, 1, a))
+  }
+  tmp <- array(NA, dim = c(n.post, N, J * K.max))
+  names.long <- which(!is.na(c(object$y[1, , ])))
+  tmp[, , names.long] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(n.post, N, J, K.max))
+  return(y.rep.samples)
 }
 
 print.spMsPGOcc <- function(x, ...) {

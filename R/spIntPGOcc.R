@@ -87,7 +87,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   if (!'coords' %in% names(data)) {
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
-  coords <- data$coords
+  coords <- as.matrix(data$coords)
 
     # Checking missing values ---------------------------------------------
     for (q in 1:n.data) {
@@ -260,9 +260,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         beta.starting <- rep(beta.starting, p.occ)
       }
     } else {
-      beta.starting <- coefficients(glm((z.starting)~X-1, family="binomial"))
+      beta.starting <- rnorm(p.occ)
       if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values using glm\n')
+        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
       }
     }
     # alpha -----------------------
@@ -289,24 +289,28 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       alpha.starting <- unlist(alpha.starting)
     } else {
       if (verbose) {
-        message("alpha is not specified in starting values.\nSetting starting value to 0\n")
+        message("alpha is not specified in starting values.\nSetting starting values to random standard normal values\n")
       }
-      alpha.starting <- rep(0, p.det)
+      alpha.starting <- rnorm(p.det)
     }
 
     alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
     alpha.indx.c <- alpha.indx.r - 1
 
     # phi -----------------------------
+    # Get distance matrix which is used if priors are not specified
+    coords.D <- iDist(coords)
+    lower.unif <- 3 / max(coords.D)
+    upper.unif <- 3 / sort(unique(c(coords.D)))[2]
     if ("phi" %in% names(starting)) {
       phi.starting <- starting[["phi"]]
       if (length(phi.starting) != 1) {
         stop("error: starting values for phi must be of length 1")
       }
     } else {
-      phi.starting <- 3 / mean(range(coords))
+      phi.starting <- runif(1, lower.unif, upper.unif)
       if (verbose) {
-        message("phi is not specified in starting values.\nSetting starting value to 3/mean(range(coords))\n")
+        message("phi is not specified in starting values.\nSetting starting value to random value between 3/range(dist(data$coords))\n")
       }
     }
 
@@ -317,9 +321,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop("error: starting values for sigma.sq must be of length 1")
       }
     } else {
-      sigma.sq.starting <- 2
+      sigma.sq.starting <- runif(1, 0.2, 4)
       if (verbose) {
-        message("sigma.sq is not specified in starting values.\nSetting starting value to 2\n")
+        message("sigma.sq is not specified in starting values.\nSetting starting value to random value between 0.2 and 4\n")
       }
     }
     # w -----------------------------
@@ -456,8 +460,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
 
     # phi -----------------------------
-    # Get distance matrix which is used if priors are not specified
-    coords.D <- iDist(coords)
     if ("phi.unif" %in% names(priors)) {
       if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
         stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
@@ -680,7 +682,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         # Number of sites in each hold out data set. 
         sites.random <- sample(1:J)    
       }
-      sites.k.fold <- split(sites.random, sites.random %% k.fold)
+      sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
       registerDoParallel(k.fold.threads)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])

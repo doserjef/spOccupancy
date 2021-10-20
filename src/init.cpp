@@ -5,7 +5,7 @@
 #include "spOccupancy.h"
 
 static const R_CallMethodDef CallEntries[] = {
-    {"PGOcc", (DL_FUNC) &PGOcc, 22},
+    {"PGOcc", (DL_FUNC) &PGOcc, 23},
     {"PGOccREDet", (DL_FUNC) &PGOccREDet, 32},
     {"PGOccREOcc", (DL_FUNC) &PGOccREOcc, 32},
     {"PGOccREBoth", (DL_FUNC) &PGOccREBoth, 42},

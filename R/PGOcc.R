@@ -55,23 +55,34 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         if (verbose) {
           message("detection covariates (det.covs) not specified in data.\nAssuming interept only detection model.\n")
 	}
-        data$det.covs <- list(int = matrix(1, dim(y)[1], dim(y)[2]))
+        data$det.covs <- list(int = rep(1, dim(y)[1]))
       } else {
         stop("error: det.covs must be specified in data for a detection model with covariates")
       }
     }
 
+    # First subset detection covariates to only use those that are included in the analysis. 
+    data$det.covs <- data$det.covs[names(data$det.covs) %in% all.vars(det.formula)]
+    # Null model support
+    if (length(data$det.covs) == 0) {
+      data$det.covs <- list(int = rep(1, dim(y)[1]))
+    }
     # Make both covariates a data frame. Unlist is necessary for when factors
     # are supplied. 
     data$det.covs <- data.frame(lapply(data$det.covs, function(a) unlist(c(a))))
-    # Replicate det.covs if only covariates are at the site level. 
+    binom <- FALSE
+    # Check if all detection covariates are at site level, and simplify the data
+    # if necessary
+    y.big <- y
     if (nrow(data$det.covs) == nrow(y)) {
-      data$det.covs <- data.frame(sapply(data$det.covs, rep, times = dim(y)[2]))
+     # Convert data to binomial form
+     y <- apply(y, 1, sum, na.rm = TRUE) 
+     binom <- TRUE
     }
     data$occ.covs <- as.data.frame(data$occ.covs)
 
     # Checking missing values ---------------------------------------------
-    y.na.test <- apply(y, 1, function(a) sum(!is.na(a)))
+    y.na.test <- apply(y.big, 1, function(a) sum(!is.na(a)))
     if (sum(y.na.test == 0) > 0) {
       stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
     }
@@ -109,7 +120,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Get basic info from inputs ------------------------------------------
     # Number of sites
-    J <- nrow(y)
+    J <- nrow(y.big)
     # Number of occupancy parameters
     p.occ <- ncol(X)
     # Number of occupancy random effect parameters
@@ -125,19 +136,22 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
     n.det.re <- length(unlist(apply(X.p.re, 2, unique)))
     n.det.re.long <- apply(X.p.re, 2, function(a) length(unique(a)))
     # Number of replicates at each site
-    n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
+    n.rep <- apply(y.big, 1, function(a) sum(!is.na(a)))
     # Max number of repeat visits
     K.max <- max(n.rep)
     # Because I like K better than n.rep
     K <- n.rep
 
     # Get indices to map z to y -------------------------------------------
-    z.long.indx <- rep(1:J, K.max)
-    z.long.indx <- z.long.indx[!is.na(c(y))]
-    # Subtract 1 for indices in C
-    z.long.indx <- z.long.indx - 1
+    if (!binom) {
+      z.long.indx <- rep(1:J, K.max)
+      z.long.indx <- z.long.indx[!is.na(c(y.big))]
+      # Subtract 1 for indices in C
+      z.long.indx <- z.long.indx - 1
+    } else {
+      z.long.indx <- 0:(J - 1)
+    }
     # y is stored in the following order: species, site, visit
-    y.big <- y
     y <- c(y)
     names.long <- which(!is.na(y))
     # Remove missing observations when the covariate data are available but
@@ -145,11 +159,11 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
     if (nrow(X.p) == length(y)) {
       X.p <- X.p[!is.na(y), , drop = FALSE]  
     }
-    if (nrow(X.p.re) == length(y)) {
+    if (nrow(X.p.re) == length(y) & p.det.re > 0) {
       X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
     }
     y <- y[!is.na(y)]
-    # Number of pseudoreplicates
+    # Number of data points for the y vector
     n.obs <- nrow(X.p)
 
     # Get random effect matrices all set ----------------------------------
@@ -216,9 +230,9 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         beta.starting <- rep(beta.starting, p.occ)
       }
     } else {
-      beta.starting <- coefficients(glm((z.starting)~X-1, family="binomial"))
+      beta.starting <- rnorm(p.occ)
       if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values using glm\n')
+        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
       }
     }
     # alpha -----------------------
@@ -237,9 +251,9 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         alpha.starting <- rep(alpha.starting, p.det)
       }
     } else {
-      alpha.starting <- coefficients(glm((y)~X.p-1, family = 'binomial'))
+      alpha.starting <- rnorm(p.det)
       if (verbose) {
-        message("alpha is not specified in starting values.\nSetting starting values using glm\n")
+        message("alpha is not specified in starting values.\nSetting starting values to random standard normal values\n")
       }
     }
 
@@ -260,9 +274,9 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           sigma.sq.psi.starting <- rep(sigma.sq.psi.starting, p.occ.re)
         }
       } else {
-        sigma.sq.psi.starting <- rep(1, p.occ.re)
+        sigma.sq.psi.starting <- runif(p.occ.re, 0.2, 2)
         if (verbose) {
-          message("sigma.sq.psi is not specified in starting values.\nSetting starting value to 1\n")
+          message("sigma.sq.psi is not specified in starting values.\nSetting starting value to random values between 0.2 and 2\n")
         }
       }
       beta.star.indx <- rep(0:(p.occ.re - 1), n.occ.re.long)
@@ -286,9 +300,9 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           sigma.sq.p.starting <- rep(sigma.sq.p.starting, p.det.re)
         }
       } else {
-        sigma.sq.p.starting <- rep(1, p.det.re)
+        sigma.sq.p.starting <- runif(p.det.re, 0.2, 2)
         if (verbose) {
-          message("sigma.sq.p is not specified in starting values.\nSetting starting value to 1\n")
+          message("sigma.sq.p is not specified in starting values.\nSetting starting value to random values between 0.2 and 2\n")
         }
       }
       alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
@@ -467,7 +481,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(p.det) <- "integer"
     storage.mode(p.occ) <- "integer"
     storage.mode(J) <- "integer"
-    storage.mode(K) <- "integer"
+    storage.mode(n.obs) <- "integer"
+    storage.mode(K) <- "double"
     storage.mode(beta.starting) <- "double"
     storage.mode(alpha.starting) <- "double"
     storage.mode(z.long.indx) <- "integer"
@@ -504,7 +519,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
       out <- .Call("PGOccREOcc", y, X, X.p, X.re,  
 		   lambda.psi, p.occ, p.det, 
-		   p.occ.re, J, K, n.occ.re,  
+		   p.occ.re, J, n.obs, K, n.occ.re,  
 		   n.occ.re.long, beta.starting, 
 		   alpha.starting, sigma.sq.psi.starting, beta.star.starting, 
 		   z.starting, z.long.indx, beta.star.indx, 
@@ -520,10 +535,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       colnames(out$alpha.samples) <- x.p.names
       out$z.samples <- mcmc(t(out$z.samples))
       out$psi.samples <- mcmc(t(out$psi.samples))
-      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-      tmp[names.long, ] <- out$y.rep.samples
-      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
-      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
       out$sigma.sq.psi.samples <- mcmc(t(out$sigma.sq.psi.samples))
       colnames(out$sigma.sq.psi.samples) <- x.re.names
       out$beta.star.samples <- mcmc(t(out$beta.star.samples))
@@ -558,35 +569,49 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         sites.k.fold <- split(sites.random, sites.random %% k.fold)
 	registerDoParallel(k.fold.threads)
 	model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
-          curr.set <- sort(sites.k.fold[[i]])
-	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+          curr.set <- sort(sites.random[sites.k.fold[[i]]])
+          if (binom) {
+            y.indx <- !(1:J %in% curr.set)
+          } else {
+	    y.indx <- !((z.long.indx + 1) %in% curr.set)
+          }
           y.fit <- y[y.indx]
 	  y.0 <- y[!y.indx]
+	  y.big.fit <- y.big[-curr.set, , drop = FALSE]
+	  y.big.0 <- y.big[curr.set, , drop = FALSE]
 	  z.starting.fit <- z.starting[-curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
 	  X.fit <- X[-curr.set, , drop = FALSE]
 	  X.0 <- X[curr.set, , drop = FALSE]
 	  J.fit <- nrow(X.fit)
+	  J.0 <- nrow(X.0)
 	  K.fit <- K[-curr.set]
 	  K.0 <- K[curr.set]
+	  n.obs.fit <- nrow(X.p.fit)
+	  n.obs.0 <- nrow(X.p.0)
 	  lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
 	  lambda.psi.0 <- lambda.psi[curr.set, , drop = FALSE]
 	  X.re.fit <- X.re[-curr.set, , drop = FALSE]
 	  X.re.0 <- X.re[curr.set, , drop = FALSE]
 	  # Gotta be a better way, but will do for now. 
-	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-	  for (j in 1:J.fit) {
-            z.long.indx.fit[j, 1:K.fit[j]] <- j  
-          }
-	  z.long.indx.fit <- c(z.long.indx.fit)
-	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-	  for (j in 1:nrow(X.0)) {
-            z.0.long.indx[j, 1:K.0[j]] <- j  
-          }
-	  z.0.long.indx <- c(z.0.long.indx)
-	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  if (binom) {
+            z.long.indx.fit <- 0:(J.fit - 1)
+            z.0.long.indx <- 1:J.0
+          } else {
+	    z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	    for (j in 1:J.fit) {
+              z.long.indx.fit[j, 1:K.fit[j]] <- j  
+            }
+	    z.long.indx.fit <- c(z.long.indx.fit)
+	    z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	    z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	    for (j in 1:nrow(X.0)) {
+              z.0.long.indx[j, 1:K.0[j]] <- j  
+            }
+	    z.0.long.indx <- c(z.0.long.indx)
+	    z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  }
 	  verbose.fit <- FALSE
 	  n.omp.threads.fit <- 1
 
@@ -597,7 +622,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(p.det) <- "integer"
           storage.mode(p.occ) <- "integer"
           storage.mode(J.fit) <- "integer"
-          storage.mode(K.fit) <- "integer"
+          storage.mode(n.obs.fit) <- "integer"
+          storage.mode(K.fit) <- "double"
           storage.mode(beta.starting) <- "double"
           storage.mode(alpha.starting) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
@@ -625,7 +651,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           # Run the model in C
           out.fit <- .Call("PGOccREOcc", y.fit, X.fit, X.p.fit, X.re.fit,  
 		           lambda.psi.fit, p.occ, p.det, 
-		           p.occ.re, J.fit, K.fit, n.occ.re,  
+		           p.occ.re, J.fit, n.obs.fit, K.fit, n.occ.re,  
 		           n.occ.re.long, beta.starting, 
 		           alpha.starting, sigma.sq.psi.starting, beta.star.starting, 
 		           z.starting.fit, z.long.indx.fit, beta.star.indx, 
@@ -635,7 +661,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           	           n.post.samples)
 
 	  # Predict occurrence at new sites. 
-          # Now can get the output
           psi.0.samples <- mcmc(logit.inv(t(X.0 %*% out.fit$beta.samples + 
 					  lambda.psi.0 %*% out.fit$beta.star.samples)))
 	  z.0.samples <- matrix(NA, n.post.samples, nrow(X.0))
@@ -644,11 +669,21 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           }
 	  # Detection 
 	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples))
-	  like.samples <- rep(NA, nrow(X.p.0))
-	  for (j in 1:nrow(X.p.0)) {
-            like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
-          }
-	  sum(log(like.samples))
+	  if (binom) {
+            like.samples <- matrix(NA, nrow(y.big.0), ncol(y.big.0))
+            for (j in 1:nrow(X.p.0)) {
+              for (k in 1:K.0[j]) {
+                like.samples[j, k] <- mean(dbinom(y.big.0[j, k], 1,
+					         p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+	      }
+            }
+          } else {
+	    like.samples <- rep(NA, nrow(X.p.0))
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+            }
+	  }
+	  sum(log(like.samples), na.rm = TRUE)
         }
 	model.deviance <- -2 * model.deviance
 	# Return objects from cross-validation
@@ -672,7 +707,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(lambda.p) <- "double"
       
       out <- .Call("PGOccREDet", y, X, X.p, X.p.re, lambda.p, p.occ, p.det, 
-		   p.det.re, J, K, n.det.re, n.det.re.long, beta.starting, 
+		   p.det.re, J, n.obs, K, n.det.re, n.det.re.long, beta.starting, 
 		   alpha.starting, sigma.sq.p.starting, 
 		   alpha.star.starting, z.starting, z.long.indx, alpha.star.indx, 
 		   mu.beta, mu.alpha, Sigma.beta, Sigma.alpha, 
@@ -686,10 +721,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       colnames(out$alpha.samples) <- x.p.names
       out$z.samples <- mcmc(t(out$z.samples))
       out$psi.samples <- mcmc(t(out$psi.samples))
-      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-      tmp[names.long, ] <- out$y.rep.samples
-      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
-      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
       out$sigma.sq.p.samples <- mcmc(t(out$sigma.sq.p.samples))
       colnames(out$sigma.sq.p.samples) <- x.p.re.names
       out$alpha.star.samples <- mcmc(t(out$alpha.star.samples))
@@ -725,16 +756,25 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         sites.k.fold <- split(sites.random, sites.random %% k.fold)
 	registerDoParallel(k.fold.threads)
 	model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
-          curr.set <- sort(sites.k.fold[[i]])
-	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+          curr.set <- sort(sites.random[sites.k.fold[[i]]])
+          if (binom) {
+            y.indx <- !(1:J %in% curr.set)
+          } else {
+	    y.indx <- !((z.long.indx + 1) %in% curr.set)
+          }
           y.fit <- y[y.indx]
 	  y.0 <- y[!y.indx]
+	  y.big.fit <- y.big[-curr.set, , drop = FALSE]
+	  y.big.0 <- y.big[curr.set, , drop = FALSE]
 	  z.starting.fit <- z.starting[-curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
 	  X.fit <- X[-curr.set, , drop = FALSE]
 	  X.0 <- X[curr.set, , drop = FALSE]
+	  n.obs.fit <- nrow(X.p.fit)
+	  n.obs.0 <- nrow(X.p.0)
 	  J.fit <- nrow(X.fit)
+	  J.0 <- nrow(X.0)
 	  K.fit <- K[-curr.set]
 	  K.0 <- K[curr.set]
 	  lambda.p.fit <- lambda.p[y.indx, , drop = FALSE]
@@ -742,18 +782,23 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	  X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
 	  X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
 	  # Gotta be a better way, but will do for now. 
-	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-	  for (j in 1:J.fit) {
-            z.long.indx.fit[j, 1:K.fit[j]] <- j  
-          }
-	  z.long.indx.fit <- c(z.long.indx.fit)
-	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-	  for (j in 1:nrow(X.0)) {
-            z.0.long.indx[j, 1:K.0[j]] <- j  
-          }
-	  z.0.long.indx <- c(z.0.long.indx)
-	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  if (binom) {
+            z.long.indx.fit <- 0:(J.fit - 1)
+            z.0.long.indx <- 1:J.0
+          } else {
+	    z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	    for (j in 1:J.fit) {
+              z.long.indx.fit[j, 1:K.fit[j]] <- j  
+            }
+	    z.long.indx.fit <- c(z.long.indx.fit)
+	    z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	    z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	    for (j in 1:nrow(X.0)) {
+              z.0.long.indx[j, 1:K.0[j]] <- j  
+            }
+	    z.0.long.indx <- c(z.0.long.indx)
+	    z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  }
 	  verbose.fit <- FALSE
 	  n.omp.threads.fit <- 1
 
@@ -764,7 +809,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(p.det) <- "integer"
           storage.mode(p.occ) <- "integer"
           storage.mode(J.fit) <- "integer"
-          storage.mode(K.fit) <- "integer"
+          storage.mode(n.obs.fit) <- "integer"
+          storage.mode(K.fit) <- "double"
           storage.mode(beta.starting) <- "double"
           storage.mode(alpha.starting) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
@@ -792,7 +838,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           # Run the model in C
           out.fit <- .Call("PGOccREDet", y.fit, X.fit, X.p.fit, X.p.re.fit,  
 		           lambda.p.fit, p.occ, p.det, 
-		           p.det.re, J.fit, K.fit, n.det.re,  
+		           p.det.re, J.fit, n.obs.fit, K.fit, n.det.re,  
 		           n.det.re.long, beta.starting, 
 		           alpha.starting, sigma.sq.p.starting, alpha.star.starting, 
 		           z.starting.fit, z.long.indx.fit, alpha.star.indx, 
@@ -810,12 +856,22 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           }
 	  # Detection 
 	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples + 
-				     lambda.p.0 %*% out.fit$alpha.star.samples))
-	  like.samples <- rep(NA, nrow(X.p.0))
-	  for (j in 1:nrow(X.p.0)) {
-            like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
-          }
-	  sum(log(like.samples))
+				   lambda.p.0 %*% out.fit$alpha.star.samples))
+	  if (binom) {
+            like.samples <- matrix(NA, nrow(y.big.0), ncol(y.big.0))
+            for (j in 1:nrow(X.p.0)) {
+              for (k in 1:K.0[j]) {
+                like.samples[j, k] <- mean(dbinom(y.big.0[j, k], 1,
+					         p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+	      }
+            }
+          } else {
+	    like.samples <- rep(NA, nrow(X.p.0))
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+            }
+	  }
+	  sum(log(like.samples), na.rm = TRUE)
         }
 	model.deviance <- -2 * model.deviance
 	# Return objects from cross-validation
@@ -853,7 +909,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
       out <- .Call("PGOccREBoth", y, X, X.p, X.re, X.p.re, 
 		   lambda.psi, lambda.p, p.occ, p.det, 
-		   p.occ.re, p.det.re, J, K, n.occ.re, n.det.re, 
+		   p.occ.re, p.det.re, J, n.obs, K, n.occ.re, n.det.re, 
 		   n.occ.re.long, n.det.re.long, beta.starting, 
 		   alpha.starting, sigma.sq.psi.starting, 
 		   sigma.sq.p.starting, beta.star.starting, 
@@ -871,10 +927,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       colnames(out$alpha.samples) <- x.p.names
       out$z.samples <- mcmc(t(out$z.samples))
       out$psi.samples <- mcmc(t(out$psi.samples))
-      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-      tmp[names.long, ] <- out$y.rep.samples
-      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
-      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
       out$sigma.sq.psi.samples <- mcmc(t(out$sigma.sq.psi.samples))
       colnames(out$sigma.sq.psi.samples) <- x.re.names
       out$sigma.sq.p.samples <- mcmc(t(out$sigma.sq.p.samples))
@@ -918,19 +970,27 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         sites.k.fold <- split(sites.random, sites.random %% k.fold)
 	registerDoParallel(k.fold.threads)
 	model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
-          curr.set <- sort(sites.k.fold[[i]])
-	  # y.indx is for the actual model-fitting component. 
-	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+          curr.set <- sort(sites.random[sites.k.fold[[i]]])
+          if (binom) {
+            y.indx <- !(1:J %in% curr.set)
+          } else {
+	    y.indx <- !((z.long.indx + 1) %in% curr.set)
+          }
           y.fit <- y[y.indx]
 	  y.0 <- y[!y.indx]
+	  y.big.fit <- y.big[-curr.set, , drop = FALSE]
+	  y.big.0 <- y.big[curr.set, , drop = FALSE]
 	  z.starting.fit <- z.starting[-curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
 	  X.fit <- X[-curr.set, , drop = FALSE]
 	  X.0 <- X[curr.set, , drop = FALSE]
 	  J.fit <- nrow(X.fit)
+	  J.0 <- nrow(X.0)
 	  K.fit <- K[-curr.set]
 	  K.0 <- K[curr.set]
+	  n.obs.fit <- nrow(X.p.fit)
+	  n.obs.0 <- nrow(X.p.0)
 	  lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
 	  lambda.psi.0 <- lambda.psi[curr.set, , drop = FALSE]
 	  X.re.fit <- X.re[-curr.set, , drop = FALSE]
@@ -940,18 +1000,23 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	  X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
 	  X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
 	  # Gotta be a better way, but will do for now. 
-	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-	  for (j in 1:J.fit) {
-            z.long.indx.fit[j, 1:K.fit[j]] <- j  
-          }
-	  z.long.indx.fit <- c(z.long.indx.fit)
-	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-	  for (j in 1:nrow(X.0)) {
-            z.0.long.indx[j, 1:K.0[j]] <- j  
-          }
-	  z.0.long.indx <- c(z.0.long.indx)
-	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  if (binom) {
+            z.long.indx.fit <- 0:(J.fit - 1)
+            z.0.long.indx <- 1:J.0
+          } else {
+	    z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	    for (j in 1:J.fit) {
+              z.long.indx.fit[j, 1:K.fit[j]] <- j  
+            }
+	    z.long.indx.fit <- c(z.long.indx.fit)
+	    z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	    z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	    for (j in 1:nrow(X.0)) {
+              z.0.long.indx[j, 1:K.0[j]] <- j  
+            }
+	    z.0.long.indx <- c(z.0.long.indx)
+	    z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  }
 	  verbose.fit <- FALSE
 	  n.omp.threads.fit <- 1
 
@@ -962,7 +1027,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(p.det) <- "integer"
           storage.mode(p.occ) <- "integer"
           storage.mode(J.fit) <- "integer"
-          storage.mode(K.fit) <- "integer"
+          storage.mode(n.obs.fit) <- "integer"
+          storage.mode(K.fit) <- "double"
           storage.mode(beta.starting) <- "double"
           storage.mode(alpha.starting) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
@@ -996,7 +1062,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           # Run the model in C
           out.fit <- .Call("PGOccREBoth", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.fit, 
 		           lambda.psi.fit, lambda.p.fit, p.occ, p.det, 
-		           p.occ.re, p.det.re, J.fit, K.fit, n.occ.re, n.det.re, 
+		           p.occ.re, p.det.re, J.fit, n.obs.fit, K.fit, n.occ.re, n.det.re, 
 		           n.occ.re.long, n.det.re.long, beta.starting, 
 		           alpha.starting, sigma.sq.psi.starting, 
 		           sigma.sq.p.starting, beta.star.starting, 
@@ -1016,14 +1082,23 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	  for (j in 1:nrow(X.0)) {
             z.0.samples[, j] <- rbinom(n.post.samples, 1, psi.0.samples[, j])
           }
-	  # Detection 
 	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples + 
 				     lambda.p.0 %*% out.fit$alpha.star.samples))
-	  like.samples <- rep(NA, nrow(X.p.0))
-	  for (j in 1:nrow(X.p.0)) {
-            like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
-          }
-	  sum(log(like.samples))
+	  if (binom) {
+            like.samples <- matrix(NA, nrow(y.big.0), ncol(y.big.0))
+            for (j in 1:nrow(X.p.0)) {
+              for (k in 1:K.0[j]) {
+                like.samples[j, k] <- mean(dbinom(y.big.0[j, k], 1,
+					         p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+	      }
+            }
+          } else {
+	    like.samples <- rep(NA, nrow(X.p.0))
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+            }
+	  }
+	  sum(log(like.samples), na.rm = TRUE)
         }
 	model.deviance <- -2 * model.deviance
 	# Return objects from cross-validation
@@ -1038,7 +1113,7 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
     if (p.occ.re == 0 & p.det.re == 0) {
 
       # Run the model in C
-      out <- .Call("PGOcc", y, X, X.p, p.occ, p.det, J, K,
+      out <- .Call("PGOcc", y, X, X.p, p.occ, p.det, J, n.obs, K,
           	 beta.starting, alpha.starting, z.starting,
           	 z.long.indx, mu.beta, mu.alpha,
           	 Sigma.beta, Sigma.alpha, n.samples,
@@ -1051,10 +1126,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       colnames(out$alpha.samples) <- x.p.names
       out$z.samples <- mcmc(t(out$z.samples))
       out$psi.samples <- mcmc(t(out$psi.samples))
-      tmp <- array(NA, dim = c(J * K.max, n.post.samples))
-      tmp[names.long, ] <- out$y.rep.samples
-      out$y.rep.samples <- array(tmp, dim = c(J, K.max, n.post.samples))
-      out$y.rep.samples <- aperm(out$y.rep.samples, c(3, 1, 2))
       out$X <- X
       out$X.p <- X.p
       out$y <- y.big
@@ -1075,38 +1146,51 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
 		      " thread(s).", sep = ''))
 	}
-        # Currently implemented without parellization. 
 	set.seed(k.fold.seed)
 	# Number of sites in each hold out data set. 
 	sites.random <- sample(1:J)    
         sites.k.fold <- split(sites.random, sites.random %% k.fold)
 	registerDoParallel(k.fold.threads)
 	model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
-          curr.set <- sort(sites.k.fold[[i]])
-	  y.indx <- !((z.long.indx + 1) %in% curr.set)
+          curr.set <- sort(sites.random[sites.k.fold[[i]]])
+          if (binom) {
+            y.indx <- !(1:J %in% curr.set)
+          } else {
+	    y.indx <- !((z.long.indx + 1) %in% curr.set)
+          }
           y.fit <- y[y.indx]
+	  y.big.fit <- y.big[-curr.set, , drop = FALSE]
+	  y.big.0 <- y.big[curr.set, , drop = FALSE]
 	  y.0 <- y[!y.indx]
 	  z.starting.fit <- z.starting[-curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
+	  n.obs.fit <- nrow(X.p.fit)
+	  n.obs.0 <- nrow(X.p.0)
 	  X.fit <- X[-curr.set, , drop = FALSE]
 	  X.0 <- X[curr.set, , drop = FALSE]
 	  J.fit <- nrow(X.fit)
+	  J.0 <- nrow(X.0)
 	  K.fit <- K[-curr.set]
 	  K.0 <- K[curr.set]
 	  # Gotta be a better way, but will do for now. 
-	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-	  for (j in 1:J.fit) {
-            z.long.indx.fit[j, 1:K.fit[j]] <- j  
-          }
-	  z.long.indx.fit <- c(z.long.indx.fit)
-	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-	  for (j in 1:nrow(X.0)) {
-            z.0.long.indx[j, 1:K.0[j]] <- j  
-          }
-	  z.0.long.indx <- c(z.0.long.indx)
-	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  if (binom) {
+            z.long.indx.fit <- 0:(J.fit - 1)
+            z.0.long.indx <- 1:J.0
+          } else {
+	    z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
+	    for (j in 1:J.fit) {
+              z.long.indx.fit[j, 1:K.fit[j]] <- j  
+            }
+	    z.long.indx.fit <- c(z.long.indx.fit)
+	    z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
+	    z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
+	    for (j in 1:nrow(X.0)) {
+              z.0.long.indx[j, 1:K.0[j]] <- j  
+            }
+	    z.0.long.indx <- c(z.0.long.indx)
+	    z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
+	  }
 	  verbose.fit <- FALSE
 	  n.omp.threads.fit <- 1
 
@@ -1117,7 +1201,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(p.det) <- "integer"
           storage.mode(p.occ) <- "integer"
           storage.mode(J.fit) <- "integer"
-          storage.mode(K.fit) <- "integer"
+          storage.mode(n.obs.fit) <- "integer"
+          storage.mode(K.fit) <- "double"
           storage.mode(beta.starting) <- "double"
           storage.mode(alpha.starting) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
@@ -1133,8 +1218,8 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(n.thin) <- "integer"
 
           # Run the model in C
-          out.fit <- .Call("PGOcc", y.fit, X.fit, X.p.fit, p.occ, p.det, J.fit, K.fit,
-              	           beta.starting, alpha.starting, z.starting.fit,
+          out.fit <- .Call("PGOcc", y.fit, X.fit, X.p.fit, p.occ, p.det, J.fit, n.obs.fit, 
+			   K.fit, beta.starting, alpha.starting, z.starting.fit,
               	           z.long.indx.fit, mu.beta, mu.alpha,
               	           Sigma.beta, Sigma.alpha, n.samples,
               	           n.omp.threads.fit, verbose.fit, n.report, n.burn, n.thin, 
@@ -1149,11 +1234,21 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           }
 	  # Detection 
 	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples))
-	  like.samples <- rep(NA, nrow(X.p.0))
-	  for (j in 1:nrow(X.p.0)) {
-            like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
-          }
-	  sum(log(like.samples))
+	  if (binom) {
+            like.samples <- matrix(NA, nrow(y.big.0), ncol(y.big.0))
+            for (j in 1:nrow(X.p.0)) {
+              for (k in 1:K.0[j]) {
+                like.samples[j, k] <- mean(dbinom(y.big.0[j, k], 1,
+					         p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+	      }
+            }
+          } else {
+	    like.samples <- rep(NA, nrow(X.p.0))
+	    for (j in 1:nrow(X.p.0)) {
+              like.samples[j] <- mean(dbinom(y.0[j], 1, p.0.samples[, j] * z.0.samples[, z.0.long.indx[j]]))
+            }
+	  }
+	  sum(log(like.samples), na.rm = TRUE)
         }
 	model.deviance <- -2 * model.deviance
 	# Return objects from cross-validation

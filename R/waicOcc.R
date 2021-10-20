@@ -28,6 +28,11 @@ waicOcc <- function(object, ...) {
   if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     X.p <- object$X.p
     y <- object$y
+    # Necessary for when X.p is only at site level
+    if (nrow(X.p) == nrow(y)) {
+      X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
+      X.p <- X.p[!is.na(c(y)), , drop = FALSE] 
+    }
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     y.sum <- apply(y, 1, sum, na.rm = TRUE)
     y.ind <- as.numeric(y.sum == 0)
@@ -69,6 +74,10 @@ waicOcc <- function(object, ...) {
     y <- object$y
     y.ind <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) == 0))
     n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
+    # Necessary for when X.p is only at site level
+    if (nrow(X.p) == dim(y)[2]) {
+      X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+    }
     K.max <- max(n.rep)
     J <- dim(y)[2]
     N <- dim(y)[1]
@@ -104,6 +113,7 @@ waicOcc <- function(object, ...) {
     elpd <- 0
     pD <- 0
 
+    # TODO: need to make this faster. 
     for (j in 1:J) {
       long.indx <- which(z.long.indx == j)
       for (i in 1:N) {
