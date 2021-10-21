@@ -233,9 +233,6 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
   \item{w.samples}{a three-dimensional array of posterior samples for 
     the latent spatial random effects for each species.}
 
-  \item{y.rep.samples}{a four-dimensional array of fitted values for use
-    in Goodness of Fit assessments.}
-
   \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
     for variances of random intercpets included in the detection portion 
     of the model. Only included if random intercepts are specified in 
@@ -311,37 +308,26 @@ data.list <- list(y = y,
 		  occ.covs = occ.covs,
 		  det.covs = det.covs, 
 		  coords = coords)
-
-# Priors 
-prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ), 
-					   var = rep(2.72, p.occ)), 
-		   alpha.comm.normal = list(mean = rep(0, p.det), 
-					    var = rep(2.72, p.det)), 
-		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
-					  b = rep(0.1, p.occ)), 
-		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
-					   b = rep(0.1, p.det)), 
-		   phi.unif = list(a = rep(3/1, N), 
-				   b = rep(3/.1, N)), 
-		   sigma.sq.ig = list(a = rep(2, N), 
-				      b = rep(2, N)), 
-		   nu.unif = list(a = rep(0.5, N), 
-				  b = rep(10, N)))
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+		   phi.unif = list(a = 3/1, b = 3/.1), 
+		   sigma.sq.ig = list(a = 2, b = 2)) 
 # Starting values
-starting.list <- list(alpha.comm = rep(0, p.det), 
-		      beta.comm = rep(0, p.occ), 
-		      beta = matrix(0, N, p.occ), 
-		      alpha = matrix(0, N, p.det),
-		      tau.sq.beta = rep(1, p.occ), 
-		      tau.sq.alpha = rep(1, p.det), 
-		      phi = rep(3 / .5, N), 
-		      sigma.sq = rep(2, N),
-		      nu = rep(1, N), 
+starting.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      phi = 3 / .5, 
+		      sigma.sq = 2,
 		      w = matrix(0, nrow = N, ncol = nrow(X)),
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 # Tuning
-tuning.list <- list(phi = 1, 
-		    nu = 1)
+tuning.list <- list(phi = 1) 
 
 out <- spMsPGOcc(occ.formula = ~ occ.cov, 
 		 det.formula = ~ det.cov.1 + det.cov.2, 
@@ -356,7 +342,7 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
 	         n.omp.threads = 1, 
 	         verbose = TRUE, 
 		 NNGP = TRUE, 
-		 n.neighbors = 15, 
+		 n.neighbors = 5, 
 		 search.type = 'cb', 
 	         n.report = 25, 
 		 n.burn = 1000, 

@@ -105,24 +105,18 @@ n.batch <- 200
 batch.length <- 25
 n.iter <- n.batch * batch.length
 # Priors 
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ), 
-				      var = rep(2.72, p.occ)), 
-		   alpha.normal = list(mean = rep(0, p.det), 
-			               var = rep(2.72, p.det)), 
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+		   alpha.normal = list(mean = 0, var = 2.72),
 		   sigma.sq.ig = c(2, 2), 
-		   phi.unif = c(3/1, 3/.1), 
-		   nu.unif = c(0.5, 10))
+		   phi.unif = c(3/1, 3/.1)) 
 # Starting values
-starting.list <- list(alpha = rep(0, p.det), 
-		      beta = rep(0, p.occ), 
+starting.list <- list(alpha = 0, beta = 0,
 		      phi = 3 / .5, 
 		      sigma.sq = 2,
-		      nu = 1, 
 		      w = rep(0, nrow(X)),
 		      z = apply(y, 1, max, na.rm = TRUE))
 # Tuning
-tuning.list <- list(phi = 1, 
-		    nu = 1)
+tuning.list <- list(phi = 1) 
 
 out <- spPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1, 
@@ -130,7 +124,7 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       starting = starting.list, 
 	       n.batch = n.batch, 
 	       batch.length = batch.length, 
-	       accept.rate = accept.rate, 
+	       accept.rate = 0.43, 
 	       priors = prior.list,
 	       cov.model = 'exponential', 
 	       tuning = tuning.list, 

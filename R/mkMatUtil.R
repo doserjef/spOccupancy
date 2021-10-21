@@ -32,7 +32,7 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
     X.re <- matrix(NA, nrow(X), length(re.terms$Ztlist))
     if (ncol(X.re) > 0) {
       # Support for RE only model
-      if (ncol(X) == 1) {
+      if (length(re.terms$Ztlist[[1]]@i) != nrow(X)) {
         X.re <- matrix(NA, length(re.terms$Ztlist[[1]]@i), 
 		       length(re.terms$Ztlist)) 
       }

@@ -208,9 +208,6 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
   \item{psi.samples}{a \code{coda} object of posterior samples
     for the latent occupancy probability values}
 
-  \item{y.rep.samples}{a three-dimensional array of fitted values
-    for use in Goodness of Fit assessments.}
-
   \item{theta.samples}{a \code{coda} object of posterior samples
     for covariance parameters.}
 
@@ -272,25 +269,18 @@ n.batch <- 200
 batch.length <- 25
 n.iter <- n.batch * batch.length
 # Priors 
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ), 
-				      var = rep(2.72, p.occ)), 
-		   alpha.normal = list(mean = rep(0, p.det), 
-			               var = rep(2.72, p.det)), 
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+		   alpha.normal = list(mean = 0, var = 2.72),
 		   sigma.sq.ig = c(2, 2), 
-		   phi.unif = c(3/1, 3/.1), 
-		   nu.unif = c(0.5, 10))
+		   phi.unif = c(3/1, 3/.1)) 
 # Starting values
-starting.list <- list(alpha = rep(0, p.det), 
-		      beta = rep(0, p.occ), 
+starting.list <- list(alpha = 0, beta = 0,
 		      phi = 3 / .5, 
 		      sigma.sq = 2,
-		      nu = 1, 
 		      w = rep(0, nrow(X)),
 		      z = apply(y, 1, max, na.rm = TRUE))
 # Tuning
-tuning.list <- list(phi = 1, 
-		    nu = 1)
-
+tuning.list <- list(phi = 1) 
 
 out <- spPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1 + det.cov.2, 

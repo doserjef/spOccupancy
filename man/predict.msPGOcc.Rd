@@ -88,21 +88,17 @@ data.list <- list(y = y,
 		  det.covs = det.covs)
 
 # Occupancy initial values
-prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ), 
-					   var = rep(2.72, p.occ)), 
-		   alpha.comm.normal = list(mean = rep(0, p.det), 
-					    var = rep(2.72, p.det)), 
-		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
-					  b = rep(0.1, p.occ)), 
-		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
-					   b = rep(0.1, p.det)))
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 # Starting values
-starting.list <- list(alpha.comm = rep(0, p.det), 
-		      beta.comm = rep(0, p.occ), 
-		      beta = matrix(0, N, p.occ), 
-		      alpha = matrix(0, N, p.det),
-		      tau.sq.beta = rep(1, p.occ), 
-		      tau.sq.alpha = rep(1, p.det), 
+starting.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 out <- msPGOcc(occ.formula = ~ occ.cov, 

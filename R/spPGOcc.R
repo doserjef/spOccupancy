@@ -1193,24 +1193,24 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       # Get detection covariate stuff in right order. Method of doing this
       # depends on if there are observation level covariates or not. 
       if (!binom) {
-      tmp <- matrix(NA, J * K.max, p.det)
-      tmp[names.long, ] <- X.p
-      tmp <- array(tmp, dim = c(J, K.max, p.det))
-      tmp <- tmp[order(ord), , ]
-      out$X.p <- matrix(tmp, J * K.max, p.det)
-      out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
-      tmp <- matrix(NA, J * K.max, p.det.re)
-      tmp[names.long, ] <- X.p.re
-      tmp <- array(tmp, dim = c(J, K.max, p.det.re))
-      tmp <- tmp[order(ord), , ]
-      out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
-      out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, ]
-      tmp <- matrix(NA, J * K.max, n.det.re)
-      tmp[names.long, ] <- lambda.p
-      tmp <- array(tmp, dim = c(J, K.max, n.det.re))
-      tmp <- tmp[order(ord), , ]
-      out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
-      out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, ]
+        tmp <- matrix(NA, J * K.max, p.det)
+        tmp[names.long, ] <- X.p
+        tmp <- array(tmp, dim = c(J, K.max, p.det))
+        tmp <- tmp[order(ord), , ]
+        out$X.p <- matrix(tmp, J * K.max, p.det)
+        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+        tmp <- matrix(NA, J * K.max, p.det.re)
+        tmp[names.long, ] <- X.p.re
+        tmp <- array(tmp, dim = c(J, K.max, p.det.re))
+        tmp <- tmp[order(ord), , ]
+        out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
+        out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, ]
+        tmp <- matrix(NA, J * K.max, n.det.re)
+        tmp[names.long, ] <- lambda.p
+        tmp <- array(tmp, dim = c(J, K.max, n.det.re))
+        tmp <- tmp[order(ord), , ]
+        out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
+        out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, ]
       } else {
         out$X.p <- X.p[order(ord), , drop = FALSE]
         out$lambda.p <- lambda.p[order(ord), , drop = FALSE]
@@ -1481,7 +1481,7 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         tmp <- array(tmp, dim = c(J, K.max, p.det))
         tmp <- tmp[order(ord), , ]
         out$X.p <- matrix(tmp, J * K.max, p.det)
-        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
+        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
       } else {
         out$X.p <- X.p[order(ord), , drop = FALSE]
       }

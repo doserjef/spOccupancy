@@ -162,9 +162,6 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   \item{psi.samples}{a three-dimensional array of posterior samples for
     the latent occupancy probability values for each species.}
 
-  \item{y.rep.samples}{a four-dimensional array of fitted values for use
-    in Goodness of Fit assessments.}
-
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occupancy portion
     of the model. Only included if random intercepts are specified in 
@@ -219,10 +216,6 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
-# These could potentially be treated as random effects, but maybe not necessary.
-phi <- runif(N, 3/1, 3/.1)
-sigma.sq <- runif(N, 0.3, 3)
-sp = FALSE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
 		sp = FALSE)
@@ -240,21 +233,17 @@ data.list <- list(y = y,
 		  det.covs = det.covs)
 
 # Occupancy initial values
-prior.list <- list(beta.comm.normal = list(mean = rep(0, p.occ), 
-					   var = rep(2.72, p.occ)), 
-		   alpha.comm.normal = list(mean = rep(0, p.det), 
-					    var = rep(2.72, p.det)), 
-		   tau.sq.beta.ig = list(a = rep(0.1, p.occ), 
-					  b = rep(0.1, p.occ)), 
-		   tau.sq.alpha.ig = list(a = rep(0.1, p.det), 
-					   b = rep(0.1, p.det)))
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 # Starting values
-starting.list <- list(alpha.comm = rep(0, p.det), 
-		      beta.comm = rep(0, p.occ), 
-		      beta = matrix(0, N, p.occ), 
-		      alpha = matrix(0, N, p.det),
-		      tau.sq.beta = rep(1, p.occ), 
-		      tau.sq.alpha = rep(1, p.det), 
+starting.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 5000

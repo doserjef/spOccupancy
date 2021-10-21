@@ -189,7 +189,7 @@ p.occ <- length(beta)
 # Detection covariates
 alpha <- list()
 for (i in 1:n.data) {
-  alpha[[i]] <- runif(sample(1:4, 1), -1, 1)
+  alpha[[i]] <- runif(2, -1, 1)
 }
 p.det.long <- sapply(alpha, length)
 p.det <- sum(p.det.long)
@@ -208,16 +208,10 @@ occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list()
 # Add covariates one by one
-det.covs[[1]] <- list(det.cov.1.1 = X.p[[1]][, , 2], 
-		      det.cov.1.2 = X.p[[1]][, , 3], 
-		      det.cov.1.3 = X.p[[1]][, , 4])
-det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2])
-det.covs[[3]] <- list(det.cov.3.1 = X.p[[3]][, , 2], 
-		      det.cov.3.2 = X.p[[3]][, , 3], 
-		      det.cov.3.3 = X.p[[3]][, , 4])
-det.covs[[4]] <- list(det.cov.4.1 = X.p[[4]][, , 2], 
-		      det.cov.4.2 = X.p[[4]][, , 3], 
-		      det.cov.4.3 = X.p[[4]][, , 4])
+det.covs[[1]] <- list(det.cov.1.1 = X.p[[1]][, , 2]) 
+det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2]) 
+det.covs[[3]] <- list(det.cov.3.1 = X.p[[3]][, , 2]) 
+det.covs[[4]] <- list(det.cov.4.1 = X.p[[4]][, , 2]) 
 data.list <- list(y = y, 
 		  occ.covs = occ.covs,
 		  det.covs = det.covs, 
@@ -225,31 +219,19 @@ data.list <- list(y = y,
 
 J <- length(dat$z.obs)
 # Starting values
-alpha.start <- list()
-for (q in 1:n.data) {
-  alpha.start[[q]] <- rep(0, p.det.long[q])
-}
-starting.list <- list(alpha = alpha.start, 
-		      beta = rep(0, p.occ), 
+starting.list <- list(alpha = list(0, 0, 0, 0), 
+		      beta = 0, 
 		      z = rep(1, J))
 # Priors
-alpha.mu <- list()
-alpha.var <- list()
-for (q in 1:n.data) {
-  alpha.mu[[q]] <- rep(0, p.det.long[q])
-  alpha.var[[q]] <- rep(2.72, p.det.long[q])
-}
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ), 
-				      var = rep(2.72, p.occ)), 
-		   alpha.normal = list(mean = alpha.mu, 
-			               var = alpha.var))
-
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+		   alpha.normal = list(mean = list(0, 0, 0, 0), 
+			               var = list(2.72, 2.72, 2.72, 2.72)))
 n.samples <- 5000
 out <- intPGOcc(occ.formula = ~ occ.cov, 
-                det.formula = list(f.1 = ~ det.cov.1.1 + det.cov.1.2 + det.cov.1.3, 
-		              f.2 = ~ det.cov.2.1, 
-		              f.3 = ~ det.cov.3.1 + det.cov.3.2 + det.cov.3.3, 
-		              f.4 = ~ det.cov.4.1 + det.cov.4.2 + det.cov.4.3), 
+                det.formula = list(f.1 = ~ det.cov.1.1, 
+		                   f.2 = ~ det.cov.2.1, 
+		                   f.3 = ~ det.cov.3.1, 
+		                   f.4 = ~ det.cov.4.1), 
 		data = data.list,
 		starting = starting.list,
 		n.samples = n.samples, 

@@ -84,13 +84,10 @@ data.list <- list(y = dat$y,
 		  det.covs = det.covs)
 
 # Priors
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
-				      var = rep(2.72, p.occ)),
-		   alpha.normal = list(mean = rep(0, p.det),
-			               var = rep(2.72, p.det)))
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
+		   alpha.normal = list(mean = 0, var = 2.72))
 # Starting values
-starting.list <- list(alpha = rep(0, p.det),
-		      beta = rep(0, p.occ),
+starting.list <- list(alpha = 0, beta = 0,
 		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000

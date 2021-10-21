@@ -237,7 +237,6 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
 
 \examples{
 \dontrun{
-rm(list = ls())
 set.seed(400)
 
 # Simulate Data -----------------------------------------------------------
@@ -304,32 +303,20 @@ data.list <- list(y = y,
 J <- length(dat$z.obs)
 
 # Starting values
-alpha.start <- list()
-for (q in 1:n.data) {
-  alpha.start[[q]] <- rep(0, p.det.long[q])
-}
-starting.list <- list(alpha = alpha.start, 
-		      beta = rep(0, p.occ), 
+starting.list <- list(alpha = list(0, 0, 0, 0), 
+		      beta = 0, 
 		      phi = 3 / .5, 
 		      sigma.sq = 2, 
 		      w = rep(0, J), 
 		      z = rep(1, J))
 # Priors
-alpha.mu <- list()
-alpha.var <- list()
-for (q in 1:n.data) {
-  alpha.mu[[q]] <- rep(0, p.det.long[q])
-  alpha.var[[q]] <- rep(2.72, p.det.long[q])
-}
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ), 
-				      var = rep(2.72, p.occ)), 
-		   alpha.normal = list(mean = alpha.mu, 
-			               var = alpha.var),
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+		   alpha.normal = list(mean = list(0, 0, 0, 0), 
+				       var = list(2.72, 2.72, 2.72, 2.72)),
 		   phi.unif = c(3/1, 3/.1), 
 		   sigma.sq.ig = c(2, 2))
 # Tuning
-tuning.list <- list(phi = 1, 
-		    nu = 1)
+tuning.list <- list(phi = 1) 
 
 # Number of batches
 n.batch <- 200

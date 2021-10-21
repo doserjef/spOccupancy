@@ -147,9 +147,6 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   \item{psi.samples}{a \code{coda} object of posterior samples
     for the latent occupancy probability values}
 
-  \item{y.rep.samples}{a three-dimensional array of fitted values
-    for use in Goodness of Fit assessments.}
-
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occupancy portion
     of the model. Only included if random intercepts are specified in 
@@ -200,13 +197,10 @@ data.list <- list(y = dat$y,
 		  det.covs = det.covs)
 
 # Priors
-prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
-				      var = rep(2.72, p.occ)),
-		   alpha.normal = list(mean = rep(0, p.det),
-			               var = rep(2.72, p.det)))
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
+		   alpha.normal = list(mean = 0, var = 2.72))
 # Starting values
-starting.list <- list(alpha = rep(0, p.det),
-		      beta = rep(0, p.occ),
+starting.list <- list(alpha = 0, beta = 0,
 		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
