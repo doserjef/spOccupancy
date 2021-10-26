@@ -4,7 +4,7 @@
 
 
 \description{
-Function for fitting single species integrated occupancy models using Polya-Gamma latent variables. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each connected to a single latent occupancy process. 
+Function for fitting single species integrated occupancy models using Polya-Gamma latent variables. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each conditional on a single latent occurrence process. 
 }
 
 \usage{
@@ -50,7 +50,9 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   of tags \code{z} and \code{beta} is the parameter's starting value. The tag
   \code{alpha} is a list comprised of the starting values for the detection 
   parameters for each data source. Each element of the list should be a vector of 
-  starting values for all detection parameters in the given data source.}
+  starting values for all detection parameters in the given data source or a single value
+  for each data source to assign all parameters for a given data source
+  the same starting value.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal} and \code{alpha.normal}. Occupancy 
@@ -59,12 +61,13 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
     normal distribution are passed as a list of length two with the first
     and second elements corresponding to the mean and variance of the normal
     distribution, which are each specified as vectors of 
-    length equal to the number of coefficients to be estimated. For 
+    length equal to the number of coefficients to be estimated or of 
+    length one if priors are the same for all coefficients. For 
     the detection coefficients \code{alpha}, the mean and variance 
     hyperparameters are themselves passed in as lists, with each element 
     of the list corresponding to the specific hyperparameters for the 
     detection parameters in a given data source. If not specified, prior means 
-    are set to 0 and prior variances set to 2.73.}
+    are set to 0 and prior variances set to 2.72.}
   
   \item{n.samples}{the number of posterior samples to collect.}
 

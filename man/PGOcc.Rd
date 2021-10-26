@@ -54,7 +54,7 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   and variance of the normal distribution, which are each specified as vectors of 
   length equal to the number of coefficients to be estimated or of length one
   if priors are the same for all coefficients. If not specified, prior means 
-  are set to 0 and prior variances set to 2.73. \code{sigma.sq.psi} and 
+  are set to 0 and prior variances set to 2.72. \code{sigma.sq.psi} and 
   \code{sigma.sq.p} are the random effect variances for any occurrence or 
   detection random effects, respectively, and are assumed to follow an inverse
   Gamma distribution. The hyperparameters of the inverse-Gamma distribution

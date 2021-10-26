@@ -25,12 +25,13 @@ data(hbef2015)
 
 \source{Rodenhouse, N. and S. Sillett. 2019. Valleywide Bird Survey, Hubbard Brook 
 	Experimental Forest, 1999-2016 (ongoing) ver 3. Environmental Data Initiative. 
-	https://doi.org/10.6073/pasta/faca2b2cf2db9d415c39b695cc7fc217 (Accessed 2021-09-07)}
+	\url{https://doi.org/10.6073/pasta/faca2b2cf2db9d415c39b695cc7fc217} 
+	(Accessed 2021-09-07)}
 
 \references{
   Doser, J.W., Leuenberger, W., Sillett, T.S., Hallworth, M.T., Zipkin, E.F. 
   Integrated community occupancy models:  A framework to assess occurrence 
-  and biodiversity dynamics usingmultiple data sources.
+  and biodiversity dynamics using multiple data sources.
   https://arxiv.org/abs/2109.01894
 }
 
