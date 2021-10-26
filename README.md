@@ -1,4 +1,4 @@
-# spOccupancy: An R Package for single species and multispecies spatial occupancy modeling
+# spOccupancy: An R Package for single species, multispecies, and integrated spatial occupancy models
 
 Fits single-species and multi-species non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. 
 
