@@ -14,6 +14,7 @@
 \method{summary}{spMsPGOcc}(object, level, quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
 	 digits = max(3L, getOption("digits") - 3L), \dots)
 \method{print}{spMsPGOcc}(x, \dots)
+\method{fitted}{spMsPGOcc}(object, \dots)
 }
 
 \arguments{
@@ -28,7 +29,7 @@
 
 \details{
   A set of standard extractor functions for fitted model objects of
-  class \code{spMsPGOcc}, including methods to the generic functions \code{\link[base]{print}} and \code{\link[base]{summary}}. 
+  class \code{spMsPGOcc}, including methods to the generic functions \code{\link[base]{print}}, \code{\link[base]{summary}}, and \code{\link[stats]{fitted}}. 
 }
 
 \keyword{model}

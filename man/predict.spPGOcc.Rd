@@ -8,9 +8,8 @@
 }
 
 \usage{
-\method{predict}{spPGOcc}(object, X.0, coords.0,  
-	                  n.omp.threads = 1, verbose = TRUE, 
-			  n.report = 100, ...)
+\method{predict}{spPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
+                          n.report = 100, ...)
 }
 
 \arguments{
@@ -18,7 +17,9 @@
   \item{object}{an object of class \code{spPGOcc}}
 
   \item{X.0}{the design matrix for prediction locations. This should 
-    include a column of 1s for the intercept if an intercept is included in the original model fit.}
+    include a column of 1s for the intercept if an intercept is included in the original model fit.
+    Covariates should have the same column names as those used when fitting the model with 
+    \code{spPGOcc}.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
 
@@ -42,14 +43,18 @@
   Andrew O. Finley \email{finleya@msu.edu}
 }
 
+\references{
+  Hooten, M. B., and Hefley, T. J. (2019). Bringing Bayesian models to life. CRC Press.
+}
+
 \value{
   An object of class \code{predict.spPGOcc} that is a list comprised of: 
 
   \item{psi.0.samples}{a \code{coda} object of posterior predictive samples 
-    for the latent occupancy probability values.}
+    for the latent occurrence probability values.}
   
   \item{z.0.samples}{a \code{coda} object of posterior predictive samples 
-    for the latent occupancy values.}
+    for the latent occurrence values.}
   
   \item{w.0.samples}{a \code{coda} object of posterior predictive samples 
     for the latent spatial random effects.}
@@ -142,6 +147,7 @@ out.pred <- predict(out, X.0, coords.0, verbose = TRUE)
 psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 
 # Plot of predicted psi vs true psi
+# Code for plot is adapted from Hooten and Hefley (2019)
 sq.cex=2.1
 par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
 layout(matrix(1:2,1,2))

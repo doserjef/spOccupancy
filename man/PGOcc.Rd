@@ -15,7 +15,7 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
 \arguments{
 \item{occ.formula}{a symbolic description of the model to be fit
-  for the occupancy portion of the model using R's model syntax. Only
+  for the occurrence portion of the model using R's model syntax. Only
   right-hand side of formula is specified. See example below. Random intercepts
   are allowed using lme4 syntax (Bates et al. 2015).}
 
@@ -29,7 +29,7 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   is a matrix or data frame with first dimension equal to the number of 
   sites (\eqn{J}{J}) and second dimension equal to the maximum number of 
   replicates at a given site. \code{occ.covs} is a matrix or data frame
-  containing the variables used in the occupancy portion of the model, with
+  containing the variables used in the occurrence portion of the model, with
   \eqn{J}{J} rows for each column (variable). \code{det.covs} is a list of
   variables included in the detection portion of the model. Each list element
   is a different detection covariate, which can be site-level or 
@@ -43,7 +43,8 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   and \code{sigma.sq.p}. The value portion of each tag is the 
   parameter's starting value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
-  detection portion of the occupancy model, respectively.}
+  detection portion of the occupancy model, respectively. See \code{priors} 
+  description for definition of each parameter name.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{sigma.sq.psi.ig}, 
@@ -71,9 +72,9 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
   \code{n.omp.threads} > 1 might not work on some systems.}
 
-\item{verbose}{if \code{TRUE}, model specification and progress of the 
-  sampler is printed to the screen. Otherwise, only messages in data 
-  preparation phase are printed.}
+\item{verbose}{if \code{TRUE}, messages about data preparation, 
+  model specification, and progress of the sampler are printed to the screen. 
+  Otherwise, no messages are printed.}
 
 \item{n.report}{the interval to report MCMC progress.}
 
@@ -125,6 +126,10 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
+
+  MacKenzie, D. I., J. D. Nichols, G. B. Lachman, S. Droege, 
+  J. Andrew Royle, and C. A. Langtimm. 2002. Estimating Site Occupancy 
+  Rates When Detection Probabilities Are Less Than One. Ecology 83: 2248-2255.
 }
 
 \author{

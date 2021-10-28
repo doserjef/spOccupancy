@@ -14,7 +14,7 @@
 
   \item{object}{an object of class intPGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{intPGOcc}.}
 
   \item{...}{currently no additional arguments}
 }
@@ -28,10 +28,10 @@
   An object of class \code{predict.intPGOcc} that is a list comprised of: 
 
   \item{psi.0.samples}{a \code{coda} object of posterior predictive samples for the
-    latent occupancy probability values.}
+    latent occurrence probability values.}
 
   \item{z.0.samples}{a \code{coda} object of posterior predictive samples for the
-    latent occupancy values.}
+    latent occurrence values.}
 
   The return object will include additional objects used for standard 
   extractor functions. 

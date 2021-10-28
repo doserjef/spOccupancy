@@ -1,14 +1,15 @@
 \name{simMsOcc}
 \alias{simMsOcc}
-\title{Simulate Multi-Species Occupancy Data}
+\title{Simulate Multi-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simMsOcc} simulates multi-species occupancy data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process following an exponential correlation function.
+  The function \code{simMsOcc} simulates multi-species detection-nondetection data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process following an exponential correlation function.
 }
 
 \usage{
 simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
-	 p.RE = list(), sigma.sq = rep(2, N), phi = rep(3/0.5, N), sp = FALSE)
+	 p.RE = list(), sigma.sq = rep(2, N), phi = rep(3/0.5, N), sp = FALSE, 
+	 ...)
 }
 
 \arguments{
@@ -21,11 +22,11 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 
 \item{N}{a single numeric value indicating the number of species to simulate detection-nondetection data.}
 
-\item{beta}{a numeric matrix with \eqn{N}{N} rows containing the intercept and regression coefficient parameters for the occupancy portion of the multispecies occupancy model. Each row corresponds to the regression coefficients for a given species.} 
+\item{beta}{a numeric matrix with \eqn{N}{N} rows containing the intercept and regression coefficient parameters for the occurrence portion of the multispecies occupancy model. Each row corresponds to the regression coefficients for a given species.} 
 
 \item{alpha}{a numeric matrix with \eqn{N}{N} rows containing the intercept and regression coefficient parameters for the detection portion of the multispecies occupancy model. Each row corresponds to the regression coefficients for a given species.}
 
-\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the occupancy portion of the model.}
+\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occurrence portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the occurrence portion of the model.}
 
 \item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
@@ -34,6 +35,8 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 \item{phi}{a numeric vector of length \eqn{N}{N} containing the spatial range parameter for each species. Ignored when \code{sp = FALSE}.}
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+
+\item{...}{currently no additional arguments}
 }
 
 \author{
@@ -44,14 +47,14 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 \value{
   A list comprised of: 
 
-  \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occupancy portion of the model.}
+  \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occurrence portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
   \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
   \item{D}{a \eqn{J \times J}{J x J} numeric matrix consisting of the distances between all occupancy sites.}
   \item{w}{a \eqn{N \times J}{N x J} matrix of the spatial random effects for each species. Only used to simulate data when \code{sp = TRUE}.}
-  \item{psi}{a \eqn{N \times J}{N x J} matrix of the occupancy probabilities for each species at each site.}
-  \item{z}{a \eqn{N \times J}{N x J} matrix of the latent occupancy states for each species at each site.}
-  \item{p}{a \code{N x J x max(n.rep)} array of the detection probabilities for each species at each site site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
+  \item{psi}{a \eqn{N \times J}{N x J} matrix of the occurrence probabilities for each species at each site.}
+  \item{z}{a \eqn{N \times J}{N x J} matrix of the latent occurrence states for each species at each site.}
+  \item{p}{a \code{N x J x max(n.rep)} array of the detection probabilities for each species at each site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
   \item{y}{a \code{N x J x max(n.rep)} array of the raw detection-nondetection data for each species at each site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}
   \item{X.p.re}{a three-dimensional numeric array containing the levels of any detection random effect included in the model. Only relevant when detection random effects are specified in \code{p.RE}.}
   \item{X.lambda.re}{a numeric matrix containing the levels of any occurrence random effect included in the model. Only relevant when occurrence random effects are specified in \code{psi.RE}.}

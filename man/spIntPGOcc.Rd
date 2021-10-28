@@ -20,7 +20,7 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
 \arguments{
 
   \item{occ.formula}{a symbolic description of the model to be fit
-  for the occupancy portion of the model using R's model syntax. Only
+  for the occurrence portion of the model using R's model syntax. Only
   right-hand side of formula is specified. See example below.}
 
  \item{det.formula}{a list of symbolic descriptions of the models to be fit
@@ -35,7 +35,7 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   the integrated model. Each element of the list has first dimension equal 
   to the number of sites with that data source and second dimension equal 
   to the maximum number of replicates at a given site. \code{occ.covs} is 
-  a matrix or data frame containing the variables used in the occupancy 
+  a matrix or data frame containing the variables used in the occurrence 
   portion of the model, with the number of rows being the number of sites 
   with at least one data source for each column (variable). \code{det.covs} is a list of
   variables included in the detection portion of the model for each data source. 
@@ -50,22 +50,25 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   \code{coords} is a matrix of the observation site coordinates.}
 
   \item{starting}{a list with each tag corresponding to a parameter name.
-  Valid tags are \code{z}, \code{beta}, and \code{alpha}, \code{sigma.sq}, \code{phi}, 
+  Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 
   \code{w}, and \code{nu}. The value portion of all tags except \code{alpha} 
   is the parameter's starting value. The tag \code{alpha} is a list comprised 
   of the starting values for the detection parameters for each data source. 
   Each element of the list should be a vector of starting values for all detection 
-  parameters in the given data source.}
+  parameters in the given data source or a single value for each data source to 
+  assign all parameters for a given data source the same starting value. See 
+  \code{priors} description for definition of each parameter name.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, and \code{nu.unif}. Occupancy (\code{beta}) and detection 
+    \code{sigma.sq.ig}, and \code{nu.unif}. Occurrence (\code{beta}) and detection 
     (\code{alpha}) regression coefficients are assumed to follow a normal 
     distribution. For \code{beta} hyperparameters of the normal distribution 
     are passed as a list of length two with the first and second elements 
     corresponding to the mean and variance of the normal distribution, which are 
     each specified as vectors of length equal to the number of coefficients 
-    to be estimated. For the detection coefficients \code{alpha}, the mean 
+    to be estimated or of length one if priors are the same for all coefficients. 
+    For the detection coefficients \code{alpha}, the mean 
     and variance hyperparameters are themselves passed in as lists, with each 
     element of the list corresponding to the specific hyperparameters for the 
     detection parameters in a given data source. If not specified, prior means 
@@ -115,7 +118,7 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
     MCMC sampler. See Roberts and Rosenthal (2009) for details.}
   
-  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
+  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Default is 
     0.43. See Roberts and Rosenthal (2009) for details.}
   
   \item{n.omp.threads}{a positive integer indicating
@@ -125,12 +128,13 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
    hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
    work on some systems.}
  
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
+  \item{verbose}{if \code{TRUE}, messages about data preparation, 
+    model specification, and progress of the sampler are printed to the screen. 
+    Otherwise, no messages are printed.}
   
   \item{n.report}{the interval to report Metropolis sampler acceptance and
-    MCMC progress.}
+    MCMC progress. Note this is specified in terms of batches and not overall
+    samples for spatial models.}
 
   \item{n.burn}{the number of samples out of the total \code{n.batch * batch.length} 
     samples to discard as burn-in. By default, the first 10\% of samples is discarded.}
@@ -184,6 +188,15 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   Gaussian Processes. \emph{Journal of Computational and Graphical
     Statistics}, \doi{10.1080/10618600.2018.1537924}.
 
+  Finley, A. O., Datta, A., and Banerjee, S. (2020). spNNGP R package 
+  for nearest neighbor Gaussian process models. \emph{arXiv} preprint arXiv:2001.09111.
+
+  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
+  selection for ecologists. \emph{Ecological Monographs}, 85(1), 3-28.
+
+  Hooten, M. B., and Hefley, T. J. (2019). Bringing Bayesian models to life. 
+  \emph{CRC Press}.
+
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables.
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
@@ -191,8 +204,6 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   Roberts, G.O. and Rosenthal J.S. (2009) Examples  of adaptive MCMC. 
   \emph{Journal of Computational and Graphical Statistics}, 18(2):349-367.
 
-  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
-  selection for ecologists. Ecological monographs, 85(1), 3-28.
 }
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
@@ -203,16 +214,16 @@ spIntPGOcc(occ.formula, det.formula, data, starting, priors,
   An object of class \code{spIntPGOcc} that is a list comprised of: 
 
   \item{beta.samples}{a \code{coda} object of posterior samples
-    for the occupancy regression coefficients.}
+    for the occurrence regression coefficients.}
 
   \item{alpha.samples}{a \code{coda} object of posterior samples
     for the detection regression coefficients for all data sources.}
 
   \item{z.samples}{a \code{coda} object of posterior samples 
-    for the latent occupancy values}
+    for the latent occurrence values}
 
   \item{psi.samples}{a \code{coda} object of posterior samples
-    for the latent occupancy probability values}
+    for the latent occurrence probability values}
 
   \item{y.rep.samples}{a list of three-dimensional arrays of fitted values for 
     each data source for use in Goodness of Fit assessments.}
@@ -350,6 +361,7 @@ summary(out)
 psi.quants <- apply(out$psi.samples, 2, quantile, c(0.025, 0.5, 0.975))
 psi.true <- dat$psi.obs
 
+# Code for plot adapted from Hooten and Hefley (2019)
 sq.cex=2.1
 par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
 layout(matrix(1:2,1,2))

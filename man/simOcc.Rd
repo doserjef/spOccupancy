@@ -1,14 +1,14 @@
 \name{simOcc}
 \alias{simOcc}
-\title{Simulate Single-Species Occupancy Data}
+\title{Simulate Single-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simOcc} simulates single-species occupancy data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model following an exponential correlation function. Random intercepts can also be included in the detection or occurrence portions of the occupancy model.
+  The function \code{simOcc} simulates single-species occurrence data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model following an exponential correlation function. Random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
 simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
-       p.RE = list(), sigma.sq = 2, phi = 3/0.5, sp = FALSE)
+       p.RE = list(), sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...)
 }
 
 \arguments{
@@ -31,6 +31,8 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 \item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+
+\item{...}{currently no additional arguments}
 }
 
 \author{

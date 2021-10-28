@@ -227,6 +227,11 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     if (NNGP) {
       z.starting <- z.starting[ord]
     }
+    z.test <- apply(y.big, 1, max, na.rm = TRUE)
+    init.test <- sum(z.starting < z.test)
+    if (init.test > 0) {
+      stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
+    }
   } else {
     # In correct order since you reordered y.
     z.starting <- apply(y.big, 1, max, na.rm = TRUE)

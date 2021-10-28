@@ -1,9 +1,9 @@
 \name{predict.msPGOcc}
 \alias{predict.msPGOcc}
-\title{Function for prediction at new locations for multi-species occupancy models}
+\title{Function for prediction at new locations for multispecies occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `msPGOcc`. 
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `msPGOcc`. When non-spatial random effects are included in the occurrence portion of the model, \code{predict} only allows prediction at random effect levels that are included in the fitted data.
 }
 
 \usage{
@@ -14,7 +14,7 @@
 
   \item{object}{an object of class msPGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. Covariates should have the same column names as those used when fitting the model with \code{msPGOcc}.}
 
   \item{...}{currently no additional arguments}
 }
@@ -28,10 +28,10 @@
   An object of class \code{predict.msPGOcc} that is a list comprised of: 
 
   \item{psi.0.samples}{a three-dimensional array of posterior predictive samples for the
-    latent occupancy probability values.}
+    latent occurrence probability values.}
 
   \item{z.0.samples}{a three-dimensional array of posterior predictive samples for the
-    latent occupancy values.}
+    latent occurrence values.}
 
   The return object will include additional objects used for standard 
   extractor functions. 

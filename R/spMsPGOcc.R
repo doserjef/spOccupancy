@@ -190,7 +190,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   names.long <- which(!is.na(c(y.big[1, , ])))
   if (nrow(X.p) == length(y) / N) {
     if (!binom) {
-      X.p <- X.p[!is.na(c(y.big[1, , ])), ]
+      X.p <- X.p[!is.na(c(y.big[1, , ])), , drop = FALSE]
     }
   }
   if (nrow(X.p.re) == length(y) / N & p.det.re > 0) {
@@ -234,6 +234,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Reorder the user supplied starting values for NNGP models
     if (NNGP) {
       z.starting <- z.starting[, ord]
+    }
+    z.test <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+    init.test <- sum(z.starting < z.test)
+    if (init.test > 0) {
+      stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
     }
   } else {
     # In correct order since you reordered y for NNGP. 
@@ -400,7 +405,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       sigma.sq.starting <- rep(sigma.sq.starting, N)
     }
   } else {
-    sigma.sq.starting <- runif(1, 0.2, 4)
+    sigma.sq.starting <- runif(N, 0.2, 4)
     if (verbose) {
       message("sigma.sq is not specified in starting values.\nSetting starting values to random values between 0.2 and 4\n")
     }
@@ -1612,19 +1617,19 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         tmp <- array(tmp, dim = c(J, K.max, p.det))
         tmp <- tmp[order(ord), , ]
         out$X.p <- matrix(tmp, J * K.max, p.det)
-        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
+        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
         tmp <- matrix(NA, J * K.max, p.det.re)
         tmp[names.long, ] <- X.p.re
         tmp <- array(tmp, dim = c(J, K.max, p.det.re))
         tmp <- tmp[order(ord), , ]
         out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
-        out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, ]
+        out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
         tmp <- matrix(NA, J * K.max, n.det.re)
         tmp[names.long, ] <- lambda.p
         tmp <- array(tmp, dim = c(J, K.max, n.det.re))
         tmp <- tmp[order(ord), , ]
         out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
-        out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, ]
+        out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
       } else {
         out$X.p <- X.p[order(ord), , drop = FALSE]
         out$lambda.p <- lambda.p[order(ord), , drop = FALSE]
@@ -1947,7 +1952,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         tmp <- array(tmp, dim = c(J, K.max, p.det))
         tmp <- tmp[order(ord), , ]
         out$X.p <- matrix(tmp, J * K.max, p.det)
-        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, ]
+        out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
       } else {
         out$X.p <- X.p[order(ord), , drop = FALSE]
       }
@@ -2057,6 +2062,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(z.starting.fit) <- "double"
           storage.mode(X.p.fit) <- "double"
           storage.mode(X.fit) <- "double"
+	  storage.mode(coords.fit) <- "double"
           storage.mode(p.det) <- "integer"
           storage.mode(p.occ) <- "integer"
           storage.mode(J.fit) <- "integer"
@@ -2149,7 +2155,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           out.fit$n.post <- n.post.samples
           out.fit$n.thin <- n.thin
           out.fit$n.burn <- n.burn
-          out.fit$pRE <- TRUE
+          out.fit$pRE <- FALSE
 	  class(out.fit) <- "spMsPGOcc"
 
 	  # Predict occurrence at new sites. 

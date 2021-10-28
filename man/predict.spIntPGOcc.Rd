@@ -7,16 +7,15 @@
 }
 
 \usage{
-\method{predict}{spIntPGOcc}(object, X.0, coords.0,
-	                     n.omp.threads = 1, verbose = TRUE, 
-			     n.report = 100, ...)
+\method{predict}{spIntPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
+                             n.report = 100, ...)
 }
 
 \arguments{
 
-  \item{object}{an object of class spIntPGOcc}
+  \item{object}{an object of class \code{spIntPGOcc}.}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{spIntPGOcc}.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
 
@@ -44,13 +43,17 @@
   An object of class \code{predict.spIntPGOcc} that is a list comprised of: 
 
   \item{psi.0.samples}{a \code{coda} object of posterior predictive samples for the
-    latent occupancy probability values.}
+    latent occurrence probability values.}
 
   \item{z.0.samples}{a \code{coda} object of posterior predictive samples for the
-    latent occupancy values.}
+    latent occurrence values.}
 
   The return object will include additional objects used for standard 
   extractor functions. 
+}
+
+\references{
+  Hooten, M. B., and Hefley, T. J. (2019). Bringing Bayesian models to life. CRC Press.
 }
 
 \examples{
@@ -169,6 +172,7 @@ summary(out)
 out.pred <- predict(out, X.0, coords.0)
 psi.hat.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 
+# Code for plot adapted from Hooten and Hefley (2019). 
 sq.cex=2.1
 par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
 layout(matrix(1:2,1,2))

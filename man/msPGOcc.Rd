@@ -18,14 +18,14 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 \arguments{
 
 \item{occ.formula}{a symbolic description of the model to be fit
-  for the occupancy portion of the model using R's model syntax. Only
+  for the occurrence portion of the model using R's model syntax. Only
   right-hand side of formula is specified. See example below. Random 
-  intercepts are allowed using lme4 syntax (Bates et al. 2015).}
+  intercepts are allowed using \pkg{lme4} syntax (Bates et al. 2015).}
 
 \item{det.formula}{a symbolic description of the model to be fit
   for the detection portion of the model using R's model syntax. Only
   right-hand side of formula is specified. See example below. Random 
-  intercepts are allowed using lme4 syntax (Bates et al. 2015).}
+  intercepts are allowed using \pkg{lme4} syntax (Bates et al. 2015).}
 
 \item{data}{a list containing data necessary for model fitting.
   Valid tags are \code{y}, \code{occ.covs}, and \code{det.covs}. \code{y}
@@ -33,7 +33,7 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   of species, second dimension equal to the number of sites, and third 
   dimension equal to the maximum number of replicates at a given site. 
   \code{occ.covs} is a matrix or data frame containing the variables 
-  used in the occupancy portion of the model, with \eqn{J}{J} rows for 
+  used in the occurrence portion of the model, with \eqn{J}{J} rows for 
   each column (variable). \code{det.covs} is a list of variables included 
   in the detection portion of the model. Each list element is a different 
   detection covariate, which can be site-level or observational-level. 
@@ -45,24 +45,27 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 \item{starting}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
   \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}. 
-  The value portion of each tag is the parameter's starting value.}
+  The value portion of each tag is the parameter's starting value. See 
+  \code{priors} description for definition of each parameter name.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, and \code{tau.sq.alpha.ig}. Community-level occupancy 
+  \code{tau.sq.beta.ig}, and \code{tau.sq.alpha.ig}. Community-level occurrence 
   (\code{beta.comm}) and detection (\code{alpha.comm}) regression coefficients 
   are assumed to follow a normal distribution. The hyperparameters of the 
   normal distribution are passed as a list of length two with the first
   and second elements corresponding to the mean and variance of the normal
   distribution, which are each specified as vectors of 
-  length equal to the number of coefficients to be estimated. If not
-  specified, prior means are set to 0 and prior variances set to 2.73. 
-  Community-level variance parameters for occupancy (\code{tau.sq.beta}) and
+  length equal to the number of coefficients to be estimated or of length one
+  if priors are the same for all coefficients. If not
+  specified, prior means are set to 0 and prior variances set to 2.72. 
+  Community-level variance parameters for occurrence (\code{tau.sq.beta}) and
   detection (\code{tau.sq.alpha}) are assumed to follow an inverse Gamma 
   distribution. The hyperparameters of the inverse gamma distribution are 
   passed as a list of length two with the first and second elements 
   corresponding to the shape and scale parameters, which are each specified
-  as vectors of length equal to the number of coefficients to be estimated. 
+  as vectors of length equal to the number of coefficients to be estimated 
+  or a single value if all parameters are assigned the same prior. 
   If not specified, prior shape and scale parameters are set to 0.1.}
 
 \item{n.samples}{the number of posterior samples to collect.}
@@ -73,9 +76,9 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
   \code{n.omp.threads} > 1 might not work on some systems.}
 
-\item{verbose}{if \code{TRUE}, model specification and progress of the 
-  sampler is printed to the screen. Otherwise, only messages in data 
-  preparation phase are printed.}
+\item{verbose}{if \code{TRUE}, messages about data preparation, 
+  model specification, and progress of the sampler are printed to the screen. 
+  Otherwise, no messages are printed.}
 
 \item{n.report}{the interval to report MCMC progress.}
 
@@ -128,6 +131,10 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
+
+  Dorazio, R. M., and Royle, J. A. (2005). Estimating size and composition 
+  of biological communities by modeling the occurrence of species. 
+  Journal of the American Statistical Association, 100(470), 389-398.
 }
 
 \author{
@@ -139,36 +146,36 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   An object of class \code{msPGOcc} that is a list comprised of: 
 
   \item{beta.comm.samples}{a \code{coda} object of posterior samples
-    for the community level occupancy regression coefficients.}
+    for the community level occurrence regression coefficients.}
   
   \item{alpha.comm.samples}{a \code{coda} object of posterior samples
     for the community level detection regression coefficients.}
 
   \item{tau.sq.beta.samples}{a \code{coda} object of posterior samples
-    for the occupancy community variance parameters.}
+    for the occurrence community variance parameters.}
 
   \item{tau.sq.alpha.samples}{a \code{coda} object of posterior samples
     for the detection community variance parameters.}
 
   \item{beta.samples}{a \code{coda} object of posterior samples
-    for the species level occupancy regression coefficients.}
+    for the species level occurrence regression coefficients.}
 
   \item{alpha.samples}{a \code{coda} object of posterior samples
     for the species level detection regression coefficients.}
 
   \item{z.samples}{a three-dimensional array of posterior samples for
-    the latent occupancy values for each species.}
+    the latent occurrence values for each species.}
 
   \item{psi.samples}{a three-dimensional array of posterior samples for
-    the latent occupancy probability values for each species.}
+    the latent occurrence probability values for each species.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
-    for variances of random intercepts included in the occupancy portion
+    for variances of random intercepts included in the occurrence portion
     of the model. Only included if random intercepts are specified in 
     \code{occ.formula}.}
 
   \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
-    for variances of random intercpets included in the detection portion 
+    for variances of random intercepts included in the detection portion 
     of the model. Only included if random intercepts are specified in 
     \code{det.formula}.}
 

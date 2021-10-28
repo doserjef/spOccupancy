@@ -1,22 +1,21 @@
 \name{predict.spMsPGOcc}
 \alias{predict.spMsPGOcc}
-\title{Function for prediction at new locations for multi-species spatial occupancy models}
+\title{Function for prediction at new locations for multispecies spatial occupancy models}
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `spMsPGOcc`. 
 }
 
 \usage{
-\method{predict}{spMsPGOcc}(object, X.0, coords.0,
-	                    n.omp.threads = 1, verbose = TRUE, 
-			    n.report = 100, ...)
+\method{predict}{spMsPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
+                            n.report = 100, ...)
 }
 
 \arguments{
 
   \item{object}{an object of class spMsPGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{intPGOcc}.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
 
@@ -44,10 +43,10 @@
   An object of class \code{predict.spMsPGOcc} that is a list comprised of: 
 
   \item{psi.0.samples}{a three-dimensional array of posterior predictive samples for the
-    latent occupancy probability values.}
+    latent occurrence probability values.}
 
   \item{z.0.samples}{a three-dimensional array of posterior predictive samples for the
-    latent occupancy values.}
+    latent occurrence values.}
 
   \item{w.0.samples}{a three-dimensional array of posterior predictive samples
     for the latent spatial random effects.}

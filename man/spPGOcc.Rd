@@ -20,7 +20,7 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
 \arguments{
 
   \item{occ.formula}{a symbolic description of the model to be fit
-    for the occupancy portion of the model using R's model syntax. Only
+    for the occurrence portion of the model using R's model syntax. Only
     right-hand side of formula is specified. See example below.}
   
   \item{det.formula}{a symbolic description of the model to be fit
@@ -49,11 +49,12 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
     \code{phi}, \code{w}, \code{nu}, and \code{sigma.sq.p}. 
     \code{nu} is only specified if \code{cov.model = "matern"} and \code{sigma.sq.p}
     is only specified if there are random effects in \code{det.formula}. 
-    The value portion of each tag is the parameter's starting value.}
+    The value portion of each tag is the parameter's starting value. See \code{priors}
+    description for definition of each parameter name.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, \code{nu.unif}, and \code{sigma.sq.p.ig}. Occupancy 
+    \code{sigma.sq.ig}, \code{nu.unif}, and \code{sigma.sq.p.ig}. Occurrence 
     (\code{beta}) and detection (\code{alpha}) regression coefficients 
     are assumed to follow a normal distribution. The hyperparameters of the 
     normal distribution are passed as a list of length two with the first
@@ -114,7 +115,7 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
   \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
     MCMC sampler. See Roberts and Rosenthal (2009) for details.}
   
-  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Defaul is 
+  \item{accept.rate}{target acceptance rate for Adaptive MCMC. Default is 
     0.43. See Roberts and Rosenthal (2009) for details.}
   
   \item{n.omp.threads}{a positive integer indicating
@@ -124,9 +125,9 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
    hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
    work on some systems.}
  
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
+  \item{verbose}{if \code{TRUE}, messages about data preparation, 
+    model specification, and progress of the sampler are printed to the screen. 
+    Otherwise, no messages are printed.}
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
@@ -162,6 +163,11 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
 }
 
 \references{
+
+  Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
+  Fitting Linear Mixed-Effects Models Using lme4. Journal of
+  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+
   Datta, A., S. Banerjee, A.O. Finley, and A.E. Gelfand. (2016)
   Hierarchical Nearest-Neighbor Gaussian process models for large
   geostatistical datasets. \emph{Journal of the American Statistical
@@ -172,20 +178,21 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
   Gaussian Processes. \emph{Journal of Computational and Graphical
     Statistics}, \doi{10.1080/10618600.2018.1537924}.
 
+  Finley, A. O., Datta, A., and Banerjee, S. (2020). spNNGP R package 
+  for nearest neighbor Gaussian process models. \emph{arXiv} preprint arXiv:2001.09111.
+
+  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
+  selection for ecologists. \emph{Ecological Monographs}, 85(1), 3-28.
+
+  Hooten, M. B., and Hefley, T. J. (2019). Bringing Bayesian models to life. 
+  \emph{CRC Press}.
+
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables. 
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
 
   Roberts, G.O. and Rosenthal J.S. (2009) Examples  of adaptive MCMC. 
   \emph{Journal of Computational and Graphical Statistics}, 18(2):349-367.
-
-  Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
-  Fitting Linear Mixed-Effects Models Using lme4. Journal of
-  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
-
-  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
-  selection for ecologists. Ecological monographs, 85(1), 3-28.
-
 }
 
 \author{
@@ -197,16 +204,16 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
   An object of class \code{spPGOcc} that is a list comprised of: 
 
   \item{beta.samples}{a \code{coda} object of posterior samples
-    for the occupancy regression coefficients.}
+    for the occurrence regression coefficients.}
 
   \item{alpha.samples}{a \code{coda} object of posterior samples
     for the detection regression coefficients.}
 
   \item{z.samples}{a \code{coda} object of posterior samples 
-    for the latent occupancy values}
+    for the latent occurrence values}
 
   \item{psi.samples}{a \code{coda} object of posterior samples
-    for the latent occupancy probability values}
+    for the latent occurrence probability values}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
     for covariance parameters.}
@@ -302,6 +309,7 @@ summary(out)
 w.summary <- summary(out$w.samples)$quantiles[, c(3, 1, 5)]
 w.true <- dat$w
 
+# Code for plot is adapted from Hooten and Hefley (2019).
 sq.cex=2.1
 par(cex.lab=1.5, cex.main=1.5, xaxt="n", yaxt="n", bty="n", mar=c(5,5,4,2))
 layout(matrix(1:2,1,2))

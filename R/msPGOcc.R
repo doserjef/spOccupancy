@@ -218,6 +218,11 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop(paste("error: starting values for z must be a matrix with dimensions ", 
 		   N, " x ", J, sep = ""))
       }
+      z.test <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+      init.test <- sum(z.starting < z.test)
+      if (init.test > 0) {
+        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
+      }
     } else {
       z.starting <- apply(y.big, c(1, 2), max, na.rm = TRUE)
       if (verbose) {

@@ -36,6 +36,7 @@ waicOcc(object, ...)
 
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}
+  Andrew O. Finley \email{finleya@msu.edu}
 }
 
 \value{

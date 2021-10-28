@@ -1,5 +1,71 @@
 simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(), 
-		   sigma.sq = 2, phi = 3/0.5, sp = FALSE) {
+		   sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...) {
+
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+
+  # Check function inputs -------------------------------------------------
+  # J.x -------------------------------
+  if (missing(J.x)) {
+    stop("error: J.x must be specified")
+  }
+  if (length(J.x) != 1) {
+    stop("error: J.x must be a single numeric value.")
+  }
+  # J.y -------------------------------
+  if (missing(J.y)) {
+    stop("error: J.y must be specified")
+  }
+  if (length(J.y) != 1) {
+    stop("error: J.y must be a single numeric value.")
+  }
+  J <- J.x * J.y
+  # n.rep -----------------------------
+  if (missing(n.rep)) {
+    stop("error: n.rep must be specified.")
+  }
+  if (length(n.rep) != J) {
+    stop(paste("error: n.rep must be a vector of length ", J, sep = ''))
+  }
+  # beta ------------------------------
+  if (missing(beta)) {
+    stop("error: beta must be specified.")
+  }
+  # alpha -----------------------------
+  if (missing(alpha)) {
+    stop("error: alpha must be specified.")
+  }
+  # psi.RE ----------------------------
+  names(psi.RE) <- tolower(names(psi.RE))
+  if (!is.list(psi.RE)) {
+    stop("error: if specified, psi.RE must be a list with tags 'levels' and 'sigma.sq.psi'")
+  }
+  if (length(names(psi.RE)) > 0) {
+    if (!'sigma.sq.psi' %in% names(psi.RE)) {
+      stop("error: sigma.sq.psi must be a tag in psi.RE with values for the occurrence random effect variances")
+    }
+    if (!'levels' %in% names(psi.RE)) {
+      stop("error: levels must be a tag in psi.RE with the number of random effect levels for each occurrence random intercept.")
+    }
+  }
+  # p.RE ----------------------------
+  names(p.RE) <- tolower(names(p.RE))
+  if (!is.list(p.RE)) {
+    stop("error: if specified, p.RE must be a list with tags 'levels' and 'sigma.sq.p'")
+  }
+  if (length(names(p.RE)) > 0) {
+    if (!'sigma.sq.p' %in% names(p.RE)) {
+      stop("error: sigma.sq.p must be a tag in p.RE with values for the detection random effect variances")
+    }
+    if (!'levels' %in% names(p.RE)) {
+      stop("error: levels must be a tag in p.RE with the number of random effect levels for each detection random intercept.")
+    }
+  }
 
   # Subroutines -----------------------------------------------------------
   # MVN
@@ -15,7 +81,6 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
 
   # Form occupancy covariates (if any) ------------------------------------
-  J <- J.x * J.y
   n.beta <- length(beta)
   X <- matrix(1, nrow = J, ncol = n.beta)
   if (n.beta > 1) {

@@ -1,5 +1,70 @@
 simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, 
-		      sigma.sq = 2, phi = 3/0.5, sp = FALSE) {
+		      sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...) {
+
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+
+  # Check function inputs -------------------------------------------------
+  # n.data -------------------------------
+  if (missing(n.data)) {
+    stop("error: n.data must be specified")
+  }
+  if (length(n.data) != 1) {
+    stop("error: n.data must be a single numeric value.")
+  }
+  # J.x -------------------------------
+  if (missing(J.x)) {
+    stop("error: J.x must be specified")
+  }
+  if (length(J.x) != 1) {
+    stop("error: J.x must be a single numeric value.")
+  }
+  # J.y -------------------------------
+  if (missing(J.y)) {
+    stop("error: J.y must be specified")
+  }
+  if (length(J.y) != 1) {
+    stop("error: J.y must be a single numeric value.")
+  }
+  J <- J.x * J.y
+  # J.obs -----------------------------
+  if (missing(J.obs)) {
+    stop("error: J.obs must be specified")
+  }
+  if (length(J.obs) != n.data) {
+    stop(paste("error: J.obs must be a vector of length ", n.data, sep = ''))
+  }
+  # n.rep -----------------------------
+  if (missing(n.rep)) {
+    stop("error: n.rep must be specified.")
+  }
+  if (!is.list(n.rep)) {
+    stop(paste("error: n.rep must be a list of ", n.data, " vectors", sep = ''))
+  }
+  if (length(n.rep) != n.data) {
+    stop(paste("error: n.rep must be a list of ", n.data, " vectors", sep = ''))
+  }
+  for (i in 1:n.data) {
+    if (length(n.rep[[i]]) != J.obs[i]) {
+      stop(paste("error: n.rep[[", i, "]] must be of length ", J.obs[i], sep = ''))
+    }
+  }
+  # beta ------------------------------
+  if (missing(beta)) {
+    stop("error: beta must be specified.")
+  }
+  # alpha -----------------------------
+  if (missing(alpha)) {
+    stop("error: alpha must be specified.")
+  }
+  if (!is.list(alpha)) {
+    stop(paste("error: alpha must be a list with ", n.data, " vectors", sep = ''))
+  }
 
   # Subroutines -----------------------------------------------------------
   # MVN 
@@ -15,7 +80,6 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
 
   # Form occupancy covariates (if any) ------------------------------------
-  J <- J.x * J.y
   n.beta <- length(beta)
   X <- matrix(1, nrow = J, ncol = n.beta) 
   if (n.beta > 1) {

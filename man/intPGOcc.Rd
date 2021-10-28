@@ -17,7 +17,7 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 }
 \arguments{
   \item{occ.formula}{a symbolic description of the model to be fit
-  for the occupancy portion of the model using R's model syntax. Only
+  for the occurrence portion of the model using R's model syntax. Only
   right-hand side of formula is specified. See example below.}
 
  \item{det.formula}{a list of symbolic descriptions of the models to be fit
@@ -52,10 +52,11 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   parameters for each data source. Each element of the list should be a vector of 
   starting values for all detection parameters in the given data source or a single value
   for each data source to assign all parameters for a given data source
-  the same starting value.}
+  the same starting value. See \code{priors} description for definition of 
+  each parameter name.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
-    Valid tags are \code{beta.normal} and \code{alpha.normal}. Occupancy 
+    Valid tags are \code{beta.normal} and \code{alpha.normal}. Occurrence 
     (\code{beta}) and detection (\code{alpha}) regression coefficients 
     are assumed to follow a normal distribution. For \code{beta} hyperparameters of the 
     normal distribution are passed as a list of length two with the first
@@ -77,9 +78,9 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
     \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
     \code{n.omp.threads} > 1 might not work on some systems.}
   
-  \item{verbose}{if \code{TRUE}, model specification and progress of the 
-    sampler is printed to the screen. Otherwise, only messages in data 
-    preparation phase are printed.}
+  \item{verbose}{if \code{TRUE}, messages about data preparation, 
+    model specification, and progress of the sampler are printed to the screen. 
+    Otherwise, no messages are printed.}
   
   \item{n.report}{the interval to report MCMC progress.}
 
@@ -132,6 +133,10 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
+
+  Finley, A. O., Datta, A., and Banerjee, S. (2020). spNNGP R 
+  package for nearest neighbor Gaussian process models. 
+  arXiv preprint arXiv:2001.09111.
 
 }
 \author{

@@ -1,18 +1,18 @@
 \name{simIntOcc}
 \alias{simIntOcc}
-\title{Simulate Single-Species Occupancy Data from Multiple Data Sources}
+\title{Simulate Single-Species Detection-Nondetection Data from Multiple Data Sources}
 
 \description{
-  The function \code{simIntOcc} simulates single-species occupancy data from multiple data sources for simulation studies, power assessments, or function testing of integrated occupancy models. Data can optionally be simulated with a spatial Gaussian Process on the occupancy process following an exponential correlation function.
+  The function \code{simIntOcc} simulates single-species detection-nondetection data from multiple data sources for simulation studies, power assessments, or function testing of integrated occupancy models. Data can optionally be simulated with a spatial Gaussian Process on the occupancy process following an exponential correlation function.
 }
 
 \usage{
 simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2, 
-	  phi = 3/0.5, sp = FALSE)
+	  phi = 3/0.5, sp = FALSE, ...)
 }
 \arguments{
 
-\item{n.data}{an intenger indicating the number of detection-nondetection data sources to simulate.}
+\item{n.data}{an integer indicating the number of detection-nondetection data sources to simulate.}
 
 \item{J.x}{a single numeric value indicating the number of sites across the region of interest along the horizontal axis. Total number of sites across the simulated region of interest is \eqn{J.x \times J.y}{J.x x J.y}. }
 
@@ -22,7 +22,7 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2,
 
 \item{n.rep}{a list of length \code{n.data}. Each element is a numeric vector with length corresponding to the number of sites that given data source is observed at (in \code{J.obs}). Each vector indicates the number of repeat visits at each of the sites for a given data source.}
 
-\item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occupancy portion of the single-species occupancy model.}
+\item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occurrence portion of the single-species occupancy model.}
 
 \item{alpha}{a list of length \code{n.data}. Each element is a numeric vector containing the intercept and regression coefficient parameters for the detection portion of the single-species occupancy model for each data source.}
 
@@ -32,6 +32,7 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2,
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
 
+\item{...}{currently no additional arguments}
 }
 
 \author{
@@ -42,8 +43,8 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2,
 \value{
   A list comprised of: 
 
-  \item{X.obs}{a numeric design matrix for the occupancy portion of the model. This matrix contains the intercept and regression coefficients for only the observed sites.}
-  \item{X.pred}{a numeric design matrix for the occupancy portion of the model at sites where there are no observed data sources.} 
+  \item{X.obs}{a numeric design matrix for the occurrence portion of the model. This matrix contains the intercept and regression coefficients for only the observed sites.}
+  \item{X.pred}{a numeric design matrix for the occurrence portion of the model at sites where there are no observed data sources.} 
   \item{X.p}{a list of design matrices for the detection portions of the integrated occupancy model. Each element in the list is a design matrix of detection covariates for each data source.}
   \item{coords.obs}{a numeric matrix of coordinates of each observed site. Required for spatial models.}
   \item{coords.pred}{a numeric matrix of coordinates of each site in the study region without any data sources. Only used for spatial models.}
@@ -51,10 +52,10 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2,
   \item{D.pred}{a distance matrix of sites in the study region without any observed data. Only used for spatial models.}
   \item{w.obs}{a matrix of the spatial random effects at observed locations. Only used to simulate data when \code{sp = TRUE}}. 
   \item{w.pred}{a matrix of the spatial random random effects at locations without any observation.}
-  \item{psi.obs}{a matrix of the occupancy probabilities for each observed site.}
-  \item{psi.pred}{a matrix of the occupancy probabilities for sites without any observations.}
-  \item{z.obs}{a vector of the latent occupancy states at each observed site.}
-  \item{z.pred}{a vector of the latent occupancy states at each site without any observations.}
+  \item{psi.obs}{a matrix of the occurrence probabilities for each observed site.}
+  \item{psi.pred}{a matrix of the occurrence probabilities for sites without any observations.}
+  \item{z.obs}{a vector of the latent occurrence states at each observed site.}
+  \item{z.pred}{a vector of the latent occurrence states at each site without any observations.}
   \item{p}{a list of detection probability matrices for each of the \code{n.data} data sources.}
   \item{y}{a list of matrices of the raw detection-nondetection data for each site and replicate combination.}
 

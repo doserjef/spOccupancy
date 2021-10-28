@@ -237,6 +237,11 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop(paste("error: starting values for z must be a vector of length ",
 		   J, sep = ""))
       }
+      z.test <- tapply(y, z.long.indx.r, max, na.rm = TRUE)	
+      init.test <- sum(z.starting < z.test)
+      if (init.test > 0) {
+        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
+      }
     } else {
       z.starting <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
       if (verbose) {

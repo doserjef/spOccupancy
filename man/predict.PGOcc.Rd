@@ -14,7 +14,7 @@
 
   \item{object}{an object of class PGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data.}
+  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{PGOcc}. Covariates should have the same column names as those used when fitting the model with \code{PGOcc}.}
 
   \item{...}{currently no additional arguments}
 }

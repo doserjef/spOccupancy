@@ -1,9 +1,9 @@
 \name{spMsPGOcc}
 \alias{spMsPGOcc}
-\title{Function for Fitting Multi-Species Spatial Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Multispecies Spatial Occupancy Models Using Polya-Gamma Latent Variables}
 
 \description{
-  The function \code{spMsPGOcc} fits multi-species spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
+  The function \code{spMsPGOcc} fits multispecies spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
 }
 
 \usage{
@@ -19,7 +19,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
 \arguments{
 
   \item{occ.formula}{a symbolic description of the model to be fit
-    for the occupancy portion of the model using R's model syntax. Only
+    for the occurrence portion of the model using R's model syntax. Only
     right-hand side of formula is specified. See example below.}
   
   \item{det.formula}{a symbolic description of the model to be fit
@@ -33,7 +33,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
     number of species, second dimension equal to the number of sites, and 
     third dimension equal to the maximum number of replicates at a given site. 
     \code{occ.covs} is a matrix or data frame containing the variables 
-    used in the occupancy portion of the model, with \eqn{J}{J} rows for 
+    used in the occurrence portion of the model, with \eqn{J}{J} rows for 
     each column (variable). \code{det.covs} is a list of variables included 
     in the detection portion of the model. Each list element is a different 
     detection covariate, which can be site-level or observational-level. 
@@ -48,34 +48,39 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
     \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, \code{sigma.sq}, 
     \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
     \code{cov.model = "matern"}. The value portion of each tag is 
-    the parameter's starting value.}
+    the parameter's starting value. See \code{priors} description for definition
+    of each parameter name.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, \code{sigma.sq.ig}, 
-  and \code{nu.unif}. Community-level occupancy (\code{beta.comm}) and detection 
+  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
   corresponding to the mean and variance of the normal distribution, 
   which are each specified as vectors of length equal to the number of 
-  coefficients to be estimated. If not specified, prior means are set 
+  coefficients to be estimated or of length one if priors are the same for 
+  all coefficients. If not specified, prior means are set 
   to 0 and prior variances set to 2.73. Community-level variance parameters 
   for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
   assumed to follow an inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
   the first and second elements corresponding to the shape and scale parameters,
   which are each specified as vectors of length equal to the number of 
-  coefficients to be estimated. If not specified, prior shape and scale 
+  coefficients to be estimated or a single value if priors are the same for all 
+  parameters. If not specified, prior shape and scale 
   parameters are set to 0.1. The species-specific spatial variance parameter, 
   \code{sigma.sq}, is assumed to follow an inverse-Gamma distribution, whereas
   the spatial decay \code{phi} and smoothness \code{nu} parameters are assumed
   to follow Uniform distributions. The hyperparameters of the inverse-Gamma are
   passed as a list of length two, with the list elements being vectors of length 
-  N corresponding to the species-specific shape and scale parameters, respectively. 
+  N corresponding to the species-specific shape and scale parameters, respectively, 
+  or a single value if the same value is assigned for all species. 
   The hyperparameters of the Uniform are also passed as a list with two elements, 
   with both elements being vectors of length N corresponding to the lower and 
-  upper support, respectively.}
+  upper support, respectively, or as a single value if the same value is assigned
+  for all species.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each
@@ -124,12 +129,13 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
    hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
    work on some systems.}
  
-  \item{verbose}{if \code{TRUE}, model specification and progress of the sampler 
-    is printed on the screen. Otherwise, only messages in data preparation
-    phase are printed.}
+  \item{verbose}{if \code{TRUE}, messages about data preparation, 
+    model specification, and progress of the sampler are printed to the screen. 
+    Otherwise, no messages are printed.}
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
-    MCMC progress.}
+    MCMC progress. Note this is specified in terms of batches and not overall
+    samples for spatial models.}
 
   \item{n.burn}{the number of samples out of the total \code{n.samples} to 
     discard as burn-in. By default, the first 10\% of samples is discarded.}
@@ -179,6 +185,9 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
   Gaussian Processes. \emph{Journal of Computational and Graphical
     Statistics}, \doi{10.1080/10618600.2018.1537924}.
 
+  Finley, A. O., Datta, A., and Banerjee, S. (2020). spNNGP R package 
+  for nearest neighbor Gaussian process models. \emph{arXiv} preprint arXiv:2001.09111.
+
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables.
   \emph{Journal of the American Statistical Association}, 108:1339-1349.
@@ -191,7 +200,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
   Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
-  selection for ecologists. Ecological monographs, 85(1), 3-28.
+  selection for ecologists. \emph{Ecological Monographs}, 85(1), 3-28.
 
 }
 
@@ -204,19 +213,19 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
   An object of class \code{spMsPGOcc} that is a list comprised of: 
 
   \item{beta.comm.samples}{a \code{coda} object of posterior samples
-    for the community level occupancy regression coefficients.}
+    for the community level occurrence regression coefficients.}
   
   \item{alpha.comm.samples}{a \code{coda} object of posterior samples
     for the community level detection regression coefficients.}
 
   \item{tau.sq.beta.samples}{a \code{coda} object of posterior samples
-    for the occupancy community variance parameters.}
+    for the occurrence community variance parameters.}
 
   \item{tau.sq.alpha.samples}{a \code{coda} object of posterior samples
     for the detection community variance parameters.}
 
   \item{beta.samples}{a \code{coda} object of posterior samples
-    for the species level occupancy regression coefficients.}
+    for the species level occurrence regression coefficients.}
 
   \item{alpha.samples}{a \code{coda} object of posterior samples
     for the species level detection regression coefficients.}
@@ -225,7 +234,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
     for the species level covariance parameters.}
 
   \item{z.samples}{a three-dimensional array of posterior samples for
-    the latent occupancy values for each species.}
+    the latent occurrence values for each species.}
 
   \item{psi.samples}{a three-dimensional array of posterior samples for
     the latent occupancy probability values for each species.}

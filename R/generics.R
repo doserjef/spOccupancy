@@ -107,13 +107,20 @@ fitted.PGOcc <- function(object, ...) {
   if (nrow(X.p) == nrow(y)) {
     X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+    if (object$pRE) {
+      lambda.p <- do.call(rbind, replicate(ncol(y), object$lambda.p, simplify = FALSE))
+      lambda.p <- lambda.p[!is.na(c(y)), , drop = FALSE]
+    }
+  } else {
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+    }
   }
   y <- c(y)
   y <- y[!is.na(y)]
   z.samples <- object$z.samples
   alpha.samples <- object$alpha.samples
   if (object$pRE) {
-    lambda.p <- object$lambda.p
     det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) +
       			      lambda.p %*% t(object$alpha.star.samples)))
   } else {
@@ -476,13 +483,20 @@ fitted.spPGOcc <- function(object, ...) {
   if (nrow(X.p) == nrow(y)) {
     X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+    if (object$pRE) {
+      lambda.p <- do.call(rbind, replicate(ncol(y), object$lambda.p, simplify = FALSE))
+      lambda.p <- lambda.p[!is.na(c(y)), , drop = FALSE]
+    }
+  } else {
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+    }
   }
   y <- c(y)
   y <- y[!is.na(y)]
   z.samples <- object$z.samples
   alpha.samples <- object$alpha.samples
   if (object$pRE) {
-    lambda.p <- object$lambda.p
     det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) +
       			      lambda.p %*% t(object$alpha.star.samples)))
   } else {
@@ -741,6 +755,14 @@ fitted.msPGOcc <- function(object, ...) {
   if (nrow(X.p) == dim(y)[2]) {
     X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+    if (object$pRE) {
+      lambda.p <- do.call(rbind, replicate(dim(y)[3], object$lambda.p, simplify = FALSE))
+      lambda.p <- lambda.p[!is.na(c(y[1, , ])), , drop = FALSE]
+    }
+  } else {
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+    }
   }
   z.long.indx <- rep(1:J, K.max)
   z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
@@ -753,7 +775,6 @@ fitted.msPGOcc <- function(object, ...) {
   y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
   if (object$pRE) {
     sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
-    lambda.p <- object$lambda.p
     for (i in 1:N) {
       det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
       				   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
@@ -933,6 +954,14 @@ fitted.spMsPGOcc <- function(object, ...) {
   if (nrow(X.p) == dim(y)[2]) {
     X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+    if (object$pRE) {
+      lambda.p <- do.call(rbind, replicate(dim(y)[3], object$lambda.p, simplify = FALSE))
+      lambda.p <- lambda.p[!is.na(c(y[1, , ])), , drop = FALSE]
+    }
+  } else {
+    if (object$pRE) {
+      lambda.p <- object$lambda.p
+    }
   }
   z.long.indx <- rep(1:J, K.max)
   z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
@@ -945,7 +974,6 @@ fitted.spMsPGOcc <- function(object, ...) {
   y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
   if (object$pRE) {
     sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
-    lambda.p <- object$lambda.p
     for (i in 1:N) {
       det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
       				   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))

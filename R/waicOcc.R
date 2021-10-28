@@ -31,7 +31,15 @@ waicOcc <- function(object, ...) {
     # Necessary for when X.p is only at site level
     if (nrow(X.p) == nrow(y)) {
       X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
-      X.p <- X.p[!is.na(c(y)), , drop = FALSE] 
+      X.p <- X.p[!is.na(c(y)), , drop = FALSE]
+      if (object$pRE) {
+        lambda.p <- do.call(rbind, replicate(ncol(y), object$lambda.p, simplify = FALSE))
+        lambda.p <- lambda.p[!is.na(c(y)), , drop = FALSE]
+      }
+    } else {
+      if (object$pRE) {
+        lambda.p <- object$lambda.p
+      }
     }
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     y.sum <- apply(y, 1, sum, na.rm = TRUE)
@@ -45,7 +53,6 @@ waicOcc <- function(object, ...) {
     psi.samples <- object$psi.samples
     alpha.samples <- object$alpha.samples
     if (object$pRE) {
-      lambda.p <- object$lambda.p
       det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) + 
 				      lambda.p %*% t(object$alpha.star.samples)))
     } else {
@@ -77,6 +84,15 @@ waicOcc <- function(object, ...) {
     # Necessary for when X.p is only at site level
     if (nrow(X.p) == dim(y)[2]) {
       X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+      X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+      if (object$pRE) {
+        lambda.p <- do.call(rbind, replicate(dim(y)[3], object$lambda.p, simplify = FALSE))
+        lambda.p <- lambda.p[!is.na(c(y[1, , ])), , drop = FALSE]
+      }
+    } else {
+      if (object$pRE) {
+        lambda.p <- object$lambda.p
+      }
     }
     K.max <- max(n.rep)
     J <- dim(y)[2]
@@ -93,7 +109,6 @@ waicOcc <- function(object, ...) {
     sp.indx <- rep(1:N, ncol(X.p))
     if (object$pRE) {
       sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
-      lambda.p <- object$lambda.p
       for (i in 1:N) {
         det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + 
   					   lambda.p %*% t(object$alpha.star.samples[, sp.re.indx == i]))
@@ -113,7 +128,6 @@ waicOcc <- function(object, ...) {
     elpd <- 0
     pD <- 0
 
-    # TODO: need to make this faster. 
     for (j in 1:J) {
       long.indx <- which(z.long.indx == j)
       for (i in 1:N) {

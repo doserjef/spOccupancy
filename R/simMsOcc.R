@@ -1,6 +1,98 @@
 simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
 		     p.RE = list(), sigma.sq = rep(2, N), 
-		     phi = rep(3/0.5, N), sp = FALSE) {
+		     phi = rep(3/0.5, N), sp = FALSE, ...) {
+
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Check function inputs -------------------------------------------------
+  # J.x -------------------------------
+  if (missing(J.x)) {
+    stop("error: J.x must be specified")
+  }
+  if (length(J.x) != 1) {
+    stop("error: J.x must be a single numeric value.")
+  }
+  # J.y -------------------------------
+  if (missing(J.y)) {
+    stop("error: J.y must be specified")
+  }
+  if (length(J.y) != 1) {
+    stop("error: J.y must be a single numeric value.")
+  }
+  J <- J.x * J.y
+  # n.rep -----------------------------
+  if (missing(n.rep)) {
+    stop("error: n.rep must be specified.")
+  }
+  if (length(n.rep) != J) {
+    stop(paste("error: n.rep must be a vector of length ", J, sep = ''))
+  }
+  # N ---------------------------------
+  if (missing(N)) {
+    stop("error: N must be specified")
+  }
+  if (length(N) != 1) {
+    stop("error: N must be a single numeric value.")
+  }
+  # beta ------------------------------
+  if (missing(beta)) {
+    stop("error: beta must be specified")
+  }
+  if (!is.matrix(beta)) {
+    stop(paste("error: beta must be a numeric matrix with ", N, " rows", sep = ''))
+  }
+  if (nrow(beta) != N) {
+    stop(paste("error: beta must be a numeric matrix with ", N, " rows", sep = ''))
+  }
+  # alpha -----------------------------
+  if (missing(alpha)) {
+    stop("error: alpha must be specified.")
+  }
+  if (!is.matrix(alpha)) {
+    stop(paste("error: alpha must be a numeric matrix with ", N, " rows", sep = ''))
+  }
+  if (nrow(alpha) != N) {
+    stop(paste("error: alpha must be a numeric matrix with ", N, " rows", sep = ''))
+  }
+  # sigma.sq --------------------------
+  if (length(sigma.sq) != N) {
+    stop(paste("error: if specified, sigma.sq must be a vector of length ", N, sep = ''))
+  }
+  # phi -------------------------------
+  if (length(phi) != N) {
+    stop(paste("error: if specified, phi must be a vector of length ", N, sep = ''))
+  }
+  # psi.RE ----------------------------
+  names(psi.RE) <- tolower(names(psi.RE))
+  if (!is.list(psi.RE)) {
+    stop("error: if specified, psi.RE must be a list with tags 'levels' and 'sigma.sq.psi'")
+  }
+  if (length(names(psi.RE)) > 0) {
+    if (!'sigma.sq.psi' %in% names(psi.RE)) {
+      stop("error: sigma.sq.psi must be a tag in psi.RE with values for the occurrence random effect variances")
+    }
+    if (!'levels' %in% names(psi.RE)) {
+      stop("error: levels must be a tag in psi.RE with the number of random effect levels for each occurrence random intercept.")
+    }
+  }
+  # p.RE ----------------------------
+  names(p.RE) <- tolower(names(p.RE))
+  if (!is.list(p.RE)) {
+    stop("error: if specified, p.RE must be a list with tags 'levels' and 'sigma.sq.p'")
+  }
+  if (length(names(p.RE)) > 0) {
+    if (!'sigma.sq.p' %in% names(p.RE)) {
+      stop("error: sigma.sq.p must be a tag in p.RE with values for the detection random effect variances")
+    }
+    if (!'levels' %in% names(p.RE)) {
+      stop("error: levels must be a tag in p.RE with the number of random effect levels for each detection random intercept.")
+    }
+  }
 
   # Subroutines -----------------------------------------------------------
   # MVN 
