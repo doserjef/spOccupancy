@@ -80,6 +80,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Make all covariates a data frame. Unlist is necessary for when factors
     # are supplied. 
     for (i in 1:n.data) {
+      # Get in required R model format. 
       data$det.covs[[i]] <- data.frame(lapply(data$det.covs[[i]], function(a) unlist(c(a))))
       # Replicate det.covs if only covariates are at the site level. 
       if (nrow(data$det.covs[[i]]) == nrow(y[[i]])) {

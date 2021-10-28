@@ -645,12 +645,6 @@ extern "C" {
     } // s (sample loop)
     if (verbose) {
       Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-      Rprintf("\tparameter\tacceptance\ttuning\n");	  
-      Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
-      if (corName == "matern") {
-        Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
-      }
-      Rprintf("-------------------------------------------------\n");
     }
     // This is necessary when generating random numbers in C.     
     PutRNGstate();
