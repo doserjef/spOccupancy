@@ -176,8 +176,6 @@ Out-of-sample prediction is possible using the `predict` function, a set
 of occurrence covariates at the new locations, and the spatial
 coordinates of the new locations. The object `hbefElev` contains
 elevation data across the entire Hubbard Brook Experimental Forest.
-Below we predict BTBW occurrence across the forest and plot the results
-using `ggplot2` and `stars`.
 
 ``` r
 # First standardize elevation using mean and sd from fitted model
