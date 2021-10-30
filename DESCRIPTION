@@ -1,6 +1,6 @@
 Package: spOccupancy
 Type: Package
-Title: Single-Species and Multi-Species Spatial Occupancy Modeling
+Title: Single species, multispecies, and integrated spatial occupancy models
 Version: 0.1.0
 Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut]
@@ -10,7 +10,7 @@ License: GPL (>= 3) + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-URL: https://github.com/doserjef/spOccupancy
+URL: https://www.jeffdoser.com/files/spoccupancy-web, https://github.com/doserjef/spOccupancy
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Imports: 
     stats, coda, abind, RANN, lme4, foreach, doParallel

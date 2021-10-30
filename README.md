@@ -1,11 +1,11 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# spOccupancy: An R Package for single species, multispecies, and integrated spatial occupancy models
+# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139"/></a>
 
-Fits single-species and multi-species non-spatial and spatial occupancy
-models using Markov Chain Monte Carlo (MCMC). Models are fit using
-Polya-Gamma data augmentation. Spatial models are fit using either
+spOccupancy fits single species, multispecies, and integrated spatial
+occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
+using Polya-Gamma data augmentation. Spatial models are fit using either
 Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for
 large spatial datasets. Provides functionality for data integration of
 multiple single species occupancy data sets using a joint likelihood
@@ -79,7 +79,7 @@ batches each of length 25. We discard the first 2000 iterations as
 burn-in and use a thinning rate of 8 for a resulting 1000 samples from
 the joint posterior. We fit the model using 5 nearest neighbors and an
 exponential correlation function. We also specify the `k.fold` argument
-to perform 4-fold cross-validation after fitting the full model.
+to perform 2-fold cross-validation after fitting the full model.
 
 ``` r
 # Run the model
@@ -88,14 +88,14 @@ out <- spPGOcc(occ.formula = btbw.occ.formula,
                data = btbwHBEF, n.batch = 400, batch.length = 25,
                accept.rate = 0.43, cov.model = "exponential", 
                NNGP = TRUE, n.neighbors = 5, n.burn = 2000, 
-               n.thin = 8, verbose = FALSE, k.fold = 4)
+               n.thin = 8, verbose = FALSE, k.fold = 2)
 summary(out)
 #> 
 #> Call:
 #> spPGOcc(occ.formula = btbw.occ.formula, det.formula = btbw.det.formula, 
 #>     data = btbwHBEF, cov.model = "exponential", NNGP = TRUE, 
 #>     n.neighbors = 5, n.batch = 400, batch.length = 25, accept.rate = 0.43, 
-#>     verbose = FALSE, n.burn = 2000, n.thin = 8, k.fold = 4)
+#>     verbose = FALSE, n.burn = 2000, n.thin = 8, k.fold = 2)
 #> 
 #> Chain Information:
 #> Total samples: 10000
@@ -105,21 +105,21 @@ summary(out)
 #> 
 #> Occurrence: 
 #>                          2.5%     25%     50%     75%   97.5%
-#> (Intercept)            3.1631  3.7915  4.1292  4.5246  5.4862
-#> scale(Elevation)      -1.0463 -0.6883 -0.5478 -0.4107 -0.1273
-#> I(scale(Elevation)^2) -1.6625 -1.3297 -1.1768 -1.0550 -0.8096
+#> (Intercept)            3.2495  3.7368  4.1049  4.5230  5.4486
+#> scale(Elevation)      -0.9596 -0.6692 -0.5236 -0.3942 -0.1374
+#> I(scale(Elevation)^2) -1.7186 -1.3472 -1.1981 -1.0537 -0.8364
 #> 
 #> Detection: 
 #>                    2.5%     25%     50%     75%  97.5%
-#> (Intercept)      0.4601  0.5906  0.6635  0.7402 0.8923
-#> scale(day)       0.1574  0.2470  0.2900  0.3391 0.4312
-#> scale(tod)      -0.1574 -0.0750 -0.0294  0.0203 0.1217
-#> I(scale(day)^2) -0.2562 -0.1335 -0.0743 -0.0155 0.0963
+#> (Intercept)      0.4517  0.5806  0.6565  0.7372 0.8891
+#> scale(day)       0.1619  0.2448  0.2934  0.3398 0.4279
+#> scale(tod)      -0.1634 -0.0806 -0.0345  0.0136 0.0949
+#> I(scale(day)^2) -0.2413 -0.1326 -0.0740 -0.0137 0.0936
 #> 
 #> Covariance: 
 #>            2.5%    25%    50%    75%  97.5%
-#> sigma.sq 0.4470 0.9317 1.3607 2.1120 4.1048
-#> phi      0.0012 0.0038 0.0076 0.0148 0.0275
+#> sigma.sq 0.3704 0.7420 1.1379 1.8005 4.2642
+#> phi      0.0017 0.0034 0.0072 0.0143 0.0284
 ```
 
 ### Posterior predictive check
@@ -145,7 +145,7 @@ summary(ppc.out)
 #> Thin: 8
 #> Total Posterior Samples: 1000
 #> 
-#> Bayesian p-value:  0.397 
+#> Bayesian p-value:  0.409 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -157,7 +157,7 @@ Criterion (WAIC) for use in model selection and assessment.
 ``` r
 waicOcc(out)
 #>      elpd        pD      WAIC 
-#> -675.0033   28.0920 1406.1906
+#> -676.9712   25.4458 1404.8339
 ```
 
 Alternatively, we can perform k-fold cross-validation directly in our
@@ -167,7 +167,7 @@ we access the devaince scoring rule from the 4-fold cross-validation.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1509.138
+#> [1] 1501.617
 ```
 
 ### Prediction
@@ -176,6 +176,8 @@ Out-of-sample prediction is possible using the `predict` function, a set
 of occurrence covariates at the new locations, and the spatial
 coordinates of the new locations. The object `hbefElev` contains
 elevation data across the entire Hubbard Brook Experimental Forest.
+Below we predict BTBW occurrence across the forest and plot the results
+using `ggplot2` and `stars`.
 
 ``` r
 # First standardize elevation using mean and sd from fitted model
@@ -187,8 +189,7 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The package vignette “Fitting occupancy models with spOccupancy”
-provides a more detailed description and tutorial of all functions in
-`spOccupancy`. For full statistical details on the MCMC samplers used in
-`spOccupancy`, see `MCMC samplers for models fit in spOccupancy`
-vignette.
+The `vignette("modelFitting")` provides a more detailed description and
+tutorial of all functions in `spOccupancy`. For full statistical details
+on the MCMC samplers used in `spOccupancy`, see
+`vignette("mcmcSamplers")`.

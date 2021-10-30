@@ -10,7 +10,8 @@ knitr::opts_chunk$set(
   comment = "#>",
   out.width = "100%")
 ```
-# spOccupancy: An R Package for single species, multispecies, and integrated spatial occupancy models 
+
+# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139"/></a>
 
 
 ```{r, echo=FALSE, results='asis', message=FALSE}
@@ -25,7 +26,7 @@ knitr::opts_chunk$set(
 # )
 ```
 
-Fits single-species and multi-species non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. 
+spOccupancy fits single species, multispecies, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. 
 
 ## Installation
 
@@ -82,7 +83,7 @@ btbw.occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
 btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
-We run the model using an Adaptive MCMC sampler with a target acceptance rate of 0.43. We run the model for 10,000 iterations split into 400 batches each of length 25. We discard the first 2000 iterations as burn-in and use a thinning rate of 8 for a resulting 1000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 4-fold cross-validation after fitting the full model. 
+We run the model using an Adaptive MCMC sampler with a target acceptance rate of 0.43. We run the model for 10,000 iterations split into 400 batches each of length 25. We discard the first 2000 iterations as burn-in and use a thinning rate of 8 for a resulting 1000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 2-fold cross-validation after fitting the full model. 
 
 ```{r}
 # Run the model
@@ -91,7 +92,7 @@ out <- spPGOcc(occ.formula = btbw.occ.formula,
                data = btbwHBEF, n.batch = 400, batch.length = 25,
                accept.rate = 0.43, cov.model = "exponential", 
                NNGP = TRUE, n.neighbors = 5, n.burn = 2000, 
-               n.thin = 8, verbose = FALSE, k.fold = 4)
+               n.thin = 8, verbose = FALSE, k.fold = 2)
 summary(out)
 ```
 
@@ -132,5 +133,5 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The package vignette "Fitting occupancy models with spOccupancy" provides a more detailed description and tutorial of all functions in `spOccupancy`. For full statistical details on the MCMC samplers used in `spOccupancy`, see `MCMC samplers for models fit in spOccupancy` vignette. 
+The `vignette("modelFitting")` provides a more detailed description and tutorial of all functions in `spOccupancy`. For full statistical details on the MCMC samplers used in `spOccupancy`, see `vignette("mcmcSamplers")`. 
 

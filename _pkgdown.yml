@@ -3,3 +3,21 @@ authors:
           href: "https://www.jeffdoser.com"
   Andrew Finley:
           href: "https://www.finley-lab.com/"
+reference:
+ - title: "Fitting Models"
+ - contents:
+   - PGOcc
+   - spPGOcc
+   - msPGOcc
+   - spMsPGOcc
+   - intPGOcc
+   - spIntPGOcc
+ - title: Goodness of Fit and Model Assessment
+ - contents:
+   - ppcOcc
+   - waicOcc
+ - title: "Data Simulation"
+ - contents: 
+   - simOcc
+   - simMsOcc
+   - simIntOcc

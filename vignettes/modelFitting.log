@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.11.20)  12 OCT 2021 16:36
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.11.20)  29 OCT 2021 09:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1225,24 +1225,24 @@ File: modelFitting_files/figure-latex/unnamed-chunk-82-1.pdf Graphic file (type
  pdf)
 <use modelFitting_files/figure-latex/unnamed-chunk-82-1.pdf>
 Package pdftex.def Info: modelFitting_files/figure-latex/unnamed-chunk-82-1.pdf
-  used on input line 3068.
+  used on input line 3065.
 (pdftex.def)             Requested size: 289.09251pt x 289.09251pt.
-[63 <./modelFitting_files/figure-latex/unnamed-chunk-82-1.pdf>] [64] [65] [66]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 3315.
-[67]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 3315.
+[63 <./modelFitting_files/figure-latex/unnamed-chunk-82-1.pdf>] [64] [65]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 3303.
+[66]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 3303.
 (./modelFitting.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 3315.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 3315.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 3303.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 3303.
 
 LaTeX Warning: There were multiply-defined labels.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 3315.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 3303.
  ) 
 Here is how much of TeX's memory you used:
- 14434 strings out of 494923
- 211188 string characters out of 6180741
- 314586 words of memory out of 5000000
+ 14433 strings out of 494923
+ 211181 string characters out of 6180741
+ 314968 words of memory out of 5000000
  17165 multiletter control sequences out of 15000+600000
  84178 words of font info for 134 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
@@ -1263,10 +1263,10 @@ f/fonts/type1/public/lm/lmri10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy
 s/type1/public/lm/lmtk10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.pfb
 ></usr/share/texmf/fonts/type1/public/lm/lmtt12.pfb></usr/share/texmf/fonts/typ
 e1/public/lm/lmtti10.pfb>
-Output written on modelFitting.pdf (67 pages, 1154793 bytes).
+Output written on modelFitting.pdf (66 pages, 1152689 bytes).
 PDF statistics:
- 920 PDF objects out of 1000 (max. 8388607)
- 769 compressed objects within 8 object streams
- 214 named destinations out of 1000 (max. 500000)
+ 915 PDF objects out of 1000 (max. 8388607)
+ 765 compressed objects within 8 object streams
+ 213 named destinations out of 1000 (max. 500000)
  12752 words of extra memory for PDF output out of 14400 (max. 10000000)
 

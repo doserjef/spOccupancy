@@ -1,12 +1,15 @@
 ---
 title: "MCMC samplers for models fit in `spOccupancy`"
-author: "Jeffrey W. Doser"
+author: "Jeffrey W. Doser, Andrew O. Finley, Elise F. Zipkin"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   bookdown::pdf_document2:
     toc: true
     toc_depth: 3
     number_sections: true
+pkgdown:
+  as_is: true
+  extension: pdf
 bibliography: [references.bib]
 biblio-style: apalike
 vignette: >
