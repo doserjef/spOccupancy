@@ -1,16 +1,18 @@
 #include <string>
-#include <R.h>
-#include <Rmath.h>
-#include <Rinternals.h>
-#include <R_ext/Linpack.h>
-#include <R_ext/Lapack.h>
-#include <R_ext/BLAS.h>
 #include "util.h"
 #include "rpg.h"
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
+#include <R.h>
+#include <Rmath.h>
+#include <Rinternals.h>
+#include <R_ext/Linpack.h>
+#include <R_ext/Lapack.h>
+#include <R_ext/BLAS.h>
+
 void updateBF1MsRE(double *B, double *F, double *c, double *C, double *coords, int *nnIndx, int *nnIndxLU, int n, int m, double sigmaSq, double phi, double nu, int covModel, double *bk, double nuUnifb){
     
   int i, k, l;

@@ -1,16 +1,17 @@
 #include <string>
-#include <R.h>
-#include <Rmath.h>
-#include <Rinternals.h>
-#include <R_ext/Linpack.h>
-#include <R_ext/Lapack.h>
-#include <R_ext/BLAS.h>
 #include "util.h"
 #include "rpg.h"
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
+#include <R.h>
+#include <Rmath.h>
+#include <Rinternals.h>
+#include <R_ext/Linpack.h>
+#include <R_ext/Lapack.h>
+#include <R_ext/BLAS.h>
 
 extern "C" {
   SEXP spPGOccRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP XpRE_r, SEXP lambdaP_r, 

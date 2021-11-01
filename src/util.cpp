@@ -1,15 +1,16 @@
 #include <string>
 #include <limits>
-#include <R.h>
-#include <Rmath.h>
-#include <Rinternals.h>
-#include <R_ext/BLAS.h>
-#include <R_ext/Utils.h>
 #include "util.h"
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
+#include <R.h>
+#include <Rmath.h>
+#include <Rinternals.h>
+#include <R_ext/BLAS.h>
+#include <R_ext/Utils.h>
 
 extern "C" {
   void zeros(double *a, int n){

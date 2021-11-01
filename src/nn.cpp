@@ -2,11 +2,6 @@
 #include <string>
 #include <limits>
 #include <iostream>
-#include <R.h>
-#include <Rmath.h>
-#include <Rinternals.h>
-#include <R_ext/BLAS.h>
-#include <R_ext/Utils.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -14,6 +9,13 @@
 
 #include "util.h"
 #include "nn.h"
+#include <R.h>
+#include <Rmath.h>
+#include <Rinternals.h>
+#include <R_ext/BLAS.h>
+#include <R_ext/Utils.h>
+
+
 
 ///////////////////////////////////////////////////////////////////
 //u index 

@@ -369,7 +369,8 @@ For `PGOcc` objects, the `predict` function takes two arguments: (1) the `PGOcc`
 plot.dat <- data.frame(x = hbefElev$Easting, 
                        y = hbefElev$Northing, 
                        mean.psi = apply(out.pred$psi.0.samples, 2, mean), 
-                       sd.psi = apply(out.pred$psi.0.samples, 2, sd))
+                       sd.psi = apply(out.pred$psi.0.samples, 2, sd), 
+		       stringsAsFactors = FALSE)
 
 dat.stars <- st_as_stars(plot.dat, dims = c('x', 'y'))
 ggplot() + 

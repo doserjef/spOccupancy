@@ -14,6 +14,3 @@ URL: https://www.jeffdoser.com/files/spoccupancy-web, https://github.com/doserje
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Imports: 
     stats, coda, abind, RANN, lme4, foreach, doParallel
-Suggests: 
-    rmarkdown, knitr, stars, ggplot2, dplyr, bookdown
-VignetteBuilder: knitr

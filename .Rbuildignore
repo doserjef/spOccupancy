@@ -4,5 +4,6 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
-compile
-man/figures/
+^vignettes$
+^compile$
+^README\.Rmd$
