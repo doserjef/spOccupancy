@@ -70,6 +70,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
   coords <- as.matrix(data$coords)
+  if (!missing(k.fold)) {
+    if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+      stop("error: k.fold must be a single integer value >= 2")  
+    }
+  }
 
   # Checking missing values ---------------------------------------------
   y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
@@ -160,7 +165,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   # Number of sites
   J <- nrow(X)
   # Number of repeat visits
-  n.rep <- apply(y.big[1, , ], 1, function(a) sum(!is.na(a)))
+  n.rep <- apply(y.big[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
   K.max <- max(n.rep)
   # Because I like K better than n.rep
   K <- n.rep

@@ -39,6 +39,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: data must be a list")
   }
   names(data) <- tolower(names(data))
+  if (missing(occ.formula)) {
+    stop("error: occ.formula must be specified")
+  }
+  if (missing(det.formula)) {
+    stop("error: det.formula must be specified")
+  }
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
   }
@@ -47,6 +53,14 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   }
   y <- data$y
   n.data <- length(y)
+  # Check if individual data sets are provided as vectors for nonreplicated data, 
+  # then convert all to matrices to allow for data frames.
+  for (q in 1:n.data) {
+    if (is.null(dim(y[[q]]))) {
+      message(paste("Data source ", q, " is provided as a one-dimensional vector.\nAssuming this is a nonreplicated detection-nondetection data source.\n", sep = ''))
+    }
+    y[[q]] <- as.matrix(y[[q]])
+  }
   if (!'sites' %in% names(data)) {
     stop("error: site ids must be specified in data")
   }
@@ -88,6 +102,11 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
   coords <- as.matrix(data$coords)
+  if (!missing(k.fold)) {
+    if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+      stop("error: k.fold must be a single integer value >= 2")  
+    }
+  }
 
     # Checking missing values ---------------------------------------------
     for (q in 1:n.data) {
@@ -130,9 +149,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   # Formula -------------------------------------------------------------
   # Occupancy -----------------------
-  if (missing(occ.formula)) {
-    stop("error: occ.formula must be specified")
-  }
 
   if (class(occ.formula) == 'formula') {
     tmp <- parseFormula(occ.formula, data$occ.covs)
@@ -143,9 +159,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   }
 
   # Detection -----------------------
-  if (missing(det.formula)) {
-    stop("error: det.formula must be specified")
-  }
   if (!is.list(det.formula)) {
     stop(paste("error: det.formula must be a list of ", n.data, " formulas", sep = ''))
   }

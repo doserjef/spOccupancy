@@ -1,6 +1,6 @@
 simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
-		     p.RE = list(), sigma.sq = rep(2, N), 
-		     phi = rep(3/0.5, N), sp = FALSE, ...) {
+		     p.RE = list(), sp = FALSE, cov.model, 
+		     sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -59,13 +59,33 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   if (nrow(alpha) != N) {
     stop(paste("error: alpha must be a numeric matrix with ", N, " rows", sep = ''))
   }
-  # sigma.sq --------------------------
-  if (length(sigma.sq) != N) {
-    stop(paste("error: if specified, sigma.sq must be a vector of length ", N, sep = ''))
-  }
-  # phi -------------------------------
-  if (length(phi) != N) {
-    stop(paste("error: if specified, phi must be a vector of length ", N, sep = ''))
+  if (sp) {
+    # sigma.sq --------------------------
+    if (missing(sigma.sq)) {
+      stop("error: sigma.sq must be specified when sp = TRUE")
+    }
+    if (length(sigma.sq) != N) {
+      stop(paste("error: sigma.sq must be a vector of length ", N, sep = ''))
+    }
+    # phi -------------------------------
+    if(missing(phi)) {
+      stop("error: phi must be specified when sp = TRUE")
+    }
+    if (length(phi) != N) {
+      stop(paste("error: phi must be a vector of length ", N, sep = ''))
+    }
+    # Covariance model ----------------
+    if(missing(cov.model)) {
+      stop("error: cov.model must be specified when sp = TRUE")
+    }
+    cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
+    if(! cov.model %in% cov.model.names){
+      stop("error: specified cov.model '",cov.model,"' is not a valid option; choose from ", 
+           paste(cov.model.names, collapse=", ", sep="") ,".")
+    }
+    if (cov.model == 'matern' & missing(nu)) {
+      stop("error: nu must be specified when cov.model = 'matern'")
+    }
   }
   # psi.RE ----------------------------
   names(psi.RE) <- tolower(names(psi.RE))
@@ -133,13 +153,22 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
-  coords <- expand.grid(s.x, s.y)
-  # Distance matrix
-  D <- as.matrix(dist(coords))
-  # Spatial random effects for each species (assuming exponential decay)
-  w <- matrix(NA, nrow = N, ncol = J)
-  for (i in 1:N) {
-    w[i, ] <- rmvn(1, rep(0, J), sigma.sq[i] * exp(-phi[i] * D))
+  coords <- as.matrix(expand.grid(s.x, s.y))
+  if (sp) {
+    if (cov.model == 'matern') {
+      theta <- cbind(phi, nu)
+    } else {
+      theta <- as.matrix(phi)
+    }
+    # Spatial random effects for each species
+    w <- matrix(NA, nrow = N, ncol = J)
+    for (i in 1:N) {
+      Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), 
+          	     theta[i, ], cov.model)
+      w[i, ] <- rmvn(1, rep(0, J), Sigma)
+    }
+  } else {
+    w <- NA
   }
 
   # Random effects --------------------------------------------------------
@@ -238,7 +267,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     } # j
   } # i
   return(
-    list(X = X, X.p = X.p, coords = coords, D = D,
+    list(X = X, X.p = X.p, coords = coords,
 	 w = w, psi = psi, z = z, p = p, y = y, X.p.re = X.p.re, 
 	 X.re = X.re, alpha.star = alpha.star, beta.star = beta.star)
   )

@@ -3,13 +3,12 @@
 \title{Simulate Multi-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simMsOcc} simulates multi-species detection-nondetection data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process following an exponential correlation function.
+  The function \code{simMsOcc} simulates multi-species detection-nondetection data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
 simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
-	 p.RE = list(), sigma.sq = rep(2, N), phi = rep(3/0.5, N), sp = FALSE, 
-	 ...)
+	 p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 
 \arguments{
@@ -30,11 +29,15 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 
 \item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
+\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+
+\item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
+
 \item{sigma.sq}{a numeric vector of length \eqn{N}{N} containing the spatial variance parameter for each species. Ignored when \code{sp = FALSE}. }
 
 \item{phi}{a numeric vector of length \eqn{N}{N} containing the spatial range parameter for each species. Ignored when \code{sp = FALSE}.}
 
-\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+\item{nu}{a numeric vector of length \eqn{N}{N} containing the spatial smoothness parameter for each species. Only used when \code{sp = TRUE} and \code{cov.model = 'matern'}.} 
 
 \item{...}{currently no additional arguments}
 }
@@ -50,7 +53,6 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occurrence portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
   \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
-  \item{D}{a \eqn{J \times J}{J x J} numeric matrix consisting of the distances between all occupancy sites.}
   \item{w}{a \eqn{N \times J}{N x J} matrix of the spatial random effects for each species. Only used to simulate data when \code{sp = TRUE}.}
   \item{psi}{a \eqn{N \times J}{N x J} matrix of the occurrence probabilities for each species at each site.}
   \item{z}{a \eqn{N \times J}{N x J} matrix of the latent occurrence states for each species at each site.}
@@ -98,6 +100,6 @@ sigma.sq <- runif(N, 0.3, 3)
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, 
-		alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, phi = phi, 
-		sigma.sq = sigma.sq, sp = sp)
+		alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, 
+		cov.model = 'exponential', phi = phi, sigma.sq = sigma.sq)
 }

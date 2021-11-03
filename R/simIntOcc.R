@@ -1,5 +1,5 @@
 simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, 
-		      sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...) {
+		      sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -65,6 +65,26 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   if (!is.list(alpha)) {
     stop(paste("error: alpha must be a list with ", n.data, " vectors", sep = ''))
   }
+  # Spatial parameters ----------------
+  if (sp) {
+    if(missing(sigma.sq)) {
+      stop("error: sigma.sq must be specified when sp = TRUE")
+    }
+    if(missing(phi)) {
+      stop("error: phi must be specified when sp = TRUE")
+    }
+    if(missing(cov.model)) {
+      stop("error: cov.model must be specified when sp = TRUE")
+    }
+    cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
+    if(! cov.model %in% cov.model.names){
+      stop("error: specified cov.model '",cov.model,"' is not a valid option; choose from ", 
+           paste(cov.model.names, collapse=", ", sep="") ,".")
+    }
+    if (cov.model == 'matern' & missing(nu)) {
+      stop("error: nu must be specified when cov.model = 'matern'")
+    }
+  }
 
   # Subroutines -----------------------------------------------------------
   # MVN 
@@ -116,13 +136,19 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
-  coords <- expand.grid(s.x, s.y)
-  # Distance matrix
-  D <- as.matrix(dist(coords))
-  # Exponential correlation function
-  R <- exp(-phi * D)
-  # Random spatial process
-  w <- rmvn(1, rep(0, J), sigma.sq * R)
+  coords <- as.matrix(expand.grid(s.x, s.y))
+  if (sp) {
+    if (cov.model == 'matern') {
+      theta <- c(phi, nu)
+    } else {
+      theta <- phi
+    }
+    Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
+    # Random spatial process
+    w <- rmvn(1, rep(0, J), Sigma)
+  } else {
+    w <- NA
+  }
 
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {
@@ -156,14 +182,15 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   X.pred <- X[sites.pred, , drop = FALSE]
   z.obs <- z[sites.obs]
   z.pred <- z[sites.pred]
-  D.obs <- D[sites.obs, sites.obs, drop = FALSE]
-  D.pred <- D[sites.pred, sites.pred, drop = FALSE]
   coords.obs <- coords[sites.obs,, drop = FALSE]
   coords.pred <- coords[sites.pred,, drop = FALSE]
-  R.obs <- R[sites.obs, sites.obs, drop = FALSE]
-  R.pred <- R[sites.pred, sites.pred, drop = FALSE]
-  w.obs <- w[sites.obs, , drop = FALSE]
-  w.pred <- w[sites.pred, , drop = FALSE]
+  if (sp) {
+    w.obs <- w[sites.obs, , drop = FALSE]
+    w.pred <- w[sites.pred, , drop = FALSE]
+  } else {
+    w.obs <- NA
+    w.pred <- NA
+  }
   psi.obs <- psi[sites.obs, , drop = FALSE]
   psi.pred <- psi[sites.pred, , drop = FALSE]
   sites.vec <- unlist(sites)
@@ -182,7 +209,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   return(
     list(X.obs = X.obs, X.pred = X.pred, X.p = X.p, 
 	 coords.obs = coords.obs, coords.pred = coords.pred, 
-	 D.obs = D.obs, D.pred = D.pred, w.obs = w.obs, w.pred = w.pred, 
+	 w.obs = w.obs, w.pred = w.pred, 
 	 psi.obs = psi.obs, psi.pred = psi.pred, z.obs = z.obs, 
 	 z.pred = z.pred, p = p, y = y, sites = sites.return
 	)

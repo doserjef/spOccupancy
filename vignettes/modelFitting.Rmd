@@ -34,7 +34,7 @@ This vignette provides worked examples and explanations for fitting single speci
 5. Integrated occupancy model using `intPGOcc()`.
 6. Spatial integrated occupancy model using `spIntPGOcc()`. 
 
-In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate MCMC sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC) and k-fold cross-validation, and out of sample predictions using standard R helper functions (i.e., `predict()`).   
+In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate MCMC sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out of sample predictions using standard R helper functions (e.g., `predict()`).   
 
 To get started, we load the `spOccupancy` package, as well as the `coda` package, which we will use for some MCMC diagnostics. We will also use the `stars` and `ggplot2` packages to create some very basic plots of our results. We then set a seed so we can reproduce the same results.
 
@@ -64,7 +64,7 @@ ovenHBEF$y <- ovenHBEF$y[sp.names == "OVEN", , ]
 table(ovenHBEF$y)
 ```
 
-We see OVEN is detected at a few more than half of all site-replicate combinations.
+We see OVEN is detected at little over half of all site-replicate combinations.
 
 # Single species occupancy models
 
@@ -114,7 +114,7 @@ oven.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 str(ovenHBEF)
 ```
 
-Next, we specify the starting values for the MCMC sampler in `starting`. `PGOcc()` (and all other `spOccupancy` model fitting functions) will set starting values by default, but here we will do this explicitly. Starting values are specified in a list with the following tags: `z` (latent occurrence values), `alpha` (detection regression coefficients), and `beta` (occurrence regression coefficients). Below we set all initial values of the regression coefficients to 0, and set starting values for `z` based on the detection-nondetection data matrix. For the occurrence (`beta`) and detection (`alpha`) regression coefficients, the starting values are passed in either as a vector of length corresponding to the number of estimated parameters, or as a single value if setting the same starting value for all parameters. Below we take the latter approach.  
+Next, we specify the starting values for the MCMC sampler in `starting`. `PGOcc()` (and all other `spOccupancy` model fitting functions) will set starting values by default, but here we will do this explicitly. Starting values are specified in a list with the following tags: `z` (latent occurrence values), `alpha` (detection regression coefficients), and `beta` (occurrence regression coefficients). Below we set all initial values of the regression coefficients to 0, and set starting values for `z` based on the detection-nondetection data matrix. For the occurrence (`beta`) and detection (`alpha`) regression coefficients, the starting values are passed in either as a vector of length corresponding to the number of estimated parameters, or as a single value if setting the same starting value for all parameters. Below we take the latter approach. To specify the starting values for the latent occurrence at each site (`z`), we must ensure we set the value to 1 at all sites where OVEN was detected, because if we detect OVEN at a site then the value of `z` is 1 with complete certainty. If the initial value for `z` at a site is set to 0 when the species was detected there, the occupancy model will fail. `spOccupancy` will provide a clear error message if the supplied starting values for `z` are invalid. Below we use the raw detection-nondetection data and the `apply()` function to set the initial values to 1 if OVEN was detected at that site and 0 otherwise. 
 
 ```{r}
 oven.starting <- list(alpha = 0, 
@@ -234,7 +234,7 @@ ppc.out <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
 summary(ppc.out)
 ```
 
-The Bayesian p-value is the proportion of posterior samples of the fit statistic of the model generated data that are greater than the corresponding fit statistic of the true data, summed across all "grouped" data points. We can create a visual representation of the Bayesian p-value as follows, which is highly motivated by @kery2015applied. 
+The Bayesian p-value is the proportion of posterior samples of the fit statistic of the model generated data that are greater than the corresponding fit statistic of the true data, summed across all "grouped" data points. We can create a visual representation of the Bayesian p-value as follows [@kery2015applied]: 
 
 ```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
 ppc.df <- data.frame(fit = ppc.out$fit.y, 
@@ -301,7 +301,7 @@ As a measure of out-of-sample predictive performance, we use the deviance as a c
 -2 \sum_{k = 1}^K \text{log}\Bigg(\frac{\sum_{q = 1}^Q \text{Bernoulli}(\bm{y}_k \mid \bm{p}^{(q)}\bm{z}_k^{(q)})}{Q}\Bigg), 
 \end{equation}
 
-where $\bm{p}^{(q)}$ and $\bm{z}_k^{(q)}$ are MCMC samples of detection probability and latent occurrence, respectively, arising from a model that is fit without the observations $\bm{y}_k$, and Q$ is the total number of posterior samples from the MCMC sampler. The -2 is used so that smaller values indicate better model fit, which aligns with most information criteria used for model assessment (like the WAIC implemented using `waicOcc()`). 
+where $\bm{p}^{(q)}$ and $\bm{z}_k^{(q)}$ are MCMC samples of detection probability and latent occurrence, respectively, arising from a model that is fit without the observations $\bm{y}_k$, and $Q$ is the total number of posterior samples from the MCMC sampler. The -2 is used so that smaller values indicate better model fit, which aligns with most information criteria used for model assessment (like the WAIC implemented using `waicOcc()`). 
 
 The final three arguments (`k.fold`, `k.fold.threads`, `k.fold.seed`) in `PGOcc()` control whether or not k-fold cross validation is performed following the complete fit of the model using the entire data set. The `k.fold` argument indicates the number of $k$ folds to use for cross-validation. If `k.fold` is not specified, cross-validation is not performed and `k.fold.threads` and `k.fold.seed` are ignored. The `k.fold.threads` argument indicates the number of threads to use for running the $k$ models in parallel across multiple threads. Parallel processing is accomplished using the R packages `foreach` and `doParallel`. Specifying `k.fold.threads > 1` can substantially decrease run time since it allows for models to be fit simultaneously on different threads rather than sequentially. The `k.fold.seed` indicates the seed used to randomly split the data into $k$ groups. This is by default set to 100.
 

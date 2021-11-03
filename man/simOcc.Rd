@@ -3,12 +3,12 @@
 \title{Simulate Single-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simOcc} simulates single-species occurrence data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model following an exponential correlation function. Random intercepts can also be included in the detection or occurrence portions of the occupancy model.
+  The function \code{simOcc} simulates single-species occurrence data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
 simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
-       p.RE = list(), sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...)
+       p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 
 \arguments{
@@ -26,11 +26,15 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 
 \item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
+\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+
+\item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
+
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
 
 \item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
 
-\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+\item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
 
 \item{...}{currently no additional arguments}
 }
@@ -46,7 +50,6 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
   \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occupancy portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
   \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
-  \item{D}{a \eqn{J \times J}{J x J} numeric matrix consisting of the distances between all occupancy sites.}
   \item{w}{a \eqn{J \times 1}{J x 1} matrix of the spatial random effects. Only used to simulate data when \code{sp = TRUE}.}
   \item{psi}{a \eqn{J \times 1}{J x 1} matrix of the occupancy probabilities for each site.}
   \item{z}{a length \eqn{J}{J} vector of the latent occupancy states at each site.}
@@ -72,6 +75,6 @@ psi.RE <- list(levels = 10,
 p.RE <- list(levels = 15, 
 	     sigma.sq.p = 0.8)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-	      psi.RE = psi.RE, p.RE = p.RE, sigma.sq = sigma.sq, 
-	      phi = phi, sp = TRUE)
+	      psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, cov.model = 'spherical', 
+	      sigma.sq = sigma.sq, phi = phi)
 }

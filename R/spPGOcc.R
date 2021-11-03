@@ -40,6 +40,12 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: data must be a list")
   }
   names(data) <- tolower(names(data))
+  if (missing(occ.formula)) {
+    stop("error: occ.formula must be specified")
+  }
+  if (missing(det.formula)) {
+    stop("error: det.formula must be specified")
+  }
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
   }
@@ -64,10 +70,24 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       stop("error: det.covs must be specified in data for a detection model with covariates")
     }
   }
+  if (!is.matrix(data$occ.covs) & !is.data.frame(data$occ.covs)) {
+    stop("error: occ.covs must be a matrix or data frame")
+  }
   if (!'coords' %in% names(data)) {
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
+  if (!is.matrix(data$coords) & !is.data.frame(data$coords)) {
+    stop("error: coords must be a matrix or data frame")
+  }
   coords <- as.matrix(data$coords)
+  if (!is.list(data$det.covs)) {
+    stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
+  }
+  if (!missing(k.fold)) {
+    if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+      stop("error: k.fold must be a single integer value >= 2")  
+    }
+  }
 
   # Checking missing values ---------------------------------------------
   y.na.test <- apply(y, 1, function(a) sum(!is.na(a)))
@@ -117,10 +137,6 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   # Formula -------------------------------------------------------------
   # Occupancy -----------------------
-  if (missing(occ.formula)) {
-    stop("error: occ.formula must be specified")
-  }
-
   if (class(occ.formula) == 'formula') {
     tmp <- parseFormula(occ.formula, data$occ.covs)
     X <- as.matrix(tmp[[1]])
@@ -130,10 +146,6 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   }
 
   # Detection -----------------------
-  if (missing(det.formula)) {
-    stop("error: det.formula must be specified")
-  }
-
   if (class(det.formula) == 'formula') {
     tmp <- parseFormula(det.formula, data$det.covs)
     X.p <- as.matrix(tmp[[1]])
@@ -169,6 +181,12 @@ spPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: must specify length of each MCMC batch")
   }
   n.samples <- n.batch * batch.length
+  if (n.burn > n.samples) {
+    stop("error: n.burn must be less than n.samples")
+  }
+  if (n.thin > n.samples) {
+    stop("error: n.thin must be less than n.samples")
+  }
 
   # Get indices to map z to y -------------------------------------------
   if (!binom) {

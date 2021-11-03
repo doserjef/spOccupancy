@@ -62,6 +62,11 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop("error: det.covs must be specified in data for a detection model with covariates")
       }
     }
+    if (!missing(k.fold)) {
+      if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+        stop("error: k.fold must be a single integer value >= 2")  
+      }
+    }
 
     # First subset detection covariates to only use those that are included in the analysis. 
     data$det.covs <- data$det.covs[names(data$det.covs) %in% all.vars(det.formula)]
@@ -142,7 +147,7 @@ msPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Number of repeat visits
     # Note this assumes equivalent detection histories for all species. 
     # May want to change this at some point. 
-    n.rep <- apply(y.big[1, , ], 1, function(a) sum(!is.na(a)))
+    n.rep <- apply(y.big[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
     K.max <- max(n.rep)
     # Because I like K better than n.rep
     K <- n.rep

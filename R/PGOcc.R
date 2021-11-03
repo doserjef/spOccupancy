@@ -36,6 +36,12 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
       stop("error: data must be a list")
     }
     names(data) <- tolower(names(data))
+    if (missing(occ.formula)) {
+      stop("error: occ.formula must be specified")
+    }
+    if (missing(det.formula)) {
+      stop("error: det.formula must be specified")
+    }
     if (!'y' %in% names(data)) {
       stop("error: detection-nondetection data y must be specified in data")
     }
@@ -50,6 +56,9 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         stop("error: occ.covs must be specified in data for an occupancy model with covariates")
       }
     }
+    if (!is.matrix(data$occ.covs) & !is.data.frame(data$occ.covs)) {
+      stop("error: occ.covs must be a matrix or data frame")
+    }
     if (!'det.covs' %in% names(data)) {
       if (det.formula == ~ 1) {
         if (verbose) {
@@ -58,6 +67,23 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
         data$det.covs <- list(int = rep(1, dim(y)[1]))
       } else {
         stop("error: det.covs must be specified in data for a detection model with covariates")
+      }
+    }
+    if (!is.list(data$det.covs)) {
+      stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
+    }
+    if (missing(n.samples)) {
+      stop("error: n.samples must be specified")
+    }
+    if (n.burn > n.samples) {
+      stop("error: n.burn must be less than n.samples")
+    }
+    if (n.thin > n.samples) {
+      stop("error: n.thin must be less than n.samples")
+    }
+    if (!missing(k.fold)) {
+      if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+        stop("error: k.fold must be a single integer value >= 2")  
       }
     }
 
@@ -89,10 +115,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------
-    if (missing(occ.formula)) {
-      stop("error: occ.formula must be specified")
-    }
-
     if (class(occ.formula) == 'formula') {
       tmp <- parseFormula(occ.formula, data$occ.covs)
       X <- as.matrix(tmp[[1]])
@@ -104,10 +126,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
 
     # Detection -----------------------
-    if (missing(det.formula)) {
-      stop("error: det.formula must be specified")
-    }
-
     if (class(det.formula) == 'formula') {
       tmp <- parseFormula(det.formula, data$det.covs)
       X.p <- as.matrix(tmp[[1]])
@@ -567,7 +585,6 @@ PGOcc <- function(occ.formula, det.formula, data, starting, priors,
           message(paste("Performing ", k.fold, "-fold cross-validation using ", k.fold.threads,
 	  	        " thread(s).", sep = ''))
 	}
-        # Currently implemented without parellization. 
 	set.seed(k.fold.seed)
 	# Number of sites in each hold out data set. 
 	sites.random <- sample(1:J)    

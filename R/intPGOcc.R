@@ -43,6 +43,14 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
     y <- data$y
     n.data <- length(y)
+    # Check if individual data sets are provided as vectors for nonreplicated data, 
+    # then convert all to matrices to allow for data frames.
+    for (q in 1:n.data) {
+      if (is.null(dim(y[[q]]))) {
+        message(paste("Data source ", q, " is provided as a one-dimensional vector.\nAssuming this is a nonreplicated detection-nondetection data source.\n", sep = ''))
+      }
+      y[[q]] <- as.matrix(y[[q]])
+    }
     if (!'sites' %in% names(data)) {
       stop("error: site ids must be specified in data")
     }
@@ -77,6 +85,12 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         }
       }
     }
+    if (!missing(k.fold)) {
+      if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+        stop("error: k.fold must be a single integer value >= 2")  
+      }
+    }
+
     # Make all covariates a data frame. Unlist is necessary for when factors
     # are supplied. 
     for (i in 1:n.data) {

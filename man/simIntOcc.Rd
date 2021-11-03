@@ -3,12 +3,12 @@
 \title{Simulate Single-Species Detection-Nondetection Data from Multiple Data Sources}
 
 \description{
-  The function \code{simIntOcc} simulates single-species detection-nondetection data from multiple data sources for simulation studies, power assessments, or function testing of integrated occupancy models. Data can optionally be simulated with a spatial Gaussian Process on the occupancy process following an exponential correlation function.
+  The function \code{simIntOcc} simulates single-species detection-nondetection data from multiple data sources for simulation studies, power assessments, or function testing of integrated occupancy models. Data can optionally be simulated with a spatial Gaussian Process on the occurrence process.
 }
 
 \usage{
-simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2, 
-	  phi = 3/0.5, sp = FALSE, ...)
+simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
+	  sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 \arguments{
 
@@ -24,13 +24,17 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, sigma.sq = 2,
 
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occurrence portion of the single-species occupancy model.}
 
-\item{alpha}{a list of length \code{n.data}. Each element is a numeric vector containing the intercept and regression coefficient parameters for the detection portion of the single-species occupancy model for each data source.}
+\item{alpha}{a list of length \code{n.data}. Each element is a numeric vector containing the intercept and regression coefficient parameters for the detection portion of the single-species occupancy model for each data source.}		
+
+\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+
+\item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
 
 \item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
 
-\item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process and exponential correlation function. By default set to \code{FALSE}.}
+\item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.}
 
 \item{...}{currently no additional arguments}
 }
@@ -93,6 +97,6 @@ sp <- TRUE
 
 # Simulate occupancy data. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sigma.sq = sigma.sq, 
-		 phi = phi, sp = sp)
+		 n.rep = n.rep, beta = beta, alpha = alpha, sp = TRUE, 
+		 cov.model = 'gaussian', sigma.sq = sigma.sq, phi = phi)
 }

@@ -1,5 +1,5 @@
 simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(), 
-		   sigma.sq = 2, phi = 3/0.5, sp = FALSE, ...) {
+		   sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -66,6 +66,26 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
       stop("error: levels must be a tag in p.RE with the number of random effect levels for each detection random intercept.")
     }
   }
+  # Spatial parameters ----------------
+  if (sp) {
+    if(missing(sigma.sq)) {
+      stop("error: sigma.sq must be specified when sp = TRUE")
+    }
+    if(missing(phi)) {
+      stop("error: phi must be specified when sp = TRUE")
+    }
+    if(missing(cov.model)) {
+      stop("error: cov.model must be specified when sp = TRUE")
+    }
+    cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
+    if(! cov.model %in% cov.model.names){
+      stop("error: specified cov.model '",cov.model,"' is not a valid option; choose from ", 
+           paste(cov.model.names, collapse=", ", sep="") ,".")
+    }
+    if (cov.model == 'matern' & missing(nu)) {
+      stop("error: nu must be specified when cov.model = 'matern'")
+    }
+  }
 
   # Subroutines -----------------------------------------------------------
   # MVN
@@ -105,13 +125,19 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
-  coords <- expand.grid(s.x, s.y)
-  # Distance matrix
-  D <- as.matrix(dist(coords))
-  # Exponential correlation function
-  R <- exp(-phi * D)
-  # Random spatial process
-  w <- rmvn(1, rep(0, J), sigma.sq * R)
+  coords <- as.matrix(expand.grid(s.x, s.y))
+  if (sp) {
+    if (cov.model == 'matern') {
+      theta <- c(phi, nu)
+    } else {
+      theta <- phi
+    }
+    Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
+    # Random spatial process
+    w <- rmvn(1, rep(0, J), Sigma)
+  } else {
+    w <- NA
+  }
 
   # Random effects --------------------------------------------------------
   if (length(psi.RE) > 0) {
@@ -194,7 +220,7 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
   } # j
 
   return(
-    list(X = X, X.p = X.p, coords = coords, D = D,
+    list(X = X, X.p = X.p, coords = coords,
          w = w, psi = psi, z = z, p = p, y = y, 
 	 X.p.re = X.p.re, X.re = X.re, 
 	 alpha.star = alpha.star, beta.star = beta.star)
