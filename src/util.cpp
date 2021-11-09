@@ -12,7 +12,6 @@
 #include <R_ext/BLAS.h>
 #include <R_ext/Utils.h>
 
-extern "C" {
   void zeros(double *a, int n){
     for(int i = 0; i < n; i++)
       a[i] = 0.0;
@@ -470,5 +469,3 @@ double spCor(double &D, double &phi, double &nu, int &covModel, double *bk){
   }
 }
 
-
-}
