@@ -85,7 +85,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
 	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
@@ -93,7 +93,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         }
       } else if (fit.stat == 'freeman-tukey') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
 	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
@@ -107,7 +107,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
       if (fit.stat == 'chi-square') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
 	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
@@ -115,7 +115,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         }
       } else if (fit.stat == 'freeman-tukey') {
         for (i in 1:n.samples) {
-          E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+          E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
 	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
@@ -154,7 +154,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       }
     }
     p.det <- dim(X.p)[2]
-    n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
+    n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
     J <- dim(y)[2]
     N <- dim(y)[1]
     if (class(object) == 'msPGOcc') {
@@ -181,7 +181,12 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     }
     det.prob <- aperm(det.prob, c(3, 2, 1))
     det.prob.full <- array(NA, dim(y.rep.samples))
-    det.prob.full[!is.na(y.rep.samples)] <- det.prob
+    # Null model support
+    if (sum(dim(y.rep.samples)[1:3] == dim(det.prob)) == 3) {
+      det.prob.full[, , , ] <- det.prob
+    } else {
+      det.prob.full[!is.na(y.rep.samples)] <- det.prob
+    }
     fit.y <- matrix(NA, n.samples, N)
     fit.y.rep <- matrix(NA, n.samples, N)
     e <- 0.0001
@@ -195,7 +200,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         print(paste("Currently on species ", i, " out of ", N, sep = ''))
         if (fit.stat == 'chi-square') {
             for (j in 1:n.samples) {
-              E.grouped <- apply(det.prob.full[j, i, , ] * z.samples[j, i, ], 1, sum, na.rm = TRUE)
+              E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 3, sum, na.rm = TRUE)
               fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
               fit.y[j, i] <- sum(fit.big.y[j, i, ])
               fit.big.y.rep[j, i, ] <- (y.rep.grouped[j, i, ] - E.grouped)^2 / (E.grouped + e)
@@ -203,7 +208,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
             }
         } else if (fit.stat == 'freeman-tukey') {
           for (j in 1:n.samples) {
-            E.grouped <- apply(det.prob.full[j, i, , ] * z.samples[j, i, ], 1, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 3, sum, na.rm = TRUE)
             fit.big.y[j, i, ] <- (sqrt(y.grouped[i, ]) - sqrt(E.grouped))^2 
             fit.y[j, i] <- sum(fit.big.y[j, i, ])
             fit.big.y.rep[j, i, ] <- (sqrt(y.rep.grouped[j, i, ]) - sqrt(E.grouped))^2 
@@ -220,7 +225,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         print(paste("Currently on species ", i, " out of ", N, sep = ''))
         if (fit.stat == 'chi-square') {
           for (j in 1:n.samples) {
-            E.grouped <- apply(det.prob.full[j, i, , ] * z.samples[j, i, ], 2, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 4, sum, na.rm = TRUE)
             fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
             fit.y[j, i] <- sum(fit.big.y[j, i, ])
             fit.big.y.rep[j, i, ] <- (y.rep.grouped[j, i, ] - E.grouped)^2 / (E.grouped + e)
@@ -228,7 +233,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           }
         } else if (fit.stat == 'freeman-tukey') {
           for (j in 1:n.samples) {
-            E.grouped <- apply(det.prob.full[j, i, , ] * z.samples[j, i, ], 2, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 4, sum, na.rm = TRUE)
             fit.big.y[j, i, ] <- (sqrt(y.grouped[i, ]) - sqrt(E.grouped))^2 
             fit.y[j, i] <- sum(fit.big.y[j, i, ])
             fit.big.y.rep[j, i, ] <- (sqrt(y.rep.grouped[j, i, ]) - sqrt(E.grouped))^2 
@@ -286,7 +291,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         fit.big.y <- matrix(NA, length(y.grouped), n.samples)
         if (fit.stat == 'chi-square') {
           for (i in 1:n.samples) {
-            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
             fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
             fit.y[i] <- sum(fit.big.y[, i])
             fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
@@ -294,7 +299,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           }
         } else if (fit.stat == 'freeman-tukey') {
           for (i in 1:n.samples) {
-            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 1, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
             fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
             fit.y[i] <- sum(fit.big.y[, i])
             fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
@@ -308,7 +313,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
         if (fit.stat == 'chi-square') {
           for (i in 1:n.samples) {
-            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
             fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
             fit.y[i] <- sum(fit.big.y[, i])
             fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
@@ -316,7 +321,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           }
         } else if (fit.stat == 'freeman-tukey') {
           for (i in 1:n.samples) {
-            E.grouped <- apply(det.prob[i, ,] * z.samples[i, ], 2, sum, na.rm = TRUE)
+            E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
             fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
             fit.y[i] <- sum(fit.big.y[, i])
             fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 

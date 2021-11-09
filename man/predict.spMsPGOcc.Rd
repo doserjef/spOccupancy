@@ -90,7 +90,7 @@ sigma.sq <- runif(N, 0.3, 3)
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		phi = phi, sigma.sq = sigma.sq, sp = TRUE)
+		phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
 n.batch <- 200
@@ -131,7 +131,7 @@ prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 		   phi.unif = list(a = 3/1, b = 3/.1), 
 		   sigma.sq.ig = list(a = 2, b = 2)) 
 # Starting values
-starting.list <- list(alpha.comm = 0, 
+inits.list <- list(alpha.comm = 0, 
 		      beta.comm = 0, 
 		      beta = 0, 
 		      alpha = 0,
@@ -147,7 +147,7 @@ tuning.list <- list(phi = 1)
 out <- spMsPGOcc(occ.formula = ~ occ.cov, 
 		 det.formula = ~ det.cov.1 + det.cov.2, 
 		 data = data.list,
-		 starting = starting.list, 
+		 inits = inits.list, 
 		 n.batch = n.batch, 
 		 batch.length = batch.length, 
 		 accept.rate = 0.43, 

@@ -331,7 +331,44 @@ void spCorLT(double *D, int n, double *theta, std::string &covModel, double *R){
       }
     }
 
-  } else{
+  }else if(covModel == "spherical"){
+    
+    for(i = 0; i < n; i++){
+      for(j = i; j < n; j++){ 
+	if(D[i*n+j] > 0 && D[i*n+j] <= 1.0/theta[1]){
+	  R[i*n+j] = (1.0 - 1.5*theta[1]*D[i*n+j] + 0.5*pow(theta[1]*D[i*n+j],3));
+	}else if(D[i*n+j] >= 1.0/theta[1]){
+	  R[i*n+j] = 0.0;
+	}else{
+	  R[i*n+j] = 1.0;
+	}
+      }
+    }
+    
+  }else if(covModel == "gaussian"){
+    
+    for(i = 0; i < n; i++){
+      for(j = i; j < n; j++){ 
+	R[i*n+j] = exp(-1.0*(pow(theta[1]*D[i*n+j],2)));
+      }
+    }
+
+  }else if(covModel == "matern"){
+    
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*pi/2*(besselI(d*phi,-nu)-besselI(d*phi, nu))/sin(nu*pi), or
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*besselK(x=d*phi, nu=nu)
+    
+    for(i = 0; i < n; i++){
+      for(j = i; j < n; j++){ 
+	if(D[i*n+j]*theta[1] > 0.0){
+	  R[i*n+j] = pow(D[i*n+j]*theta[1], theta[2])/(pow(2, theta[2]-1)*gammafn(theta[2]))*bessel_k(D[i*n+j]*theta[1], theta[2], 1.0);
+	}else{
+	  R[i*n+j] = 1.0;
+	}
+      }
+    }
+    
+ }else{
     error("c++ error: cov.model is not correctly specified");
   }
 }

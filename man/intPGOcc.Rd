@@ -8,11 +8,11 @@ Function for fitting single species integrated occupancy models using Polya-Gamm
 }
 
 \usage{
-intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples, 
-	 n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
-	 n.burn = round(.10 * n.samples), n.thin = 1, 
-	 k.fold, k.fold.threads = 1, k.fold.seed, 
-	 k.fold.data, ...
+intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
+         n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
+         n.burn = round(.10 * n.samples), n.thin = 1, 
+         k.fold, k.fold.threads = 1, k.fold.seed, 
+         k.fold.data, ...
 )
 }
 \arguments{
@@ -45,14 +45,14 @@ intPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   with the number of rows equal to the number of observed sites of that data source
   and number of columns equal to the maximum number of replicates at a given site.}
 
-  \item{starting}{a list with each tag corresponding to a parameter name.
+  \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, and \code{alpha}. The value portion
-  of tags \code{z} and \code{beta} is the parameter's starting value. The tag
-  \code{alpha} is a list comprised of the starting values for the detection 
+  of tags \code{z} and \code{beta} is the parameter's initial value. The tag
+  \code{alpha} is a list comprised of the initial values for the detection 
   parameters for each data source. Each element of the list should be a vector of 
-  starting values for all detection parameters in the given data source or a single value
+  initial values for all detection parameters in the given data source or a single value
   for each data source to assign all parameters for a given data source
-  the same starting value. See \code{priors} description for definition of 
+  the same initial value. See \code{priors} description for definition of 
   each parameter name.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
@@ -226,8 +226,8 @@ data.list <- list(y = y,
 		  sites = sites)
 
 J <- length(dat$z.obs)
-# Starting values
-starting.list <- list(alpha = list(0, 0, 0, 0), 
+# Initial values
+inits.list <- list(alpha = list(0, 0, 0, 0), 
 		      beta = 0, 
 		      z = rep(1, J))
 # Priors
@@ -241,7 +241,7 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		                   f.3 = ~ det.cov.3.1, 
 		                   f.4 = ~ det.cov.4.1), 
 		data = data.list,
-		starting = starting.list,
+		inits = inits.list,
 		n.samples = n.samples, 
 		priors = prior.list, 
 		n.omp.threads = 1, 

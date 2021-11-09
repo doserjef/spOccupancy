@@ -172,8 +172,8 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
-      Rprintf("NNGP Multi-species Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i species.\n\n", J, N);
-      Rprintf("Number of MCMC samples %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
+      Rprintf("NNGP Multispecies Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i species.\n\n", J, N);
+      Rprintf("Number of MCMC samples: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
       Rprintf("Burn-in: %i \n", nBurn); 
       Rprintf("Thinning Rate: %i \n", nThin); 
       Rprintf("Total Posterior Samples: %i \n\n", nPost); 
@@ -932,14 +932,11 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tparameter\tacceptance\ttuning\n");	  
+	  Rprintf("\tSpecies\t\tAcceptance\tTuning\n");	  
 	  for (i = 0; i < N; i++) {
-	    Rprintf("\tphi[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
-	    if (corName == "matern") {
-	    Rprintf("\tnu[%i]\t\t%3.1f\t\t%1.5f\n", i, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[nuIndx * N + i]));
-	      Rprintf("-------------------------------------------------\n");
-	    }
+	    Rprintf("\t%i\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
 	  } // i
+	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();
           #endif

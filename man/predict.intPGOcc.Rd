@@ -89,8 +89,8 @@ data.list <- list(y = y,
 		  sites = sites)
 
 J <- length(dat$z.obs)
-# Starting values
-starting.list <- list(alpha = list(0, 0, 0, 0), 
+# Initial values
+inits.list <- list(alpha = list(0, 0, 0, 0), 
 		      beta = 0, 
 		      z = rep(1, J))
 # Priors
@@ -104,7 +104,7 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		                   f.3 = ~ det.cov.3.1, 
 		                   f.4 = ~ det.cov.4.1), 
 		data = data.list,
-		starting = starting.list,
+		inits = inits.list,
 		n.samples = n.samples, 
 		priors = prior.list, 
 		n.omp.threads = 1, 

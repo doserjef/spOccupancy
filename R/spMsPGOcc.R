@@ -1,4 +1,4 @@
-spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors, 
+spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		      tuning, cov.model = 'exponential', NNGP = TRUE, 
 		      n.neighbors = 15, search.type = "cb", n.batch, 
 		      batch.length, accept.rate = 0.43,
@@ -11,6 +11,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+  rigamma <- function(n, a, b){
+    1/rgamma(n = n, shape = a, rate = b)
+  }
     
   # Make it look nice
   if (verbose) {
@@ -176,6 +179,17 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     stop("error: must specify length of each MCMC batch")
   }
   n.samples <- n.batch * batch.length
+  if (n.burn > n.samples) {
+    stop("error: n.burn must be less than n.samples")
+  }
+  if (n.thin > n.samples) {
+    stop("error: n.thin must be less than n.samples")
+  }
+  if (!missing(k.fold)) {
+    if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+      stop("error: k.fold must be a single integer value >= 2")  
+    }
+  }
 
   # Get indices to map z to y -------------------------------------------
   if (!binom) {
@@ -218,266 +232,6 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     for (i in 1:n.det.re) {
       lambda.p[which(X.p.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
     }
-  }
-
-  # Starting values -----------------------------------------------------
-  if (missing(starting)) {
-    starting <- list()
-  }
-  names(starting) <- tolower(names(starting))
-  # z -------------------------------
-  if ("z" %in% names(starting)) {
-    z.starting <- starting$z
-    if (!is.matrix(z.starting)) {
-      stop(paste("error: starting values for z must be a matrix with dimensions ", 
-      	   N, " x ", J, sep = ""))
-    }
-    if (nrow(z.starting) != N | ncol(z.starting) != J) {
-      stop(paste("error: starting values for z must be a matrix with dimensions ", 
-      	   N, " x ", J, sep = ""))
-    }
-    # Reorder the user supplied starting values for NNGP models
-    if (NNGP) {
-      z.starting <- z.starting[, ord]
-    }
-    z.test <- apply(y.big, c(1, 2), max, na.rm = TRUE)
-    init.test <- sum(z.starting < z.test)
-    if (init.test > 0) {
-      stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
-    }
-  } else {
-    # In correct order since you reordered y for NNGP. 
-    z.starting <- apply(y.big, c(1, 2), max, na.rm = TRUE)
-    if (verbose) {
-      message("z is not specified in starting values.\nSetting starting values based on observed data\n")
-    }
-  }
-  # beta ----------------------------
-  if ("beta" %in% names(starting)) {
-    beta.starting <- starting[["beta"]]
-    if (is.matrix(beta.starting)) {
-      if (ncol(beta.starting) != p.occ | nrow(beta.starting) != N) {
-        stop(paste("error: starting values for beta must be a matrix with dimensions ", 
-        	   N, "x", p.occ, " or a single numeric value", sep = ""))
-      }
-    }
-    if (!is.matrix(beta.starting) & length(beta.starting) != 1) {
-      stop(paste("error: starting values for beta must be a matrix with dimensions ", 
-      	   N, " x ", p.occ, " or a single numeric value", sep = ""))
-    }
-    if (length(beta.starting) == 1) {
-      beta.starting <- matrix(beta.starting, N, p.occ)
-    }
-  } else {
-      beta.starting <- matrix(rnorm(N * p.occ), N, p.occ)
-      if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
-      }
-  }
-  # beta.comm -----------------------
-  if ("beta.comm" %in% names(starting)) {
-    beta.comm.starting <- starting[["beta.comm"]]
-    if (length(beta.comm.starting) != p.occ & length(beta.comm.starting) != 1) {
-      if (p.occ == 1) {
-        stop(paste("error: starting values for beta.comm must be of length ", p.occ, 
-      	   sep = ""))
-      } else {
-        stop(paste("error: starting values for beta.comm must be of length ", p.occ, 
-      	   , " or 1", sep = ""))
-      }
-    }
-    if (length(beta.starting) != p.occ) {
-      beta.comm.starting <- rep(beta.comm.starting, p.occ)
-    }
-  } else {
-    beta.comm.starting <- apply(beta.starting, 2, mean)
-    if (verbose) {
-      message('beta.comm is not specified in starting values.\nSetting starting values as average of species-level starting values\n')
-    }
-  }
-  # alpha ----------------------------
-  if ("alpha" %in% names(starting)) {
-    alpha.starting <- starting[["alpha"]]
-    if (is.matrix(alpha.starting)) {
-      if (ncol(alpha.starting) != p.det | nrow(alpha.starting) != N) {
-        stop(paste("error: starting values for alpha must be a matrix with dimensions ", 
-        	   N, "x", p.det, " or a single numeric value", sep = ""))
-      }
-    }
-    if (!is.matrix(alpha.starting) & length(alpha.starting) != 1) {
-      stop(paste("error: starting values for alpha must be a matrix with dimensions ", 
-      	   N, " x ", p.det, " or a single numeric value", sep = ""))
-    }
-    if (length(alpha.starting) == 1) {
-      alpha.starting <- matrix(alpha.starting, N, p.det)
-    }
-  } else {
-      alpha.starting <- matrix(rnorm(N * p.det), N, p.det)
-      if (verbose) {
-        message('alpha is not specified in starting values.\nSetting starting values to random standard normal values\n')
-      }
-  }
-  # alpha.comm -----------------------
-  if ("alpha.comm" %in% names(starting)) {
-    alpha.comm.starting <- starting[["alpha.comm"]]
-    if (length(alpha.comm.starting) != p.det & length(alpha.comm.starting) != 1) {
-      if (p.det == 1) {
-        stop(paste("error: starting values for alpha.comm must be of length ", p.det, 
-      	   sep = ""))
-      } else {
-        stop(paste("error: starting values for alpha.comm must be of length ", p.det, 
-      	   , " or 1", sep = ""))
-      }
-    }
-    if (length(alpha.starting) != p.det) {
-      alpha.comm.starting <- rep(alpha.comm.starting, p.det)
-    }
-  } else {
-    alpha.comm.starting <- apply(alpha.starting, 2, mean)
-    if (verbose) {
-      message('alpha.comm is not specified in starting values.\nSetting starting values as average of species-level starting values\n')
-    }
-  }
-  # tau.sq.beta ------------------------
-  if ("tau.sq.beta" %in% names(starting)) {
-    tau.sq.beta.starting <- starting[["tau.sq.beta"]]
-    if (length(tau.sq.beta.starting) != p.occ & length(tau.sq.beta.starting) != 1) {
-      if (p.occ == 1) {
-        stop(paste("error: starting values for tau.sq.beta must be of length ", p.occ, 
-      	   sep = ""))
-      } else {
-        stop(paste("error: starting values for tau.sq.beta must be of length ", p.occ, 
-      	   " or 1", sep = ""))
-      }
-    }
-    if (length(tau.sq.beta.starting) != p.occ) {
-      tau.sq.beta.starting <- rep(tau.sq.beta.starting, p.occ)
-    }
-  } else {
-    tau.sq.beta.starting <- runif(p.occ, 0.1, 2)
-    if (verbose) {
-      message('tau.sq.beta is not specified in starting values.\nSetting to random values between 0.1 and 2.\n')
-    }
-  }
-  # tau.sq.alpha -----------------------
-  if ("tau.sq.alpha" %in% names(starting)) {
-    tau.sq.alpha.starting <- starting[["tau.sq.alpha"]]
-    if (length(tau.sq.alpha.starting) != p.det & length(tau.sq.alpha.starting) != 1) {
-      if (p.det == 1) {
-        stop(paste("error: starting values for tau.sq.alpha must be of length ", p.det, 
-      	   sep = ""))
-      } else {
-        stop(paste("error: starting values for tau.sq.alpha must be of length ", p.det, 
-      	   " or 1", sep = ""))
-      }
-    }
-    if (length(tau.sq.alpha.starting) != p.det) {
-      tau.sq.alpha.starting <- rep(tau.sq.alpha.starting, p.det)
-    }
-  } else {
-    tau.sq.alpha.starting <- runif(p.det, 0.1, 2)
-    if (verbose) {
-      message('tau.sq.alpha is not specified in starting values.\nSetting to random values between 0.1 and 2.\n')
-    }
-  }
-  # phi -----------------------------
-  coords.D <- iDist(coords)
-  lower.unif <- 3 / max(coords.D)
-  upper.unif <- 3 / sort(unique(c(coords.D)))[2]
-  if ("phi" %in% names(starting)) {
-    phi.starting <- starting[["phi"]]
-    if (length(phi.starting) != N & length(phi.starting) != 1) {
-      stop(paste("error: starting values for phi must be of length ", N, " or 1", 
-      	   sep = ""))
-    }
-    if (length(phi.starting) != N) {
-      phi.starting <- rep(phi.starting, N)
-    }
-  } else {
-    phi.starting <- runif(N, lower.unif, upper.unif)
-    if (verbose) {
-      message("phi is not specified in starting values.\nSetting starting value to random values between 3/range(dist(data$coords))\n")
-    }
-  }
-  # sigma.sq ------------------------
-  if ("sigma.sq" %in% names(starting)) {
-    sigma.sq.starting <- starting[["sigma.sq"]]
-    if (length(sigma.sq.starting) != N & length(sigma.sq.starting) != 1) {
-      stop(paste("error: starting values for sigma.sq must be of length ", N,  " or 1",
-      	   sep = ""))
-    }
-    if (length(sigma.sq.starting) != N) {
-      sigma.sq.starting <- rep(sigma.sq.starting, N)
-    }
-  } else {
-    sigma.sq.starting <- runif(N, 0.2, 4)
-    if (verbose) {
-      message("sigma.sq is not specified in starting values.\nSetting starting values to random values between 0.2 and 4\n")
-    }
-  }
-  # w -----------------------------
-  if ("w" %in% names(starting)) {
-    w.starting <- starting[["w"]]
-    if (!is.matrix(w.starting)) {
-      stop(paste("error: starting values for w must be a matrix with dimensions ",
-      	   N, " x ", J, sep = ""))
-    }
-    if (nrow(w.starting) != N | ncol(w.starting) != J) {
-      stop(paste("error: starting values for w must be a matrix with dimensions ",
-      	   N, " x ", J, sep = ""))
-    }
-  } else {
-    w.starting <- matrix(0, N, J)
-    if (verbose) {
-      message("w is not specified in starting values.\nSetting starting value to 0\n")
-    }
-  }
-  # nu ------------------------
-  if ("nu" %in% names(starting)) {
-    nu.starting <- starting[["nu"]]
-    if (length(nu.starting) != N & length(nu.starting) != 1) {
-      stop(paste("error: starting values for nu must be of length ", N,  " or 1",
-      	   sep = ""))
-    }
-    if (length(nu.starting) != N) {
-      nu.starting <- rep(nu.starting, N)
-    }
-  } else {
-    if (cov.model == 'matern') {
-      if (verbose) {
-        message("nu is not specified in starting values.\nSetting starting value to 1\n")
-      }
-      nu.starting <- rep(1, N)
-    } else {
-      nu.starting <- rep(0, N)
-    }
-  }
-
-  # sigma.sq.p ------------------
-  if (p.det.re > 0) {
-    if ("sigma.sq.p" %in% names(starting)) {
-      sigma.sq.p.starting <- starting[["sigma.sq.p"]]
-      if (length(sigma.sq.p.starting) != p.det.re & length(sigma.sq.p.starting) != 1) {
-        if (p.det.re == 1) {
-          stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
-      	     sep = ""))
-        } else {
-          stop(paste("error: starting values for sigma.sq.p must be of length ", p.det.re, 
-      	     " or 1", sep = ""))
-        }
-      }
-      if (length(sigma.sq.p.starting) != p.det.re) {
-        sigma.sq.p.starting <- rep(sigma.sq.p.starting, p.det.re)
-      }
-    } else {
-      sigma.sq.p.starting <- runif(p.det.re, 0.2, 2)
-      if (verbose) {
-        message("sigma.sq.p is not specified in starting values.\nSetting starting value to random values between 0.2 and 2\n")
-      }
-    }
-    alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
-    alpha.star.starting <- rnorm(n.det.re, sqrt(sigma.sq.p.starting[alpha.star.indx + 1]))
-    alpha.star.starting <- rep(alpha.star.starting, N)
   }
 
   # Priors --------------------------------------------------------------
@@ -523,6 +277,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       message("No prior specified for beta.comm.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.beta.comm <- rep(0, p.occ)
+    sigma.beta.comm <- rep(2.72, p.occ)
     Sigma.beta.comm <- diag(p.occ) * 2.72
   }
 
@@ -563,6 +318,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       message("No prior specified for alpha.comm.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.alpha.comm <- rep(0, p.det)
+    sigma.alpha.comm <- rep(2.72, p.det)
     Sigma.alpha.comm <- diag(p.det) * 2.72
   }
 
@@ -645,6 +401,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
   }
 
   # phi -----------------------------
+  coords.D <- iDist(coords)
+  lower.unif <- 3 / max(coords.D)
+  upper.unif <- 3 / sort(unique(c(coords.D)))[2]
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -773,10 +532,264 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
   }
 
-  # Covariance Model ----------------------------------------------------
-  if (missing(cov.model)) {
-    stop("error: cov.model must be specified")
+  # Starting values -----------------------------------------------------
+  if (missing(inits)) {
+    inits <- list()
   }
+  names(inits) <- tolower(names(inits))
+  # z -------------------------------
+  if ("z" %in% names(inits)) {
+    z.inits <- inits$z
+    if (!is.matrix(z.inits)) {
+      stop(paste("error: initial values for z must be a matrix with dimensions ", 
+      	   N, " x ", J, sep = ""))
+    }
+    if (nrow(z.inits) != N | ncol(z.inits) != J) {
+      stop(paste("error: initial values for z must be a matrix with dimensions ", 
+      	   N, " x ", J, sep = ""))
+    }
+    # Reorder the user supplied inits values for NNGP models
+    if (NNGP) {
+      z.inits <- z.inits[, ord]
+    }
+    z.test <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+    init.test <- sum(z.inits < z.test)
+    if (init.test > 0) {
+      stop("error: initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
+    }
+  } else {
+    # In correct order since you reordered y for NNGP. 
+    z.inits <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+    if (verbose) {
+      message("z is not specified in initial values.\nSetting initial values based on observed data\n")
+    }
+  }
+  # beta.comm -----------------------
+  if ("beta.comm" %in% names(inits)) {
+    beta.comm.inits <- inits[["beta.comm"]]
+    if (length(beta.comm.inits) != p.occ & length(beta.comm.inits) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: initial values for beta.comm must be of length ", p.occ, 
+      	   sep = ""))
+      } else {
+        stop(paste("error: initial values for beta.comm must be of length ", p.occ, 
+      	   , " or 1", sep = ""))
+      }
+    }
+    if (length(beta.comm.inits) != p.occ) {
+      beta.comm.inits <- rep(beta.comm.inits, p.occ)
+    }
+  } else {
+    beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+    if (verbose) {
+      message('beta.comm is not specified in initial values.\nSetting initial values to random values from the prior distribution\n')
+    }
+  }
+  # alpha.comm -----------------------
+  if ("alpha.comm" %in% names(inits)) {
+    alpha.comm.inits <- inits[["alpha.comm"]]
+    if (length(alpha.comm.inits) != p.det & length(alpha.comm.inits) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: initial values for alpha.comm must be of length ", p.det, 
+      	   sep = ""))
+      } else {
+        stop(paste("error: initial values for alpha.comm must be of length ", p.det, 
+      	   , " or 1", sep = ""))
+      }
+    }
+    if (length(alpha.comm.inits) != p.det) {
+      alpha.comm.inits <- rep(alpha.comm.inits, p.det)
+    }
+  } else {
+    alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+    if (verbose) {
+      message('alpha.comm is not specified in initial values.\nSetting initial values to random values from the prior distribution\n')
+    }
+  }
+  # tau.sq.beta ------------------------
+  if ("tau.sq.beta" %in% names(inits)) {
+    tau.sq.beta.inits <- inits[["tau.sq.beta"]]
+    if (length(tau.sq.beta.inits) != p.occ & length(tau.sq.beta.inits) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: initial values for tau.sq.beta must be of length ", p.occ, 
+      	   sep = ""))
+      } else {
+        stop(paste("error: initial values for tau.sq.beta must be of length ", p.occ, 
+      	   " or 1", sep = ""))
+      }
+    }
+    if (length(tau.sq.beta.inits) != p.occ) {
+      tau.sq.beta.inits <- rep(tau.sq.beta.inits, p.occ)
+    }
+  } else {
+    tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+    if (verbose) {
+      message('tau.sq.beta is not specified in initial values.\nSetting initial values to random values between 0.5 and 10\n')
+    }
+  }
+  # tau.sq.alpha -----------------------
+  if ("tau.sq.alpha" %in% names(inits)) {
+    tau.sq.alpha.inits <- inits[["tau.sq.alpha"]]
+    if (length(tau.sq.alpha.inits) != p.det & length(tau.sq.alpha.inits) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: initial values for tau.sq.alpha must be of length ", p.det, 
+      	   sep = ""))
+      } else {
+        stop(paste("error: initial values for tau.sq.alpha must be of length ", p.det, 
+      	   " or 1", sep = ""))
+      }
+    }
+    if (length(tau.sq.alpha.inits) != p.det) {
+      tau.sq.alpha.inits <- rep(tau.sq.alpha.inits, p.det)
+    }
+  } else {
+    tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
+    if (verbose) {
+      message('tau.sq.alpha is not specified in initial values.\nSetting initial values to random values between 0.5 and 10\n')
+    }
+  }
+  # beta ----------------------------
+  if ("beta" %in% names(inits)) {
+    beta.inits <- inits[["beta"]]
+    if (is.matrix(beta.inits)) {
+      if (ncol(beta.inits) != p.occ | nrow(beta.inits) != N) {
+        stop(paste("error: initial values for beta must be a matrix with dimensions ", 
+        	   N, "x", p.occ, " or a single numeric value", sep = ""))
+      }
+    }
+    if (!is.matrix(beta.inits) & length(beta.inits) != 1) {
+      stop(paste("error: initial values for beta must be a matrix with dimensions ", 
+      	   N, " x ", p.occ, " or a single numeric value", sep = ""))
+    }
+    if (length(beta.inits) == 1) {
+      beta.inits <- matrix(beta.inits, N, p.occ)
+    }
+  } else {
+      beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, sqrt(tau.sq.beta.inits)), N, p.occ)
+      if (verbose) {
+        message('beta is not specified in initial values.\nSetting initial values to random values from the community-level normal distribution\n')
+      }
+  }
+  # alpha ----------------------------
+  if ("alpha" %in% names(inits)) {
+    alpha.inits <- inits[["alpha"]]
+    if (is.matrix(alpha.inits)) {
+      if (ncol(alpha.inits) != p.det | nrow(alpha.inits) != N) {
+        stop(paste("error: initial values for alpha must be a matrix with dimensions ", 
+        	   N, "x", p.det, " or a single numeric value", sep = ""))
+      }
+    }
+    if (!is.matrix(alpha.inits) & length(alpha.inits) != 1) {
+      stop(paste("error: initial values for alpha must be a matrix with dimensions ", 
+      	   N, " x ", p.det, " or a single numeric value", sep = ""))
+    }
+    if (length(alpha.inits) == 1) {
+      alpha.inits <- matrix(alpha.inits, N, p.det)
+    }
+  } else {
+      alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, sqrt(tau.sq.alpha.inits)), N, p.det)
+      if (verbose) {
+        message('alpha is not specified in initial values.\nSetting initial values to random values from the community-level normal distribution\n')
+      }
+  }
+  # phi -----------------------------
+  if ("phi" %in% names(inits)) {
+    phi.inits <- inits[["phi"]]
+    if (length(phi.inits) != N & length(phi.inits) != 1) {
+      stop(paste("error: initial values for phi must be of length ", N, " or 1", 
+      	   sep = ""))
+    }
+    if (length(phi.inits) != N) {
+      phi.inits <- rep(phi.inits, N)
+    }
+  } else {
+    phi.inits <- runif(N, lower.unif, upper.unif)
+    if (verbose) {
+      message("phi is not specified in initial values.\nSetting initial value to random values from the prior distribution\n")
+    }
+  }
+  # sigma.sq ------------------------
+  if ("sigma.sq" %in% names(inits)) {
+    sigma.sq.inits <- inits[["sigma.sq"]]
+    if (length(sigma.sq.inits) != N & length(sigma.sq.inits) != 1) {
+      stop(paste("error: initial values for sigma.sq must be of length ", N,  " or 1",
+      	   sep = ""))
+    }
+    if (length(sigma.sq.inits) != N) {
+      sigma.sq.inits <- rep(sigma.sq.inits, N)
+    }
+  } else {
+    sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+    if (verbose) {
+      message("sigma.sq is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
+    }
+  }
+  # w -----------------------------
+  if ("w" %in% names(inits)) {
+    w.inits <- inits[["w"]]
+    if (!is.matrix(w.inits)) {
+      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      	   N, " x ", J, sep = ""))
+    }
+    if (nrow(w.inits) != N | ncol(w.inits) != J) {
+      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      	   N, " x ", J, sep = ""))
+    }
+  } else {
+    w.inits <- matrix(0, N, J)
+    if (verbose) {
+      message("w is not specified in initial values.\nSetting initial value to 0\n")
+    }
+  }
+  # nu ------------------------
+  if ("nu" %in% names(inits)) {
+    nu.inits <- inits[["nu"]]
+    if (length(nu.inits) != N & length(nu.inits) != 1) {
+      stop(paste("error: initial values for nu must be of length ", N,  " or 1",
+      	   sep = ""))
+    }
+    if (length(nu.inits) != N) {
+      nu.inits <- rep(nu.inits, N)
+    }
+  } else {
+    if (cov.model == 'matern') {
+      if (verbose) {
+        message("nu is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
+      }
+      nu.inits <- runif(N, nu.a, nu.b)
+    } else {
+      nu.inits <- rep(0, N)
+    }
+  }
+
+  # sigma.sq.p ------------------
+  if (p.det.re > 0) {
+    if ("sigma.sq.p" %in% names(inits)) {
+      sigma.sq.p.inits <- inits[["sigma.sq.p"]]
+      if (length(sigma.sq.p.inits) != p.det.re & length(sigma.sq.p.inits) != 1) {
+        if (p.det.re == 1) {
+          stop(paste("error: initial values for sigma.sq.p must be of length ", p.det.re, 
+      	     sep = ""))
+        } else {
+          stop(paste("error: initial values for sigma.sq.p must be of length ", p.det.re, 
+      	     " or 1", sep = ""))
+        }
+      }
+      if (length(sigma.sq.p.inits) != p.det.re) {
+        sigma.sq.p.inits <- rep(sigma.sq.p.inits, p.det.re)
+      }
+    } else {
+      sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+      if (verbose) {
+        message("sigma.sq.p is not specified in initial values.\nSetting initial values to random values between 0.5 and 10\n")
+      }
+    }
+    alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
+    alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+    alpha.star.inits <- rep(alpha.star.inits, N)
+  }
+
+  # Covariance Model ----------------------------------------------------
   # Order must match util.cpp spCor.
   cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
   if(! cov.model %in% cov.model.names){
@@ -830,7 +843,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(z.starting) <- "double"
+    storage.mode(z.inits) <- "double"
     storage.mode(X.p) <- "double"
     storage.mode(X) <- "double"
     storage.mode(coords.D) <- "double"
@@ -840,16 +853,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(K) <- "double"
     storage.mode(n.obs) <- "integer"
     storage.mode(N) <- "integer"
-    storage.mode(beta.starting) <- "double"
-    storage.mode(alpha.starting) <- "double"
-    storage.mode(beta.comm.starting) <- "double"
-    storage.mode(alpha.comm.starting) <- "double"
-    storage.mode(tau.sq.beta.starting) <- "double"
-    storage.mode(tau.sq.alpha.starting) <- "double"
-    storage.mode(phi.starting) <- "double"
-    storage.mode(sigma.sq.starting) <- "double"
-    storage.mode(w.starting) <- "double"
-    storage.mode(nu.starting) <- "double"
+    storage.mode(beta.inits) <- "double"
+    storage.mode(alpha.inits) <- "double"
+    storage.mode(beta.comm.inits) <- "double"
+    storage.mode(alpha.comm.inits) <- "double"
+    storage.mode(tau.sq.beta.inits) <- "double"
+    storage.mode(tau.sq.alpha.inits) <- "double"
+    storage.mode(phi.inits) <- "double"
+    storage.mode(sigma.sq.inits) <- "double"
+    storage.mode(w.inits) <- "double"
+    storage.mode(nu.inits) <- "double"
     storage.mode(z.long.indx) <- "integer"
     storage.mode(mu.beta.comm) <- "double"
     storage.mode(Sigma.beta.comm) <- "double"
@@ -886,21 +899,21 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(X.p.re) <- "integer"
       storage.mode(n.det.re) <- "integer"
       storage.mode(n.det.re.long) <- "integer"
-      storage.mode(sigma.sq.p.starting) <- "double"
+      storage.mode(sigma.sq.p.inits) <- "double"
       storage.mode(sigma.sq.p.a) <- "double"
       storage.mode(sigma.sq.p.b) <- "double"
-      storage.mode(alpha.star.starting) <- "double"
+      storage.mode(alpha.star.inits) <- "double"
       storage.mode(alpha.star.indx) <- "integer"
       storage.mode(lambda.p) <- "double"
 
       out <- .Call("spMsPGOccRE", y, X, X.p, coords.D, X.p.re, lambda.p, 
 		   p.occ, p.det, p.det.re, J, n.obs, K, N, n.det.re, n.det.re.long,
-          	   beta.starting, alpha.starting, z.starting,
-          	   beta.comm.starting, 
-          	   alpha.comm.starting, tau.sq.beta.starting, 
-          	   tau.sq.alpha.starting, w.starting, phi.starting, 
-          	   sigma.sq.starting, nu.starting, sigma.sq.p.starting, 
-		   alpha.star.starting, z.long.indx, alpha.star.indx, mu.beta.comm, 
+          	   beta.inits, alpha.inits, z.inits,
+          	   beta.comm.inits, 
+          	   alpha.comm.inits, tau.sq.beta.inits, 
+          	   tau.sq.alpha.inits, w.inits, phi.inits, 
+          	   sigma.sq.inits, nu.inits, sigma.sq.p.inits, 
+		   alpha.star.inits, z.long.indx, alpha.star.indx, mu.beta.comm, 
           	   mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	   tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -993,8 +1006,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	    y.0 <- c(y.big[, curr.set, , drop = FALSE])
 	    y.0 <- y.0[!is.na(y.0)]
           }
-	  z.starting.fit <- z.starting[, -curr.set]
-	  w.starting.fit <- w.starting[, -curr.set]
+	  z.inits.fit <- z.inits[, -curr.set]
+	  w.inits.fit <- w.inits[, -curr.set]
 	  y.big.fit <- y.big[, -curr.set, , drop = FALSE]
 	  y.big.0 <- y.big[, curr.set, , drop = FALSE]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
@@ -1037,7 +1050,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	  n.omp.threads.fit <- 1
 
           storage.mode(y.fit) <- "double"
-          storage.mode(z.starting.fit) <- "double"
+          storage.mode(z.inits.fit) <- "double"
           storage.mode(X.p.fit) <- "double"
           storage.mode(X.fit) <- "double"
           storage.mode(coords.D.fit) <- "double"
@@ -1047,16 +1060,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(K.fit) <- "double"
 	  storage.mode(n.obs.fit) <- "integer"
           storage.mode(N) <- "integer"
-          storage.mode(beta.starting) <- "double"
-          storage.mode(alpha.starting) <- "double"
-          storage.mode(beta.comm.starting) <- "double"
-          storage.mode(alpha.comm.starting) <- "double"
-          storage.mode(tau.sq.beta.starting) <- "double"
-          storage.mode(tau.sq.alpha.starting) <- "double"
-          storage.mode(phi.starting) <- "double"
-          storage.mode(sigma.sq.starting) <- "double"
-          storage.mode(w.starting.fit) <- "double"
-          storage.mode(nu.starting) <- "double"
+          storage.mode(beta.inits) <- "double"
+          storage.mode(alpha.inits) <- "double"
+          storage.mode(beta.comm.inits) <- "double"
+          storage.mode(alpha.comm.inits) <- "double"
+          storage.mode(tau.sq.beta.inits) <- "double"
+          storage.mode(tau.sq.alpha.inits) <- "double"
+          storage.mode(phi.inits) <- "double"
+          storage.mode(sigma.sq.inits) <- "double"
+          storage.mode(w.inits.fit) <- "double"
+          storage.mode(nu.inits) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
           storage.mode(mu.beta.comm) <- "double"
           storage.mode(Sigma.beta.comm) <- "double"
@@ -1086,10 +1099,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(X.p.re.fit) <- "integer"
           storage.mode(n.det.re) <- "integer"
           storage.mode(n.det.re.long) <- "integer"
-          storage.mode(sigma.sq.p.starting) <- "double"
+          storage.mode(sigma.sq.p.inits) <- "double"
           storage.mode(sigma.sq.p.a) <- "double"
           storage.mode(sigma.sq.p.b) <- "double"
-          storage.mode(alpha.star.starting) <- "double"
+          storage.mode(alpha.star.inits) <- "double"
           storage.mode(alpha.star.indx) <- "integer"
           storage.mode(lambda.p.fit) <- "double"
 
@@ -1097,12 +1110,12 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           out.fit <- .Call("spMsPGOccRE", y.fit, X.fit, X.p.fit, coords.D.fit, X.p.re.fit, lambda.p.fit, 
 		           p.occ, p.det, p.det.re, J.fit, n.obs.fit, 
 			   K.fit, N, n.det.re, n.det.re.long,
-          	           beta.starting, alpha.starting, z.starting.fit,
-          	           beta.comm.starting, 
-          	           alpha.comm.starting, tau.sq.beta.starting, 
-          	           tau.sq.alpha.starting, w.starting.fit, phi.starting, 
-          	           sigma.sq.starting, nu.starting, sigma.sq.p.starting, 
-		           alpha.star.starting, z.long.indx.fit, alpha.star.indx, mu.beta.comm, 
+          	           beta.inits, alpha.inits, z.inits.fit,
+          	           beta.comm.inits, 
+          	           alpha.comm.inits, tau.sq.beta.inits, 
+          	           tau.sq.alpha.inits, w.inits.fit, phi.inits, 
+          	           sigma.sq.inits, nu.inits, sigma.sq.p.inits, 
+		           alpha.star.inits, z.long.indx.fit, alpha.star.indx, mu.beta.comm, 
           	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	           tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -1187,11 +1200,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
       # Run the model in C    
       out <- .Call("spMsPGOcc", y, X, X.p, coords.D, p.occ, p.det, J, n.obs, K, N, 
-          	 beta.starting, alpha.starting, z.starting,
-          	 beta.comm.starting, 
-          	 alpha.comm.starting, tau.sq.beta.starting, 
-          	 tau.sq.alpha.starting, w.starting, phi.starting, 
-          	 sigma.sq.starting, nu.starting, z.long.indx, mu.beta.comm, 
+          	 beta.inits, alpha.inits, z.inits,
+          	 beta.comm.inits, 
+          	 alpha.comm.inits, tau.sq.beta.inits, 
+          	 tau.sq.alpha.inits, w.inits, phi.inits, 
+          	 sigma.sq.inits, nu.inits, z.long.indx, mu.beta.comm, 
           	 mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	 tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	 tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -1276,8 +1289,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	    y.0 <- c(y.big[, curr.set, , drop = FALSE])
 	    y.0 <- y.0[!is.na(y.0)]
           }
-	  z.starting.fit <- z.starting[, -curr.set]
-	  w.starting.fit <- w.starting[, -curr.set]
+	  z.inits.fit <- z.inits[, -curr.set]
+	  w.inits.fit <- w.inits[, -curr.set]
 	  y.big.fit <- y.big[, -curr.set, , drop = FALSE]
 	  y.big.0 <- y.big[, curr.set, , drop = FALSE]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
@@ -1316,7 +1329,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	  n.omp.threads.fit <- 1
 
           storage.mode(y.fit) <- "double"
-          storage.mode(z.starting.fit) <- "double"
+          storage.mode(z.inits.fit) <- "double"
           storage.mode(X.p.fit) <- "double"
           storage.mode(X.fit) <- "double"
           storage.mode(coords.D.fit) <- "double"
@@ -1326,16 +1339,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(K.fit) <- "double"
 	  storage.mode(n.obs.fit) <- "integer"
           storage.mode(N) <- "integer"
-          storage.mode(beta.starting) <- "double"
-          storage.mode(alpha.starting) <- "double"
-          storage.mode(beta.comm.starting) <- "double"
-          storage.mode(alpha.comm.starting) <- "double"
-          storage.mode(tau.sq.beta.starting) <- "double"
-          storage.mode(tau.sq.alpha.starting) <- "double"
-          storage.mode(phi.starting) <- "double"
-          storage.mode(sigma.sq.starting) <- "double"
-          storage.mode(w.starting.fit) <- "double"
-          storage.mode(nu.starting) <- "double"
+          storage.mode(beta.inits) <- "double"
+          storage.mode(alpha.inits) <- "double"
+          storage.mode(beta.comm.inits) <- "double"
+          storage.mode(alpha.comm.inits) <- "double"
+          storage.mode(tau.sq.beta.inits) <- "double"
+          storage.mode(tau.sq.alpha.inits) <- "double"
+          storage.mode(phi.inits) <- "double"
+          storage.mode(sigma.sq.inits) <- "double"
+          storage.mode(w.inits.fit) <- "double"
+          storage.mode(nu.inits) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
           storage.mode(mu.beta.comm) <- "double"
           storage.mode(Sigma.beta.comm) <- "double"
@@ -1364,11 +1377,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
           out.fit <- .Call("spMsPGOcc", y.fit, X.fit, X.p.fit, coords.D.fit, 
 		           p.occ, p.det, J.fit, n.obs.fit, K.fit, N,
-          	           beta.starting, alpha.starting, z.starting.fit,
-          	           beta.comm.starting, 
-          	           alpha.comm.starting, tau.sq.beta.starting, 
-          	           tau.sq.alpha.starting, w.starting.fit, phi.starting, 
-          	           sigma.sq.starting, nu.starting,
+          	           beta.inits, alpha.inits, z.inits.fit,
+          	           beta.comm.inits, 
+          	           alpha.comm.inits, tau.sq.beta.inits, 
+          	           tau.sq.alpha.inits, w.inits.fit, phi.inits, 
+          	           sigma.sq.inits, nu.inits,
 		           z.long.indx.fit, mu.beta.comm, 
           	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
@@ -1491,7 +1504,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(z.starting) <- "double"
+    storage.mode(z.inits) <- "double"
     storage.mode(X.p) <- "double"
     storage.mode(X) <- "double"
     storage.mode(p.det) <- "integer"
@@ -1500,16 +1513,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(K) <- "double"
     storage.mode(n.rep) <- "integer"
     storage.mode(N) <- "integer"
-    storage.mode(beta.starting) <- "double"
-    storage.mode(alpha.starting) <- "double"
-    storage.mode(beta.comm.starting) <- "double"
-    storage.mode(alpha.comm.starting) <- "double"
-    storage.mode(tau.sq.beta.starting) <- "double"
-    storage.mode(tau.sq.alpha.starting) <- "double"
-    storage.mode(phi.starting) <- "double"
-    storage.mode(sigma.sq.starting) <- "double"
-    storage.mode(nu.starting) <- "double"
-    storage.mode(w.starting) <- "double"
+    storage.mode(beta.inits) <- "double"
+    storage.mode(alpha.inits) <- "double"
+    storage.mode(beta.comm.inits) <- "double"
+    storage.mode(alpha.comm.inits) <- "double"
+    storage.mode(tau.sq.beta.inits) <- "double"
+    storage.mode(tau.sq.alpha.inits) <- "double"
+    storage.mode(phi.inits) <- "double"
+    storage.mode(sigma.sq.inits) <- "double"
+    storage.mode(nu.inits) <- "double"
+    storage.mode(w.inits) <- "double"
     storage.mode(z.long.indx) <- "integer"
     storage.mode(mu.beta.comm) <- "double"
     storage.mode(Sigma.beta.comm) <- "double"
@@ -1551,10 +1564,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       storage.mode(X.p.re) <- "integer"
       storage.mode(n.det.re) <- "integer"
       storage.mode(n.det.re.long) <- "integer"
-      storage.mode(sigma.sq.p.starting) <- "double"
+      storage.mode(sigma.sq.p.inits) <- "double"
       storage.mode(sigma.sq.p.a) <- "double"
       storage.mode(sigma.sq.p.b) <- "double"
-      storage.mode(alpha.star.starting) <- "double"
+      storage.mode(alpha.star.inits) <- "double"
       storage.mode(alpha.star.indx) <- "integer"
       storage.mode(lambda.p) <- "double"
 
@@ -1562,12 +1575,12 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       out <- .Call("spMsPGOccNNGPRE", y, X, X.p, coords, X.p.re, lambda.p, 
 		   p.occ, p.det, p.det.re, J, n.obs, K, N, n.det.re, n.det.re.long, 
           	   n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-          	   beta.starting, alpha.starting, z.starting,
-          	   beta.comm.starting, 
-          	   alpha.comm.starting, tau.sq.beta.starting, 
-          	   tau.sq.alpha.starting, w.starting, phi.starting, 
-          	   sigma.sq.starting, nu.starting, sigma.sq.p.starting, 
-		   alpha.star.starting, z.long.indx, alpha.star.indx, mu.beta.comm, 
+          	   beta.inits, alpha.inits, z.inits,
+          	   beta.comm.inits, 
+          	   alpha.comm.inits, tau.sq.beta.inits, 
+          	   tau.sq.alpha.inits, w.inits, phi.inits, 
+          	   sigma.sq.inits, nu.inits, sigma.sq.p.inits, 
+		   alpha.star.inits, z.long.indx, alpha.star.indx, mu.beta.comm, 
           	   mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	   tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	   tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -1686,10 +1699,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	    y.0 <- c(y.big[, curr.set, , drop = FALSE])
 	    y.0 <- y.0[!is.na(y.0)]
           }
-	  z.starting.fit <- z.starting[, -curr.set]
+	  z.inits.fit <- z.inits[, -curr.set]
 	  y.big.fit <- y.big[, -curr.set, , drop = FALSE]
 	  y.big.0 <- y.big[, curr.set, , drop = FALSE]
-	  w.starting.fit <- w.starting[, -curr.set]
+	  w.inits.fit <- w.inits[, -curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
 	  X.fit <- X[-curr.set, , drop = FALSE]
@@ -1748,7 +1761,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           ui.indx.fit <- indx$ui.indx
 
           storage.mode(y.fit) <- "double"
-          storage.mode(z.starting.fit) <- "double"
+          storage.mode(z.inits.fit) <- "double"
           storage.mode(X.p.fit) <- "double"
           storage.mode(X.fit) <- "double"
           storage.mode(p.det) <- "integer"
@@ -1757,16 +1770,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(K.fit) <- "double"
 	  storage.mode(n.obs.fit) <- "integer"
           storage.mode(N) <- "integer"
-          storage.mode(beta.starting) <- "double"
-          storage.mode(alpha.starting) <- "double"
-          storage.mode(beta.comm.starting) <- "double"
-          storage.mode(alpha.comm.starting) <- "double"
-          storage.mode(tau.sq.beta.starting) <- "double"
-          storage.mode(tau.sq.alpha.starting) <- "double"
-          storage.mode(phi.starting) <- "double"
-          storage.mode(sigma.sq.starting) <- "double"
-          storage.mode(nu.starting) <- "double"
-          storage.mode(w.starting.fit) <- "double"
+          storage.mode(beta.inits) <- "double"
+          storage.mode(alpha.inits) <- "double"
+          storage.mode(beta.comm.inits) <- "double"
+          storage.mode(alpha.comm.inits) <- "double"
+          storage.mode(tau.sq.beta.inits) <- "double"
+          storage.mode(tau.sq.alpha.inits) <- "double"
+          storage.mode(phi.inits) <- "double"
+          storage.mode(sigma.sq.inits) <- "double"
+          storage.mode(nu.inits) <- "double"
+          storage.mode(w.inits.fit) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
           storage.mode(mu.beta.comm) <- "double"
           storage.mode(Sigma.beta.comm) <- "double"
@@ -1802,10 +1815,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(X.p.re.fit) <- "integer"
           storage.mode(n.det.re) <- "integer"
           storage.mode(n.det.re.long) <- "integer"
-          storage.mode(sigma.sq.p.starting) <- "double"
+          storage.mode(sigma.sq.p.inits) <- "double"
           storage.mode(sigma.sq.p.a) <- "double"
           storage.mode(sigma.sq.p.b) <- "double"
-          storage.mode(alpha.star.starting) <- "double"
+          storage.mode(alpha.star.inits) <- "double"
           storage.mode(alpha.star.indx) <- "integer"
           storage.mode(lambda.p.fit) <- "double"
 
@@ -1815,12 +1828,12 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 			   K.fit, N, n.det.re, n.det.re.long, 
           	           n.neighbors, nn.indx.fit, nn.indx.lu.fit, 
 			   u.indx.fit, u.indx.lu.fit, ui.indx.fit,
-          	           beta.starting, alpha.starting, z.starting.fit,
-          	           beta.comm.starting, 
-          	           alpha.comm.starting, tau.sq.beta.starting, 
-          	           tau.sq.alpha.starting, w.starting.fit, phi.starting, 
-          	           sigma.sq.starting, nu.starting, sigma.sq.p.starting, 
-		           alpha.star.starting, z.long.indx.fit, alpha.star.indx, mu.beta.comm, 
+          	           beta.inits, alpha.inits, z.inits.fit,
+          	           beta.comm.inits, 
+          	           alpha.comm.inits, tau.sq.beta.inits, 
+          	           tau.sq.alpha.inits, w.inits.fit, phi.inits, 
+          	           sigma.sq.inits, nu.inits, sigma.sq.p.inits, 
+		           alpha.star.inits, z.long.indx.fit, alpha.star.indx, mu.beta.comm, 
           	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	           tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -1905,11 +1918,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       # Run the model in C    
       out <- .Call("spMsPGOccNNGP", y, X, X.p, coords, p.occ, p.det, J, n.obs, K, N, 
           	 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-          	 beta.starting, alpha.starting, z.starting,
-          	 beta.comm.starting, 
-          	 alpha.comm.starting, tau.sq.beta.starting, 
-          	 tau.sq.alpha.starting, w.starting, phi.starting, 
-          	 sigma.sq.starting, nu.starting, z.long.indx, mu.beta.comm, 
+          	 beta.inits, alpha.inits, z.inits,
+          	 beta.comm.inits, 
+          	 alpha.comm.inits, tau.sq.beta.inits, 
+          	 tau.sq.alpha.inits, w.inits, phi.inits, 
+          	 sigma.sq.inits, nu.inits, z.long.indx, mu.beta.comm, 
           	 mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	 tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
           	 tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
@@ -2006,10 +2019,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	    y.0 <- c(y.big[, curr.set, , drop = FALSE])
 	    y.0 <- y.0[!is.na(y.0)]
           }
-	  z.starting.fit <- z.starting[, -curr.set]
+	  z.inits.fit <- z.inits[, -curr.set]
 	  y.big.fit <- y.big[, -curr.set, , drop = FALSE]
 	  y.big.0 <- y.big[, curr.set, , drop = FALSE]
-	  w.starting.fit <- w.starting[, -curr.set]
+	  w.inits.fit <- w.inits[, -curr.set]
 	  X.p.fit <- X.p[y.indx, , drop = FALSE]
 	  X.p.0 <- X.p[!y.indx, , drop = FALSE]
 	  X.fit <- X[-curr.set, , drop = FALSE]
@@ -2064,7 +2077,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           ui.indx.fit <- indx$ui.indx
 
           storage.mode(y.fit) <- "double"
-          storage.mode(z.starting.fit) <- "double"
+          storage.mode(z.inits.fit) <- "double"
           storage.mode(X.p.fit) <- "double"
           storage.mode(X.fit) <- "double"
 	  storage.mode(coords.fit) <- "double"
@@ -2074,16 +2087,16 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           storage.mode(K.fit) <- "double"
 	  storage.mode(n.obs.fit) <- "integer"
           storage.mode(N) <- "integer"
-          storage.mode(beta.starting) <- "double"
-          storage.mode(alpha.starting) <- "double"
-          storage.mode(beta.comm.starting) <- "double"
-          storage.mode(alpha.comm.starting) <- "double"
-          storage.mode(tau.sq.beta.starting) <- "double"
-          storage.mode(tau.sq.alpha.starting) <- "double"
-          storage.mode(phi.starting) <- "double"
-          storage.mode(sigma.sq.starting) <- "double"
-          storage.mode(nu.starting) <- "double"
-          storage.mode(w.starting.fit) <- "double"
+          storage.mode(beta.inits) <- "double"
+          storage.mode(alpha.inits) <- "double"
+          storage.mode(beta.comm.inits) <- "double"
+          storage.mode(alpha.comm.inits) <- "double"
+          storage.mode(tau.sq.beta.inits) <- "double"
+          storage.mode(tau.sq.alpha.inits) <- "double"
+          storage.mode(phi.inits) <- "double"
+          storage.mode(sigma.sq.inits) <- "double"
+          storage.mode(nu.inits) <- "double"
+          storage.mode(w.inits.fit) <- "double"
           storage.mode(z.long.indx.fit) <- "integer"
           storage.mode(mu.beta.comm) <- "double"
           storage.mode(Sigma.beta.comm) <- "double"
@@ -2120,11 +2133,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 		           p.occ, p.det, J.fit, n.obs.fit, K.fit, N, 
           	           n.neighbors, nn.indx.fit, nn.indx.lu.fit, 
 			   u.indx.fit, u.indx.lu.fit, ui.indx.fit,
-          	           beta.starting, alpha.starting, z.starting.fit,
-          	           beta.comm.starting, 
-          	           alpha.comm.starting, tau.sq.beta.starting, 
-          	           tau.sq.alpha.starting, w.starting.fit, phi.starting, 
-          	           sigma.sq.starting, nu.starting, 
+          	           beta.inits, alpha.inits, z.inits.fit,
+          	           beta.comm.inits, 
+          	           alpha.comm.inits, tau.sq.beta.inits, 
+          	           tau.sq.alpha.inits, w.inits.fit, phi.inits, 
+          	           sigma.sq.inits, nu.inits, 
 		           z.long.indx.fit, mu.beta.comm, 
           	           mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
           	           tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 

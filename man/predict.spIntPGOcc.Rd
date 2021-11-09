@@ -92,7 +92,8 @@ sp <- TRUE
 
 # Simulate occupancy data. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sp = sp)
+		 n.rep = n.rep, beta = beta, alpha = alpha, sp = sp, 
+		 phi = phi, sigma.sq = sigma.sq, cov.model = 'spherical')
 
 y <- dat$y
 X <- dat$X.obs
@@ -123,8 +124,8 @@ data.list <- list(y = y,
 
 J <- length(dat$z.obs)
 
-# Starting values
-starting.list <- list(alpha = list(0, 0, 0, 0), 
+# Initial values
+inits.list <- list(alpha = list(0, 0, 0, 0), 
 		      beta = 0, 
 		      phi = 3 / .5, 
 		      sigma.sq = 2, 
@@ -150,12 +151,12 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
 				     f.3 = ~ det.cov.3.1, 
 				     f.4 = ~ det.cov.4.1 + det.cov.4.2 + det.cov.4.3), 
 		  data = data.list,  
-		  starting = starting.list, 
+		  inits = inits.list, 
 		  n.batch = n.batch, 
 		  batch.length = batch.length, 
 		  accept.rate = 0.43, 
 		  priors = prior.list, 
-		  cov.model = "exponential", 
+		  cov.model = "spherical", 
 		  tuning = tuning.list, 
 		  n.omp.threads = 1, 
 		  verbose = TRUE, 

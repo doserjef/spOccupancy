@@ -7,14 +7,14 @@
 }
 
 \usage{
-spPGOcc(occ.formula, det.formula, data, starting, priors, 
-	tuning, cov.model = "exponential", NNGP = TRUE, 
-	n.neighbors = 15, search.type = "cb", n.batch,
-	batch.length, accept.rate = 0.43, 
-	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-	n.burn = round(.10 * n.batch * batch.length), 
-	n.thin = 1, k.fold, k.fold.threads = 1, 
-	k.fold.seed = 100, ...)
+spPGOcc(occ.formula, det.formula, data, inits, priors, 
+        tuning, cov.model = "exponential", NNGP = TRUE, 
+        n.neighbors = 15, search.type = "cb", n.batch,
+        batch.length, accept.rate = 0.43, 
+        n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+        n.burn = round(.10 * n.batch * batch.length), 
+        n.thin = 1, k.fold, k.fold.threads = 1, 
+        k.fold.seed = 100, ...)
 }
 
 \arguments{
@@ -44,12 +44,12 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
     number of columns equal to the maximum number of replicates at a given site. 
     \code{coords} is a \eqn{J \times 2}{J x 2} matrix of the observation coordinates.}
   
-  \item{starting}{a list with each tag corresponding to a parameter name.
+  \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, 
     \code{phi}, \code{w}, \code{nu}, and \code{sigma.sq.p}. 
     \code{nu} is only specified if \code{cov.model = "matern"} and \code{sigma.sq.p}
     is only specified if there are random effects in \code{det.formula}. 
-    The value portion of each tag is the parameter's starting value. See \code{priors}
+    The value portion of each tag is the parameter's initial value. See \code{priors}
     description for definition of each parameter name.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
@@ -96,7 +96,12 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
     Finley et al. (2019) for more information.}
   
   \item{n.neighbors}{number of neighbors used in the NNGP. Only used if 
-  \code{NNGP = TRUE}.}
+  \code{NNGP = TRUE}. Datta et al. (2016) showed that 15 neighbors is usually 
+  sufficient, but that as few as 5 neighbors can be adequate for certain data
+  sets, which can lead to even greater decreases in run time. We recommend
+  starting with 15 neighbors (the default) and if additional gains in computation
+  time are desired, subsequently compare the results with a smaller number
+  of neighbors using WAIC or k-fold cross-validation.}
   
   \item{search.type}{a quoted keyword that specifies the type of nearest
     neighbor search algorithm. Supported method key words are: \code{"cb"} and
@@ -166,7 +171,7 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
 
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
-  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+  Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
   Datta, A., S. Banerjee, A.O. Finley, and A.E. Gelfand. (2016)
   Hierarchical Nearest-Neighbor Gaussian process models for large
@@ -243,8 +248,8 @@ spPGOcc(occ.formula, det.formula, data, starting, priors,
 \dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
-J.x <- 8
-J.y <- 8
+J.x <- 12
+J.y <- 12
 J <- J.x * J.y
 n.rep <- sample(2:4, J, replace = TRUE)
 beta <- c(0.5, -0.15)
@@ -254,7 +259,7 @@ p.det <- length(alpha)
 phi <- 3 / .6
 sigma.sq <- 2
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha, 
-              sigma.sq = sigma.sq, phi = phi, sp = TRUE)
+              sigma.sq = sigma.sq, phi = phi, sp = TRUE, cov.model = 'exponential')
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
@@ -280,19 +285,19 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 		   alpha.normal = list(mean = 0, var = 2.72),
 		   sigma.sq.ig = c(2, 2), 
 		   phi.unif = c(3/1, 3/.1)) 
-# Starting values
-starting.list <- list(alpha = 0, beta = 0,
-		      phi = 3 / .5, 
-		      sigma.sq = 2,
-		      w = rep(0, nrow(X)),
-		      z = apply(y, 1, max, na.rm = TRUE))
+# Initial values
+inits.list <- list(alpha = 0, beta = 0,
+		   phi = 3 / .5, 
+		   sigma.sq = 2,
+		   w = rep(0, nrow(X)),
+		   z = apply(y, 1, max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
 
 out <- spPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1 + det.cov.2, 
 	       data = data.list, 
-	       starting = starting.list, 
+	       inits = inits.list, 
 	       n.batch = n.batch, 
 	       batch.length = batch.length, 
 	       priors = prior.list,

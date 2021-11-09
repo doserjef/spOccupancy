@@ -100,7 +100,7 @@ extern "C" {
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
       Rprintf("Spatial Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
-      Rprintf("Number of MCMC samples %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
+      Rprintf("Number of MCMC samples: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
       Rprintf("Burn-in: %i \n", nBurn); 
       Rprintf("Thinning Rate: %i \n", nThin); 
       Rprintf("Total Posterior Samples: %i \n\n", nPost); 
@@ -395,13 +395,13 @@ extern "C" {
 	// Invert CCand and log det cov. 
         detCand = 0.0;
 	F77_NAME(dpotrf)(lower, &J, CCand, &J, &info); 
-	if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	if(info != 0){error("c++ error: Cholesky failed in proposal covariance matrix\n");}
 	// Get log of the determinant of the covariance matrix. 
 	for (k = 0; k < J; k++) {
 	  detCand += 2.0 * log(CCand[k*J+k]);
 	} // k
 	F77_NAME(dpotri)(lower, &J, CCand, &J, &info); 
-	if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+	if(info != 0){error("c++ error: Cholesky inverse failed in proposal covariance matrix\n");}
         logPostCand = 0.0; 
 	// Jacobian and Uniform prior. 
 	logPostCand += log(phiCand - phiA) + log(phiB - phiCand); 
@@ -420,12 +420,12 @@ extern "C" {
 	spCovLT(coordsD, J, theta, corName, C); 
         detCurr = 0.0;
 	F77_NAME(dpotrf)(lower, &J, C, &J, &info); 
-	if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	if(info != 0){error("c++ error: Cholesky failed in current covariance matrix\n");}
 	for (k = 0; k < J; k++) {
 	  detCurr += 2.0 * log(C[k*J+k]);
 	} // k
 	F77_NAME(dpotri)(lower, &J, C, &J, &info); 
-	if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+	if(info != 0){error("c++ error: Cholesky inverse failed in current covariance matrix\n");}
         logPostCurr = 0.0; 
 	logPostCurr += log(phi - phiA) + log(phiB - phi); 
 	// (-1/2) * tmp_JD` *  C^-1 * tmp_JD
@@ -554,11 +554,8 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tparameter\tacceptance\ttuning\n");	  
-	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
-	  if (corName == "matern") {
-	  Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
-          }
+	  Rprintf("\tAcceptance\tTuning\n");	  
+	  Rprintf("\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();

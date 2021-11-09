@@ -73,8 +73,8 @@ prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
 				      var = rep(2.72, p.occ)),
 		   alpha.normal = list(mean = rep(0, p.det),
 			               var = rep(2.72, p.det)))
-# Starting values
-starting.list <- list(alpha = rep(0, p.det),
+# Initial values
+inits.list <- list(alpha = rep(0, p.det),
 		      beta = rep(0, p.occ),
 		      z = apply(y, 1, max, na.rm = TRUE))
 
@@ -84,7 +84,7 @@ n.report <- 1000
 out <- PGOcc(occ.formula = ~ occ.cov, 
 	     det.formula = ~ det.cov,
 	     data = data.list, 
-	     starting = starting.list,
+	     inits = inits.list,
 	     n.samples = n.samples,
 	     priors = prior.list,
 	     n.omp.threads = 1,

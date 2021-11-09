@@ -1,8 +1,8 @@
 Package: spOccupancy
 Type: Package
-Title: Single species, multispecies, and integrated spatial occupancy models
+Title: Single Species, Multispecies, and Integrated Spatial Occupancy Models
 Version: 0.1.0
-Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu", comment=c(ORCID = "0000-0002-8950-9895")), person("Andrew", "Finley", role = c("aut")))
+Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut]
 Maintainer: Jeffrey Doser <doserjef@msu.edu>
 Description: Fits single species, multispecies, and integrated non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. 

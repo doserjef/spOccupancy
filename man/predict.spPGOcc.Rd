@@ -69,8 +69,8 @@
 \dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
-J.x <- 10
-J.y <- 10
+J.x <- 15
+J.y <- 15
 J <- J.x * J.y
 n.rep <- sample(2:4, J, replace = TRUE)
 beta <- c(0.5, 2)
@@ -80,7 +80,7 @@ p.det <- length(alpha)
 phi <- 3 / .6
 sigma.sq <- 2
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha, 
-              sigma.sq = sigma.sq, phi = phi, sp = TRUE)
+              sigma.sq = sigma.sq, phi = phi, sp = TRUE, cov.model = 'gaussian')
 # Split into fitting and prediction data set
 pred.indx <- sample(1:J, round(J * .5), replace = FALSE)
 y <- dat$y[-pred.indx, ]
@@ -114,8 +114,8 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 		   alpha.normal = list(mean = 0, var = 2.72),
 		   sigma.sq.ig = c(2, 2), 
 		   phi.unif = c(3/1, 3/.1)) 
-# Starting values
-starting.list <- list(alpha = 0, beta = 0,
+# Initial values
+inits.list <- list(alpha = 0, beta = 0,
 		      phi = 3 / .5, 
 		      sigma.sq = 2,
 		      w = rep(0, nrow(X)),
@@ -126,12 +126,12 @@ tuning.list <- list(phi = 1)
 out <- spPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1, 
 	       data = data.list, 
-	       starting = starting.list, 
+	       inits = inits.list, 
 	       n.batch = n.batch, 
 	       batch.length = batch.length, 
 	       accept.rate = 0.43, 
 	       priors = prior.list,
-	       cov.model = 'exponential', 
+	       cov.model = 'gaussian', 
 	       tuning = tuning.list, 
 	       n.omp.threads = 1, 
 	       verbose = TRUE, 

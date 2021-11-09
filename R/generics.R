@@ -748,7 +748,7 @@ fitted.msPGOcc <- function(object, ...) {
   n.post <- object$n.post
   X.p <- object$X.p
   y <- object$y
-  n.rep <- apply(y[1, ,], 1, function(a) sum(!is.na(a)))
+  n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
   K.max <- max(n.rep)
   J <- dim(y)[2]
   N <- dim(y)[1]
@@ -947,7 +947,7 @@ fitted.spMsPGOcc <- function(object, ...) {
   n.post <- object$n.post
   X.p <- object$X.p
   y <- object$y
-  n.rep <- apply(y[1, ,], 1, function(a) sum(!is.na(a)))
+  n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
   K.max <- max(n.rep)
   J <- dim(y)[2]
   N <- dim(y)[1]

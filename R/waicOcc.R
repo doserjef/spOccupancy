@@ -80,7 +80,7 @@ waicOcc <- function(object, ...) {
     X.p <- object$X.p
     y <- object$y
     y.ind <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) == 0))
-    n.rep <- apply(y[1, , ], 1, function(a) sum(!is.na(a)))
+    n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
     # Necessary for when X.p is only at site level
     if (nrow(X.p) == dim(y)[2]) {
       X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))

@@ -86,8 +86,8 @@ data.list <- list(y = dat$y,
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 		   alpha.normal = list(mean = 0, var = 2.72))
-# Starting values
-starting.list <- list(alpha = 0, beta = 0,
+# Initial values
+inits.list <- list(alpha = 0, beta = 0,
 		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
@@ -96,7 +96,7 @@ n.report <- 1000
 out <- PGOcc(occ.formula = ~ occ.cov, 
 	     det.formula = ~ det.cov, 
 	     data = data.list, 
-	     starting = starting.list,
+	     inits = inits.list,
 	     n.samples = n.samples,
 	     priors = prior.list,
 	     n.omp.threads = 1,

@@ -1,4 +1,4 @@
-intPGOcc <- function(occ.formula, det.formula, data, starting, priors, 
+intPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		     n.samples, n.omp.threads = 1, verbose = TRUE, 
 		     n.report = 1000, n.burn = round(.10 * n.samples), 
 		     n.thin = 1, k.fold, k.fold.threads = 1, 
@@ -111,6 +111,21 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       }
     }
 
+    if (missing(n.samples)) {
+      stop("error: must specify number of MCMC samples")
+    }
+    if (n.burn > n.samples) {
+      stop("error: n.burn must be less than n.samples")
+    }
+    if (n.thin > n.samples) {
+      stop("error: n.thin must be less than n.samples")
+    }
+    if (!missing(k.fold)) {
+      if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+        stop("error: k.fold must be a single integer value >= 2")  
+      }
+    }
+
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------
     if (missing(occ.formula)) {
@@ -204,87 +219,6 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       indx <- indx + nrow(X.p[[i]])
     }
 
-    # Starting values -----------------------------------------------------
-    if (missing(starting)) {
-      starting <- list()
-    }
-    names(starting) <- tolower(names(starting))
-    # z -------------------------------
-    if ("z" %in% names(starting)) {
-      z.starting <- starting$z
-      if (!is.vector(z.starting)) {
-        stop(paste("error: starting values for z must be a vector of length ",
-		   J, sep = ""))
-      }
-      if (length(z.starting) != J) {
-        stop(paste("error: starting values for z must be a vector of length ",
-		   J, sep = ""))
-      }
-      z.test <- tapply(y, z.long.indx.r, max, na.rm = TRUE)	
-      init.test <- sum(z.starting < z.test)
-      if (init.test > 0) {
-        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
-      }
-    } else {
-      z.starting <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
-      if (verbose) {
-        message("z is not specified in starting values.\nSetting starting values based on observed data\n")
-      }
-    }
-    # beta -----------------------
-    if ("beta" %in% names(starting)) {
-      beta.starting <- starting[["beta"]]
-      if (length(beta.starting) != p.occ & length(beta.starting) != 1) {
-        if (p.occ == 1) {
-          stop(paste("error: starting values for beta must be of length ", p.occ,
-		     sep = ""))
-
-        } else {
-          stop(paste("error: starting values for beta must be of length ", p.occ, " or 1",
-	  	     sep = ""))
-        }
-      }
-      if (length(beta.starting) != p.occ) {
-        beta.starting <- rep(beta.starting, p.occ)
-      }
-    } else {
-      beta.starting <- rnorm(p.occ)
-      if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
-      }
-    }
-    # alpha -----------------------
-    if ("alpha" %in% names(starting)) {
-      alpha.starting <- starting[["alpha"]]
-      if (length(alpha.starting) != n.data | !is.list(alpha.starting)) {
-        stop(paste("error: starting values for alpha must be a list of length ", n.data,
-		   sep = ""))
-      }
-      for (q in 1:n.data) {
-        if (length(alpha.starting[[q]]) != p.det.long[q] & length(alpha.starting[[q]]) != 1) {
-          if (p.det.long[q] == 1) {
-            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
-		     p.det.long[q], sep = ""))
-	  } else {
-            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
-		       p.det.long[q], " or 1", sep = ""))
-          }
-        }
-        if (length(alpha.starting[[q]]) != p.det.long[q]) {
-          alpha.starting[[q]] <- rep(alpha.starting, p.det.long[q])
-        }
-      }
-      alpha.starting <- unlist(alpha.starting)
-    } else {
-      if (verbose) {
-        message("alpha is not specified in starting values.\nSetting starting values to random standard normal values\n")
-      }
-      alpha.starting <- rnorm(p.det)
-    }
-
-    alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
-    alpha.indx.c <- alpha.indx.r - 1
-
     # Priors --------------------------------------------------------------
     if (missing(priors)) {
       priors <- list()
@@ -327,6 +261,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
       }
       mu.beta <- rep(0, p.occ)
+      sigma.beta <- rep(2.72, p.occ)
       Sigma.beta <- diag(p.occ) * 2.72
     }
 
@@ -384,12 +319,93 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       sigma.alpha <- rep(2.72, p.det) 
     }
 
+    # Starting values -----------------------------------------------------
+    if (missing(inits)) {
+      inits <- list()
+    }
+    names(inits) <- tolower(names(inits))
+    # z -------------------------------
+    if ("z" %in% names(inits)) {
+      z.inits <- inits$z
+      if (!is.vector(z.inits)) {
+        stop(paste("error: initial values for z must be a vector of length ",
+		   J, sep = ""))
+      }
+      if (length(z.inits) != J) {
+        stop(paste("error: initial values for z must be a vector of length ",
+		   J, sep = ""))
+      }
+      z.test <- tapply(y, z.long.indx.r, max, na.rm = TRUE)	
+      init.test <- sum(z.inits < z.test)
+      if (init.test > 0) {
+        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
+      }
+    } else {
+      z.inits <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
+      if (verbose) {
+        message("z is not specified in initial values.\nSetting initial values based on observed data\n")
+      }
+    }
+    # beta -----------------------
+    if ("beta" %in% names(inits)) {
+      beta.inits <- inits[["beta"]]
+      if (length(beta.inits) != p.occ & length(beta.inits) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: initial values for beta must be of length ", p.occ,
+		     sep = ""))
+
+        } else {
+          stop(paste("error: initial values for beta must be of length ", p.occ, " or 1",
+	  	     sep = ""))
+        }
+      }
+      if (length(beta.inits) != p.occ) {
+        beta.inits <- rep(beta.inits, p.occ)
+      }
+    } else {
+      beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+      if (verbose) {
+        message('beta is not specified in initial values.\nSetting initial values to random values from the prior distribution\n')
+      }
+    }
+    # alpha -----------------------
+    if ("alpha" %in% names(inits)) {
+      alpha.inits <- inits[["alpha"]]
+      if (length(alpha.inits) != n.data | !is.list(alpha.inits)) {
+        stop(paste("error: initial values for alpha must be a list of length ", n.data,
+		   sep = ""))
+      }
+      for (q in 1:n.data) {
+        if (length(alpha.inits[[q]]) != p.det.long[q] & length(alpha.inits[[q]]) != 1) {
+          if (p.det.long[q] == 1) {
+            stop(paste("error: initial values for alpha[[", q, "]] must be a vector of length ", 
+		     p.det.long[q], sep = ""))
+	  } else {
+            stop(paste("error: initial values for alpha[[", q, "]] must be a vector of length ", 
+		       p.det.long[q], " or 1", sep = ""))
+          }
+        }
+        if (length(alpha.inits[[q]]) != p.det.long[q]) {
+          alpha.inits[[q]] <- rep(alpha.inits, p.det.long[q])
+        }
+      }
+      alpha.inits <- unlist(alpha.inits)
+    } else {
+      if (verbose) {
+        message("alpha is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
+      }
+      alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+    }
+
+    alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
+    alpha.indx.c <- alpha.indx.r - 1
+
     # Set model.deviance to NA for returning when no cross-validation
     model.deviance <- NA
 
     # Specify storage modes -----------------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(z.starting) <- "double"
+    storage.mode(z.inits) <- "double"
     storage.mode(X.p.all) <- "double"
     storage.mode(X) <- "double"
     storage.mode(p.det) <- "integer"
@@ -401,8 +417,8 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(J.long) <- "integer"
     storage.mode(K) <- "integer"
     storage.mode(n.data) <- "integer"
-    storage.mode(beta.starting) <- "double"
-    storage.mode(alpha.starting) <- "double"
+    storage.mode(beta.inits) <- "double"
+    storage.mode(alpha.inits) <- "double"
     storage.mode(z.long.indx.c) <- "integer"
     storage.mode(data.indx.c) <- "integer"
     storage.mode(alpha.indx.c) <- "integer"
@@ -424,7 +440,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Run the model in C    
     out <- .Call("intPGOcc", y, X, X.p.all, p.occ, p.det, p.det.long, 
 		 J, J.long, K, n.obs, n.obs.long, n.data, 
-		 beta.starting, alpha.starting, z.starting,
+		 beta.inits, alpha.inits, z.inits,
 		 z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
 		 Sigma.beta, sigma.alpha, n.samples, 
 		 n.omp.threads, verbose, n.report, n.burn, n.thin, 
@@ -499,7 +515,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         } 
 	y.fit <- y[y.indx]
         y.0 <- y[!y.indx]
-        z.starting.fit <- z.starting[curr.set.fit]
+        z.inits.fit <- z.inits[curr.set.fit]
         X.p.fit <- X.p.all[y.indx, , drop = FALSE]
         X.p.0 <- X.p.all[!y.indx, , drop = FALSE]
         X.fit <- X[curr.set.fit, , drop = FALSE]
@@ -566,7 +582,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 			     FUN = function(a) length(unique(a))))
 
         storage.mode(y.fit) <- "double"
-        storage.mode(z.starting.fit) <- "double"
+        storage.mode(z.inits.fit) <- "double"
         storage.mode(X.p.fit) <- "double"
         storage.mode(X.fit) <- "double"
         storage.mode(p.det) <- "integer"
@@ -580,8 +596,8 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 	storage.mode(n.obs.fit) <- "integer"
 	storage.mode(n.obs.long.fit) <- "integer"
         storage.mode(n.data) <- "integer"
-        storage.mode(beta.starting) <- "double"
-        storage.mode(alpha.starting) <- "double"
+        storage.mode(beta.inits) <- "double"
+        storage.mode(alpha.inits) <- "double"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(data.indx.c.fit) <- "integer"
         storage.mode(alpha.indx.c) <- "integer"
@@ -598,7 +614,7 @@ intPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     
 	out.fit <- .Call("intPGOcc", y.fit, X.fit, X.p.fit, p.occ, p.det, p.det.long, 
 		         J.fit, J.long.fit, K.fit, n.obs.fit, n.obs.long.fit, n.data, 
-		         beta.starting, alpha.starting, z.starting.fit,
+		         beta.inits, alpha.inits, z.inits.fit,
 		         z.long.indx.fit, data.indx.c.fit, alpha.indx.c, mu.beta, mu.alpha, 
 		         Sigma.beta, sigma.alpha, n.samples, 
 		         n.omp.threads.fit, verbose.fit, n.report, n.burn, n.thin, 

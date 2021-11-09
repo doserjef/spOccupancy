@@ -8,7 +8,7 @@
 
 \usage{
 simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
-	 p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
+         p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 
 \arguments{

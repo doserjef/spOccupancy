@@ -1,4 +1,4 @@
-spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors, 
+spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		       tuning, cov.model = "exponential", NNGP = TRUE, 
 		       n.neighbors = 15, search.type = "cb",
 		       n.batch, batch.length, accept.rate = 0.43, 
@@ -12,6 +12,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+  rigamma <- function(n, a, b){
+    1/rgamma(n = n, shape = a, rate = b)
+  }
 
   # Make it look nice
   if (verbose) {
@@ -117,7 +120,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
 
   # Neighbors and Ordering ----------------------------------------------
-  # TODO: may need to check this. 
   if (NNGP) {
     u.search.type <- 2 
     # Order by x column. Could potentailly allow this to be user defined.
@@ -125,6 +127,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Reorder everything to align with NN ordering. 
     coords <- coords[ord, ]
     data$occ.covs <- data$occ.covs[ord, , drop = FALSE]
+    rownames(data$occ.covs) <- 1:nrow(data$occ.covs)
     sites.orig <- sites
     # Don't need to actually reorder the data, can just reorder the site 
     # indices. 
@@ -193,6 +196,20 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Number of repeat visits for each data set site. 
     K <- unlist(n.rep)
     n.samples <- n.batch * batch.length
+    if (missing(n.samples)) {
+      stop("error: must specify number of MCMC samples")
+    }
+    if (n.burn > n.samples) {
+      stop("error: n.burn must be less than n.samples")
+    }
+    if (n.thin > n.samples) {
+      stop("error: n.thin must be less than n.samples")
+    }
+    if (!missing(k.fold)) {
+      if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
+        stop("error: k.fold must be a single integer value >= 2")  
+      }
+    }
 
     # Get indics to map z to y --------------------------------------------
     X.p.orig <- X.p
@@ -233,150 +250,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     for (i in 1:n.data) {
       X.p.all[indx:(indx + nrow(X.p[[i]]) - 1), 1:p.det.long[i]] <- X.p[[i]] 
       indx <- indx + nrow(X.p[[i]])
-    }
-
-    # Starting values -----------------------------------------------------
-    if (missing(starting)) {
-      starting <- list()
-    }
-    names(starting) <- tolower(names(starting))
-    # z -------------------------------
-    if ("z" %in% names(starting)) {
-      z.starting <- starting$z
-      if (!is.vector(z.starting)) {
-        stop(paste("error: starting values for z must be a vector of length ",
-		   J, sep = ""))
-      }
-      if (length(z.starting) != J) {
-        stop(paste("error: starting values for z must be a vector of length ",
-		   J, sep = ""))
-      }
-      z.test <- tapply(y, z.long.indx.r, max, na.rm = TRUE)	
-      init.test <- sum(z.starting < z.test)
-      if (init.test > 0) {
-        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify starting$z so initial values are 1 if the species is observed at that site.")
-      }
-    } else {
-      z.starting <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
-      if (verbose) {
-        message("z is not specified in starting values.\nSetting starting values based on observed data\n")
-      }
-    }
-    # beta -----------------------
-    if ("beta" %in% names(starting)) {
-      beta.starting <- starting[["beta"]]
-      if (length(beta.starting) != p.occ & length(beta.starting) != 1) {
-        if (p.occ == 1) {
-          stop(paste("error: starting values for beta must be of length ", p.occ,
-		     sep = ""))
-
-        } else {
-          stop(paste("error: starting values for beta must be of length ", p.occ, " or 1",
-	  	     sep = ""))
-        }
-      }
-      if (length(beta.starting) != p.occ) {
-        beta.starting <- rep(beta.starting, p.occ)
-      }
-    } else {
-      beta.starting <- rnorm(p.occ)
-      if (verbose) {
-        message('beta is not specified in starting values.\nSetting starting values to random standard normal values\n')
-      }
-    }
-    # alpha -----------------------
-    if ("alpha" %in% names(starting)) {
-      alpha.starting <- starting[["alpha"]]
-      if (length(alpha.starting) != n.data | !is.list(alpha.starting)) {
-        stop(paste("error: starting values for alpha must be a list of length ", n.data,
-		   sep = ""))
-      }
-      for (q in 1:n.data) {
-        if (length(alpha.starting[[q]]) != p.det.long[q] & length(alpha.starting[[q]]) != 1) {
-          if (p.det.long[q] == 1) {
-            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
-		     p.det.long[q], sep = ""))
-	  } else {
-            stop(paste("error: starting values for alpha[[", q, "]] must be a vector of length ", 
-		       p.det.long[q], " or 1", sep = ""))
-          }
-        }
-        if (length(alpha.starting[[q]]) != p.det.long[q]) {
-          alpha.starting[[q]] <- rep(alpha.starting, p.det.long[q])
-        }
-      }
-      alpha.starting <- unlist(alpha.starting)
-    } else {
-      if (verbose) {
-        message("alpha is not specified in starting values.\nSetting starting values to random standard normal values\n")
-      }
-      alpha.starting <- rnorm(p.det)
-    }
-
-    alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
-    alpha.indx.c <- alpha.indx.r - 1
-
-    # phi -----------------------------
-    # Get distance matrix which is used if priors are not specified
-    coords.D <- iDist(coords)
-    lower.unif <- 3 / max(coords.D)
-    upper.unif <- 3 / sort(unique(c(coords.D)))[2]
-    if ("phi" %in% names(starting)) {
-      phi.starting <- starting[["phi"]]
-      if (length(phi.starting) != 1) {
-        stop("error: starting values for phi must be of length 1")
-      }
-    } else {
-      phi.starting <- runif(1, lower.unif, upper.unif)
-      if (verbose) {
-        message("phi is not specified in starting values.\nSetting starting value to random value between 3/range(dist(data$coords))\n")
-      }
-    }
-
-    # sigma.sq ------------------------
-    if ("sigma.sq" %in% names(starting)) {
-      sigma.sq.starting <- starting[["sigma.sq"]]
-      if (length(sigma.sq.starting) != 1) {
-        stop("error: starting values for sigma.sq must be of length 1")
-      }
-    } else {
-      sigma.sq.starting <- runif(1, 0.2, 4)
-      if (verbose) {
-        message("sigma.sq is not specified in starting values.\nSetting starting value to random value between 0.2 and 4\n")
-      }
-    }
-    # w -----------------------------
-    if ("w" %in% names(starting)) {
-      w.starting <- starting[["w"]]
-      if (!is.vector(w.starting)) {
-        stop(paste("error: starting values for w must be a vector of length ",
-        	   J, sep = ""))
-      }
-      if (length(w.starting) != J) {
-        stop(paste("error: starting values for w must be a vector of length ",
-        	   J, sep = ""))
-      }
-    } else {
-      w.starting <- rep(0, J)
-      if (verbose) {
-        message("w is not specified in starting values.\nSetting starting value to 0\n")
-      }
-    }
-    # nu ------------------------
-    if ("nu" %in% names(starting)) {
-      nu.starting <- starting[["nu"]]
-      if (length(nu.starting) != 1) {
-        stop("error: starting values for nu must be of length 1")
-      }
-    } else {
-      if (cov.model == 'matern') {
-        if (verbose) {
-          message("nu is not specified in starting values.\nSetting starting value to 1\n")
-        }
-        nu.starting <- 1
-      } else {
-        nu.starting <- 0
-      }
     }
 
     # Priors --------------------------------------------------------------
@@ -421,6 +294,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
       }
       mu.beta <- rep(0, p.occ)
+      sigma.beta <- rep(2.72, p.occ)
       Sigma.beta <- diag(p.occ) * 2.72
     }
 
@@ -479,6 +353,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     }
 
     # phi -----------------------------
+    # Get distance matrix which is used if priors are not specified
+    coords.D <- iDist(coords)
+    lower.unif <- 3 / max(coords.D)
+    upper.unif <- 3 / sort(unique(c(coords.D)))[2]
     if ("phi.unif" %in% names(priors)) {
       if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
         stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
@@ -522,10 +400,147 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
       nu.b <- 0
     }
 
-    # Covariance Model ----------------------------------------------------
-    if (missing(cov.model)) {
-      stop("error: cov.model must be specified")
+    # Starting values -----------------------------------------------------
+    if (missing(inits)) {
+      inits <- list()
     }
+    names(inits) <- tolower(names(inits))
+    # z -------------------------------
+    if ("z" %in% names(inits)) {
+      z.inits <- inits$z
+      if (!is.vector(z.inits)) {
+        stop(paste("error: initial values for z must be a vector of length ",
+		   J, sep = ""))
+      }
+      if (length(z.inits) != J) {
+        stop(paste("error: initial values for z must be a vector of length ",
+		   J, sep = ""))
+      }
+      z.test <- tapply(y, z.long.indx.r, max, na.rm = TRUE)	
+      init.test <- sum(z.inits < z.test)
+      if (init.test > 0) {
+        stop("error: initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
+      }
+    } else {
+      z.inits <- tapply(y, z.long.indx.r, max, na.rm = TRUE)
+      if (verbose) {
+        message("z is not specified in initial values.\nSetting initial values based on observed data\n")
+      }
+    }
+    # beta -----------------------
+    if ("beta" %in% names(inits)) {
+      beta.inits <- inits[["beta"]]
+      if (length(beta.inits) != p.occ & length(beta.inits) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: initial values for beta must be of length ", p.occ,
+		     sep = ""))
+
+        } else {
+          stop(paste("error: initial values for beta must be of length ", p.occ, " or 1",
+	  	     sep = ""))
+        }
+      }
+      if (length(beta.inits) != p.occ) {
+        beta.inits <- rep(beta.inits, p.occ)
+      }
+    } else {
+      beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+      if (verbose) {
+        message('beta is not specified in initial values.\nSetting initial values to random values from the prior distribution\n')
+      }
+    }
+    # alpha -----------------------
+    if ("alpha" %in% names(inits)) {
+      alpha.inits <- inits[["alpha"]]
+      if (length(alpha.inits) != n.data | !is.list(alpha.inits)) {
+        stop(paste("error: initial values for alpha must be a list of length ", n.data,
+		   sep = ""))
+      }
+      for (q in 1:n.data) {
+        if (length(alpha.inits[[q]]) != p.det.long[q] & length(alpha.inits[[q]]) != 1) {
+          if (p.det.long[q] == 1) {
+            stop(paste("error: initial values for alpha[[", q, "]] must be a vector of length ", 
+		     p.det.long[q], sep = ""))
+	  } else {
+            stop(paste("error: initial values for alpha[[", q, "]] must be a vector of length ", 
+		       p.det.long[q], " or 1", sep = ""))
+          }
+        }
+        if (length(alpha.inits[[q]]) != p.det.long[q]) {
+          alpha.inits[[q]] <- rep(alpha.inits, p.det.long[q])
+        }
+      }
+      alpha.inits <- unlist(alpha.inits)
+    } else {
+      if (verbose) {
+        message("alpha is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
+      }
+      alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+    }
+
+    alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
+    alpha.indx.c <- alpha.indx.r - 1
+
+    # phi -----------------------------
+    if ("phi" %in% names(inits)) {
+      phi.inits <- inits[["phi"]]
+      if (length(phi.inits) != 1) {
+        stop("error: initial values for phi must be of length 1")
+      }
+    } else {
+      phi.inits <- runif(1, lower.unif, upper.unif)
+      if (verbose) {
+        message("phi is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
+      }
+    }
+
+    # sigma.sq ------------------------
+    if ("sigma.sq" %in% names(inits)) {
+      sigma.sq.inits <- inits[["sigma.sq"]]
+      if (length(sigma.sq.inits) != 1) {
+        stop("error: initial values for sigma.sq must be of length 1")
+      }
+    } else {
+      sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+      if (verbose) {
+        message("sigma.sq is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
+      }
+    }
+    # w -----------------------------
+    if ("w" %in% names(inits)) {
+      w.inits <- inits[["w"]]
+      if (!is.vector(w.inits)) {
+        stop(paste("error: initial values for w must be a vector of length ",
+        	   J, sep = ""))
+      }
+      if (length(w.inits) != J) {
+        stop(paste("error: initial values for w must be a vector of length ",
+        	   J, sep = ""))
+      }
+    } else {
+      w.inits <- rep(0, J)
+      if (verbose) {
+        message("w is not specified in initial values.\nSetting initial value to 0\n")
+      }
+    }
+    # nu ------------------------
+    if ("nu" %in% names(inits)) {
+      nu.inits <- inits[["nu"]]
+      if (length(nu.inits) != 1) {
+        stop("error: initial values for nu must be of length 1")
+      }
+    } else {
+      if (cov.model == 'matern') {
+        if (verbose) {
+          message("nu is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
+        }
+        nu.inits <- runif(1, nu.a, nu.b)
+      } else {
+        nu.inits <- 0
+      }
+    }
+
+    # Covariance Model ----------------------------------------------------
     # Order must match util.cpp spCor.
     cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
     if(! cov.model %in% cov.model.names){
@@ -574,7 +589,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Specify storage modes -----------------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(z.starting) <- "double"
+    storage.mode(z.inits) <- "double"
     storage.mode(X.p.all) <- "double"
     storage.mode(X) <- "double"
     storage.mode(coords.D) <- "double"
@@ -587,12 +602,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(J.long) <- "integer"
     storage.mode(K) <- "integer"
     storage.mode(n.data) <- "integer"
-    storage.mode(beta.starting) <- "double"
-    storage.mode(alpha.starting) <- "double"
-    storage.mode(phi.starting) <- "double"
-    storage.mode(nu.starting) <- "double"
-    storage.mode(w.starting) <- "double"
-    storage.mode(sigma.sq.starting) <- "double"
+    storage.mode(beta.inits) <- "double"
+    storage.mode(alpha.inits) <- "double"
+    storage.mode(phi.inits) <- "double"
+    storage.mode(nu.inits) <- "double"
+    storage.mode(w.inits) <- "double"
+    storage.mode(sigma.sq.inits) <- "double"
     storage.mode(z.long.indx.c) <- "integer"
     storage.mode(data.indx.c) <- "integer"
     storage.mode(alpha.indx.c) <- "integer"
@@ -624,8 +639,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     # Run the model in C    
     out <- .Call("spIntPGOcc", y, X, X.p.all, coords.D, p.occ, p.det, p.det.long, 
 		 J, J.long, K, n.obs, n.obs.long, n.data, 
-		 beta.starting, alpha.starting, z.starting, w.starting, 
-		 phi.starting, sigma.sq.starting, nu.starting, 
+		 beta.inits, alpha.inits, z.inits, w.inits, 
+		 phi.inits, sigma.sq.inits, nu.inits, 
 		 z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
 		 Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx, 
@@ -716,8 +731,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         } 
         y.fit <- y[y.indx]
         y.0 <- y[!y.indx]
-        z.starting.fit <- z.starting[curr.set.fit]
-	w.starting.fit <- w.starting[curr.set.fit]
+        z.inits.fit <- z.inits[curr.set.fit]
+	w.inits.fit <- w.inits[curr.set.fit]
 	coords.fit <- coords[curr.set.fit, , drop = FALSE]
 	coords.0 <- coords[curr.set.pred, , drop = FALSE]
 	coords.D.fit <- coords.D[curr.set.fit, curr.set.fit, drop = FALSE]
@@ -789,7 +804,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
 
         storage.mode(y.fit) <- "double"
-        storage.mode(z.starting.fit) <- "double"
+        storage.mode(z.inits.fit) <- "double"
         storage.mode(X.p.fit) <- "double"
         storage.mode(X.fit) <- "double"
         storage.mode(coords.D.fit) <- "double"
@@ -802,12 +817,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         storage.mode(J.long.fit) <- "integer"
         storage.mode(K.fit) <- "integer"
         storage.mode(n.data) <- "integer"
-        storage.mode(beta.starting) <- "double"
-        storage.mode(alpha.starting) <- "double"
-        storage.mode(phi.starting) <- "double"
-        storage.mode(nu.starting) <- "double"
-        storage.mode(w.starting.fit) <- "double"
-        storage.mode(sigma.sq.starting) <- "double"
+        storage.mode(beta.inits) <- "double"
+        storage.mode(alpha.inits) <- "double"
+        storage.mode(phi.inits) <- "double"
+        storage.mode(nu.inits) <- "double"
+        storage.mode(w.inits.fit) <- "double"
+        storage.mode(sigma.sq.inits) <- "double"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(data.indx.c.fit) <- "integer"
         storage.mode(alpha.indx.c) <- "integer"
@@ -835,8 +850,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
         out.fit <- .Call("spIntPGOcc", y.fit, X.fit, X.p.fit, coords.D.fit, p.occ, p.det, p.det.long, 
 		         J.fit, J.long.fit, K.fit, n.obs.fit, n.obs.long.fit, n.data, 
-		         beta.starting, alpha.starting, z.starting.fit, w.starting.fit, 
-		         phi.starting, sigma.sq.starting, nu.starting, 
+		         beta.inits, alpha.inits, z.inits.fit, w.inits.fit, 
+		         phi.inits, sigma.sq.inits, nu.inits, 
 		         z.long.indx.fit, data.indx.c.fit, alpha.indx.c, mu.beta, mu.alpha, 
 		         Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		         nu.a, nu.b, tuning.c, cov.model.indx, 
@@ -927,7 +942,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 
     # Specify storage modes -----------------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(z.starting) <- "double"
+    storage.mode(z.inits) <- "double"
     storage.mode(X.p.all) <- "double"
     storage.mode(X) <- "double"
     storage.mode(coords) <- "double"
@@ -940,12 +955,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     storage.mode(J.long) <- "integer"
     storage.mode(K) <- "integer"
     storage.mode(n.data) <- "integer"
-    storage.mode(beta.starting) <- "double"
-    storage.mode(alpha.starting) <- "double"
-    storage.mode(phi.starting) <- "double"
-    storage.mode(sigma.sq.starting) <- "double"
-    storage.mode(nu.starting) <- "double"
-    storage.mode(w.starting) <- "double"
+    storage.mode(beta.inits) <- "double"
+    storage.mode(alpha.inits) <- "double"
+    storage.mode(phi.inits) <- "double"
+    storage.mode(sigma.sq.inits) <- "double"
+    storage.mode(nu.inits) <- "double"
+    storage.mode(w.inits) <- "double"
     storage.mode(z.long.indx.c) <- "integer"
     storage.mode(data.indx.c) <- "integer"
     storage.mode(alpha.indx.c) <- "integer"
@@ -985,8 +1000,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
     out <- .Call("spIntPGOccNNGP", y, X, X.p.all, coords, p.occ, p.det, p.det.long, 
 		 J, J.long, K, n.obs, n.obs.long, n.data, 
 		 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
-		 beta.starting, alpha.starting, z.starting, w.starting, 
-		 phi.starting, sigma.sq.starting, nu.starting, 
+		 beta.inits, alpha.inits, z.inits, w.inits, 
+		 phi.inits, sigma.sq.inits, nu.inits, 
 		 z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
 		 Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		 nu.a, nu.b, tuning.c, cov.model.indx,
@@ -1060,11 +1075,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         # Number of sites in each hold out data set. 
         sites.random <- sample(1:J)    
       }
-      sites.k.fold <- split(sites.random, sites.random %% k.fold)
+      sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
       registerDoParallel(k.fold.threads)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
+	# curr.set.fit are the rows of X.fit that are included in the fitted model
 	curr.set.fit <- (1:J)[-curr.set]
 	if (!is.null(k.fold.data)) {
           curr.set.fit <- sort(unique(c(curr.set.fit, unlist(sites[-k.fold.data]))))
@@ -1075,8 +1091,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         } 
         y.fit <- y[y.indx]
         y.0 <- y[!y.indx]
-        z.starting.fit <- z.starting[curr.set.fit]
-	w.starting.fit <- w.starting[curr.set.fit]
+        z.inits.fit <- z.inits[curr.set.fit]
+	w.inits.fit <- w.inits[curr.set.fit]
 	coords.fit <- coords[curr.set.fit, , drop = FALSE]
 	coords.0 <- coords[curr.set.pred, , drop = FALSE]
         X.p.fit <- X.p.all[y.indx, , drop = FALSE]
@@ -1105,7 +1121,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
           z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(z.long.indx.fit[[q]])] - 1
         }
 	z.long.indx.fit <- unlist(z.long.indx.fit)
-	
+
 	# Site indices for hold out data
 	sites.0 <- sapply(sites, 
 			    function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% curr.set.pred]))
@@ -1162,9 +1178,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         u.indx.lu.fit <- indx$u.indx.lu
         ui.indx.fit <- indx$ui.indx
 
-
         storage.mode(y.fit) <- "double"
-        storage.mode(z.starting.fit) <- "double"
+        storage.mode(z.inits.fit) <- "double"
         storage.mode(X.p.fit) <- "double"
         storage.mode(X.fit) <- "double"
         storage.mode(coords.fit) <- "double"
@@ -1177,12 +1192,12 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
         storage.mode(J.long.fit) <- "integer"
         storage.mode(K.fit) <- "integer"
         storage.mode(n.data) <- "integer"
-        storage.mode(beta.starting) <- "double"
-        storage.mode(alpha.starting) <- "double"
-        storage.mode(phi.starting) <- "double"
-        storage.mode(sigma.sq.starting) <- "double"
-        storage.mode(nu.starting) <- "double"
-        storage.mode(w.starting.fit) <- "double"
+        storage.mode(beta.inits) <- "double"
+        storage.mode(alpha.inits) <- "double"
+        storage.mode(phi.inits) <- "double"
+        storage.mode(sigma.sq.inits) <- "double"
+        storage.mode(nu.inits) <- "double"
+        storage.mode(w.inits.fit) <- "double"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(data.indx.c.fit) <- "integer"
         storage.mode(alpha.indx.c) <- "integer"
@@ -1219,8 +1234,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, starting, priors,
 		         J.fit, J.long.fit, K.fit, n.obs.fit, n.obs.long.fit, n.data, 
 		         n.neighbors, nn.indx.fit, nn.indx.lu.fit, 
 			 u.indx.fit, u.indx.lu.fit, ui.indx.fit, 
-		         beta.starting, alpha.starting, z.starting.fit, w.starting.fit, 
-		         phi.starting, sigma.sq.starting, nu.starting, 
+		         beta.inits, alpha.inits, z.inits.fit, w.inits.fit, 
+		         phi.inits, sigma.sq.inits, nu.inits, 
 		         z.long.indx.fit, data.indx.c.fit, alpha.indx.c, mu.beta, mu.alpha, 
 		         Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
 		         nu.a, nu.b, tuning.c, cov.model.indx,

@@ -72,7 +72,7 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("\tPrediction description\n");
       Rprintf("----------------------------------------\n");
-      Rprintf("NNGP Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
+      Rprintf("NNGP Multispecies Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
       Rprintf("Number of covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Using %i nearest neighbors.\n\n", m);

@@ -3,7 +3,7 @@
 \title{Function for Fitting Single Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
-PGOcc(occ.formula, det.formula, data, starting, priors, n.samples, 
+PGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
       n.omp.threads = 1, verbose = TRUE, n.report = 100, 
       n.burn = round(.10 * n.samples), n.thin = 1, 
       k.fold, k.fold.threads = 1, k.fold.seed, ...)
@@ -38,10 +38,10 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   as a matrix or data frame with the number of rows equal to \eqn{J}{J} and 
   number of columns equal to the maximum number of replicates at a given site.}
 
-\item{starting}{a list with each tag corresponding to a parameter name.
+\item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq.psi},
   and \code{sigma.sq.p}. The value portion of each tag is the 
-  parameter's starting value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
+  parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
   detection portion of the occupancy model, respectively. See \code{priors} 
   description for definition of each parameter name.}
@@ -122,7 +122,7 @@ PGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
-  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+  Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
@@ -204,8 +204,8 @@ data.list <- list(y = dat$y,
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 		   alpha.normal = list(mean = 0, var = 2.72))
-# Starting values
-starting.list <- list(alpha = 0, beta = 0,
+# Initial values
+inits.list <- list(alpha = 0, beta = 0,
 		      z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
@@ -214,7 +214,7 @@ n.report <- 1000
 out <- PGOcc(occ.formula = ~ occ.cov, 
 	     det.formula = ~ det.cov, 
 	     data = data.list, 
-	     starting = starting.list,
+	     inits = inits.list,
 	     n.samples = n.samples,
 	     priors = prior.list,
 	     n.omp.threads = 1,

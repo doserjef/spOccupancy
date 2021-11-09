@@ -8,7 +8,7 @@
 
 \usage{
 simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
-	  sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
+          sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 \arguments{
 

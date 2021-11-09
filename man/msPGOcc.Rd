@@ -1,16 +1,16 @@
 \name{msPGOcc}
 \alias{msPGOcc}
-\title{Function for Fitting Multi-Species Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Multispecies Occupancy Models Using Polya-Gamma Latent Variables}
 
 
 \description{
-Function for fitting multi-species occupancy models using Polya-Gamma latent variables. 
+Function for fitting multispecies occupancy models using Polya-Gamma latent variables. 
 }
 
 \usage{
-msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
-	n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-	n.burn = round(.10 * n.samples), n.thin = 1,
+msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
+        n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+        n.burn = round(.10 * n.samples), n.thin = 1,
         k.fold, k.fold.threads = 1, k.fold.seed, ...)
 
 }
@@ -42,10 +42,10 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
   with the number of rows equal to \eqn{J}{J} and number of columns equal 
   to the maximum number of replicates at a given site.}
 
-\item{starting}{a list with each tag corresponding to a parameter name.
+\item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
   \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}. 
-  The value portion of each tag is the parameter's starting value. See 
+  The value portion of each tag is the parameter's initial value. See 
   \code{priors} description for definition of each parameter name.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
@@ -127,7 +127,7 @@ msPGOcc(occ.formula, det.formula, data, starting, priors, n.samples,
 
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
-  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+  Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
@@ -244,14 +244,14 @@ prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 		   alpha.comm.normal = list(mean = 0, var = 2.72), 
 		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
 		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
-# Starting values
-starting.list <- list(alpha.comm = 0, 
-		      beta.comm = 0, 
-		      beta = 0, 
-		      alpha = 0,
-		      tau.sq.beta = 1, 
-		      tau.sq.alpha = 1, 
-		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+# Initial values
+inits.list <- list(alpha.comm = 0, 
+		   beta.comm = 0, 
+		   beta = 0, 
+		   alpha = 0,
+		   tau.sq.beta = 1, 
+		   tau.sq.alpha = 1, 
+		   z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 5000
 n.burn <- 1000
@@ -260,7 +260,7 @@ n.thin <- 2
 out <- msPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1 + det.cov.2, 
 	       data = data.list, 
-	       starting = starting.list, 
+	       inits = inits.list, 
 	       n.samples = n.samples, 
 	       priors = prior.list, 
                n.omp.threads = 1, 

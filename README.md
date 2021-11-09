@@ -26,7 +26,7 @@ Coming soon\!
 | `PGOcc`                | Single species occupancy model                                     |
 | `spPGOcc`              | Single species spatial occupancy model                             |
 | `intPGOcc`             | Single species occupancy model with multiple data sources          |
-| `spIntPGOcc`           | Single species spatial occupancy model with multiplde data sources |
+| `spIntPGOcc`           | Single species spatial occupancy model with multiple data sources  |
 | `msPGOcc`              | Multispecies occupancy model                                       |
 | `spMsPGOcc`            | Multispecies spatial occupancy model                               |
 | `ppcOcc`               | Posterior predictive check using Bayesian p-values                 |
@@ -55,7 +55,7 @@ btbwHBEF <- hbef2015
 btbwHBEF$y <- btbwHBEF$y[sp.names == "BTBW", , ]
 ```
 
-### Fit a spatial occupancy model using `spPGOcc`
+### Fit a spatial occupancy model using `spPGOcc()`
 
 Below we fit a single species spatial occupancy model to the BTBW data
 using a Nearest Neighbor Gaussian Process. We use the default priors and

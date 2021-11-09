@@ -7,13 +7,13 @@
 }
 
 \usage{
-spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning, 
-	  cov.model = 'exponential', NNGP = TRUE, 
-	  n.neighbors = 15, search.type = 'cb', n.batch, 
-	  batch.length, accept.rate = 0.43, n.omp.threads = 1, 
-	  verbose = TRUE, n.report = 100, 
-	  n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-	  k.fold, k.fold.threads = 1, k.fold.seed, ...)
+spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
+          cov.model = 'exponential', NNGP = TRUE, 
+          n.neighbors = 15, search.type = 'cb', n.batch, 
+          batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+          verbose = TRUE, n.report = 100, 
+          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+          k.fold, k.fold.threads = 1, k.fold.seed, ...)
 }
 
 \arguments{
@@ -43,12 +43,12 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
     to the maximum number of replicates at a given site. \code{coords} is a 
     \eqn{J \times 2}{J x 2} matrix of the observation coordinates.}
 
-  \item{starting}{a list with each tag corresponding to a parameter name.
+  \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
     \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, \code{sigma.sq}, 
     \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
     \code{cov.model = "matern"}. The value portion of each tag is 
-    the parameter's starting value. See \code{priors} description for definition
+    the parameter's initial value. See \code{priors} description for definition
     of each parameter name.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
@@ -100,7 +100,12 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
     Finley et al. (2019) for more information.}
   
   \item{n.neighbors}{number of neighbors used in the NNGP. Only used if 
-  \code{NNGP = TRUE}.}
+  \code{NNGP = TRUE}. Datta et al. (2016) showed that 15 neighbors is usually 
+  sufficient, but that as few as 5 neighbors can be adequate for certain data
+  sets, which can lead to even greater decreases in run time. We recommend
+  starting with 15 neighbors (the default) and if additional gains in computation
+  time are desired, subsequently compare the results with a smaller number
+  of neighbors using WAIC or k-fold cross-validation.}
   
   \item{search.type}{a quoted keyword that specifies the type of nearest
     neighbor search algorithm. Supported method key words are: \code{"cb"} and
@@ -197,7 +202,7 @@ spMsPGOcc(occ.formula, det.formula, data, starting, priors, tuning,
 
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
-  Statistical Software, 67(1), 1-48. \url{doi:10.18637/jss.v067.i01}.
+  Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. \emph{Ecological Monographs}, 85(1), 3-28.
@@ -294,7 +299,7 @@ sigma.sq <- runif(N, 0.3, 3)
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		phi = phi, sigma.sq = sigma.sq, sp = TRUE)
+                phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
 n.batch <- 200
@@ -311,51 +316,50 @@ coords <- as.matrix(dat$coords)
 occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3]
-		 )
+                 det.cov.2 = X.p[, , 3])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
-		  coords = coords)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
+                  coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-		   phi.unif = list(a = 3/1, b = 3/.1), 
-		   sigma.sq.ig = list(a = 2, b = 2)) 
-# Starting values
-starting.list <- list(alpha.comm = 0, 
-		      beta.comm = 0, 
-		      beta = 0, 
-		      alpha = 0,
-		      tau.sq.beta = 1, 
-		      tau.sq.alpha = 1, 
-		      phi = 3 / .5, 
-		      sigma.sq = 2,
-		      w = matrix(0, nrow = N, ncol = nrow(X)),
-		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   phi.unif = list(a = 3/1, b = 3/.1), 
+                   sigma.sq.ig = list(a = 2, b = 2)) 
+# Initial values
+inits.list <- list(alpha.comm = 0, 
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   phi = 3 / .5, 
+                   sigma.sq = 2,
+                   w = matrix(0, nrow = N, ncol = nrow(X)),
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
 
 out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-		 det.formula = ~ det.cov.1 + det.cov.2, 
-		 data = data.list,
-		 starting = starting.list, 
-		 n.batch = n.batch, 
-		 batch.length = batch.length, 
-		 accept.rate = 0.43, 
-	         priors = prior.list, 
-		 cov.model = "exponential", 
-		 tuning = tuning.list, 
-	         n.omp.threads = 1, 
-	         verbose = TRUE, 
-		 NNGP = TRUE, 
-		 n.neighbors = 5, 
-		 search.type = 'cb', 
-	         n.report = 25, 
-		 n.burn = 1000, 
-		 n.thin = 1)
+                 det.formula = ~ det.cov.1 + det.cov.2, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 25, 
+                 n.burn = 1000, 
+                 n.thin = 1)
 
 summary(out, level = 'both')
 }

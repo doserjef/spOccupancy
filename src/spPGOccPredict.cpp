@@ -74,7 +74,7 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("\tPrediction description\n");
       Rprintf("----------------------------------------\n");
-      Rprintf("Spatial Multi-species Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
+      Rprintf("Spatial Occupancy model with Polya-Gamma latent\nvariable fit with %i observations.\n\n", J);
       Rprintf("Number of covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Number of MCMC samples %i.\n\n", nSamples);

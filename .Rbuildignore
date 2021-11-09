@@ -7,3 +7,7 @@
 ^vignettes$
 ^compile$
 ^README\.Rmd$
+^\.Rhistory$
+^\.gitignore$
+^vignettes/\.gitignore$
+^\.git$

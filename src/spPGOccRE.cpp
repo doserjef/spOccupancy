@@ -112,7 +112,7 @@ extern "C" {
       Rprintf("\tModel description\n");
       Rprintf("----------------------------------------\n");
       Rprintf("Spatial Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
-      Rprintf("Number of MCMC samples %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
+      Rprintf("Number of MCMC samples: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
       Rprintf("Burn-in: %i \n", nBurn); 
       Rprintf("Thinning Rate: %i \n", nThin); 
       Rprintf("Total Posterior Samples: %i \n\n", nPost); 
@@ -646,11 +646,8 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tparameter\tacceptance\ttuning\n");	  
-	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
-	  if (corName == "matern") {
-	  Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
-          }
+	  Rprintf("\tAcceptance\tTuning\n");	  
+	  Rprintf("\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();
