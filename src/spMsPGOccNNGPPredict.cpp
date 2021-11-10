@@ -98,8 +98,13 @@ extern "C" {
    
     int nThetaN = nTheta * N; 
     // get max nu
-    double *nuMax = (double *) R_alloc(N, sizeof(double)); 
+    double *nuMax = (double *) R_alloc(N, sizeof(double));
     int *nb = (int *) R_alloc(N, sizeof(nb)); 
+    // Fill in with zeros
+    for (i = 0; i < N; i++) {
+      nuMax[i] = 0.0; 
+      nb[i] = 0; 
+    }
     
     if(corName == "matern"){
       for (i = 0; i < N; i++) {
@@ -119,9 +124,7 @@ extern "C" {
       }
     }
 
-
     double *bk = (double *) R_alloc(nThreads*nbMax, sizeof(double));
-   
     double *C = (double *) R_alloc(nThreads*mm, sizeof(double)); zeros(C, nThreads*mm);
     double *c = (double *) R_alloc(nThreads*m, sizeof(double)); zeros(c, nThreads*m);
     double *tmp_m  = (double *) R_alloc(nThreads*m, sizeof(double));
@@ -135,7 +138,6 @@ extern "C" {
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
- 
     if (verbose) {
       Rprintf("-------------------------------------------------\n");
       Rprintf("\t\tPredicting\n");
@@ -155,10 +157,10 @@ extern "C" {
     }
     
     for(j = 0; j < q; j++){
+      for (i = 0; i < N; i++) {
 #ifdef _OPENMP
 #pragma omp parallel for private(threadID, phi, nu, sigmaSq, k, l, d, info) reduction(+:vIndx)
 #endif     
-      for (i = 0; i < N; i++) {
         for(s = 0; s < nSamples; s++){
 #ifdef _OPENMP
 	  threadID = omp_get_thread_num();
@@ -187,7 +189,7 @@ extern "C" {
 
 	  d = 0;
 	  for(k = 0; k < m; k++){
-	    d += tmp_m[threadID*m+k]*w[s*J+nnIndx0[j+q*k]];
+	    d += tmp_m[threadID*m+k]*w[s*JN+nnIndx0[j+q*k] * N + i];
 	  }
 
 	  w0[s * qN + j * N + i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
