@@ -181,7 +181,6 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 J.x <- 10
 J.y <- 10
@@ -223,5 +222,4 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     n.burn = 1000, 
 	     n.thin = 1)
 summary(out)
-}
 }

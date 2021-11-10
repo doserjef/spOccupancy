@@ -62,7 +62,6 @@ column (replicate).}
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 8
@@ -101,10 +100,11 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     priors = prior.list,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
-	     n.report = n.report)
+	     n.report = n.report, 
+	     n.burn = 4000, 
+	     n.thin = 1)
 
 # Posterior predictive check
 ppc.out <- ppcOcc(out, fit.stat = 'chi-square', group = 1)
 summary(ppc.out)
-}
 }

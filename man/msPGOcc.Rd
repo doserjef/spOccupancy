@@ -198,13 +198,12 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 J.x <- 8
 J.y <- 8
 J <- J.x * J.y
 n.rep<- sample(2:4, size = J, replace = TRUE)
-N <- 10
+N <- 6
 # Community-level covariate effects
 # Occurrence
 beta.mean <- c(0.2, 0.5)
@@ -253,9 +252,9 @@ inits.list <- list(alpha.comm = 0,
 		   tau.sq.alpha = 1, 
 		   z = apply(y, c(1, 2), max, na.rm = TRUE))
 
-n.samples <- 5000
-n.burn <- 1000
-n.thin <- 2
+n.samples <- 3000
+n.burn <- 2000
+n.thin <- 1
 
 out <- msPGOcc(occ.formula = ~ occ.cov, 
 	       det.formula = ~ det.cov.1 + det.cov.2, 
@@ -270,5 +269,4 @@ out <- msPGOcc(occ.formula = ~ occ.cov,
 	       n.thin = n.thin)
 
 summary(out, level = 'community')
-}
 }

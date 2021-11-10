@@ -1,11 +1,11 @@
 Package: spOccupancy
 Type: Package
 Title: Single Species, Multispecies, and Integrated Spatial Occupancy Models
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut]
 Maintainer: Jeffrey Doser <doserjef@msu.edu>
-Description: Fits single species, multispecies, and integrated non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. 
+Description: Fits single species, multispecies, and integrated non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation detailed in Polson, Scott, and Windle (2013) <doi:10.1080/01621459.2013.829001>. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Details on NNGP models are given in Datta, Banerjee, Finley, and Gelfand (2016) <doi:10.1080/01621459.2015.1044091> and Finley, Datta, and Banerjee (2020) <arXiv:2001.09111>. Provides functionality for data integration of multiple single species occupancy data sets using a joint likelihood framework. Details on data integration are given in Miller, Pacifici, Sanderlin, and Reich (2019) <doi:10.1111/2041-210X.13110>. Details on single species and multispecies models are found in MacKenzie, Nichols, Lachman, Droege, Royle, and Langtimm (2002) <doi:10.1890/0012-9658(2002)083[2248:ESORWD]2.0.CO;2> and Dorazio and Royle <doi:10.1198/016214505000000015>, respectively. 
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

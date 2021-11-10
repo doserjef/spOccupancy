@@ -58,15 +58,14 @@
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 
 # Simulate Data -----------------------------------------------------------
-J.x <- 8
-J.y <- 8
+J.x <- 7
+J.y <- 7
 J <- J.x * J.y
 n.rep <- sample(2:4, size = J, replace = TRUE)
-N <- 10
+N <- 5
 # Community-level covariate effects
 # Occurrence
 beta.mean <- c(0.2, -0.15)
@@ -93,7 +92,7 @@ dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha =
 		phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
-n.batch <- 200
+n.batch <- 40
 # Batch length
 batch.length <- 25
 n.samples <- n.batch * batch.length
@@ -159,27 +158,12 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
 		 NNGP = TRUE, 
 		 n.neighbors = 5, 
 		 search.type = 'cb', 
-	         n.report = 25, 
-		 n.burn = 1000, 
+	         n.report = 10, 
+		 n.burn = 500, 
 		 n.thin = 1)
 
 summary(out, level = 'both')
 
 # Predict at new locations ------------------------------------------------
-
-out.pred <- predict(out, X.0, coords.0)
-
-# Create a plot one species at a time: 
-for (i in 1:N) {
-  psi.hat.quants <- apply(out.pred$psi.0.samples[,i, ], 
-  			2, quantile, c(0.025, 0.5, 0.975))
-  plot(psi.0[i, ], psi.hat.quants[2, ], pch = 19, xlab = 'True',
-       ylab = 'Predicted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)), 
-       main = paste("Species ", i, sep = ''))
-  segments(psi.0[i, ], psi.hat.quants[1, ], psi.0[i, ], psi.hat.quants[3, ])
-  lines(psi.0[i, ], psi.0[i, ])
-  Sys.sleep(1)
-}
-
-}
+out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 }

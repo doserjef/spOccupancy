@@ -38,7 +38,6 @@
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 10
@@ -90,7 +89,7 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
 	     n.report = n.report, 
-	     n.burn = 1000, 
+	     n.burn = 4000, 
 	     n.thin = 1)
 
 summary(out)
@@ -103,5 +102,4 @@ plot(dat$psi[pred.indx], psi.0.quants[2, ], pch = 19, xlab = 'True',
      ylab = 'Fitted', ylim = c(min(psi.0.quants), max(psi.0.quants)))
 segments(dat$psi[pred.indx], psi.0.quants[1, ], dat$psi[pred.indx], psi.0.quants[3, ])
 lines(dat$psi[pred.indx], dat$psi[pred.indx])
-}
 }

@@ -55,7 +55,6 @@ waicOcc(object, ...)
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
 J.x <- 8
@@ -98,11 +97,10 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     n.omp.threads = 1,
 	     verbose = TRUE,
 	     n.report = n.report, 
-	     n.burn = 1000, 
+	     n.burn = 4000, 
 	     n.thin = 1)
 
 # Calculate WAIC
 waicOcc(out)
-}
 }
 

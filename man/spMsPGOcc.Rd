@@ -267,15 +267,14 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 
 # Simulate Data -----------------------------------------------------------
-J.x <- 8
-J.y <- 8
+J.x <- 7
+J.y <- 7
 J <- J.x * J.y
 n.rep <- sample(2:4, size = J, replace = TRUE)
-N <- 10
+N <- 5
 # Community-level covariate effects
 # Occurrence
 beta.mean <- c(0.2, -0.15)
@@ -302,7 +301,7 @@ dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha =
                 phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
-n.batch <- 200
+n.batch <- 40
 # Batch length
 batch.length <- 25
 n.samples <- n.batch * batch.length
@@ -357,10 +356,9 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
                  NNGP = TRUE, 
                  n.neighbors = 5, 
                  search.type = 'cb', 
-                 n.report = 25, 
-                 n.burn = 1000, 
+                 n.report = 10, 
+                 n.burn = 500, 
                  n.thin = 1)
 
 summary(out, level = 'both')
-}
 }

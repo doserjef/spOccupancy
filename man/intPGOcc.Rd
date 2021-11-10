@@ -175,7 +175,6 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 }
 
 \examples{
-\dontrun{
 set.seed(1008)
 
 # Simulate Data -----------------------------------------------------------
@@ -251,5 +250,4 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		n.thin = 1)
 
 summary(out)
-}
 }

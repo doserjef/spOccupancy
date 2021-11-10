@@ -38,13 +38,12 @@
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 J.x <- 8
 J.y <- 8
 J <- J.x * J.y
 n.rep<- sample(2:4, size = J, replace = TRUE)
-N <- 10
+N <- 6
 # Community-level covariate effects
 # Occurrence
 beta.mean <- c(0.2, 0.5)
@@ -109,23 +108,11 @@ out <- msPGOcc(occ.formula = ~ occ.cov,
 	       priors = prior.list, 
                n.omp.threads = 1, 
 	       verbose = TRUE, 
-	       n.report = 1000)
+	       n.report = 1000, 
+	       n.burn = 4000)
 
 summary(out, level = 'community')
 
 # Predict at new locations ------------------------------------------------
-
 out.pred <- predict(out, X.0)
-# Create a plot one species at a time: 
-for (i in 1:N) {
-  psi.hat.quants <- apply(out.pred$psi.0.samples[,i, ], 
-  			2, quantile, c(0.025, 0.5, 0.975))
-  plot(psi.0[i, ], psi.hat.quants[2, ], pch = 19, xlab = 'True',
-       ylab = 'Predicted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)), 
-       main = paste("Species ", i, sep = ''))
-  segments(psi.0[i, ], psi.hat.quants[1, ], psi.0[i, ], psi.hat.quants[3, ])
-  lines(psi.0[i, ], psi.0[i, ])
-  Sys.sleep(1)
-}
-}
 }

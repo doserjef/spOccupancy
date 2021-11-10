@@ -57,14 +57,13 @@
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 
 # Simulate Data -----------------------------------------------------------
 # Number of locations in each direction. This is the total region of interest
 # where some sites may or may not have a data source. 
-J.x <- 15
-J.y <- 15
+J.x <- 8
+J.y <- 8
 J.all <- J.x * J.y
 # Number of data sources.
 n.data <- 4
@@ -141,7 +140,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 tuning.list <- list(phi = 1) 
 
 # Number of batches
-n.batch <- 200
+n.batch <- 40
 # Batch length
 batch.length <- 25
 
@@ -161,28 +160,13 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
 		  n.omp.threads = 1, 
 		  verbose = TRUE, 
 		  NNGP = TRUE, 
-		  n.neighbors = 15, 
+		  n.neighbors = 5, 
 		  search.type = 'cb', 
-		  n.report = 50, 
-		  n.burn = 1000, 
+		  n.report = 10, 
+		  n.burn = 500, 
 		  n.thin = 1)
 summary(out)
 
 # Predict at new locations ------------------------------------------------
-
-out.pred <- predict(out, X.0, coords.0)
-psi.hat.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
-
-# Code for plot adapted from Hooten and Hefley (2019). 
-sq.cex=2.1
-par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
-layout(matrix(1:2,1,2))
-plot(coords.0,type="n",xlab="",ylab="",asp=TRUE,main="Simulated")
-points(coords.0,pch=15,cex=sq.cex,
-       col=rgb(0,0,0,(psi.0-min(psi.0))/diff(range(psi.0))))
-plot(coords.0,type="n",xlab="",ylab="",asp=TRUE,main="Spatial")
-points(coords.0,pch=15,cex=sq.cex,
-       col=rgb(0,0,0,(psi.hat.quants[2,]-min(psi.hat.quants[2,]))/
-	       diff(range(psi.hat.quants[2,]))))
-}
+out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 }

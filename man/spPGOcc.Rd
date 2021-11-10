@@ -245,11 +245,10 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
 }
 
 \examples{
-\dontrun{
-set.seed(400)
+set.seed(350)
 # Simulate Data -----------------------------------------------------------
-J.x <- 12
-J.y <- 12
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
 n.rep <- sample(2:4, J, replace = TRUE)
 beta <- c(0.5, -0.15)
@@ -276,7 +275,7 @@ data.list <- list(y = y,
 		  coords = coords)
 
 # Number of batches
-n.batch <- 200
+n.batch <- 40
 # Batch length
 batch.length <- 25
 n.iter <- n.batch * batch.length
@@ -304,26 +303,10 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       cov.model = "exponential", 
 	       tuning = tuning.list, 
 	       NNGP = TRUE, 
-	       n.neighbors = 15, 
+	       n.neighbors = 5, 
 	       search.type = 'cb', 
-	       n.report = 50)
+	       n.report = 10, 
+	       n.burn = 500)
 
 summary(out)
-
-# Plot of spatial GP. 
-w.summary <- summary(out$w.samples)$quantiles[, c(3, 1, 5)]
-w.true <- dat$w
-
-# Code for plot is adapted from Hooten and Hefley (2019).
-sq.cex=2.1
-par(cex.lab=1.5, cex.main=1.5, xaxt="n", yaxt="n", bty="n", mar=c(5,5,4,2))
-layout(matrix(1:2,1,2))
-plot(coords, type="n", xlab="", ylab="", asp=TRUE, main="TRUE")
-points(coords,pch=15,cex=sq.cex,col=rgb(0,0,0,(w.true-min(w.true))/
-					diff(range(w.true))))
-plot(coords,type="n",xlab="",ylab="",asp=TRUE,main="FIT")
-points(coords,pch=15,cex=sq.cex,
-       col=rgb(0,0,0,(w.summary[, 1]-min(w.summary[, 1]))/
-	       diff(range(w.summary[, 1]))))
-}
 }

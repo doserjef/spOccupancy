@@ -26,3 +26,8 @@
   check objects of class \code{ppcOcc}, including methods to the generic function
   \code{\link[base]{summary}}. 
 }
+
+\value{
+  No return value, called to display summary information of a \code{ppcOcc} object.
+}
+

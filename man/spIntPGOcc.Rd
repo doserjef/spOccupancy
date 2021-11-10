@@ -252,14 +252,13 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 
 # Simulate Data -----------------------------------------------------------
 # Number of locations in each direction. This is the total region of interest
 # where some sites may or may not have a data source. 
-J.x <- 15
-J.y <- 15
+J.x <- 8
+J.y <- 8
 J.all <- J.x * J.y
 # Number of data sources.
 n.data <- 4
@@ -288,7 +287,7 @@ sp <- TRUE
 # Simulate occupancy data from multiple data sources. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
 		 n.rep = n.rep, beta = beta, alpha = alpha, sp = sp, 
-		 sigma.sq = sigma.sq, phi = phi, cov.model = 'gaussian')
+		 sigma.sq = sigma.sq, phi = phi, cov.model = 'exponential')
 
 y <- dat$y
 X <- dat$X.obs
@@ -336,7 +335,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 tuning.list <- list(phi = 0.3) 
 
 # Number of batches
-n.batch <- 200
+n.batch <- 40
 # Batch length
 batch.length <- 25
 
@@ -351,32 +350,16 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
 		  batch.length = batch.length, 
 		  accept.rate = 0.43, 
 		  priors = prior.list, 
-		  cov.model = "gaussian", 
+		  cov.model = "exponential", 
 		  tuning = tuning.list, 
 		  n.omp.threads = 1, 
 		  verbose = TRUE, 
 		  NNGP = TRUE, 
-		  n.neighbors = 15, 
+		  n.neighbors = 5, 
 		  search.type = 'cb', 
-		  n.report = 50, 
-		  n.burn = 1000, 
+		  n.report = 10, 
+		  n.burn = 500, 
 		  n.thin = 1)
 
 summary(out)
-
-psi.quants <- apply(out$psi.samples, 2, quantile, c(0.025, 0.5, 0.975))
-psi.true <- dat$psi.obs
-
-# Code for plot adapted from Hooten and Hefley (2019)
-sq.cex=2.1
-par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
-layout(matrix(1:2,1,2))
-plot(coords,type="n",xlab="",ylab="",asp=TRUE,main="Simulated")
-points(coords,pch=15,cex=sq.cex,
-       col=rgb(0,0,0,(psi.true-min(psi.true))/diff(range(psi.true))))
-plot(coords,type="n",xlab="",ylab="",asp=TRUE,main="Spatial")
-points(coords,pch=15,cex=sq.cex,
-       col=rgb(0,0,0,(psi.quants[2,]-min(psi.quants[2,]))/
-	       diff(range(psi.quants[2,]))))
-}
 }

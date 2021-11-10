@@ -66,11 +66,10 @@
 }
 
 \examples{
-\dontrun{
 set.seed(400)
 # Simulate Data -----------------------------------------------------------
-J.x <- 15
-J.y <- 15
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
 n.rep <- sample(2:4, J, replace = TRUE)
 beta <- c(0.5, 2)
@@ -80,7 +79,7 @@ p.det <- length(alpha)
 phi <- 3 / .6
 sigma.sq <- 2
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha, 
-              sigma.sq = sigma.sq, phi = phi, sp = TRUE, cov.model = 'gaussian')
+              sigma.sq = sigma.sq, phi = phi, sp = TRUE, cov.model = 'exponential')
 # Split into fitting and prediction data set
 pred.indx <- sample(1:J, round(J * .5), replace = FALSE)
 y <- dat$y[-pred.indx, ]
@@ -105,7 +104,7 @@ data.list <- list(y = y,
 		  coords = coords)
 
 # Number of batches
-n.batch <- 200
+n.batch <- 50
 # Batch length
 batch.length <- 25
 n.iter <- n.batch * batch.length
@@ -131,32 +130,19 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       batch.length = batch.length, 
 	       accept.rate = 0.43, 
 	       priors = prior.list,
-	       cov.model = 'gaussian', 
+	       cov.model = 'exponential', 
 	       tuning = tuning.list, 
 	       n.omp.threads = 1, 
 	       verbose = TRUE, 
 	       NNGP = TRUE, 
 	       n.neighbors = 15, 
 	       search.type = 'cb', 
-	       n.report = 50)
+	       n.report = 10, 
+	       n.burn = 500, 
+	       n.thin = 1)
 
 summary(out) 
 
 # Predict at new locations ------------------------------------------------
-out.pred <- predict(out, X.0, coords.0, verbose = TRUE)
-psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
-
-# Plot of predicted psi vs true psi
-# Code for plot is adapted from Hooten and Hefley (2019)
-sq.cex=2.1
-par(cex.lab=1.5,cex.main=1.5,xaxt="n",yaxt="n",bty="n",mar=c(5,5,4,2))
-layout(matrix(1:2,1,2))
-plot(coords.0,type="n",xlab="",ylab="",asp=TRUE,main="TRUE")
-points(coords.0,pch=15,cex=sq.cex,col=rgb(0,0,0,(psi.0-min(psi.0))/
-					  diff(range(psi.0))))
-plot(coords.0,type="n",xlab="",ylab="",asp=TRUE,main="PREDICTED")
-points(coords.0,pch=15,cex=sq.cex,col=rgb(0,0,0,(psi.0.quants[2, ]-
-						 min(psi.0.quants[2, ]))/
-                                          diff(range(psi.0.quants[2, ]))))
-}
+out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 }

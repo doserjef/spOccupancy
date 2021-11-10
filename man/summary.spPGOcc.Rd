@@ -1,7 +1,6 @@
 \name{summary.spPGOcc}
 
 \alias{summary.spPGOcc}
-\alias{fitted.spPGOcc}
 \alias{print.spPGOcc}
 
 \title{Methods for spPGOcc Object}
@@ -12,10 +11,9 @@
 }
 
 \usage{
-\method{summary}{spPGOcc}(object, quantiles =c(0.025, 0.25, 0.5, 0.75, 0.975), 
-                          digits = max(3L, getOption("digits") - 3L), \dots)
+\method{summary}{spPGOcc}(object, quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
+        digits = max(3L, getOption("digits") - 3L), \dots)
 \method{print}{spPGOcc}(x, \dots)
-\method{fitted}{spPGOcc}(object, \dots)
 }
 
 \arguments{
@@ -28,8 +26,11 @@
 \details{
   A set of standard extractor functions for fitted model objects of
   class \code{spPGOcc}, including methods to the generic functions 
-  \code{\link[base]{print}}, \code{\link[base]{summary}}, and 
-  \code{\link[stats]{fitted}}. 
+  \code{\link[base]{print}} and \code{\link[base]{summary}}. 
+}
+
+\value{
+  No return value, called to display summary information of a \code{spPGOcc} object.
 }
 
 \keyword{model}

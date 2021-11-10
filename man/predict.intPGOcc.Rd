@@ -38,12 +38,11 @@
 }
 
 \examples{
-\dontrun{
 set.seed(1008)
 
 # Simulate Data -----------------------------------------------------------
-J.x <- 15
-J.y <- 15
+J.x <- 10
+J.y <- 10
 J.all <- J.x * J.y
 # Number of data sources.
 n.data <- 4
@@ -110,7 +109,7 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		n.omp.threads = 1, 
 		verbose = TRUE, 
 		n.report = 1000, 
-		n.burn = 1000, 
+		n.burn = 4000, 
 		n.thin = 1)
 
 summary(out)
@@ -125,5 +124,4 @@ plot(psi.0, psi.hat.quants[2, ], pch = 19, xlab = 'True',
      ylab = 'Fitted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)))
 segments(psi.0, psi.hat.quants[1, ], psi.0, psi.hat.quants[3, ])
 lines(psi.0, psi.0)
-}
 }
