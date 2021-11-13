@@ -179,12 +179,12 @@ extern "C" {
     // For latent occupancy
     double psiNum; 
     double psiNew; 
-    double *detProb = (double *) R_alloc(nObsN, sizeof(double)); 
+    double *detProb = (double *) R_alloc(nObsN, sizeof(double));
     double *psi = (double *) R_alloc(JN, sizeof(double)); 
     zeros(psi, JN); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
     ones(piProd, J); 
-    double *ySum = (double *) R_alloc(J, sizeof(double)); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J);
 
     // For normal priors
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 

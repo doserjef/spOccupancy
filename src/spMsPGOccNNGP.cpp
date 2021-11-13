@@ -285,7 +285,7 @@ extern "C" {
     zeros(psi, JN); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
     ones(piProd, J); 
-    double *ySum = (double *) R_alloc(J, sizeof(double)); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J); 
 
     // For normal priors
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 

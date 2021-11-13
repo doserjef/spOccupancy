@@ -75,7 +75,7 @@ Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with
 \begin{equation}
 \begin{split}
 &z_j \sim \text{Bernoulli}(\psi_j), \\
-&\text{logit}(\psi_j) = \bm{x}'_j \cdot \bm{\beta},
+&\text{logit}(\psi_j) = \bm{x}^{\top}_j\bm{\beta},
 \end{split}
 \end{equation}
 
@@ -85,8 +85,8 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 \begin{equation}
 \begin{split}
-&y_{j, k} \sim \text{Bernoulli}(p_{j, k} \cdot z_j), \\
-&\text{logit}(p_{j, k}) = \bm{v}'_{j, k} \cdot \bm{\alpha},
+&y_{j, k} \sim \text{Bernoulli}(p_{j, k}z_j), \\
+&\text{logit}(p_{j, k}) = \bm{v}^{\top}_{j, k}\bm{\alpha},
 \end{split}
 \end{equation}
 
@@ -397,16 +397,16 @@ ggplot() +
 
 ## Basic model description
 
-When working across large spatial domains, accounting for residual spatial autocorrelation in species distributions can often improve predictive performance, leading to more accurate species distribution maps [@guelat2018; @lany2020]. We extend the basic single species occupancy model to incorporate a spatial Gaussian Process that accounts for unexplained spatial variation in species occurrence across a region of interest. The species-specific occurrence probability at site $j$, $\psi_j$, now takes the form
+When working across large spatial domains, accounting for residual spatial autocorrelation in species distributions can often improve predictive performance, leading to more accurate species distribution maps [@guelat2018; @lany2020]. We extend the basic single species occupancy model to incorporate a spatial Gaussian Process that accounts for unexplained spatial variation in species occurrence across a region of interest. Let $\bm{s}_j$ denote the geographical coordinates of site $j$ for $j = 1, \dots, J$. In all spatially-explicit models, we include $\bm{s}_j$ directly in the notation of spatially-indexed variables to indicate the model is spatially-explicit. More specifically, the occurrence probability at site $j$ with coordinates $\bm{s}_j$, $\psi(\bm{s}_j)$, now takes the form
 
 \begin{equation}
-\text{logit}(\psi_j) = \bm{x}'_j \cdot \bm{\beta} + \omega_j,
+\text{logit}(\psi(\bm{s}_j) = \bm{x}(\bm{s}_j)^{\top}\bm{\beta} + \omega(\bm{s}_j),
 \end{equation}
 
-where w$_j$ is a realization from a zero-mean spatial Gaussian Process, i.e.,
+where $\omega_j$ is a realization from a zero-mean spatial Gaussian Process, i.e.,
 
 \begin{equation}
-\bm{\omega} \sim N(\bm{0}, \bm{\Sigma}(\bm{\bm{s}, \bm{s}', \theta})).
+\bm{\omega}(\bm{s}) \sim N(\bm{0}, \bm{\Sigma}(\bm{\bm{s}, \bm{s}', \theta})).
 \end{equation}
 
 We define $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ as a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta})$ that govern the spatial process. The vector $\bm{\theta}$ is equal to $\bm{\theta} = \{\sigma^2, \phi, \nu\}$, where $\sigma^2$ is a spatial variance parameter, $\phi$ is a spatial decay parameter, and $\nu$ is a spatial smoothness parameter. $\nu$ is only specified when using a Matern correlation function.
@@ -417,7 +417,7 @@ When the number of sites is moderately large, say 1000, the above described spat
 
 ## Fitting single species spatial occupancy models with `spPGOcc()`
 
-The function `spPGOcc()` fits single species spatial occupancy models using P&oacute;ly-Gamma latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc()` fits saptial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with P&oacute;ly-Gamma latent variables.
+The function `spPGOcc()` fits single species spatial occupancy models using P&oacute;ly-Gamma latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc()` fits spatial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with P&oacute;ly-Gamma latent variables.
 
 We will fit the same occupancy model for OVEN that we fit previously using `PGOcc()`, but we will now make the model spatially explicit by incorporating a spatial process with `spPGOcc()`. First, let's take a look at the arguments for `spPGOcc()`: 
 
@@ -448,14 +448,14 @@ dist.hbef <- dist(ovenHBEF$coords)
 # Exponential covariance model
 cov.model <- "exponential"
 oven.inits <- list(alpha = 0, 
-                      beta = 0, 
-                      z = apply(ovenHBEF$y, 1, max, na.rm = TRUE), 
-                      sigma.sq = 2, 
-                      phi = 3 / mean(dist.hbef), 
-                      w = rep(0, nrow(ovenHBEF$y)))
+                   beta = 0, 
+                   z = apply(ovenHBEF$y, 1, max, na.rm = TRUE), 
+                   sigma.sq = 2, 
+                   phi = 3 / mean(dist.hbef), 
+                   w = rep(0, nrow(ovenHBEF$y)))
 ```
 
-The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler we use to fit the model. Updates for the spatial range parameter (and smoothness parameter if `cov.model = 'matern'`) require the use of a Metropolis Hastings algorithm. We implement an adaptive Metropois-Hastings algorithm discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". We must specify the total `n.batch` batches, where each "batch" consists of `batch.length` MCMC samples. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. Here we set `n.batch = 400` for a total of 10000 MCMC samples. We will additionally specify a burn-in period of 2000 samples and a thinning rate of 8. We also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are sent as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend initial the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger or smaller than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial runs of the model.
+The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler we use to fit the model. Updates for the spatial range parameter (and smoothness parameter if `cov.model = 'matern'`) require the use of a Metropolis Hastings algorithm. We implement an adaptive Metropois-Hastings algorithm discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". We must specify the total `n.batch` batches, where each "batch" consists of `batch.length` MCMC samples. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. Here we set `n.batch = 400` for a total of 10000 MCMC samples. We will additionally specify a burn-in period of 2000 samples and a thinning rate of 8. We also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are sent as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger or smaller than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial runs of the model.
 
 ```{r}
 batch.length <- 25
@@ -486,7 +486,7 @@ verbose <- TRUE
 n.report <- 100
 ```
 
-The parameters `NNGP`, `n.neighbors`, and `search.type` relate to whether or not you want to fit the model with a Gaussian Process or NNGP. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial increases in run time. Even for more modest size data sets (like the HBEF data set), using an NNGP will be quite a bit faster (especially for multispecies models). Unless you are concerned about the NNGP approximation for some reason, we recommend setting `NNGP = TRUE`, which is the default. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as small as five neighbors, which could substantially decrease run time. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`, which we have found in exploratory analysis to closely approximate a full Gaussian Process.
+The parameters `NNGP`, `n.neighbors`, and `search.type` relate to whether or not you want to fit the model with a Gaussian Process or NNGP. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial increases in run time. Even for more modest size data sets (like the HBEF data set), using an NNGP will be quite a bit faster (especially for multispecies models). Unless your data set is particularly small (e.g., 100 points) and you are concerned about the NNGP approximation, we recommend setting `NNGP = TRUE`, which is the default. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as small as five neighbors, which could substantially decrease run time. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`, which we have found in exploratory analysis to closely approximate a full Gaussian Process.
 
 We now fit the model (without k-fold cross-validation) and summarize the results using `summary()`. 
 
@@ -586,7 +586,7 @@ Let $z_{i, j}$ be the true presence (1) or absence (0) of a species $i$ at site 
 \begin{equation}
 \begin{split}
 &z_{i, j} \sim \text{Bernoulli}(\psi_{i, j}), \\
-&\text{logit}(\psi_{i, j}) = \bm{x}'_{j} \cdot \bm{\beta}_i,
+&\text{logit}(\psi_{i, j}) = \bm{x}^{\top}_{j}\bm{\beta}_i,
 \end{split}
 \end{equation}
 
@@ -602,8 +602,8 @@ We do not directly observe $z_{i, j}$ and rather we observe an imperfect represe
 
 \begin{equation}
 \begin{split}
-&y_{i, j, k} \sim \text{Bernoulli}(p_{i, j, k} \cdot z_{i, j}), \\
-&\text{logit}(p_{i, j, k}) = \bm{v}'_{i, j, k} \cdot \bm{\alpha}_i,
+&y_{i, j, k} \sim \text{Bernoulli}(p_{i, j, k}z_{i, j}), \\
+&\text{logit}(p_{i, j, k}) = \bm{v}^{\top}_{i, j, k}\bm{\alpha}_i,
 \end{split}
 \end{equation}
 
@@ -740,16 +740,16 @@ out.ms.pred <- predict(out.ms, X.0)
 
 ## Basic model description
 
-Residual spatial autocorrelation may perhaps be more prominent in multispecies occupancy models compared to single species models, as a single set of covariates is used to explain occurrence probability across a region of interest for all species. Given the large variety individual species show in habitat requirements, this may result in important drivers of occurrence probability not being included for certain species, resulting in many species having high residual spatial autocorrelation. We extend the previous multispecies occupancy model to incorporate a distinct spatial Gaussian Process (GP) for each species that accounts for unexplained spatial variation in each individual species occurrence across a spatial region. Occurrence probability for species $i$ at site $j$, $\psi_{i, j}$, now takes the form
+Residual spatial autocorrelation may perhaps be more prominent in multispecies occupancy models compared to single species models, as a single set of covariates is used to explain occurrence probability across a region of interest for all species. Given the large variety individual species show in habitat requirements, this may result in important drivers of occurrence probability not being included for certain species, resulting in many species having high residual spatial autocorrelation. We extend the previous multispecies occupancy model to incorporate a distinct spatial Gaussian Process (GP) for each species that accounts for unexplained spatial variation in each individual species occurrence across a spatial region. Occurrence probability for species $i$ at site $j$ with spatial coordinates $\bm{s}_j$, $\psi_{i}(\bm{s}_j)$, now takes the form
 
 \begin{equation}
-\text{logit}(\psi_{i, j}) = \bm{x}_j'\bm{\beta}_i + \omega_{i, j},
+\text{logit}(\psi_{i}(\bm{s}_j)) = \bm{x}^{\top}(\bm{s}_j)\bm{\beta}_i + \omega_{i}(\bm{s}_j),
 \end{equation}
 
-where the species-specific regression coefficients $\bm{\beta}_i$ follow the community level distribution described previously for nonspatial multispecies occupancy models, and $\omega_{i, j}$ is a realization from a zero-mean spatial GP, i.e.,
+where the species-specific regression coefficients $\bm{\beta}_i$ follow the community level distribution described previously for nonspatial multispecies occupancy models, and $\omega_{i}(\bm{s}_j)$ is a realization from a zero-mean spatial GP, i.e.,
 
 \begin{equation}
-\bm{\omega}_{i} \sim \text{Normal}(\bm{0}, \bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)).
+\bm{\omega}_{i}(\bm{s}) \sim \text{Normal}(\bm{0}, \bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)).
 \end{equation}
 
 We define $\bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)$ as a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta}_i)$ that govern the spatial process. The vector $\bm{\theta}_i$ is equal to $\bm{\theta}_i = \{\sigma^2_i, \phi_i, \nu_i\}$, where $\sigma^2_i$ is a spatial variance parameter for species $i$, $\phi_i$ is a spatial decay parameter for species $i$, and $\nu_i$ is a spatial smoothness parameter for species $i$. $\nu_i$ is only specified when using a Matern correlation function.
@@ -897,7 +897,7 @@ out.sp.ms.pred <- predict(out.sp.ms, X.0, coords.0)
 
 # Single species integrated occupancy models
 
-Data integration is a model-based approach that leverages multiple data sources to provide inference and prediction on some latent process of interest [@miller2019recent]. Data integration is particularly relevant in ecology as many data sources are often collected to study a single ecological phenomenon, with each data source having pros and cons. Often, multiple detection-nondetection data sources are available to study the occurrence and distribution of some species of interest. For example, both human point count surveys and autonomous recording units could be used to monitor a bird species of conservation concern. Different types of data have different sources of observation error, which we should explicitly incorporate into a model to avoid attributing any variation in detection probability to the true ecological process. Here we describe single species integrated occupancy models, which combine multiple sources of detection-nondetection data (which may or may not be replicated) in a single hierarchical modeling framework.  
+Data integration is a model-based approach that leverages multiple data sources to provide inference and prediction on some latent process of interest [@miller2019recent]. Data integration is particularly relevant in ecology as many data sources are often collected to study a single ecological phenomenon, with each data source having pros and cons. Often, multiple detection-nondetection data sources are available to study the occurrence and distribution of some species of interest. For example, both human point count surveys and autonomous recording units could be used to monitor a bird species of conservation concern [@doser2021integrating]. Different types of data have different sources of observation error, which we should explicitly incorporate into a model to avoid attributing any variation in detection probability to the true ecological process. Here we describe single species integrated occupancy models, which combine multiple sources of detection-nondetection data (which may or may not be replicated) in a single hierarchical modeling framework.  
 
 ## Basic model description
 
@@ -908,7 +908,7 @@ Let $z_j$ be the presence or absence of a species at site $j$, with $j = 1, \dot
 \begin{equation}
 \begin{split}
 &z_j \sim \text{Bernoulli}(\psi_j), \\
-&\text{logit}(\psi_j) = \bm{x}'_j \cdot \bm{\beta},
+&\text{logit}(\psi_j) = \bm{x}^{\top}_j\bm{\beta},
 \end{split}
 \end{equation}
 
@@ -918,8 +918,8 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 \begin{equation}
 \begin{split}
-&y_{r, a, k} \sim \text{Bernoulli}(p_{r, a,  k} \cdot z_{j[a]}), \\
-&\text{logit}(p_{r, a, k}) = \bm{v}'_{r, a, k} \cdot \bm{\alpha}_r,
+&y_{r, a, k} \sim \text{Bernoulli}(p_{r, a,  k}z_{j[a]}), \\
+&\text{logit}(p_{r, a, k}) = \bm{v}^{\top}_{r, a, k}\bm{\alpha}_r,
 \end{split}
 \end{equation}
 
@@ -966,7 +966,7 @@ intPGOcc(occ.formula, det.formula, data, inits, n.samples, priors,
 
 The `data` argument contains the list of data elements necessary for fitting an integrated occupancy model. For nonspatial integrated occupancy models, `data` should be a list comprised of the following objects: `y` (list of detection-nondetection data matrices for each data source), `occ.covs` (data frame or matrix of covariates for occurrence model), `det.covs` (a list of lists where each element of the list corresponds to the detection-nondetection data for the given data source), `sites` (a list where each element consists of the site indices for the given data source. 
 
-The `ovenHBEF` and `ovenNEON` lists are currently formatted for use in single data source models and so we need to combine these data sources together. Perhaps the trickiest part of data integration is ensuring each point count location in each data source lines up with the correct geographical location where you want to determine the true presence/absence of the species of interest. In `spOccupancy`, most of this bookkeeping is done under the hood, but we will need to combine the two data sources together into a single list in which we are consistent about how the data sources are sorted. To accomplish this, we recommend first creating the occurrence covariates matrix for all data sources. Because our two data sources do not overlap spatially, this is relatively simple here as we can just use `rbind`. 
+The `ovenHBEF` and `ovenNEON` lists are currently formatted for use in single data source models and so we need to combine these data sources together. Perhaps the trickiest part of data integration is ensuring each point count location in each data source lines up with the correct geographical location where you want to determine the true presence/absence of the species of interest. In `spOccupancy`, most of this bookkeeping is done under the hood, but we will need to combine the two data sources together into a single list in which we are consistent about how the data sources are sorted. To accomplish this, we recommend first creating the occurrence covariates matrix for all data sources. Because our two data sources do not overlap spatially, this is relatively simple here as we can just use `rbind()`. 
 
 ```{r}
 occ.covs.int <- rbind(ovenHBEF$occ.covs, ovenNEON$occ.covs)
@@ -993,7 +993,7 @@ Lastly, we create the detection covariates `det.covs`. `det.covs` should be a li
 
 ```{r}
 det.covs.int <- list(hbef = ovenHBEF$det.covs, 
-		     neon = ovenNEON$det.covs)
+                     neon = ovenNEON$det.covs)
 ```
 
 Finally, we package everything together into a single list, which we call `data.int`. 
@@ -1019,7 +1019,7 @@ det.formula.int = list(hbef = ~ scale(day) + scale(tod) + I(scale(day)^2),
                        neon = ~ scale(day) + scale(tod) + I(scale(day)^2))
 ```
 
-Next we specify the initial values. Initial values are specified in a list with the following tags: `z` (latent occurrence values), `alpha` (detection regression coefficients), and `beta` (occurrence regression coefficients. This aligns with fitting single species occupancy models using `PGOcc()`. However, since we now have multiple detection models with different coefficients for each data source, initial values for `alpha` are now passed to `intPGOcc()` as a list, with each element of the list corresponding to the initial detection parameter values for a given data source (which are specified either as a vector with a value for each parameter or a single value for all parameters). 
+Next we specify the initial values. Initial values are specified in a list with the following tags: `z` (latent occurrence values), `alpha` (detection regression coefficients), and `beta` (occurrence regression coefficients). This aligns with fitting single species occupancy models using `PGOcc()`. However, since we now have multiple detection models with different coefficients for each data source, initial values for `alpha` are now passed to `intPGOcc()` as a list, with each element of the list corresponding to the initial detection parameter values for a given data source (which are specified either as a vector with a value for each parameter or a single value for all parameters). 
 
 ```{r}
 # Total number of sites
@@ -1214,7 +1214,7 @@ spIntPGOcc(occ.formula, det.formula, data, inits, n.batch,
            search.type = 'cb', n.report = 100, 
            n.burn = round(.10 * n.batch * batch.length), 
            n.thin = 1, k.fold, k.fold.threads = 1, 
-           k.fold.seed, ...)
+           k.fold.seed, k.fold.data, ...)
 ```
 
 

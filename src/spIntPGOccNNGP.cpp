@@ -252,7 +252,7 @@ extern "C" {
     zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
     ones(piProd, J); 
-    double *ySum = (double *) R_alloc(J, sizeof(double)); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J);
     int *yRep = (int *) R_alloc(nObs, sizeof(int)); 
 
     // For normal priors

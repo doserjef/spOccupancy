@@ -171,12 +171,12 @@ extern "C" {
     // For latent occupancy
     double psiNum; 
     double psiNew; 
-    double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
+    double *detProb = (double *) R_alloc(nObs, sizeof(double)); zeros(detProb, nObs);
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
     ones(piProd, J); 
-    double *ySum = (double *) R_alloc(J, sizeof(double)); 
+    double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J);
 
     // For normal priors
     // Occupancy regression coefficient priors. 
