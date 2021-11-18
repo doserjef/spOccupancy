@@ -1,6 +1,6 @@
 ---
 title: "Fitting occupancy models with `spOccupancy`"
-author: "Jeffrey W. Doser, Andrew O. Finley, Elise F. Zipkin"
+author: ""
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   rmarkdown::html_vignette:
