@@ -7,3 +7,5 @@ docs
 compile
 pkgdown
 _pkgdown.yml
+src/*.o
+src/*.so
