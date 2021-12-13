@@ -11,3 +11,5 @@
 ^\.gitignore$
 ^vignettes/\.gitignore$
 ^\.git$
+^codecov\.yml$
+^\.github$

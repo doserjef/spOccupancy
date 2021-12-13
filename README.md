@@ -5,7 +5,10 @@
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://travis-ci.org/doserjef/spOccupancy.svg?branch=master)](https://travis-ci.org/doserjef/spOccupancy)
+[![](https://travis-ci.org/doserjef/spOccupancy.svg?branch=main)](https://travis-ci.org/doserjef/spOccupancy)
+
+[![Codecov test
+coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single species, multispecies, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -110,21 +113,21 @@ summary(out)
 #> 
 #> Occurrence: 
 #>                          2.5%     25%     50%     75%   97.5%
-#> (Intercept)            3.1509  3.7926  4.1715  4.6249  5.5584
-#> scale(Elevation)      -0.9964 -0.6809 -0.5459 -0.4037 -0.1343
-#> I(scale(Elevation)^2) -1.6453 -1.3531 -1.2003 -1.0468 -0.8206
+#> (Intercept)            3.2174  3.7268  4.0711  4.4382  5.1944
+#> scale(Elevation)      -0.9919 -0.6673 -0.5048 -0.3682 -0.1265
+#> I(scale(Elevation)^2) -1.5978 -1.3035 -1.1701 -1.0291 -0.8359
 #> 
 #> Detection: 
 #>                    2.5%     25%     50%     75%  97.5%
-#> (Intercept)      0.4482  0.5918  0.6663  0.7413 0.8903
-#> scale(day)       0.1551  0.2435  0.2942  0.3421 0.4333
-#> scale(tod)      -0.1769 -0.0854 -0.0365  0.0138 0.1002
-#> I(scale(day)^2) -0.2439 -0.1327 -0.0761 -0.0179 0.0784
+#> (Intercept)      0.4494  0.5846  0.6680  0.7466 0.8972
+#> scale(day)       0.1495  0.2402  0.2863  0.3335 0.4290
+#> scale(tod)      -0.1685 -0.0777 -0.0311  0.0141 0.1028
+#> I(scale(day)^2) -0.2375 -0.1345 -0.0784 -0.0163 0.0923
 #> 
 #> Covariance: 
 #>            2.5%    25%    50%    75%  97.5%
-#> sigma.sq 0.4453 0.9454 1.4531 2.3372 4.6473
-#> phi      0.0025 0.0046 0.0080 0.0147 0.0262
+#> sigma.sq 0.3997 0.8595 1.3070 2.0027 3.5470
+#> phi      0.0016 0.0037 0.0076 0.0138 0.0262
 ```
 
 ### Posterior predictive check
@@ -150,7 +153,7 @@ summary(ppc.out)
 #> Thin: 3
 #> Total Posterior Samples: 1000
 #> 
-#> Bayesian p-value:  0.423 
+#> Bayesian p-value:  0.408 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -162,7 +165,7 @@ Criterion (WAIC) for use in model selection and assessment.
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -673.44978   29.01647 1404.93250
+#> -675.88847   26.65018 1405.07730
 ```
 
 Alternatively, we can perform k-fold cross-validation directly in our
@@ -172,7 +175,7 @@ we access the devaince scoring rule from the 2-fold cross-validation.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1503.163
+#> [1] 1506.063
 ```
 
 ### Prediction
