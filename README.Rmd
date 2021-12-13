@@ -19,9 +19,7 @@ library(badger)
 cat(
 	badger::badge_cran_release("spOccupancy", "green"),
 	#badger::badge_custom("Cite spOccupancy", "in arXiv", "yellow", "https://jeffdoser.com"),
-	badger::badge_cran_download("spOccupancy", "grand-total", "blue"),
-	#badge_cran_download("spOccupancy", "last-month", "blue"),
-	badger::badge_travis("doserjef/spOccupancy")
+	badger::badge_cran_download("spOccupancy", "grand-total", "blue")
 )
 ```
 

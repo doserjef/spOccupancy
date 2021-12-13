@@ -5,7 +5,6 @@
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://travis-ci.org/doserjef/spOccupancy.svg?branch=main)](https://travis-ci.org/doserjef/spOccupancy)
 
 [![Codecov test
 coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy?branch=main)
@@ -113,21 +112,21 @@ summary(out)
 #> 
 #> Occurrence: 
 #>                          2.5%     25%     50%     75%   97.5%
-#> (Intercept)            3.2174  3.7268  4.0711  4.4382  5.1944
-#> scale(Elevation)      -0.9919 -0.6673 -0.5048 -0.3682 -0.1265
-#> I(scale(Elevation)^2) -1.5978 -1.3035 -1.1701 -1.0291 -0.8359
+#> (Intercept)            3.2163  3.7560  4.1244  4.5977  5.5702
+#> scale(Elevation)      -1.0087 -0.6697 -0.5292 -0.3911 -0.1502
+#> I(scale(Elevation)^2) -1.6735 -1.3298 -1.1749 -1.0508 -0.8299
 #> 
 #> Detection: 
 #>                    2.5%     25%     50%     75%  97.5%
-#> (Intercept)      0.4494  0.5846  0.6680  0.7466 0.8972
-#> scale(day)       0.1495  0.2402  0.2863  0.3335 0.4290
-#> scale(tod)      -0.1685 -0.0777 -0.0311  0.0141 0.1028
-#> I(scale(day)^2) -0.2375 -0.1345 -0.0784 -0.0163 0.0923
+#> (Intercept)      0.4416  0.5771  0.6562  0.7394 0.8881
+#> scale(day)       0.1439  0.2410  0.2898  0.3335 0.4277
+#> scale(tod)      -0.1624 -0.0766 -0.0312  0.0173 0.1012
+#> I(scale(day)^2) -0.2469 -0.1329 -0.0702 -0.0108 0.0935
 #> 
 #> Covariance: 
 #>            2.5%    25%    50%    75%  97.5%
-#> sigma.sq 0.3997 0.8595 1.3070 2.0027 3.5470
-#> phi      0.0016 0.0037 0.0076 0.0138 0.0262
+#> sigma.sq 0.4156 0.7717 1.2263 2.2428 4.3279
+#> phi      0.0027 0.0051 0.0114 0.0195 0.0289
 ```
 
 ### Posterior predictive check
@@ -153,7 +152,7 @@ summary(ppc.out)
 #> Thin: 3
 #> Total Posterior Samples: 1000
 #> 
-#> Bayesian p-value:  0.408 
+#> Bayesian p-value:  0.415 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -165,7 +164,7 @@ Criterion (WAIC) for use in model selection and assessment.
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -675.88847   26.65018 1405.07730
+#> -675.20185   27.77967 1405.96304
 ```
 
 Alternatively, we can perform k-fold cross-validation directly in our
@@ -175,7 +174,7 @@ we access the devaince scoring rule from the 2-fold cross-validation.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1506.063
+#> [1] 1502.477
 ```
 
 ### Prediction
