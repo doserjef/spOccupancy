@@ -301,51 +301,53 @@ test_that("random effects on occurrence and detection work", {
   expect_gt(out$k.fold.deviance, 0)
 })
 
-test_that("waicOCC works for PGOcc", {
-  J.x <- 10
-  J.y <- 10
-  J <- J.x * J.y
-  n.rep <- sample(4, J, replace = TRUE)
-  beta <- c(0.5, -0.15)
-  p.occ <- length(beta)
-  alpha <- c(0.7, 0.4)
-  p.det <- length(alpha)
-  dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-  	      sp = FALSE)
-  occ.covs <- dat$X[, 2, drop = FALSE]
-  colnames(occ.covs) <- c('occ.cov')
-  det.covs <- list(det.cov = dat$X.p[, , 2])
-  # Data bundle
-  data.list <- list(y = dat$y, 
-  		  occ.covs = occ.covs, 
-  		  det.covs = det.covs)
-  
-  # Priors
-  prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
-  		   alpha.normal = list(mean = 0, var = 2.72))
-  # Initial values
-  inits.list <- list(alpha = 0, beta = 0,
-  		      z = apply(data.list$y, 1, max, na.rm = TRUE))
-  
-  n.samples <- 5000
-  n.thin <- 1
-  n.burn <- 4000
-  n.report <- 1000
-  
-  out <- PGOcc(occ.formula = ~ occ.cov, 
-	     det.formula = ~ det.cov, 
-	     data = data.list, 
-	     inits = inits.list,
-	     n.samples = n.samples,
-	     priors = prior.list,
-	     n.omp.threads = 1,
-	     verbose = FALSE,
-	     n.report = n.report, 
-	     n.burn = n.burn, 
-	     n.thin = n.thin)
-  n.post.samples <- length(seq(from = n.burn + 1, 
+# For helper functions
+J.x <- 10
+J.y <- 10
+J <- J.x * J.y
+n.rep <- sample(4, J, replace = TRUE)
+beta <- c(0.5, -0.15)
+p.occ <- length(beta)
+alpha <- c(0.7, 0.4)
+p.det <- length(alpha)
+dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
+	      sp = FALSE)
+occ.covs <- dat$X[, 2, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov')
+det.covs <- list(det.cov = dat$X.p[, , 2])
+# Data bundle
+data.list <- list(y = dat$y, 
+		  occ.covs = occ.covs, 
+		  det.covs = det.covs)
+
+# Priors
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
+		   alpha.normal = list(mean = 0, var = 2.72))
+# Initial values
+inits.list <- list(alpha = 0, beta = 0,
+		      z = apply(data.list$y, 1, max, na.rm = TRUE))
+
+n.samples <- 5000
+n.thin <- 1
+n.burn <- 4000
+n.report <- 1000
+
+out <- PGOcc(occ.formula = ~ occ.cov, 
+           det.formula = ~ det.cov, 
+           data = data.list, 
+           inits = inits.list,
+           n.samples = n.samples,
+           priors = prior.list,
+           n.omp.threads = 1,
+           verbose = FALSE,
+           n.report = n.report, 
+           n.burn = n.burn, 
+           n.thin = n.thin)
+n.post.samples <- length(seq(from = n.burn + 1, 
 			       to = n.samples, 
 			       by = as.integer(n.thin)))
+
+test_that("waicOCC works for PGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
