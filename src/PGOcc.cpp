@@ -20,7 +20,8 @@ extern "C" {
 	     SEXP alphaStarting_r, SEXP zStarting_r, SEXP zLongIndx_r, 
 	     SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP SigmaAlpha_r, 
 	     SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r){
+	     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+	     SEXP nChain_r){
    
     /**********************************************************************
      * Initial constants
@@ -60,6 +61,8 @@ extern "C" {
     int nThin = INTEGER(nThin_r)[0]; 
     int nBurn = INTEGER(nBurn_r)[0]; 
     int nPost = INTEGER(nPost_r)[0]; 
+    int currChain = INTEGER(currChain_r)[0];
+    int nChain = INTEGER(nChain_r)[0];
     int status = 0; 
     double *z = REAL(zStarting_r); 
     int thinIndx = 0;
@@ -78,19 +81,25 @@ extern "C" {
      * Print Information 
      * *******************************************************************/
     if(verbose){
-      Rprintf("----------------------------------------\n");
-      Rprintf("\tModel description\n");
-      Rprintf("----------------------------------------\n");
-      Rprintf("Occupancy model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
-      Rprintf("Number of MCMC samples: %i \n", nSamples);
-      Rprintf("Burn-in: %i \n", nBurn); 
-      Rprintf("Thinning Rate: %i \n", nThin); 
-      Rprintf("Total Posterior Samples: %i \n\n", nPost); 
+      if (currChain == 1) {
+        Rprintf("----------------------------------------\n");
+        Rprintf("\tModel description\n");
+        Rprintf("----------------------------------------\n");
+        Rprintf("Occupancy model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
+        Rprintf("Samples per Chain: %i \n", nSamples);
+        Rprintf("Burn-in: %i \n", nBurn); 
+        Rprintf("Thinning Rate: %i \n", nThin); 
+	Rprintf("Number of Chains: %i \n", nChain);
+        Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
 #ifdef _OPENMP
-      Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
+        Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
-      Rprintf("Source not compiled with OpenMP support.\n\n");
+        Rprintf("Source not compiled with OpenMP support.\n\n");
 #endif
+      }
+      Rprintf("----------------------------------------\n");
+      Rprintf("\tChain %i\n", currChain);
+      Rprintf("----------------------------------------\n");
       Rprintf("Sampling ... \n");
     }
 

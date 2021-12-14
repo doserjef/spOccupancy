@@ -20,7 +20,7 @@ waicOcc <- function(object, ...) {
     stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc\n")
   }
 
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   # Functions -------------------------------------------------------------
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}

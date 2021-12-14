@@ -40,7 +40,7 @@ predict.PGOcc <- function(object, X.0, ...) {
 
   # Composition sampling --------------------------------------------------
   beta.samples <- as.matrix(object$beta.samples)
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   out <- list()
   if (object$psiRE) {
     beta.star.samples <- as.matrix(object$beta.star.samples)
@@ -96,7 +96,7 @@ fitted.PGOcc <- function(object, ...) {
   if (class(object) != "PGOcc") {
     stop("error: object must be one of class PGOcc\n")
   }
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
@@ -137,7 +137,7 @@ fitted.PGOcc <- function(object, ...) {
 }
 
 summary.PGOcc <- function(object,
-			  quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
+			  quantiles = c(0.025, 0.5, 0.975), 
 			  digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
@@ -145,38 +145,68 @@ summary.PGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
   
   # Occurrence
-  cat("Occurrence: \n")
-  print(noquote(round(t(apply(object$beta.samples, 2, 
-			      function(x) quantile(x, prob=quantiles))), digits)))
+  cat("Occurrence (logit scale): \n")
+  tmp.1 <- t(apply(object$beta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$beta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   if (object$psiRE) {
     cat("\n")
-    cat("Occurrence Random Effect Variances: \n")
-    print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
-			        function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Occurrence Random Effect Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq.psi, object$ESS$sigma.sq.psi), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   }
   cat("\n")
   # Detection
-  cat("Detection: \n")
-  print(noquote(round(t(apply(object$alpha.samples, 2, 
-			      function(x) quantile(x, prob=quantiles))), digits)))
+  cat("Detection (logit scale): \n")
+  tmp.1 <- t(apply(object$alpha.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$alpha.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$alpha, object$ESS$alpha), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   if (object$pRE) {
     cat("\n")
-    cat("Detection Random Effect Variances: \n")
-    print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-			        function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Detection Random Effect Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$sigma.sq.p.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.p.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq.p, object$ESS$sigma.sq.p), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   }
 }
 
 # ppcOcc ------------------------------------------------------------------ 
-summary.ppcOcc <- function(object, level, 
+summary.ppcOcc <- function(object, level = 'both', 
 			   digits = max(3L, getOption("digits") - 3L), ...) {
 
   cat("\nCall:", deparse(object$call, width.cutoff = floor(getOption("width") * 0.75)), 
@@ -186,12 +216,13 @@ summary.ppcOcc <- function(object, level,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n\n", sep=""))
 
   if (object$class %in% c('PGOcc', 'spPGOcc')) {
     cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
@@ -200,9 +231,6 @@ summary.ppcOcc <- function(object, level,
 
   if (object$class %in% c('msPGOcc', 'spMsPGOcc')) {
 
-    if (missing(level)) {
-      stop("error: must specify level of parameters to display. Valid values are 'species', 'community', or 'both'")
-    }
     if (tolower(level) == 'community') {
       cat("----------------------------------------\n");
       cat("\tCommunity Level\n");
@@ -280,7 +308,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   }
 
   # Data prep -------------------------------------------------------------
-  n.samples <- object$n.post
+  n.samples <- object$n.post * object$n.chains
   X <- object$X
   coords <- object$coords 
   J <- nrow(X)
@@ -410,7 +438,7 @@ print.spPGOcc <- function(x, ...) {
 }
 
 summary.spPGOcc <- function(object,
-			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
+			    quantiles = c(0.025, 0.5, 0.975), 
 			    digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
@@ -418,35 +446,62 @@ summary.spPGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
   
-  # Occurrence
-  cat("Occurrence: \n")
-  print(noquote(round(t(apply(object$beta.samples, 2, 
-			      function(x) quantile(x, prob=quantiles))), digits)))
-  cat("\n")
-  # Detection
-  cat("Detection: \n")
-  print(noquote(round(t(apply(object$alpha.samples, 2, 
-			      function(x) quantile(x, prob=quantiles))), digits)))
+  # Occurrence ------------------------
+  cat("Occurrence (logit scale): \n")
+  tmp.1 <- t(apply(object$beta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$beta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
 
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+  cat("\n")
+  # Detection -------------------------
+  cat("Detection (logit scale): \n")
+  tmp.1 <- t(apply(object$alpha.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$alpha.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$alpha, object$ESS$alpha), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   if (object$pRE) {
     cat("\n")
-    cat("Detection Random Effect Variances: \n")
-    print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-			        function(x) quantile(x, prob=quantiles))), digits)))
-  }
+    cat("Detection Random Effect Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$sigma.sq.p.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.p.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq.p, object$ESS$sigma.sq.p), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
 
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+  }
   cat("\n")
-  # Covariance
-  cat("Covariance: \n")
-  print(noquote(round(t(apply(object$theta.samples, 2, 
-			      function(x) quantile(x, prob = quantiles))), digits)))
+  # Covariance ------------------------
+  cat("Spatial Covariance: \n")
+  tmp.1 <- t(apply(object$theta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$theta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$theta, object$ESS$theta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 }
 
 
@@ -472,7 +527,7 @@ fitted.spPGOcc <- function(object, ...) {
   if (class(object) != "spPGOcc") {
     stop("error: object must be one of class spPGOcc\n")
   }
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
@@ -555,7 +610,7 @@ predict.msPGOcc <- function(object, X.0, ...) {
   # Composition sampling --------------------------------------------------
   N <- dim(object$y)[1]
   sp.indx <- rep(1:N, p.occ)
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   beta.samples <- as.matrix(object$beta.samples)
   out <- list()
   out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
@@ -601,13 +656,9 @@ print.msPGOcc <- function(x, ...) {
 }
 
 summary.msPGOcc <- function(object,
-			    level,
-			    quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
+			    level = 'both',
+			    quantiles = c(0.025, 0.5, 0.975),
 			    digits = max(3L, getOption("digits") - 3L), ...) {
-
-  if (missing(level)) {
-    stop("error: must specify level of parameters to display. Valid values are 'species', 'community', or 'both'")
-  }
 
   print(object)
 
@@ -615,112 +666,121 @@ summary.msPGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
 
-  if (tolower(level) == 'community') {
+  if (tolower(level) %in% c('community', 'both')) {
 
     cat("----------------------------------------\n");
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
     # Occurrence
-    cat("Occurrence Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Occurrence Means (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.comm.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.comm.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta.comm, object$ESS$beta.comm), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
+    cat("\nOccurrence Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$tau.sq.beta.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$tau.sq.beta.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$tau.sq.beta, object$ESS$tau.sq.beta), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     if (object$psiRE) {
       cat("\n")
-      cat("Occurrence Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
+      cat("Occurrence Random Effect Variances (logit scale): \n")
+      tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2, 
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$sigma.sq.psi.samples, 2, 
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.psi, object$ESS$sigma.sq.psi), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     }
     cat("\n")
     # Detection
-    cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Detection Means (logit scale): \n")
+    tmp.1 <- t(apply(object$alpha.comm.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.comm.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha.comm, object$ESS$alpha.comm), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    cat("\nDetection Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$tau.sq.alpha.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$tau.sq.alpha.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$tau.sq.alpha, object$ESS$tau.sq.alpha), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     if (object$pRE) {
       cat("\n")
-      cat("Detection Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
-    }
+      cat("Detection Random Effect Variances (logit scale): \n")
+      tmp.1 <- t(apply(object$sigma.sq.p.samples, 2, 
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$sigma.sq.p.samples, 2, 
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.p, object$ESS$sigma.sq.p), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
 
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    }
   }
 
-  if (tolower(level) == 'species') {
+  if (tolower(level) %in% c('species', 'both')) {
+    if (tolower(level) == 'both') cat("\n")
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occurrence: \n")
-    print(noquote(round(t(apply(object$beta.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Occurrence (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     cat("\n")
     # Detection
-    cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Detection (logit scale): \n")
+    tmp.1 <- t(apply(object$alpha.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha, object$ESS$alpha), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 
   }
-
-  if (tolower(level) == 'both') {
-    
-    cat("----------------------------------------\n");
-    cat("\tCommunity Level\n");
-    cat("----------------------------------------\n");
-
-    # Occurrence
-    cat("Occurrence Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    if (object$psiRE) {
-      cat("\n")
-      cat("Occurrence Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.psi.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
-    }
-    cat("\n")
-    # Detection
-    cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
-    if (object$pRE) {
-      cat("\n")
-      cat("Detection Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
-    }
-
-    cat("\n")
-    cat("----------------------------------------\n");
-    cat("\tSpecies Level\n");
-    cat("----------------------------------------\n");
-    cat("Occurrence: \n")
-    print(noquote(round(t(apply(object$beta.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\n")
-    # Detection
-    cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples, 2,
-  			        function(x) quantile(x, prob=quantiles))), digits)))
-  }
-
 }
 
 fitted.msPGOcc <- function(object, ...) {
@@ -745,7 +805,7 @@ fitted.msPGOcc <- function(object, ...) {
   if (class(object) != "msPGOcc") {
     stop("error: object must be of class msPGOcc\n")
   }
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
@@ -800,13 +860,9 @@ fitted.msPGOcc <- function(object, ...) {
 
 # spMsPGOcc ---------------------------------------------------------------
 summary.spMsPGOcc <- function(object, 
-			      level,
-			      quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
+			      level = 'both',
+			      quantiles = c(0.025, 0.5, 0.975),
 			      digits = max(3L, getOption("digits") - 3L), ...) {
-
-  if (missing(level)) {
-    stop("error: must specify level of parameters to display. Valid values are 'species', 'community', or 'both'")
-  }
 
   print(object)
 
@@ -814,111 +870,120 @@ summary.spMsPGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
 
-  if (tolower(level) == 'community') {
+  if (tolower(level) %in% c('community', 'both')) {
 
     cat("----------------------------------------\n");
     cat("\tCommunity Level\n");
     cat("----------------------------------------\n");
 
     # Occurrence
-    cat("Occurrence Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Occurrence Means (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.comm.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.comm.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta.comm, object$ESS$beta.comm), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
+    cat("\nOccurrence Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$tau.sq.beta.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$tau.sq.beta.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$tau.sq.beta, object$ESS$tau.sq.beta), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     cat("\n")
+
     # Detection
-    cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Detection Means (logit scale): \n")
+    tmp.1 <- t(apply(object$alpha.comm.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.comm.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha.comm, object$ESS$alpha.comm), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    cat("\nDetection Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$tau.sq.alpha.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$tau.sq.alpha.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$tau.sq.alpha, object$ESS$tau.sq.alpha), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     if (object$pRE) {
       cat("\n")
-      cat("Detection Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
-    }
+      cat("Detection Random Effect Variances (logit scale): \n")
+      tmp.1 <- t(apply(object$sigma.sq.p.samples, 2, 
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$sigma.sq.p.samples, 2, 
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.p, object$ESS$sigma.sq.p), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
 
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    }
   }
 
-  if (tolower(level) == 'species') {
+  if (tolower(level) %in% c('species', 'both')) {
+    if (tolower(level) == 'both') cat("\n")
     cat("----------------------------------------\n");
     cat("\tSpecies Level\n");
     cat("----------------------------------------\n");
-    cat("Occurrence: \n")
-    print(noquote(round(t(apply(object$beta.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Occurrence (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     cat("\n")
     # Detection
-    cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat("Detection (logit scale): \n")
+    tmp.1 <- t(apply(object$alpha.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha, object$ESS$alpha), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 
     cat("\n")
     # Covariance
-    cat("Covariance: \n")
-    print(noquote(round(t(apply(object$theta.samples, 2, 
-  			        function(x) quantile(x, prob = quantiles))), digits)))
-
+    cat("Spatial Covariance: \n")
+    tmp.1 <- t(apply(object$theta.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$theta.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$theta, object$ESS$theta), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   }
-
-  if (tolower(level) == 'both') {
-    
-    cat("----------------------------------------\n");
-    cat("\tCommunity Level\n");
-    cat("----------------------------------------\n");
-
-    # Occurrence
-    cat("Occurrence Means: \n")
-    print(noquote(round(t(apply(object$beta.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nOccurrence Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.beta.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\n")
-    # Detection
-    cat("Detection Means: \n")
-    print(noquote(round(t(apply(object$alpha.comm.samples, 2,
-          		      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\nDetection Variances: \n")
-    print(noquote(round(t(apply(object$tau.sq.alpha.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
-    if (object$pRE) {
-      cat("\n")
-      cat("Detection Random Effect Variances: \n")
-      print(noquote(round(t(apply(object$sigma.sq.p.samples, 2, 
-          		        function(x) quantile(x, prob=quantiles))), digits)))
-    }
-    cat("\n")
-    cat("----------------------------------------\n");
-    cat("\tSpecies Level\n");
-    cat("----------------------------------------\n");
-    cat("Occurrence: \n")
-    print(noquote(round(t(apply(object$beta.samples, 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
-    cat("\n")
-    # Detection
-    cat("Detection: \n")
-    print(noquote(round(t(apply(object$alpha.samples, 2,
-  			        function(x) quantile(x, prob=quantiles))), digits)))
-
-    cat("\n")
-    # Covariance
-    cat("Covariance: \n")
-    print(noquote(round(t(apply(object$theta.samples, 2, 
-  			        function(x) quantile(x, prob = quantiles))), digits)))
-  }
-
 }
 
 fitted.spMsPGOcc <- function(object, ...) {
@@ -944,7 +1009,7 @@ fitted.spMsPGOcc <- function(object, ...) {
   if (class(object) != "spMsPGOcc") {
     stop("error: object must be of class spMsPGOcc\n")
   }
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
@@ -1029,7 +1094,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   }
 
   # Data prep -------------------------------------------------------------
-  n.samples <- object$n.post
+  n.samples <- object$n.post * object$n.chains
   X <- object$X
   y <- object$y
   coords <- object$coords 
@@ -1200,7 +1265,7 @@ predict.intPGOcc <- function(object, X.0, ...) {
   }
 
   # Composition sampling --------------------------------------------------
-  n.post <- object$n.post
+  n.post <- object$n.post * object$n.chains
   beta.samples <- as.matrix(object$beta.samples)
   out <- list()
   out$psi.0.samples <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
@@ -1222,7 +1287,7 @@ fitted.intPGOcc <- function(object, ...) {
 }
 
 summary.intPGOcc <- function(object,
-			     quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
+			     quantiles = c(0.025, 0.5, 0.975),
 			     digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
@@ -1230,27 +1295,47 @@ summary.intPGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
 
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  # Occurrence
-  cat("Occurrence: \n")
-  print(noquote(round(t(apply(object$beta.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
+  # Occurrence ------------------------
+  cat("Occurrence (logit scale): \n")
+  tmp.1 <- t(apply(object$beta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$beta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
   cat("\n")
-  # Detection
+  # Detection -------------------------
+
+
   indx <- 1
   for (i in 1:n.data) {
-    cat(paste("Data source ", i, " Detection: \n", sep = ""))
-    print(noquote(round(t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat(paste("Data source ", i, " Detection (logit scale): \n", sep = ""))
+    tmp.1 <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
+		     function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha[indx:(indx+p.det.long[i] - 1)], 
+		      object$ESS$alpha[indx:(indx+p.det.long[i] - 1)]), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
   }
@@ -1267,7 +1352,7 @@ fitted.spIntPGOcc <- function(object, ...) {
 }
 
 summary.spIntPGOcc <- function(object,
-			       quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
+			       quantiles = c(0.025, 0.5, 0.975),
 			       digits = max(3L, getOption("digits") - 3L), ...) {
   print(object)
 
@@ -1275,35 +1360,57 @@ summary.spIntPGOcc <- function(object,
   n.samples <- object$n.samples
   n.burn <- object$n.burn
   n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
 
-  cat("Chain Information:\n")
-  cat(paste("Total samples: ", n.samples,"\n", sep=""))
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
   cat(paste("Burn-in: ", n.burn,"\n", sep=""))
-  cat(paste("Thin: ",n.thin,"\n", sep=""))
-  cat(paste("Total Posterior Samples: ",n.post,"\n\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
 
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
 
-  # Occurrence
-  cat("Occurrence: \n")
-  print(noquote(round(t(apply(object$beta.samples, 2,
-			      function(x) quantile(x, prob=quantiles))), digits)))
+  # Occurrence ------------------------
+  cat("Occurrence (logit scale): \n")
+  tmp.1 <- t(apply(object$beta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$beta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$beta, object$ESS$beta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   cat("\n")
-  # Detection
+  # Detection -------------------------
   indx <- 1
   for (i in 1:n.data) {
-    cat(paste("Data source ", i, " Detection: \n", sep = ""))
-    print(noquote(round(t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2,
-  			      function(x) quantile(x, prob=quantiles))), digits)))
+    cat(paste("Data source ", i, " Detection (logit scale): \n", sep = ""))
+    tmp.1 <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
+		     function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$alpha[indx:(indx+p.det.long[i] - 1)], 
+		      object$ESS$alpha[indx:(indx+p.det.long[i] - 1)]), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
   }
-  # Covariance
-  cat("Covariance: \n")
-  print(noquote(round(t(apply(object$theta.samples, 2, 
-			      function(x) quantile(x, prob = quantiles))), digits)))
-
+  # Covariance ------------------------
+  cat("Spatial Covariance: \n")
+  tmp.1 <- t(apply(object$theta.samples, 2, 
+		   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$theta.samples, 2, 
+		 function(x) quantile(x, prob = quantiles)))
+  diags <- matrix(c(object$rhat$theta, object$ESS$theta), ncol = 2)
+  colnames(diags) <- c('Rhat', 'ESS')
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 }
 
 predict.spIntPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
@@ -1332,7 +1439,7 @@ predict.spIntPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   }
 
   # Data prep -------------------------------------------------------------
-  n.samples <- object$n.post
+  n.samples <- object$n.post * object$n.chains
   X <- object$X
   coords <- object$coords
   J <- nrow(X)

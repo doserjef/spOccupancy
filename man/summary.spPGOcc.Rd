@@ -11,7 +11,7 @@
 }
 
 \usage{
-\method{summary}{spPGOcc}(object, quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975), 
+\method{summary}{spPGOcc}(object, quantiles = c(0.025, 0.5, 0.975), 
         digits = max(3L, getOption("digits") - 3L), \dots)
 \method{print}{spPGOcc}(x, \dots)
 }

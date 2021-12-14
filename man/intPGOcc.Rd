@@ -10,7 +10,7 @@ Function for fitting single species integrated occupancy models using Polya-Gamm
 \usage{
 intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
          n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
-         n.burn = round(.10 * n.samples), n.thin = 1, 
+         n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
          k.fold, k.fold.threads = 1, k.fold.seed, 
          k.fold.data, ...
 )
@@ -70,7 +70,7 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     detection parameters in a given data source. If not specified, prior means 
     are set to 0 and prior variances set to 2.72.}
   
-  \item{n.samples}{the number of posterior samples to collect.}
+  \item{n.samples}{the number of posterior samples to collect in each chain.}
 
   \item{n.omp.threads}{a positive integer indicating the number of threads
     to use for SMP parallel processing. The package must be compiled for 
@@ -90,6 +90,8 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   \item{n.thin}{the thinning interval for collection of MCMC samples. The
     thinning occurs after the \code{n.burn} samples are discarded. Default 
     value is set to 1.}
+
+  \item{n.chains}{the number of chains to run in sequence.}
 
   \item{k.fold}{specifies the number of \emph{k} folds for cross-validation.
     If not specified as an argument, then cross-validation is not performed
@@ -247,7 +249,8 @@ out <- intPGOcc(occ.formula = ~ occ.cov,
 		verbose = TRUE, 
 		n.report = 1000, 
 		n.burn = 1000, 
-		n.thin = 1)
+		n.thin = 1, 
+		n.chains = 1)
 
 summary(out)
 }

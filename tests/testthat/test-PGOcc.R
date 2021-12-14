@@ -44,16 +44,17 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     verbose = FALSE,
 	     n.report = n.report, 
 	     n.burn = n.burn, 
-	     n.thin = n.thin)
+	     n.thin = n.thin, 
+	     n.chains = 2)
 
 test_that("out is of class PGOcc", {
   expect_s3_class(out, "PGOcc")
 })
 
 test_that("samples are the right size", {
-  n.post.samples <- length(seq(from = n.burn + 1, 
+  n.post.samples <- length(seq(from = out$n.burn + 1, 
 			       to = n.samples, 
-			       by = as.integer(n.thin)))
+			       by = as.integer(out$n.thin))) * out$n.chains
   expect_equal(dim(out$beta.samples), c(n.post.samples, length(beta)))
   expect_equal(dim(out$alpha.samples), c(n.post.samples, length(alpha)))
   expect_equal(dim(out$z.samples), c(n.post.samples, J))
@@ -171,11 +172,12 @@ test_that("PGOccREOcc works", {
 	     n.report = n.report,
 	     n.burn = 1000,
 	     n.thin = 2, 
+	     n.chains = 2,
 	     k.fold = 2)
 
   n.post.samples <- length(seq(from = out$n.burn + 1, 
 			       to = n.samples, 
-			       by = as.integer(out$n.thin)))
+			       by = as.integer(out$n.thin))) * out$n.chains
   expect_s3_class(out, "PGOcc")
   expect_equal(out$psiRE, TRUE)
   expect_equal(out$pRE, FALSE)
@@ -224,10 +226,11 @@ test_that("random effects on detection work", {
 	       n.report = n.report,
 	       n.burn = 1000,
 	       n.thin = 2, 
+	       n.chains = 2,
 	       k.fold = 2) 
   n.post.samples <- length(seq(from = out$n.burn + 1, 
 			       to = n.samples, 
-			       by = as.integer(out$n.thin)))
+			       by = as.integer(out$n.thin))) * out$n.chains
   expect_s3_class(out, "PGOcc")
   expect_equal(out$pRE, TRUE)
   expect_equal(out$psiRE, FALSE)
@@ -290,7 +293,7 @@ test_that("random effects on occurrence and detection work", {
 
   n.post.samples <- length(seq(from = out$n.burn + 1, 
 			       to = n.samples, 
-			       by = as.integer(out$n.thin)))
+			       by = as.integer(out$n.thin))) * out$n.chains
   expect_s3_class(out, "PGOcc")
   expect_equal(out$pRE, TRUE)
   expect_equal(out$psiRE, TRUE)
@@ -343,9 +346,9 @@ out <- PGOcc(occ.formula = ~ occ.cov,
            n.report = n.report, 
            n.burn = n.burn, 
            n.thin = n.thin)
-n.post.samples <- length(seq(from = n.burn + 1, 
+n.post.samples <- length(seq(from = out$n.burn + 1, 
 			       to = n.samples, 
-			       by = as.integer(n.thin)))
+			       by = as.integer(out$n.thin))) * out$n.chains
 
 test_that("waicOCC works for PGOcc", {
   # as.vector gets rid of names

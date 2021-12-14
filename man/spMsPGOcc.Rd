@@ -13,7 +13,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
           batch.length, accept.rate = 0.43, n.omp.threads = 1, 
           verbose = TRUE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          k.fold, k.fold.threads = 1, k.fold.seed, ...)
+          n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
 }
 
 \arguments{
@@ -118,7 +118,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
 
-  \item{n.batch}{the number of MCMC batches to run for the Adaptive MCMC 
+  \item{n.batch}{the number of MCMC batches  in each chain to run for the Adaptive MCMC 
     sampler. See Roberts and Rosenthal (2009) for details.}
   
   \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
@@ -143,11 +143,13 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     samples for spatial models.}
 
   \item{n.burn}{the number of samples out of the total \code{n.samples} to 
-    discard as burn-in. By default, the first 10\% of samples is discarded.}
+    discard as burn-in for each chain. By default, the first 10\% of samples is discarded.}
   
   \item{n.thin}{the thinning interval for collection of MCMC samples. The
     thinning occurs after the \code{n.burn} samples are discarded. Default 
     value is set to 1.}
+
+  \item{n.chains}{the number of chains to run in sequence.}
 
   \item{k.fold}{specifies the number of \emph{k} folds for cross-validation. 
     If not specified as an argument, then cross-validation is not performed
@@ -358,7 +360,8 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
                  search.type = 'cb', 
                  n.report = 10, 
                  n.burn = 500, 
-                 n.thin = 1)
+                 n.thin = 1, 
+		 n.chains = 1)
 
 summary(out, level = 'both')
 }
