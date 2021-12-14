@@ -13,3 +13,4 @@
 ^\.git$
 ^codecov\.yml$
 ^\.github$
+^tests$
