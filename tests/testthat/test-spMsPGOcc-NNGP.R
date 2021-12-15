@@ -1,7 +1,7 @@
 # Test spMsPGOcc.R  -------------------------------------------------------
 # NNGP --------------------------------------------------------------------
 skip_on_cran()
-
+set.seed(101)
 J.x <- 7
 J.y <- 7
 J <- J.x * J.y
@@ -122,6 +122,7 @@ test_that("out$y == y", {
 
 test_that("default priors and inits work", {
 
+  set.seed(1010)
   out <- spMsPGOcc(occ.formula = ~ occ.cov, 
                    det.formula = ~ det.cov.1 + det.cov.2, 
                    data = data.list,
@@ -145,7 +146,7 @@ test_that("default priors and inits work", {
 })
 
 test_that("all correlation functions work", {
-
+  set.seed(555)
   out <- spMsPGOcc(occ.formula = ~ occ.cov, 
                    det.formula = ~ det.cov.1 + det.cov.2, 
                    data = data.list,
@@ -167,6 +168,7 @@ test_that("all correlation functions work", {
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 
+  set.seed(557)
   out <- spMsPGOcc(occ.formula = ~ occ.cov, 
                    det.formula = ~ det.cov.1 + det.cov.2, 
                    data = data.list,
@@ -187,7 +189,7 @@ test_that("all correlation functions work", {
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
-
+  set.seed(556)
   out <- spMsPGOcc(occ.formula = ~ occ.cov, 
                    det.formula = ~ det.cov.1 + det.cov.2, 
                    data = data.list,
@@ -212,6 +214,7 @@ test_that("all correlation functions work", {
 
 test_that("verbose prints to the screen", {
 
+  set.seed(989)		  
   expect_output(spMsPGOcc(occ.formula = ~ occ.cov, 
                  det.formula = ~ det.cov.1 + det.cov.2, 
                  data = data.list,
@@ -234,7 +237,7 @@ test_that("verbose prints to the screen", {
 })
 
 test_that("cross-validation works", {
-  
+  set.seed(117) 
   out <- spMsPGOcc(occ.formula = ~ occ.cov, 
                    det.formula = ~ det.cov.1 + det.cov.2, 
                    data = data.list,
