@@ -214,15 +214,15 @@ test_that("all correlation functions work", {
 
 test_that("verbose prints to the screen", {
 
-  set.seed(989)		  
+  set.seed(1010)		  
   expect_output(spMsPGOcc(occ.formula = ~ occ.cov, 
                  det.formula = ~ det.cov.1 + det.cov.2, 
                  data = data.list,
-                 #inits = inits.list, 
+                 inits = inits.list, 
                  n.batch = n.batch, 
                  batch.length = batch.length, 
                  accept.rate = 0.43, 
-                 #priors = prior.list, 
+                 priors = prior.list, 
                  cov.model = "exponential", 
                  tuning = tuning.list, 
                  n.omp.threads = 1, 

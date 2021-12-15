@@ -909,6 +909,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           colnames(out.fit$theta.samples) <- c('sigma.sq', 'phi', 'nu')
         }
         out.fit$w.samples <- mcmc(t(out.fit$w.samples))
+	out.fit$z.samples <- mcmc(t(out.fit$z.samples))
+	out.fit$psi.samples <- mcmc(t(out.fit$psi.samples))
         out.fit$X <- X.fit
         out.fit$X.p <- X.p.fit
         out.fit$call <- cl
@@ -1344,6 +1346,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         } else {
           colnames(out.fit$theta.samples) <- c('sigma.sq', 'phi', 'nu')
         }
+	# Don't need to reorder these, because nothing is re-ordered and it doesn't matter
+	# since you are just returning the model deviance value.  
+	out.fit$z.samples <- mcmc(t(out.fit$z.samples))
+	out.fit$psi.samples <- mcmc(t(out.fit$psi.samples))
         out.fit$w.samples <- mcmc(t(out.fit$w.samples))
         out.fit$X <- X.fit
         out.fit$X.p <- X.p.fit

@@ -82,7 +82,7 @@ extern "C" {
       Rprintf("Number of covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Number of MCMC samples %i.\n\n", nSamples);
-      Rprintf("Predicting at %i locations.\n\n", q);  
+      Rprintf("Predicting at %i non-sampled locations.\n\n", q);  
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i threads.\n", nThreads);
 #else

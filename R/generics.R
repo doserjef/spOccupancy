@@ -303,8 +303,8 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (class(object) != "spPGOcc") {
-    stop("error: requires an output object of class spPGOcc\n")
+  if (!(class(object) %in% c("spPGOcc", "spIntPGOcc"))) {
+    stop("error: requires an output object of class spPGOcc or spIntPGOcc\n")
   }
 
   # Data prep -------------------------------------------------------------
@@ -346,19 +346,27 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     stop("error: coords.0 must have two columns\n")
   }
   coords.0 <- as.matrix(coords.0)
+
+  # Eliminate prediction sites that have already sampled been for now
+  match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
+  coords.0.indx <- which(is.na(match.indx))
+  coords.indx <- match.indx[!is.na(match.indx)]
+  coords.place.indx <- which(!is.na(match.indx))
+  coords.0.new <- coords.0[coords.0.indx, ]
+  X.0.new <- X.0[coords.0.indx, ]
   
-  q <- nrow(X.0)
+  q <- nrow(X.0.new)
 
   if (type == 'GP') {
   
-    obs.pred.D <- iDist(coords, coords.0)
+    obs.pred.D <- iDist(coords, coords.0.new)
     obs.D <- iDist(coords)
     
     storage.mode(obs.pred.D) <- "double"
     storage.mode(obs.D) <- "double"
     storage.mode(J) <- "integer"
     storage.mode(p.occ) <- "integer"
-    storage.mode(X.0) <- "double"
+    storage.mode(X.0.new) <- "double"
     storage.mode(q) <- "integer"
     storage.mode(beta.samples) <- "double"
     storage.mode(theta.samples) <- "double"
@@ -372,33 +380,21 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     
     ptm <- proc.time()
 
-    out <- .Call("spPGOccPredict", J, p.occ, X.0, q, obs.D, 
+    out <- .Call("spPGOccPredict", J, p.occ, X.0.new, q, obs.D, 
 		 obs.pred.D, beta.samples, theta.samples, 
 		 w.samples, n.samples, cov.model.indx, n.omp.threads, 
 		 verbose, n.report)
-
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))  
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$run.time <- proc.time() - ptm
-    out$call <- cl
-    out$object.class <- class(object)
-
-    class(out) <- "predict.spPGOcc"
-
-    out
-
   } else { 
     # Get nearest neighbors 
     # nn2 is a function from RANN. 
-    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1 
+    nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1 
 
     storage.mode(coords) <- "double"
     storage.mode(J) <- "integer"
     storage.mode(p.occ) <- "integer"
     storage.mode(n.neighbors) <- "integer"
-    storage.mode(X.0) <- "double"
-    storage.mode(coords.0) <- "double"
+    storage.mode(X.0.new) <- "double"
+    storage.mode(coords.0.new) <- "double"
     storage.mode(q) <- "integer"
     storage.mode(beta.samples) <- "double"
     storage.mode(theta.samples) <- "double"
@@ -413,22 +409,36 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     ptm <- proc.time()
 
     out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors, 
-                 X.0, coords.0, q, nn.indx.0, beta.samples, 
+                 X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
                  theta.samples, w.samples, n.samples, 
                  cov.model.indx, n.omp.threads, verbose, n.report)
-
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))  
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$run.time <- proc.time() - ptm
-    out$call <- cl
-    out$object.class <- class(object)
-
-    class(out) <- "predict.spPGOcc"
-
-    out
-
   }
+
+  if (nrow(X.0) == q) {
+    out$z.0.samples <- mcmc(t(out$z.0.samples))
+    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
+    out$w.0.samples <- mcmc(t(out$w.0.samples))
+  } else {
+    tmp <- matrix(NA, n.samples, nrow(X.0))
+    tmp[, coords.0.indx] <- t(out$z.0.samples)
+    tmp[, coords.place.indx] <- object$z.samples[, coords.indx]
+    out$z.0.samples <- mcmc(tmp)
+    tmp <- matrix(NA, n.samples, nrow(X.0))
+    tmp[, coords.0.indx] <- t(out$psi.0.samples)
+    tmp[, coords.place.indx] <- object$psi.samples[, coords.indx]
+    out$psi.0.samples <- mcmc(tmp)
+    tmp <- matrix(NA, n.samples, nrow(X.0))
+    tmp[, coords.0.indx] <- t(out$w.0.samples)
+    tmp[, coords.place.indx] <- object$w.samples[, coords.indx]
+    out$w.0.samples <- mcmc(tmp)
+  }
+  out$run.time <- proc.time() - ptm
+  out$call <- cl
+  out$object.class <- class(object)
+
+  class(out) <- "predict.spPGOcc"
+
+  out
 
 }
 
@@ -1415,151 +1425,9 @@ summary.spIntPGOcc <- function(object,
 
 predict.spIntPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 			       verbose = TRUE, n.report = 100, ...) {
+  out <- predict.spPGOcc(object, X.0, coords.0, n.omp.threads, 
+			 verbose, n.report)
 
-  # Check for unused arguments ------------------------------------------
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-      if(! i %in% formal.args)
-          warning("'",i, "' is not an argument")
-  }
-  # Call ----------------------------------------------------------------
-  cl <- match.call()
-
-  # Functions ---------------------------------------------------------------
-  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
-  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
-
-  # Some initial checks ---------------------------------------------------
-  if (missing(object)) {
-    stop("error: predict expects object\n")
-  }
-  if (class(object) != "spIntPGOcc") {
-    stop("error: requires an output object of class spIntPGOcc\n")
-  }
-
-  # Data prep -------------------------------------------------------------
-  n.samples <- object$n.post * object$n.chains
-  X <- object$X
-  coords <- object$coords
-  J <- nrow(X)
-  p.occ <- ncol(X)
-  theta.samples <- object$theta.samples
-  beta.samples <- object$beta.samples
-  w.samples <- object$w.samples
-  n.neighbors <- object$n.neighbors
-  cov.model.indx <- object$cov.model.indx
-  type <- object$type
-
-  # Sub-sample previous
-  theta.samples <- t(theta.samples)
-  beta.samples <- t(beta.samples)
-  w.samples <- t(w.samples)
-
-  if (missing(X.0)) {
-    stop("error: X.0 must be specified\n")
-  }
-  if (!any(is.data.frame(X.0), is.matrix(X.0))){
-    stop("error: X.0 must be a data.frame or matrix\n")
-  }
-  if (ncol(X.0) != ncol(X)){
-    stop(paste("error: X.0 must have ", p.occ," columns\n"))
-  }
-  X.0 <- as.matrix(X.0)
-
-  if (missing(coords.0)) {
-    stop("error: coords.0 must be specified\n")
-  }
-  if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
-    stop("error: coords.0 must be a data.frame or matrix\n")
-  }
-  if (!ncol(coords.0) == 2){
-    stop("error: coords.0 must have two columns\n")
-  }
-  coords.0 <- as.matrix(coords.0)
-
-  q <- nrow(X.0)
-
-  if (type == 'GP') {
-
-    obs.pred.D <- iDist(coords, coords.0)
-    obs.D <- iDist(coords)
-
-    storage.mode(obs.pred.D) <- "double"
-    storage.mode(obs.D) <- "double"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(X.0) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(n.samples) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-
-    ptm <- proc.time()
-
-    out <- .Call("spPGOccPredict", J, p.occ, X.0, q, obs.D,
-		 obs.pred.D, beta.samples, theta.samples,
-		 w.samples, n.samples, cov.model.indx, verbose,
-		 n.omp.threads, n.report)
-
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$run.time <- proc.time() - ptm
-    out$call <- cl
-    out$object.class <- class(object)
-
-    class(out) <- "predict.spPGOcc"
-
-    out
-
-  } else {
-    # Get nearest neighbors
-    # nn2 is a function from RANN.
-    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
-
-    storage.mode(coords) <- "double"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(n.neighbors) <- "integer"
-    storage.mode(X.0) <- "double"
-    storage.mode(coords.0) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(n.samples) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(nn.indx.0) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-
-    ptm <- proc.time()
-
-    out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors,
-                 X.0, coords.0, q, nn.indx.0, beta.samples,
-                 theta.samples, w.samples, n.samples,
-                 cov.model.indx, n.omp.threads, verbose, n.report)
-
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$run.time <- proc.time() - ptm
-    out$call <- cl
-    out$object.class <- class(object)
-
-    class(out) <- "predict.spPGOcc"
-
-    out
-
-  }
-
+  out
 }
 
