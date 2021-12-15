@@ -1234,15 +1234,15 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (nrow(X.0) != q) {
     tmp <- array(NA, dim = c(n.samples, N, nrow(X.0)))
     tmp[, , coords.0.indx] <- out$z.0.samples
-    tmp[, coords.place.indx] <- object$z.samples[, , coords.indx]
+    tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
     out$z.0.samples <- tmp
     tmp <- array(NA, dim = c(n.samples, N, nrow(X.0)))
     tmp[, , coords.0.indx] <- out$psi.0.samples
-    tmp[, coords.place.indx] <- object$psi.samples[, , coords.indx]
+    tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
     out$psi.0.samples <- tmp
     tmp <- array(NA, dim = c(n.samples, N, nrow(X.0)))
     tmp[, , coords.0.indx] <- out$w.0.samples
-    tmp[, coords.place.indx] <- object$w.samples[, , coords.indx]
+    tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
     out$w.0.samples <- tmp
   }
 

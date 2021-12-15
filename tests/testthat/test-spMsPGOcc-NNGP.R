@@ -381,8 +381,8 @@ test_that("predict works for spMsPGOcc", {
   coords.0 <- rbind(dat$coords, matrix(c(0.538, 0.201), nrow = 1))
   pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
   expect_type(pred.out, "list")
-  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, J + 1))
-  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, J + 1))
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J + 1))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J + 1))
 })
 
 test_that("posterior predictive checks work for spMsPGOcc", {
