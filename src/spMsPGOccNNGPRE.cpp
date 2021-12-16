@@ -106,10 +106,16 @@ extern "C" {
     int m = INTEGER(m_r)[0]; 
     // Xp is sorted by parameter then site, then visit (parameter 1 site 1, p1 site 2, etc) 
     double *Xp = REAL(Xp_r);
+    int pOcc = INTEGER(pocc_r)[0];
+    int pDet = INTEGER(pdet_r)[0];
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
     double *muBetaComm = REAL(muBetaComm_r); 
     double *muAlphaComm = REAL(muAlphaComm_r); 
-    double *SigmaBetaCommInv = REAL(SigmaBetaComm_r); 
-    double *SigmaAlphaCommInv = REAL(SigmaAlphaComm_r); 
+    double *SigmaBetaCommInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBetaComm_r), &inc, SigmaBetaCommInv, &inc);
+    double *SigmaAlphaCommInv = (double *) R_alloc(ppDet, sizeof(double));   
+    F77_NAME(dcopy)(&ppDet, REAL(SigmaAlphaComm_r), &inc, SigmaAlphaCommInv, &inc);
     double *tauSqBetaA = REAL(tauSqBetaA_r); 
     double *tauSqBetaB = REAL(tauSqBetaB_r); 
     double *tauSqAlphaA = REAL(tauSqAlphaA_r); 
@@ -130,8 +136,6 @@ extern "C" {
     int *uiIndx = INTEGER(uiIndx_r);
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
-    int pOcc = INTEGER(pocc_r)[0];
-    int pDet = INTEGER(pdet_r)[0];
     int pDetRE = INTEGER(pDetRE_r)[0]; 
     int nDetRE = INTEGER(nDetRE_r)[0]; 
     int *nDetRELong = INTEGER(nDetRELong_r); 
@@ -154,8 +158,6 @@ extern "C" {
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
     int status = 0; 
-    // Sorted by site, then species (e.g., site 1 sp 1, site 1 sp2, ...)
-    double *z = REAL(zStarting_r); 
     int thinIndx = 0; 
     int sPost = 0; 
 
@@ -205,8 +207,6 @@ extern "C" {
     int nObsN = nObs * N; 
     int nDetREN = nDetRE * N; 
     int JN = J * N;
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     int JJ = J * J;
@@ -267,6 +267,9 @@ extern "C" {
     // Spatial smoothing parameter for Matern
     double *nu = (double *) R_alloc(N, sizeof(double)); 
     F77_NAME(dcopy)(&N, REAL(nuStarting_r), &inc, nu, &inc); 
+    // Latent Occurrence
+    double *z = (double *) R_alloc(JN, sizeof(double));   
+    F77_NAME(dcopy)(&JN, REAL(zStarting_r), &inc, z, &inc);
     // Auxiliary variables
     // Only need to set aside J locations since you don't save these 
     // for each species

@@ -46,16 +46,20 @@ extern "C" {
     double *y = REAL(y_r);
     double *X = REAL(X_r);
     double *Xp = REAL(Xp_r);
+    int pOcc = INTEGER(pocc_r)[0];
+    int pDet = INTEGER(pdet_r)[0];
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
     double *muBetaComm = REAL(muBetaComm_r); 
     double *muAlphaComm = REAL(muAlphaComm_r); 
-    double *SigmaBetaCommInv = REAL(SigmaBetaComm_r); 
-    double *SigmaAlphaCommInv = REAL(SigmaAlphaComm_r); 
+    double *SigmaBetaCommInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBetaComm_r), &inc, SigmaBetaCommInv, &inc);
+    double *SigmaAlphaCommInv = (double *) R_alloc(ppDet, sizeof(double));   
+    F77_NAME(dcopy)(&ppDet, REAL(SigmaAlphaComm_r), &inc, SigmaAlphaCommInv, &inc);
     double *tauSqBetaA = REAL(tauSqBetaA_r); 
     double *tauSqBetaB = REAL(tauSqBetaB_r); 
     double *tauSqAlphaA = REAL(tauSqAlphaA_r); 
     double *tauSqAlphaB = REAL(tauSqAlphaB_r); 
-    int pOcc = INTEGER(pocc_r)[0];
-    int pDet = INTEGER(pdet_r)[0];
     int J = INTEGER(J_r)[0];
     double *K = REAL(K_r); 
     int nObs = INTEGER(nObs_r)[0];
@@ -71,7 +75,6 @@ extern "C" {
     int currChain = INTEGER(currChain_r)[0];
     int nChain = INTEGER(nChain_r)[0];
     int status = 0; 
-    double *z = REAL(zStarting_r); 
     int thinIndx = 0;
     int sPost = 0;  
 
@@ -117,8 +120,6 @@ extern "C" {
     int pDetN = pDet * N; 
     int nObsN = nObs * N; 
     int JN = J * N;
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     double tmp_0; 
@@ -153,6 +154,9 @@ extern "C" {
     F77_NAME(dcopy)(&pOccN, REAL(betaStarting_r), &inc, beta, &inc);
     double *alpha = (double *) R_alloc(pDetN, sizeof(double));   
     F77_NAME(dcopy)(&pDetN, REAL(alphaStarting_r), &inc, alpha, &inc);
+    // Latent Occurrence
+    double *z = (double *) R_alloc(JN, sizeof(double));   
+    F77_NAME(dcopy)(&JN, REAL(zStarting_r), &inc, z, &inc);
     // Auxiliary variables
     double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
     double *omegaOcc = (double *) R_alloc(J, sizeof(double));

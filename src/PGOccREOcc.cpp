@@ -53,16 +53,22 @@ extern "C" {
     double *Xp = REAL(Xp_r);
     int *XRE = INTEGER(XRE_r); 
     double *lambdaPsi = REAL(lambdaPsi_r); 
-    double *muBeta = REAL(muBeta_r); 
-    double *muAlpha = REAL(muAlpha_r); 
-    double *SigmaBetaInv = REAL(SigmaBeta_r); 
-    double *SigmaAlphaInv = REAL(SigmaAlpha_r); 
-    double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
-    double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
     int pOcc = INTEGER(pocc_r)[0];
     int pDet = INTEGER(pdet_r)[0];
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
     int pOccRE = INTEGER(pOccRE_r)[0]; 
     int nOccRE = INTEGER(nOccRE_r)[0]; 
+    double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
+    F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
+    double *muAlpha = (double *) R_alloc(pDet, sizeof(double));   
+    F77_NAME(dcopy)(&pDet, REAL(muAlpha_r), &inc, muAlpha, &inc);
+    double *SigmaBetaInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBeta_r), &inc, SigmaBetaInv, &inc);
+    double *SigmaAlphaInv = (double *) R_alloc(ppDet, sizeof(double));   
+    F77_NAME(dcopy)(&ppDet, REAL(SigmaAlpha_r), &inc, SigmaAlphaInv, &inc);
+    double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
+    double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
     int *nOccRELong = INTEGER(nOccRELong_r); 
     int J = INTEGER(J_r)[0];
     double *K = REAL(K_r); 
@@ -79,7 +85,6 @@ extern "C" {
     int currChain = INTEGER(currChain_r)[0];
     int nChain = INTEGER(nChain_r)[0];
     int status = 0; 
-    double *z = REAL(zStarting_r); 
     int thinIndx = 0;
     int sPost = 0;  
     int currIndx = 0; 
@@ -131,6 +136,9 @@ extern "C" {
     // Latent occupancy random effects
     double *betaStar = (double *) R_alloc(nOccRE, sizeof(double)); 
     F77_NAME(dcopy)(&nOccRE, REAL(betaStarStarting_r), &inc, betaStar, &inc); 
+    // Latent Occurrence
+    double *z = (double *) R_alloc(J, sizeof(double));   
+    F77_NAME(dcopy)(&J, REAL(zStarting_r), &inc, z, &inc);
     // Detection covariates
     double *alpha = (double *) R_alloc(pDet, sizeof(double));   
     F77_NAME(dcopy)(&pDet, REAL(alphaStarting_r), &inc, alpha, &inc);
@@ -159,8 +167,6 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int nnOccRE = nOccRE * nOccRE; 
     int JpOcc = J * pOcc; 
     int JnOccRE = J * nOccRE; 

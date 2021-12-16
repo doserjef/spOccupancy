@@ -46,21 +46,25 @@ extern "C" {
     double *X = REAL(X_r);
     // Sorted by parameter, then data set, site, visit
     double *Xp = REAL(Xp_r);
-    // Priors for regression coefficients
-    double *muBeta = REAL(muBeta_r); 
-    double *muAlpha = REAL(muAlpha_r); 
-    double *SigmaBetaInv = REAL(SigmaBeta_r); 
-    double sigmaAlpha = REAL(sigmaAlpha_r)[0]; 
     int pOcc = INTEGER(pOcc_r)[0];
     int pDet = INTEGER(pDet_r)[0];
     int nData = INTEGER(nData_r)[0]; 
     int *pDetLong = INTEGER(pDetLong_r); 
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
+    // Priors for regression coefficients
+    double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
+    F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
+    double *muAlpha = (double *) R_alloc(pDet, sizeof(double));   
+    F77_NAME(dcopy)(&pDet, REAL(muAlpha_r), &inc, muAlpha, &inc);
+    double *SigmaBetaInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBeta_r), &inc, SigmaBetaInv, &inc);
+    double sigmaAlpha = REAL(sigmaAlpha_r)[0]; 
     int J = INTEGER(J_r)[0];
     int *JLong = INTEGER(JLong_r); 
     int *K = INTEGER(K_r); 
     int *zLongIndx = INTEGER(zLongIndx_r); 
     int nObs = INTEGER(nObs_r)[0]; 
-    // Rprintf("nObs: %i\n", nObs); 
     int *nObsLong = INTEGER(nObsLong_r); 
     int *dataIndx = INTEGER(dataIndx_r); 
     int *alphaIndx = INTEGER(alphaIndx_r); 
@@ -74,8 +78,6 @@ extern "C" {
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0]; 
     int status = 0; 
-    // z starting values 
-    double *z = REAL(zStarting_r); 
     // For looping through data sets
     int stNObs = 0; 
     int stAlpha = 0; 
@@ -127,6 +129,9 @@ extern "C" {
     // Detection covariates
     double *alpha = (double *) R_alloc(pDet, sizeof(double));   
     F77_NAME(dcopy)(&pDet, REAL(alphaStarting_r), &inc, alpha, &inc);
+    // Latent Occurrence
+    double *z = (double *) R_alloc(J, sizeof(double));   
+    F77_NAME(dcopy)(&J, REAL(zStarting_r), &inc, z, &inc);
     // Auxiliary variables
     double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
     double *omegaOcc = (double *) R_alloc(J, sizeof(double));
@@ -150,8 +155,6 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));

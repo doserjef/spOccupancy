@@ -64,7 +64,12 @@
 # 	       n.report = 10, 
 # 	       n.burn = 4000, 
 # 	       n.thin = 2,
-# 	       n.chains = 1)
+# 	       n.chains = 1, 
+# 	       k.fold = 2)
+# 
+# n.post.samples <- length(seq(from = out$n.burn + 1, 
+# 			       to = out$n.samples, 
+# 			       by = as.integer(out$n.thin))) * out$n.chains
 # 
 # test_that("out is of class spPGOcc", {
 #   expect_s3_class(out, "spPGOcc")
@@ -103,7 +108,7 @@
 # 	         cov.model = "exponential", 
 # 	         tuning = tuning.list, 
 # 	         NNGP = FALSE,
-# 		 verbose = FALSE, 
+# 		 verbose = TRUE, 
 # 	         n.neighbors = 5, 
 # 	         search.type = 'cb', 
 # 	         n.report = 10, 
@@ -163,44 +168,10 @@
 #                  n.chains = 1)
 #   expect_s3_class(out, "spPGOcc")
 # })
-# # 
-# test_that("verbose prints to the screen", {
-#   expect_output(spPGOcc(occ.formula = ~ occ.cov, 
-# 	       det.formula = ~ det.cov.1 + det.cov.2, 
-# 	       data = data.list, 
-# 	       inits = inits.list, 
-# 	       n.batch = n.batch, 
-# 	       batch.length = batch.length, 
-# 	       priors = prior.list,
-# 	       cov.model = "exponential", 
-# 	       tuning = tuning.list, 
-# 	       NNGP = FALSE, 
-# 	       n.neighbors = 5, 
-# 	       search.type = 'cb', 
-# 	       n.report = 10, 
-# 	       n.burn = 500, 
-# 	       n.chains = 1))
-# })
+# 
 # 
 # test_that("cross-validation works", {
 #   
-#   out <- spPGOcc(occ.formula = ~ occ.cov, 
-# 	         det.formula = ~ det.cov.1 + det.cov.2, 
-# 	         data = data.list, 
-# 	         inits = inits.list, 
-# 	         n.batch = 40, 
-# 	         batch.length = batch.length, 
-# 	         priors = prior.list,
-# 	         cov.model = "exponential", 
-# 	         tuning = tuning.list, 
-# 	         NNGP = FALSE, 
-# 	         n.neighbors = 5, 
-# 	         search.type = 'cb', 
-# 	         verbose = FALSE,
-# 	         n.burn = 400, 
-# 	         n.thin = 2,
-# 	         n.chains = 2, 
-# 		 k.fold = 2)
 #   expect_equal(length(out$k.fold.deviance), 1)
 #   expect_type(out$k.fold.deviance, "double")
 #   expect_gt(out$k.fold.deviance, 0)
@@ -271,67 +242,6 @@
 #   expect_equal(out$pRE, TRUE)
 #   expect_equal(dim(out$sigma.sq.p.samples), c(n.post.samples, length(p.RE$sigma.sq.p)))
 # })
-# # For helper functions
-# J.x <- 8
-# J.y <- 8
-# J <- J.x * J.y
-# n.rep <- sample(2:4, J, replace = TRUE)
-# beta <- c(0.3, -1)
-# p.occ <- length(beta)
-# alpha <- c(-0.5, 1)
-# p.det <- length(alpha)
-# psi.RE <- list()
-# p.RE <- list()
-# sigma.sq <- 2
-# phi <- 10
-# dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-# 	      psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, cov.model = 'exponential', 
-# 	      sigma.sq = 2, phi = 10)
-# y <- dat$y
-# X <- dat$X
-# X.p <- dat$X.p
-# 
-# colnames(X) <- c('int', 'occ.cov')
-# det.covs <- list(det.cov = X.p[, , 2])
-# coords <- as.matrix(dat$coords)
-# 
-# data.list <- list(y = y, coords = coords, det.covs = det.covs, 
-# 		  occ.covs = X)
-# # Priors
-# prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
-# 		   alpha.normal = list(mean = 0, var = 2.72), 
-# 		   nu.unif = c(0.3, 4))
-# # Starting values
-# inits.list <- list(alpha = 0, beta = 0, z = apply(y, 1, max, na.rm = TRUE))
-# # Tuning
-# tuning.list <- list(phi = 0.2, nu = 0.2)
-# 
-# batch.length <- 25
-# n.batch <- 40
-# n.report <- 100
-# 
-# set.seed(400)
-# out <- spPGOcc(occ.formula = ~ occ.cov,
-# 	       det.formula = ~ det.cov,
-# 	       data = data.list,
-# 	       inits = inits.list,
-# 	       batch.length = batch.length, 
-#              cov.model = "exponential",
-# 	       n.batch = n.batch, 
-# 	       priors = prior.list,
-# 	       accept.rate = 0.43, 
-# 	       tuning = tuning.list, 
-# 	       n.omp.threads = 1,
-# 	       verbose = FALSE,
-# 	       NNGP = TRUE, 
-# 	       n.neighbors = 10,
-# 	       n.report = n.report,
-# 	       n.burn = 400,
-# 	       n.thin = 6, 
-# 	       n.chains = 2)
-# n.post.samples <- length(seq(from = out$n.burn + 1, 
-# 			       to = out$n.samples, 
-# 			       by = as.integer(out$n.thin))) * out$n.chains
 # 
 # test_that("waicOCC works for spPGOcc", {
 #   # as.vector gets rid of names
@@ -347,12 +257,12 @@
 # })
 # 
 # test_that("predict works for spPGOcc", {
-#   X.0 <- dat$X
-#   coords.0 <- dat$coords
+#   X.0 <- rbind(dat$X, matrix(c(1, rnorm(p.occ - 1)), nrow = 1))
+#   coords.0 <- rbind(dat$coords, matrix(c(0.538, 0.201), nrow = 1))
 #   pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
 #   expect_type(pred.out, "list")
-#   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, J))
-#   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, J))
+#   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, J + 1))
+#   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, J + 1))
 # })
 # 
 # test_that("posterior predictive checks work for spPGOcc", {
@@ -384,4 +294,4 @@
 #   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, max(n.rep)))
 #   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, max(n.rep)))
 # })
-# 
+

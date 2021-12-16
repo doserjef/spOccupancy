@@ -8,7 +8,8 @@ extern "C" {
 	     SEXP alphaStarting_r, SEXP zStarting_r, SEXP zLongIndx_r, 
 	     SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP SigmaAlpha_r, 
 	     SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+	     SEXP nChain_r);
 
 
   SEXP PGOccREDet(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XpRE_r, SEXP lambdaP_r, 

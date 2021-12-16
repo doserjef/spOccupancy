@@ -51,13 +51,22 @@ extern "C" {
     // Sorted by parameter, then data set, site, visit
     double *Xp = REAL(Xp_r);
     double *coordsD = REAL(coordsD_r); 
+    int pOcc = INTEGER(pOcc_r)[0];
+    int pDet = INTEGER(pDet_r)[0];
+    int nData = INTEGER(nData_r)[0]; 
+    int *pDetLong = INTEGER(pDetLong_r); 
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
     // Covariance model
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
     // Priors for regression coefficients
-    double *muBeta = REAL(muBeta_r); 
-    double *muAlpha = REAL(muAlpha_r); 
-    double *SigmaBetaInv = REAL(SigmaBeta_r); 
+    double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
+    F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
+    double *muAlpha = (double *) R_alloc(pDet, sizeof(double));   
+    F77_NAME(dcopy)(&pDet, REAL(muAlpha_r), &inc, muAlpha, &inc);
+    double *SigmaBetaInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBeta_r), &inc, SigmaBetaInv, &inc);
     double sigmaAlpha = REAL(sigmaAlpha_r)[0]; 
     double phiA = REAL(phiA_r)[0];
     double phiB = REAL(phiB_r)[0]; 
@@ -66,10 +75,6 @@ extern "C" {
     double nuA = REAL(nuA_r)[0]; 
     double nuB = REAL(nuB_r)[0]; 
     double *tuning = REAL(tuning_r); 
-    int pOcc = INTEGER(pOcc_r)[0];
-    int pDet = INTEGER(pDet_r)[0];
-    int nData = INTEGER(nData_r)[0]; 
-    int *pDetLong = INTEGER(pDetLong_r); 
     int J = INTEGER(J_r)[0];
     int *JLong = INTEGER(JLong_r); 
     int *K = INTEGER(K_r); 
@@ -92,8 +97,6 @@ extern "C" {
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0]; 
     int status = 0; 
-    // z starting values 
-    double *z = REAL(zStarting_r); 
     // For looping through data sets
     int stNObs = 0; 
     int stAlpha = 0; 
@@ -150,6 +153,9 @@ extern "C" {
     // Spatial random effects
     double *w = (double *) R_alloc(J, sizeof(double));   
     F77_NAME(dcopy)(&J, REAL(wStarting_r), &inc, w, &inc);
+    // Latent Occurrence
+    double *z = (double *) R_alloc(J, sizeof(double));   
+    F77_NAME(dcopy)(&J, REAL(zStarting_r), &inc, z, &inc);
     // Spatial smooth parameter for matern. 
     double nu = REAL(nuStarting_r)[0]; 
     // Auxiliary variables
@@ -177,8 +183,6 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     int JJ = J * J; 

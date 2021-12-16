@@ -95,11 +95,19 @@ extern "C" {
     double *X = REAL(X_r);
     double *Xp = REAL(Xp_r);
     int m = INTEGER(m_r)[0]; 
+    int pOcc = INTEGER(pocc_r)[0];
+    int pDet = INTEGER(pdet_r)[0];
+    int ppDet = pDet * pDet;
+    int ppOcc = pOcc * pOcc; 
     // Priors
-    double *muBeta = REAL(muBeta_r); 
-    double *muAlpha = REAL(muAlpha_r); 
-    double *SigmaBetaInv = REAL(SigmaBeta_r); 
-    double *SigmaAlphaInv = REAL(SigmaAlpha_r); 
+    double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
+    F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
+    double *muAlpha = (double *) R_alloc(pDet, sizeof(double));   
+    F77_NAME(dcopy)(&pDet, REAL(muAlpha_r), &inc, muAlpha, &inc);
+    double *SigmaBetaInv = (double *) R_alloc(ppOcc, sizeof(double));   
+    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBeta_r), &inc, SigmaBetaInv, &inc);
+    double *SigmaAlphaInv = (double *) R_alloc(ppDet, sizeof(double));   
+    F77_NAME(dcopy)(&ppDet, REAL(SigmaAlpha_r), &inc, SigmaAlphaInv, &inc);
     double phiA = REAL(phiA_r)[0];
     double phiB = REAL(phiB_r)[0]; 
     double nuA = REAL(nuA_r)[0]; 
@@ -115,8 +123,6 @@ extern "C" {
     int *uiIndx = INTEGER(uiIndx_r);
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
-    int pOcc = INTEGER(pocc_r)[0];
-    int pDet = INTEGER(pdet_r)[0];
     int J = INTEGER(J_r)[0];
     double *K = REAL(K_r); 
     int *zLongIndx = INTEGER(zLongIndx_r); 
@@ -132,7 +138,6 @@ extern "C" {
     double acceptRate = REAL(acceptRate_r)[0];
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
-    double *z = REAL(zStarting_r); 
     int nReport = INTEGER(nReport_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
@@ -188,6 +193,9 @@ extern "C" {
     F77_NAME(dcopy)(&pDet, REAL(alphaStarting_r), &inc, alpha, &inc);
     double *w = (double *) R_alloc(J, sizeof(double)); zeros(w, J);   
     double nu = REAL(nuStarting_r)[0]; 
+    // Latent Occurrence
+    double *z = (double *) R_alloc(J, sizeof(double));   
+    F77_NAME(dcopy)(&J, REAL(zStarting_r), &inc, z, &inc);
     double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
     double *omegaOcc = (double *) R_alloc(J, sizeof(double));
     double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
@@ -211,8 +219,6 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int ppDet = pDet * pDet;
-    int ppOcc = pOcc * pOcc; 
     int JpOcc = J * pOcc; 
     int JJ = J * J; 
     int nObspDet = nObs * pDet;
