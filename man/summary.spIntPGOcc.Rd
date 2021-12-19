@@ -6,7 +6,7 @@
 \title{Methods for spIntPGOcc Object}
 
 \description{
-  Methods for extracting information from fitted single species integrated occupancy (\code{spIntPGOcc}) model.
+  Methods for extracting information from fitted single-species integrated occupancy (\code{spIntPGOcc}) model.
 }
 
 \usage{

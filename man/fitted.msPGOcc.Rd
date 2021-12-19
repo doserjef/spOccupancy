@@ -5,7 +5,7 @@
 \title{Extract Model Fitted Values for msPGOcc Object}
 
 \description{
-  Method for extracting model fitted values from a fitted multispecies occupancy (\code{msPGOcc}) model. 
+  Method for extracting model fitted values from a fitted multi-species occupancy (\code{msPGOcc}) model. 
 }
 
 \usage{

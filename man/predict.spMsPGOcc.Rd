@@ -1,6 +1,6 @@
 \name{predict.spMsPGOcc}
 \alias{predict.spMsPGOcc}
-\title{Function for prediction at new locations for multispecies spatial occupancy models}
+\title{Function for prediction at new locations for multi-species spatial occupancy models}
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `spMsPGOcc`. 
@@ -92,7 +92,7 @@ dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha =
 		phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
-n.batch <- 40
+n.batch <- 30
 # Batch length
 batch.length <- 25
 n.samples <- n.batch * batch.length

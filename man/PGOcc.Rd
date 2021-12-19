@@ -1,6 +1,6 @@
 \name{PGOcc}
 \alias{PGOcc}
-\title{Function for Fitting Single Species Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Single-Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
 PGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
@@ -10,7 +10,7 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 }
 
 \description{
-  Function for fitting single species occupancy models using Polya-Gamma latent variables. 
+  Function for fitting single-species occupancy models using Polya-Gamma latent variables. 
 }
 
 \arguments{

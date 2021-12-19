@@ -1,6 +1,6 @@
 \name{predict.intPGOcc}
 \alias{predict.intPGOcc}
-\title{Function for prediction at new locations for single species integrated occupancy models}
+\title{Function for prediction at new locations for single-species integrated occupancy models}
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `intPGOcc`. 

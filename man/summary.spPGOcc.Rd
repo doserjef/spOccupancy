@@ -6,7 +6,7 @@
 \title{Methods for spPGOcc Object}
 
 \description{
-  Methods for extracting information from fitted single species spatial 
+  Methods for extracting information from fitted single-species spatial 
   occupancy (\code{spPGOcc}) model.
 }
 

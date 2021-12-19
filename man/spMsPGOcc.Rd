@@ -1,9 +1,9 @@
 \name{spMsPGOcc}
 \alias{spMsPGOcc}
-\title{Function for Fitting Multispecies Spatial Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Multi-Species Spatial Occupancy Models Using Polya-Gamma Latent Variables}
 
 \description{
-  The function \code{spMsPGOcc} fits multispecies spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
+  The function \code{spMsPGOcc} fits multi-species spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
 }
 
 \usage{
@@ -303,7 +303,7 @@ dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha =
                 phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
 
 # Number of batches
-n.batch <- 40
+n.batch <- 30
 # Batch length
 batch.length <- 25
 n.samples <- n.batch * batch.length

@@ -1,9 +1,9 @@
 \name{spIntPGOcc}
 \alias{spIntPGOcc}
-\title{Function for Fitting Single Species Integrated Spatial Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Single-Species Integrated Spatial Occupancy Models Using Polya-Gamma Latent Variables}
 
 \description{
-  The function \code{spIntPGOcc} fits single species integrated spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each conditional on a single latent occupancy process. 
+  The function \code{spIntPGOcc} fits single-species integrated spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each conditional on a single latent occupancy process. 
 }
 
 \usage{

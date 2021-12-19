@@ -1,10 +1,10 @@
 \name{msPGOcc}
 \alias{msPGOcc}
-\title{Function for Fitting Multispecies Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Multi-Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 
 \description{
-Function for fitting multispecies occupancy models using Polya-Gamma latent variables. 
+Function for fitting multi-species occupancy models using Polya-Gamma latent variables. 
 }
 
 \usage{

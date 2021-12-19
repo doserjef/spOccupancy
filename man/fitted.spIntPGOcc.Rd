@@ -5,7 +5,7 @@
 \title{Extract Model Fitted Values for spIntPGOcc Object}
 
 \description{
-  Method for extracting model fitted values from a fitted single species integrated spatial occupancy (\code{spIntPGOcc}) model. 
+  Method for extracting model fitted values from a fitted single-species integrated spatial occupancy (\code{spIntPGOcc}) model. 
 }
 
 \usage{

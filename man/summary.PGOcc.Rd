@@ -6,7 +6,7 @@
 \title{Methods for PGOcc Object}
 
 \description{
-  Methods for extracting information from fitted single species occupancy (\code{PGOcc}) model.
+  Methods for extracting information from fitted single-species occupancy (\code{PGOcc}) model.
 }
 
 \usage{

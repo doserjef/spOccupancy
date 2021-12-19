@@ -1,10 +1,10 @@
 \name{intPGOcc}
 \alias{intPGOcc}
-\title{Function for Fitting Single Species Integrated Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Single-Species Integrated Occupancy Models Using Polya-Gamma Latent Variables}
 
 
 \description{
-Function for fitting single species integrated occupancy models using Polya-Gamma latent variables. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each conditional on a single latent occurrence process. 
+Function for fitting single-species integrated occupancy models using Polya-Gamma latent variables. Data integration is done using a joint likelihood framework, assuming distinct detection models for each data source that are each conditional on a single latent occurrence process. 
 }
 
 \usage{

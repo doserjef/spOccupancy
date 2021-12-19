@@ -6,7 +6,7 @@
 \title{Methods for spMsPGOcc Object}
 
 \description{
-  Methods for extracting information from fitted multispecies spatial occupancy (\code{spMsPGOcc}) model.
+  Methods for extracting information from fitted multi-species spatial occupancy (\code{spMsPGOcc}) model.
 }
 
 \usage{

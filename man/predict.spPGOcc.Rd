@@ -1,6 +1,6 @@
 \name{predict.spPGOcc}
 \alias{predict.spPGOcc}
-\title{Function for prediction at new locations for single species spatial occupancy models}
+\title{Function for prediction at new locations for single-species spatial occupancy models}
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new 

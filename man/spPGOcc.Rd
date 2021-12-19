@@ -1,9 +1,9 @@
 \name{spPGOcc}
 \alias{spPGOcc}
-\title{Function for Fitting Single Species Spatial Occupancy Models Using Polya-Gamma Latent Variables}
+\title{Function for Fitting Single-Species Spatial Occupancy Models Using Polya-Gamma Latent Variables}
 
 \description{
-  The function \code{spPGOcc} fits single species spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
+  The function \code{spPGOcc} fits single-species spatial occupancy models using Polya-Gamma latent variables. Models can be fit using either a full Gaussian process or a Nearest Neighbor Gaussian Process for large data sets. 
 }
 
 \usage{

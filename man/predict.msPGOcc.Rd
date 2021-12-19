@@ -1,6 +1,6 @@
 \name{predict.msPGOcc}
 \alias{predict.msPGOcc}
-\title{Function for prediction at new locations for multispecies occupancy models}
+\title{Function for prediction at new locations for multi-species occupancy models}
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `msPGOcc`. When non-spatial random effects are included in the occurrence portion of the model, \code{predict} only allows prediction at random effect levels that are included in the fitted data.
