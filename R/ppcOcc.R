@@ -23,8 +23,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(fit.stat)) {
     stop("error: fit.stat must be specified")
   }
-  if (!tolower(fit.stat) %in% c('chi-square', 'freeman-tukey')) {
-    stop("error: fit.stat must be either 'chi-square' or 'freeman-tukey'")
+  if (!tolower(fit.stat) %in% c('chi-squared', 'freeman-tukey', 'chi-square')) {
+    stop("error: fit.stat must be either 'chi-squared' or 'freeman-tukey'")
   }
   fit.stat <- tolower(fit.stat)
   # Group -----------------------------
@@ -83,7 +83,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       y.rep.grouped <- apply(y.rep.samples, c(1, 2), sum, na.rm = TRUE)
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
-      if (fit.stat == 'chi-square') {
+      if (fit.stat %in% c('chi-squared', 'chi-square')) {
         for (i in 1:n.samples) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
@@ -105,7 +105,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       y.rep.grouped <- apply(y.rep.samples, c(1, 3), sum, na.rm = TRUE)
       fit.big.y <- matrix(NA, length(y.grouped), n.samples)
       fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
-      if (fit.stat == 'chi-square') {
+      if (fit.stat %in% c('chi-squared', 'chi-square')) {
         for (i in 1:n.samples) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
@@ -199,7 +199,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       fit.big.y <- array(NA, dim = c(n.samples, N, J))
       for (i in 1:N) {
         message(noquote(paste("Currently on species ", i, " out of ", N, sep = '')))
-        if (fit.stat == 'chi-square') {
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
             for (j in 1:n.samples) {
               E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 3, sum, na.rm = TRUE)
               fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
@@ -224,7 +224,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
       fit.big.y.rep <- array(NA, dim = c(n.samples, N, max(n.rep)))
       for (i in 1:N) {
         message(noquote(paste("Currently on species ", i, " out of ", N, sep = '')))
-        if (fit.stat == 'chi-square') {
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
           for (j in 1:n.samples) {
             E.grouped <- apply(det.prob.full[j, i, , , drop = FALSE] * z.samples[j, i, ], 4, sum, na.rm = TRUE)
             fit.big.y[j, i, ] <- (y.grouped[i, ] - E.grouped)^2 / (E.grouped + e)
@@ -291,7 +291,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         y.rep.grouped <- apply(y.rep.samples, c(1, 2), sum, na.rm = TRUE)
         fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
         fit.big.y <- matrix(NA, length(y.grouped), n.samples)
-        if (fit.stat == 'chi-square') {
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
           for (i in 1:n.samples) {
             E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
             fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
@@ -313,7 +313,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
         y.rep.grouped <- apply(y.rep.samples, c(1, 3), sum, na.rm = TRUE)
         fit.big.y <- matrix(NA, length(y.grouped), n.samples)
         fit.big.y.rep <- matrix(NA, length(y.grouped), n.samples)
-        if (fit.stat == 'chi-square') {
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
           for (i in 1:n.samples) {
             E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
             fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)

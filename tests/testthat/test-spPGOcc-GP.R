@@ -1,16 +1,16 @@
 # GP ----------------------------------------------------------------------
 # skip_on_cran()
-# set.seed(350)
 # 
-# J.x <- 8
-# J.y <- 8
+# set.seed(50)
+# J.x <- 7
+# J.y <- 7
 # J <- J.x * J.y
 # n.rep <- sample(2:4, J, replace = TRUE)
 # beta <- c(0.5, -0.15)
 # p.occ <- length(beta)
 # alpha <- c(0.7, 0.4, -0.2)
 # p.det <- length(alpha)
-# phi <- 3 / .6
+# phi <- 3 / .8
 # sigma.sq <- 2
 # dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha, 
 #               sigma.sq = sigma.sq, phi = phi, sp = TRUE, cov.model = 'exponential')
@@ -46,7 +46,7 @@
 # 		   w = rep(0, nrow(X)),
 # 		   z = apply(y, 1, max, na.rm = TRUE))
 # # Tuning
-# tuning.list <- list(phi = .2) 
+# tuning.list <- list(phi = .5) 
 # 
 # out <- spPGOcc(occ.formula = ~ occ.cov, 
 # 	       det.formula = ~ det.cov.1 + det.cov.2, 
@@ -55,7 +55,7 @@
 # 	       n.batch = n.batch, 
 # 	       batch.length = batch.length, 
 # 	       priors = prior.list,
-# 	       cov.model = "exponential", 
+# 	       cov.model = "gaussian", 
 # 	       tuning = tuning.list, 
 # 	       NNGP = FALSE, 
 # 	       n.neighbors = 5, 

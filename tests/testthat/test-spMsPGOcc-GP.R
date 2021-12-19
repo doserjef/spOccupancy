@@ -1,104 +1,104 @@
 # Test spMsPGOcc.R  -------------------------------------------------------
 # GP ----------------------------------------------------------------------
-# skip_on_cran()
-# 
-# J.x <- 7
-# J.y <- 7
-# J <- J.x * J.y
-# n.rep <- sample(2:4, size = J, replace = TRUE)
-# N <- 5
-# # Community-level covariate effects
-# # Occurrence
-# beta.mean <- c(0.2, -0.15)
-# p.occ <- length(beta.mean)
-# tau.sq.beta <- c(0.6, 0.3)
-# # Detection
-# alpha.mean <- c(0.5, 0.2, -.2)
-# tau.sq.alpha <- c(0.2, 0.3, 0.8)
-# p.det <- length(alpha.mean)
-# # Draw species-level effects from community means.
-# beta <- matrix(NA, nrow = N, ncol = p.occ)
-# alpha <- matrix(NA, nrow = N, ncol = p.det)
-# for (i in 1:p.occ) {
-#   beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
-# }
-# for (i in 1:p.det) {
-#   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
-# }
-# phi <- runif(N, 3/1, 3/.4)
-# sigma.sq <- runif(N, 0.3, 3)
-# sp <- TRUE
-# 
-# dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-#                 phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
-# 
-# # Number of batches
-# n.batch <- 40
-# # Batch length
-# batch.length <- 25
-# n.samples <- n.batch * batch.length
-# 
-# y <- dat$y
-# X <- dat$X
-# X.p <- dat$X.p
-# coords <- as.matrix(dat$coords)
-# 
-# # Package all data into a list
-# occ.covs <- X[, 2, drop = FALSE]
-# colnames(occ.covs) <- c('occ.cov')
-# det.covs <- list(det.cov.1 = X.p[, , 2], 
-#                  det.cov.2 = X.p[, , 3])
-# data.list <- list(y = y, 
-#                   occ.covs = occ.covs,
-#                   det.covs = det.covs, 
-#                   coords = coords)
-# # Priors
-# prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-#                    alpha.comm.normal = list(mean = 0, var = 2.72), 
-#                    tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-#                    tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-#                    phi.unif = list(a = 3/1, b = 3/.1), 
-#                    sigma.sq.ig = list(a = 2, b = 2)) 
-# # Initial values
-# inits.list <- list(alpha.comm = 0, 
-#                    beta.comm = 0, 
-#                    beta = 0, 
-#                    alpha = 0,
-#                    tau.sq.beta = 1, 
-#                    tau.sq.alpha = 1, 
-#                    phi = 3 / .5, 
-#                    sigma.sq = 2,
-#                    w = matrix(0, nrow = N, ncol = nrow(X)),
-#                    z = apply(y, c(1, 2), max, na.rm = TRUE))
-# # Tuning
-# tuning.list <- list(phi = 1) 
-# 
-# out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-#                  det.formula = ~ det.cov.1 + det.cov.2, 
-#                  data = data.list,
-#                  inits = inits.list, 
-#                  n.batch = n.batch, 
-#                  batch.length = batch.length, 
-#                  accept.rate = 0.43, 
-#                  priors = prior.list, 
-#                  cov.model = "exponential", 
-#                  tuning = tuning.list, 
-#                  n.omp.threads = 1, 
-#                  verbose = FALSE, 
-#                  NNGP = FALSE, 
-#                  n.neighbors = 5, 
-#                  search.type = 'cb', 
-#                  n.report = 10, 
-#                  n.burn = 500, 
-#                  n.thin = 1, 
-# 		 n.chains = 1)
-# n.post.samples <- length(seq(from = out$n.burn + 1, 
-# 			     to = n.samples, 
-# 			     by = as.integer(out$n.thin))) * out$n.chains
-# 
-# test_that("out is of class spMsPGOcc", {
-#   expect_s3_class(out, "spMsPGOcc")
-# })
+skip_on_cran()
+set.seed(1017)
+J.x <- 7
+J.y <- 7
+J <- J.x * J.y
+n.rep <- sample(2:4, size = J, replace = TRUE)
+N <- 5
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, -0.15)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 0.3)
+# Detection
+alpha.mean <- c(0.5, 0.2, -.2)
+tau.sq.alpha <- c(0.2, 0.3, 0.8)
+p.det <- length(alpha.mean)
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+phi <- runif(N, 3/1, 3/.4)
+sigma.sq <- runif(N, 0.3, 3)
+sp <- TRUE
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+                phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
+
+# Number of batches
+n.batch <- 40
+# Batch length
+batch.length <- 25
+n.samples <- n.batch * batch.length
+
+y <- dat$y
+X <- dat$X
+X.p <- dat$X.p
+coords <- as.matrix(dat$coords)
+
+# Package all data into a list
+occ.covs <- X[, 2, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+                 det.cov.2 = X.p[, , 3])
+data.list <- list(y = y, 
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
+                  coords = coords)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   phi.unif = list(a = 3/1, b = 3/.1), 
+                   sigma.sq.ig = list(a = 2, b = 2)) 
+# Initial values
+inits.list <- list(alpha.comm = 0, 
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   phi = 3 / .5, 
+                   sigma.sq = 2,
+                   w = matrix(0, nrow = N, ncol = nrow(X)),
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
+# Tuning
+tuning.list <- list(phi = 1) 
+
+out <- spMsPGOcc(occ.formula = ~ occ.cov, 
+                 det.formula = ~ det.cov.1 + det.cov.2, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = FALSE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1)
+n.post.samples <- length(seq(from = out$n.burn + 1, 
+			     to = n.samples, 
+			     by = as.integer(out$n.thin))) * out$n.chains
+
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
 # 
 # test_that("samples are the right size", {
 #   n.post.samples <- length(seq(from = out$n.burn + 1, 

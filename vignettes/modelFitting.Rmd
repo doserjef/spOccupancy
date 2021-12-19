@@ -34,7 +34,7 @@ This vignette provides worked examples and explanations for fitting single speci
 5. Integrated occupancy model using `intPGOcc()`.
 6. Spatial integrated occupancy model using `spIntPGOcc()`. 
 
-We fit all occupancy models using P&oacute;ly-Gamma data augmentation [@polson2013] for computational efficiency (**P**&oacute;ly-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting function names). In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate MCMC sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out of sample predictions using standard R helper functions (e.g., `predict()`).   
+We fit all occupancy models using PP&oacute;lyoacute;lya-Gamma data augmentation [@polson2013] for computational efficiency (**P**&oacute;ly-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting function names). In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate MCMC sampler vignette. We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out of sample predictions using standard R helper functions (e.g., `predict()`).   
 
 To get started, we load the `spOccupancy` package, as well as the `coda` package, which we will use for some MCMC diagnostics. We will also use the `stars` and `ggplot2` packages to create some very basic plots of our results. We then set a seed so we can reproduce the same results.
 
@@ -92,11 +92,11 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 where $p_{j, k}$ is the probability of detecting a species at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate specific covariates $\bm{V}$ and a vector of regression coefficients ($\bm{\alpha}$).
 
-To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. To yield an efficient implementation of the occupancy model using a logit link function, we use P&oacute;ly-Gamma data augmentation [@polson2013], which is described in depth in a separate MCMC sampler vignette. 
+To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. To yield an efficient implementation of the occupancy model using a logit link function, we use PP&oacute;lyoacute;lya-Gamma data augmentation [@polson2013], which is described in depth in a separate MCMC sampler vignette. 
 
 ## Fitting single species occupancy models with `PGOcc()`
 
-The `PGOcc()` function fits single species occupancy models using P&oacute;ly-Gamma latent variables, which makes it more efficient than standard Bayesian implementations of occupancy models using a logit link function [@clark2019; @polson2013]. `PGOcc()` has the following arguments: 
+The `PGOcc()` function fits single species occupancy models using PP&oacute;lyoacute;lya-Gamma latent variables, which makes it more efficient than standard Bayesian implementations of occupancy models using a logit link function [@clark2019; @polson2013]. `PGOcc()` has the following arguments: 
 
 ```{r, eval = FALSE}
 PGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
@@ -122,7 +122,7 @@ oven.inits <- list(alpha = 0,
                    z = apply(ovenHBEF$y, 1, max, na.rm = TRUE))
 ```
 
-We next specify the priors for the occurrence and detection regression coefficients. The P&oacute;ly-Gamma data augmentation algorithm employed by `spOccupancy` assumes normal priors for both the detection and occurrence regression coefficients. These priors are specified in a list with tags `beta.normal` for occurrence and `alpha.normal` for detection parameters. Each list element is then itself a list, with the first element of the list consisting of the hypermeans for each coefficient and the second element of the list consisting of the hypervariances for each coefficient. Alternatively, the hypermean and hypervariances can be specified as a single value if the same prior is used for all regression coefficients. By default, `spOccupancy` will set the hypermeans to 0 and the hypervariances to 2.72, which corresponds to a relatively flat prior on the probability scale (0, 1) [@lunn2013bugs]. We will use these default priors here, but we specify them explicitly below for clarity 
+We next specify the priors for the occurrence and detection regression coefficients. The PP&oacute;lyoacute;lya-Gamma data augmentation algorithm employed by `spOccupancy` assumes normal priors for both the detection and occurrence regression coefficients. These priors are specified in a list with tags `beta.normal` for occurrence and `alpha.normal` for detection parameters. Each list element is then itself a list, with the first element of the list consisting of the hypermeans for each coefficient and the second element of the list consisting of the hypervariances for each coefficient. Alternatively, the hypermean and hypervariances can be specified as a single value if the same prior is used for all regression coefficients. By default, `spOccupancy` will set the hypermeans to 0 and the hypervariances to 2.72, which corresponds to a relatively flat prior on the probability scale (0, 1) [@lunn2013bugs]. We will use these default priors here, but we specify them explicitly below for clarity 
 
 ```{r, tidy = FALSE}
 oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
@@ -411,13 +411,13 @@ where $\omega_j$ is a realization from a zero-mean spatial Gaussian Process, i.e
 
 We define $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ as a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta})$ that govern the spatial process. The vector $\bm{\theta}$ is equal to $\bm{\theta} = \{\sigma^2, \phi, \nu\}$, where $\sigma^2$ is a spatial variance parameter, $\phi$ is a spatial decay parameter, and $\nu$ is a spatial smoothness parameter. $\nu$ is only specified when using a Matern correlation function.
 
-The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model. Single species spatial occupancy models, like all models in `spOccupancy` are fit using P&oacute;ly-Gamma data augmentation (see MCMC sampler vignette for details).
+The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model. Single species spatial occupancy models, like all models in `spOccupancy` are fit using PP&oacute;lyoacute;lya-Gamma data augmentation (see MCMC sampler vignette for details).
 
 When the number of sites is moderately large, say 1000, the above described spatial Gaussian process model can be drastically slow as a result of needing to take the inverse of the spatial covariance matrix $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ at each MCMC iteration. Numerous approximation methods exist to reduce this computational cost [@heaton2019case]. One attractive approach is the Nearest Neighbor Gaussian Process (NNGP; @datta2016hierarchical). Instead of modeling the spatial process using a full Gaussian Process, we replace the Gaussian Process prior specification with a NNGP, which leads to drastic increases in run time with nearly identical inference and prediction as the full Gaussian Process specification. See @datta2016hierarchical, @finley2019efficient, and the MCMC sampler vignette for additional statistical details on NNGPs and their implementation in spatial occupancy models. 
 
 ## Fitting single species spatial occupancy models with `spPGOcc()`
 
-The function `spPGOcc()` fits single species spatial occupancy models using P&oacute;ly-Gamma latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc()` fits spatial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with P&oacute;ly-Gamma latent variables.
+The function `spPGOcc()` fits single species spatial occupancy models using PP&oacute;lyoacute;lya-Gamma latent variables, where spatial autocorrelation is accounted for using a spatial Gaussian Process. `spPGOcc()` fits spatial occupancy models using either a full Gaussian process or an NNGP. See @finley2020spnngp for details on using NNGPs with PP&oacute;lyoacute;lya-Gamma latent variables.
 
 We will fit the same occupancy model for OVEN that we fit previously using `PGOcc()`, but we will now make the model spatially explicit by incorporating a spatial process with `spPGOcc()`. First, let's take a look at the arguments for `spPGOcc()`: 
 
@@ -615,11 +615,11 @@ where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ duri
 
 where $\bm{\mu}_{\alpha}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
 
-To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\mu}_{\beta}$) and detection ($\bm{\mu}_{\alpha}$) community-level regression coefficient means and independent inverse-Gamma priors for each element of $\bm{\tau}^2_{\beta}$ and $\bm{\tau}^2_{\alpha}$. We again use P&oacute;ly-Gamma data augmentation to yield an efficient implementation of the multispecies occupancy model, which is described in depth in the MCMC sampler vignette. 
+To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\mu}_{\beta}$) and detection ($\bm{\mu}_{\alpha}$) community-level regression coefficient means and independent inverse-Gamma priors for each element of $\bm{\tau}^2_{\beta}$ and $\bm{\tau}^2_{\alpha}$. We again use PP&oacute;lyoacute;lya-Gamma data augmentation to yield an efficient implementation of the multispecies occupancy model, which is described in depth in the MCMC sampler vignette. 
 
 ## Fitting multispecies occupancy models with `msPGOcc()`
 
-`spOccupancy` uses nearly identical syntax for fitting multispecies models as it does for single species models and provides the same functionality for posterior predictive checks, model assessment and selection using WAIC and k-fold cross-validation, and out of sample prediction. The `msPGOcc()` function fits nonspatial multispecies occupancy models using P&oacute;ly-Gamma latent variables, which results in substantial increases in run time compared to standard implementations of logit link multispecies occupancy models. `msPGOcc()` has exactly the same arguments as `PGOcc()`: 
+`spOccupancy` uses nearly identical syntax for fitting multispecies models as it does for single species models and provides the same functionality for posterior predictive checks, model assessment and selection using WAIC and k-fold cross-validation, and out of sample prediction. The `msPGOcc()` function fits nonspatial multispecies occupancy models using PP&oacute;lyoacute;lya-Gamma latent variables, which results in substantial increases in run time compared to standard implementations of logit link multispecies occupancy models. `msPGOcc()` has exactly the same arguments as `PGOcc()`: 
 
 ```{r, eval = FALSE}
 msPGOcc(occ.formula, det.formula, data, inits, n.samples, priors, 
@@ -754,7 +754,7 @@ where the species-specific regression coefficients $\bm{\beta}_i$ follow the com
 
 We define $\bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)$ as a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta}_i)$ that govern the spatial process. The vector $\bm{\theta}_i$ is equal to $\bm{\theta}_i = \{\sigma^2_i, \phi_i, \nu_i\}$, where $\sigma^2_i$ is a spatial variance parameter for species $i$, $\phi_i$ is a spatial decay parameter for species $i$, and $\nu_i$ is a spatial smoothness parameter for species $i$. $\nu_i$ is only specified when using a Matern correlation function.
 
-The detection portion of the multispecies spatial occupancy model remains unchanged from the non-spatial multispecies occupancy model. We fit the model again using P&oacute;ly-Gamma data augmentation to enable an efficient Gibbs sampler (see MCMC sampler vignette for details). Similar to our discussion on the single species spatial occupancy model, we also allow for specification of the spatial process using an NNGP instead of a full GP. This leads to even larger computational gains over the full GP given that a separate covariance matrix is specified for each species in the model. See @datta2016hierarchical, @finley2020spnngp, and the MCMC sampler vignette for additional details on NNGPs and their implementation in multispecies spatial occupancy models. 
+The detection portion of the multispecies spatial occupancy model remains unchanged from the non-spatial multispecies occupancy model. We fit the model again using PP&oacute;lyoacute;lya-Gamma data augmentation to enable an efficient Gibbs sampler (see MCMC sampler vignette for details). Similar to our discussion on the single species spatial occupancy model, we also allow for specification of the spatial process using an NNGP instead of a full GP. This leads to even larger computational gains over the full GP given that a separate covariance matrix is specified for each species in the model. See @datta2016hierarchical, @finley2020spnngp, and the MCMC sampler vignette for additional details on NNGPs and their implementation in multispecies spatial occupancy models. 
 
 ## Fitting multispecies spatial occupancy models with `spMsPGOcc()`
 
@@ -925,7 +925,7 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 where $p_{r, a, k}$ is the probability of detecting a species at site $a$ during replicate $k$ (given it is present at site $a$) for data source $r$, which is a function of site, replicate, and data source specific covariates $\bm{V}_r$ and a vector of regression coefficients specific to each data source ($\bm{\alpha}_r$). Note that $z_{j[a]}$ is the true occurrence status at site $j$ corresponding to the $a$th data source site in the given data set $r$. Each data source may be available at all $J$ sites in the region of interest or at a subset of the $J$ sites. Additionally, data sources can overlap in the sites they sample, or they can be obtained at distinct sites within all $J$ sites of interest in the overall region.
 
-We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and data-set specific detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single species occupancy model. P&oacute;ly-Gamma data augmentation is implemented analgous to previous models to yield an efficient implementation of integrated occupancy models.
+We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and data-set specific detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single species occupancy model. PP&oacute;lyoacute;lya-Gamma data augmentation is implemented analgous to previous models to yield an efficient implementation of integrated occupancy models.
 
 ## Example data sources: Ovenbird occurrence in the White Mountain National Forest
 

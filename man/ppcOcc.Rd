@@ -16,7 +16,7 @@ ppcOcc(object, fit.stat, group, ...)
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
-\code{"freeman-tukey"} and \code{"chi-square"}.}
+\code{"freeman-tukey"} and \code{"chi-squared"}.}
 
 \item{group}{a positive integer indicating the way to group the
 detection-nondetection data for the posterior predictive check. Value 
@@ -105,6 +105,6 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 	     n.thin = 1)
 
 # Posterior predictive check
-ppc.out <- ppcOcc(out, fit.stat = 'chi-square', group = 1)
+ppc.out <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
 summary(ppc.out)
 }
