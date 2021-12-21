@@ -34,17 +34,13 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, l, ll, q, r, info, nProtect=0;
+    int i, j, s, l, q, r, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
     
     /**********************************************************************
      * Get Inputs
@@ -151,7 +147,6 @@ extern "C" {
     for (j = 0; j < J; j++) {
       tmp_J[j] = 0; 
     }
-    double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double)); 
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
@@ -218,7 +213,6 @@ extern "C" {
    
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObsN, sizeof(double)); 
     double *psi = (double *) R_alloc(JN, sizeof(double)); 
     zeros(psi, JN); 

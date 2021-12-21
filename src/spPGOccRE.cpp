@@ -37,14 +37,10 @@ extern "C" {
     int status = 0; // For AMCMC. 
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
 
     
     /**********************************************************************
@@ -210,7 +206,6 @@ extern "C" {
    
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 
@@ -266,7 +261,6 @@ extern "C" {
     double *accept = (double *) R_alloc(nTheta, sizeof(double)); zeros(accept, nTheta); 
     double *theta = (double *) R_alloc(nTheta, sizeof(double));
     double logMHRatio, logPostCurr = 0.0, logPostCand = 0.0, detCand = 0.0, detCurr = 0.0;
-    double logDet;  
     double phiCand = 0.0, nuCand = 0.0;  
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 

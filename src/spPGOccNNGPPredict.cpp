@@ -21,17 +21,11 @@ extern "C" {
 			  SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
 			  SEXP nReport_r){
 
-    int h, i, j, k, l, s, info, nProtect=0;
+    int i, k, l, s, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
-    char const *ntran = "N";
-    char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
     
     double *coords = REAL(coords_r);
     int J = INTEGER(J_r)[0];

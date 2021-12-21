@@ -27,7 +27,6 @@
     int i;
     int inc = 1;
     double one = 1.0;
-    double zero = 0.0;
     
     for(i = 0; i < dim; i++){
       des[i] = rnorm(0, 1);
@@ -111,7 +110,7 @@
   
   void mkUIndx2(int n, int m, int* nnIndx, int *nnIndxLU, int* uIndx, int* uIndxLU){ 
   
-    int i, j, k;
+    int i, k;
     int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(n-m-1)*m);
     
     //int *j_A = new int[nIndx]; is nnIndx

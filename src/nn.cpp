@@ -31,7 +31,6 @@ SEXP mkUIndx(SEXP n_r, SEXP m_r, SEXP nnIndx_r, SEXP uIndx_r, SEXP uIndxLU_r, SE
   int *nnIndxLU = INTEGER(nnIndxLU_r);
   int searchType = INTEGER(searchType_r)[0];
   int i, j, k;
-  int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(n-m-1)*m);
 
   if(searchType == 0){
     mkUIndx0(n, m, nnIndx, uIndx, uIndxLU);
@@ -133,7 +132,7 @@ double dei(double *x, double *c, int inc){
 
 void fastNN(int m, int n, double *coords, int ui, double *u, int *sIndx, int *rSIndx, double *rSNNDist){
   
-  int i,j,k;
+  int i,j;
   bool up, down;
   double dm, de;
   

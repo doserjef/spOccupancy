@@ -28,22 +28,18 @@ extern "C" {
 	           SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, SEXP sigmaSqPA_r, 
 	           SEXP sigmaSqPB_r, SEXP nSamples_r, SEXP nThreads_r, 
 		   SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, 
-		   SEXP nPost_r){
+		   SEXP nPost_r, SEXP currChain_r, SEXP nChain_r){
    
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, l, ll, info, nProtect=0;
+    int i, j, s, l, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
     
     /**********************************************************************
      * Get Inputs
@@ -63,8 +59,6 @@ extern "C" {
     int nDetRE = INTEGER(nDetRE_r)[0]; 
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc; 
-    int nnDetRE = nDetRE * nDetRE; 
-    int nnOccRE = nOccRE * nOccRE; 
     double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
     F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
     double *muAlpha = (double *) R_alloc(pDet, sizeof(double));   
@@ -92,6 +86,8 @@ extern "C" {
     int nThin = INTEGER(nThin_r)[0]; 
     int nBurn = INTEGER(nBurn_r)[0]; 
     int nPost = INTEGER(nPost_r)[0]; 
+    int currChain = INTEGER(currChain_r)[0];
+    int nChain = INTEGER(nChain_r)[0];
     int status = 0; 
     int thinIndx = 0;
     int sPost = 0;  
@@ -109,19 +105,25 @@ extern "C" {
      * Print Information 
      * *******************************************************************/
     if(verbose){
-      Rprintf("----------------------------------------\n");
-      Rprintf("\tModel description\n");
-      Rprintf("----------------------------------------\n");
-      Rprintf("Occupancy model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
-      Rprintf("Number of MCMC samples: %i \n", nSamples);
-      Rprintf("Burn-in: %i \n", nBurn); 
-      Rprintf("Thinning Rate: %i \n", nThin); 
-      Rprintf("Total Posterior Samples: %i \n\n", nPost); 
+      if (currChain == 1) {
+        Rprintf("----------------------------------------\n");
+        Rprintf("\tModel description\n");
+        Rprintf("----------------------------------------\n");
+        Rprintf("Occupancy model with Polya-Gamma latent\nvariable fit with %i sites.\n\n", J);
+        Rprintf("Samples per Chain: %i \n", nSamples);
+        Rprintf("Burn-in: %i \n", nBurn); 
+        Rprintf("Thinning Rate: %i \n", nThin); 
+	Rprintf("Number of Chains: %i \n", nChain);
+        Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
 #ifdef _OPENMP
-      Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
+        Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
-      Rprintf("Source not compiled with OpenMP support.\n\n");
+        Rprintf("Source not compiled with OpenMP support.\n\n");
 #endif
+      }
+      Rprintf("----------------------------------------\n");
+      Rprintf("\tChain %i\n", currChain);
+      Rprintf("----------------------------------------\n");
       Rprintf("Sampling ... \n");
     }
 
@@ -179,7 +181,6 @@ extern "C" {
      * Other initial starting stuff
      * *******************************************************************/
     int JpOcc = J * pOcc; 
-    int JnOccRE = J * nOccRE; 
     int nObspDet = nObs * pDet;
     double tmp_0; 
     double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
@@ -200,7 +201,6 @@ extern "C" {
    
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); zeros(detProb, nObs);
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 

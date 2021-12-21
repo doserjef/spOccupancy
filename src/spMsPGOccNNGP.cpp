@@ -80,14 +80,10 @@ extern "C" {
 
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
     
     /**********************************************************************
      * Get Inputs
@@ -207,13 +203,11 @@ extern "C" {
     double *tmp_alpha = (double *) R_alloc(pDet, sizeof(double));
     double *tmp_pDet2 = (double *) R_alloc(pDet, sizeof(double));
     double *tmp_pOcc2 = (double *) R_alloc(pOcc, sizeof(double));
-    double * tmp_JJ = (double *) R_alloc(JJ, sizeof(double)); 
     int *tmp_J = (int *) R_alloc(J, sizeof(int));
     for (j = 0; j < J; j++) {
       tmp_J[j] = 0; 
     }
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
-    double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double)); 
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
 
@@ -290,7 +284,6 @@ extern "C" {
    
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObsN, sizeof(double)); 
     double *psi = (double *) R_alloc(JN, sizeof(double)); 
     zeros(psi, JN); 
@@ -382,14 +375,11 @@ extern "C" {
     /**********************************************************************
      Set up stuff for Adaptive MH and other misc
      * *******************************************************************/
-    double logMHRatio, logPostCurr = 0.0, logPostCand = 0.0, detCand = 0.0, detCurr = 0.0; 
+    double logPostCurr = 0.0, logPostCand = 0.0; 
     logPostCurr = R_NegInf; 
     double *accept = (double *) R_alloc(nThetaN, sizeof(double)); zeros(accept, nThetaN); 
     double phiCand = 0.0, nuCand = 0.0; 
     double logDet; 
-    // For sigmaSq Sampler
-    double aSigmaSqPost = 0.0; 
-    double bSigmaSqPost = 0.0; 
     // MCMC info if desired
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nThetaN, nBatch)); nProtect++; 

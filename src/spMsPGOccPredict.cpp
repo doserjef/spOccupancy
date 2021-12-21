@@ -24,15 +24,12 @@ extern "C" {
     /*****************************************
                 Common variables
     *****************************************/
-    int h, i, j, k, l, b, s, ii, jj, info, nProtect= 0;
+    int i, j, s, info, nProtect= 0;
     const char *lower = "L";
-    const char *upper = "U";
     const char *ntran = "N";
     const char *ytran = "T";
-    const char *rside = "R";
     const char *lside = "L";
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     const int inc = 1;
 

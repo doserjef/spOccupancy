@@ -33,17 +33,13 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, l, ll, info, nProtect=0;
+    int i, j, s, l, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
-    const double negOne = -1.0;
     const double zero = 0.0;
     char const *lower = "L";
-    char const *upper = "U";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *rside = "R";
-    char const *lside = "L";
     
     /**********************************************************************
      * Get Inputs
@@ -87,7 +83,6 @@ extern "C" {
     int status = 0; 
     int thinIndx = 0;
     int sPost = 0;  
-    int currIndx = 0; 
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -167,9 +162,7 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int nnOccRE = nOccRE * nOccRE; 
     int JpOcc = J * pOcc; 
-    int JnOccRE = J * nOccRE; 
     int nObspDet = nObs * pDet;
     double tmp_0; 
     double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
@@ -183,14 +176,12 @@ extern "C" {
     for (j = 0; j < J; j++) {
       tmp_J[j] = 0; 
     }
-    double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double)); 
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
    
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); zeros(detProb, nObs);
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 

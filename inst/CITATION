@@ -1,0 +1,22 @@
+if (!exists("meta") || is.null(meta)) meta <- packageDescription("rFIA")
+
+citHeader("To cite package", sQuote(meta$Package), "in publications use:")
+
+year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
+vers <- paste("R package version", meta$Version)
+
+citEntry(entry = "Article",
+  title        = "{spOccupancy}: An R package for single species, multispecies, and integrated spatial occupancy models",
+  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O Finley"), as.person("Marc Kéry"), as.person("Elise F. Zipkin")),
+  journal      = "arXiv preprint arXiv:2111.12163",
+  year         = "2021",
+  volume       = "",
+  number       = "",
+  pages        = "",
+  url          = "https://arxiv.org/abs/2111.12163",
+
+  textVersion  =
+  paste("Doser, J. W., Finley A. O., Kéry, M., & Zipkin E. F. (2021).",
+        "spOccupancy: An R package for single species, multispecies, and integrated spatial occupancy models",
+        "arXiv preprint arXiv:2111.12163")
+)

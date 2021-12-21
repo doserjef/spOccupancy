@@ -22,7 +22,7 @@ extern "C" {
 		  SEXP SigmaBeta_r, SEXP SigmaAlpha_r, SEXP sigmaSqPA_r, 
 	          SEXP sigmaSqPB_r, SEXP nSamples_r, SEXP nThreads_r, 
 		  SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, 
-		  SEXP nPost_r);
+		  SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
   SEXP PGOccREOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, 
 		  SEXP lambdaPsi_r,
@@ -38,7 +38,7 @@ extern "C" {
 	          SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r,
 	          SEXP nSamples_r, SEXP nThreads_r, 
 		  SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, 
-		  SEXP nPost_r);
+		  SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
   SEXP PGOccREBoth(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
 		   SEXP lambdaPsi_r, SEXP lambdaP_r, 
@@ -54,7 +54,7 @@ extern "C" {
 	           SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, SEXP sigmaSqPA_r, 
 	           SEXP sigmaSqPB_r, SEXP nSamples_r, SEXP nThreads_r, 
 		   SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, 
-		   SEXP nPost_r);
+		   SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
   SEXP spPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP pocc_r, SEXP pdet_r, 
 	       SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP betaStarting_r, SEXP alphaStarting_r, 
@@ -65,22 +65,25 @@ extern "C" {
 	       SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r, 
 	       SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	       SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	       SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	       SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
+	       SEXP currChain_r, SEXP nChain_r);
 
-  SEXP spPGOccRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP XpRE_r, SEXP lambdaP_r, 
+  SEXP spPGOccRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP XpRE_r, SEXP lambdaP_r,
 		 SEXP pocc_r, SEXP pdet_r, SEXP pDetRE_r,
-	         SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP nDetRE_r, SEXP nDetRELong_r, 
-		 SEXP betaStarting_r, SEXP alphaStarting_r, 
-		 SEXP sigmaSqPStarting_r, SEXP alphaStarStarting_r, 
-	         SEXP zStarting_r, SEXP wStarting_r, SEXP phiStarting_r, 
-	         SEXP sigmaSqStarting_r, SEXP nuStarting_r, 
-	         SEXP zLongIndx_r, SEXP alphaStarIndx_r, SEXP muBeta_r, SEXP muAlpha_r, 
-	         SEXP SigmaBeta_r, SEXP SigmaAlpha_r, SEXP phiA_r, SEXP phiB_r, 
-	         SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r, 
-		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
-	         SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
-	         SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	         SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	         SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP nDetRE_r, SEXP nDetRELong_r,
+		 SEXP betaStarting_r, SEXP alphaStarting_r,
+		 SEXP sigmaSqPStarting_r, SEXP alphaStarStarting_r,
+	         SEXP zStarting_r, SEXP wStarting_r, SEXP phiStarting_r,
+	         SEXP sigmaSqStarting_r, SEXP nuStarting_r,
+	         SEXP zLongIndx_r, SEXP alphaStarIndx_r, SEXP muBeta_r, SEXP muAlpha_r,
+	         SEXP SigmaBeta_r, SEXP SigmaAlpha_r, SEXP phiA_r, SEXP phiB_r,
+	         SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r,
+		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r,
+	         SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r,
+	         SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r,
+	         SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r,
+		 SEXP currChain_r, SEXP nChain_r);
+
 
   SEXP spPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP pocc_r, SEXP pdet_r, 
 	           SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP m_r, SEXP nnIndx_r, 
@@ -93,7 +96,8 @@ extern "C" {
 	           SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r, 
 		   SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	           SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	           SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
+		   SEXP currChain_r, SEXP nChain_r);
 
   SEXP spPGOccNNGPRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XpRE_r, 
 		     SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, SEXP pDetRE_r,
@@ -111,7 +115,8 @@ extern "C" {
 		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	             SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	             SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	             SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
+		     SEXP currChain_r, SEXP nChain_r);
 
   SEXP spPGOccPredict(SEXP J_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
@@ -134,7 +139,8 @@ extern "C" {
 	       SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
 	       SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
 	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	       SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	       SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+	       SEXP nChain_r);
 
   SEXP msPGOccREBoth(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
 	             SEXP lambdaPsi_r, SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, 
@@ -152,7 +158,8 @@ extern "C" {
 	             SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 	             SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	             SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	             SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	             SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		     SEXP nChain_r);
 
   SEXP msPGOccREDet(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XpRE_r, 
 	            SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, 
@@ -168,7 +175,8 @@ extern "C" {
 	            SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
 	            SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	            SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	            SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	            SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		    SEXP nChain_r);
 
   SEXP msPGOccREOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, 
 	            SEXP lambdaPsi_r, SEXP pocc_r, SEXP pdet_r, 
@@ -184,7 +192,8 @@ extern "C" {
 	            SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
 	            SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 	            SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-	            SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+	            SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		    SEXP nChain_r);
 
   SEXP spMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP pocc_r, SEXP pdet_r, 
 	         SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP N_r, SEXP betaStarting_r, 
@@ -198,7 +207,7 @@ extern "C" {
 		 SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
 		 SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, SEXP acceptRate_r, 
 	         SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, 
-		 SEXP nThin_r, SEXP nPost_r);
+		 SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
   SEXP spMsPGOccRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, 
 		   SEXP XpRE_r, SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, 
@@ -217,7 +226,7 @@ extern "C" {
 		   SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, SEXP tuning_r, 
 		   SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, SEXP acceptRate_r, 
 	           SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, 
-		   SEXP nThin_r, SEXP nPost_r);
+		   SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
  
   SEXP spMsPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP pocc_r, SEXP pdet_r, 
 	             SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP N_r, SEXP m_r, SEXP nnIndx_r, 
@@ -232,7 +241,8 @@ extern "C" {
 		     SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+		     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		     SEXP nChain_r);
 
   SEXP spMsPGOccNNGPRE(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, 
 		       SEXP XpRE_r, SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, 
@@ -251,7 +261,8 @@ extern "C" {
 		       SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		       SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		       SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		       SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+		       SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		       SEXP nChain_r);
 
   SEXP spMsPGOccPredict(SEXP J_r, SEXP N_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
@@ -272,7 +283,8 @@ extern "C" {
 		SEXP zLongIndx_r, SEXP dataIndx_r, SEXP alphaIndx_r, 
 		SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP sigmaAlpha_r, 
 		SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+		SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		SEXP nChain_r);
 
   SEXP spIntPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, 
 		  SEXP pOcc_r, SEXP pDet_r, SEXP pDetLong_r, 
@@ -285,7 +297,7 @@ extern "C" {
 		  SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
 		  SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
   SEXP spIntPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, 
 		      SEXP pOcc_r, SEXP pDet_r, SEXP pDetLong_r, 
@@ -300,6 +312,6 @@ extern "C" {
 		      SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, SEXP covModel_r, 
 		      SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r);
+      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
 }
