@@ -1,6 +1,6 @@
 ---
 title: "MCMC samplers for models fit in `spOccupancy`"
-author: ""
+author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   bookdown::pdf_document2:
@@ -32,11 +32,11 @@ knitr::opts_chunk$set(
 
 This vignette provides statistical details on the MCMC algorithms used to fit each occupancy model in `spOccupancy`. We provide detailed descriptions of the joint posterior distributions for each model, how each parameter is updated in the model fitting process, and provide relevant citations to more specific documentation of the approaches where necessary. We also provide information on the composition sampling algorithms used for each model to predict at out-of-sample locations. 
 
-# Single species occupancy model (`PGOcc`)
+# Single-species occupancy model (`PGOcc`)
 
 ## Model description
 
-Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with $j = 1, \dots, J$. We assume this latent occupancy process arises from a Bernoulli process following
+Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with $j = 1, \dots, J$. We assume this latent occupancy process can be represented by a Bernoulli process following
 
 \begin{equation}
 \begin{split}
@@ -49,7 +49,7 @@ Let $z_j$ be the true presence (1) or absence (0) of a species at site $j$, with
 where $\psi_j$ is the probability of occurrence at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of regression coefficients ($\bm{\beta}$). 
 
 
-We do not directly observe $z_j$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{j, k}$ be the observed detection (1) or nondetection (0) of a species of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+We do not directly observe $z_j$, but rather we observe an imperfect representation of the latent occurrence process. Let $y_{j, k}$ be the observed detection (1) or nondetection (0) of a species of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
 
 \begin{equation}
 \begin{split}
@@ -61,7 +61,7 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 where $p_{j, k}$ is the probability of detecting a species at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate specific covariates $\bm{V}$ and a vector of regression coefficients ($\bm{\alpha}$). 
 
-We ssume multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single species occupancy model. Traditionally, when estimation occurs in a Bayesian framework, the regression coefficients for occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) must be updated using Metropolis updates, which can lead to slow convergence times and bad mixing of MCMC chains [@clark2019]. Instead, we introduce $\pg$ latent variables [@polson2013] for both the occurrence and detection portions of the model, which induces Gibbs updates for all parameters in the single species occupancy model. 
+We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single-species occupancy model. Traditionally, when estimation occurs in a Bayesian framework, the regression coefficients for occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) must be updated using Metropolis updates, which can lead to slow convergence and bad mixing of MCMC chains [@clark2019]. Instead, we introduce $\pg$ latent variables [@polson2013] for both the occurrence and detection portions of the model, which induces Gibbs updates for all parameters in the single-species occupancy model. 
 
 More specifically, let $\omega_{j, \beta}$ follow a $\pg$ distribution with parameters 1 and 0, i.e., $\omega_{j, \beta} \sim \text{PG}(1, 0)$. Given this latent variable, we can express the Bernoulli process of $z_j$ as 
 
@@ -73,9 +73,9 @@ More specifically, let $\omega_{j, \beta}$ follow a $\pg$ distribution with para
 (\#eq:polyaGamma)
 \end{equation}
 
-where $\kappa_j = z_j - 0.5$ and $p(\omega_{j, \beta})$ is the probability density function of a $\pg$ distribution with parameters 1 and 0 [@polson2013]. Similarly, we define $\omega_{j, k, \alpha} \sim \text{PG}(1, 0)$ as a $\pg$ latent variable for the detection portion of the occupancy model, which results in a simliar re-expression of the Bernoulli likelihood for $y_{j, k}$ as we showed above for $z_j$. These re-expressions of the Bernoulli processes result in Gibbs updates for both the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients when they are assigned normal priors [@polson2013; @clark2019]. 
+where $\kappa_j = z_j - 0.5$ and $p(\omega_{j, \beta})$ is the probability density function of a $\pg$ distribution with parameters 1 and 0 [@polson2013]. Similarly, we define $\omega_{j, k, \alpha} \sim \text{PG}(1, 0)$ as a $\pg$ latent variable for the detection portion of the occupancy model, which results in a similar re-expression of the Bernoulli likelihood for $y_{j, k}$ as for $z_j$. These re-expressions of the Bernoulli processes result in Gibbs updates for both the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients when they are assigned normal priors [@polson2013; @clark2019]. 
 
-Our full joint posterior for a single species occupancy model thus takes the following form:
+Our full joint posterior for a single-species occupancy model thus takes the following form:
 
 $$
 \begin{aligned}
@@ -90,7 +90,7 @@ $$
 
 ## MCMC sampler
 
-The $\pg$ data augmentation induces a Gibbs update for all parameters in the single species occupancy model. We first sample the occurrence and detection auxiliary variables from 
+The $\pg$ data augmentation induces a Gibbs update for all parameters in the single-species occupancy model. We first sample the occurrence and detection auxiliary variables from 
 
 \begin{equation}
 \begin{split}
@@ -127,7 +127,7 @@ z_j \mid \cdot \sim \text{Bernoulli}\Bigg(\frac{\psi_j \prod_{k = 1}^{K_j}(1 - p
 
 ## Prediction {#singleSpeciesPred}
 
-Prediction for a nonspatial single species occupancy model is a simple composition sampling problem. Given a set of occurrence covariates at a set of non-sampled locations ($\bm{X}_0$), we can derive the latent occurrence probability and the latent occurrence state at each non-sampled site $j = 1, \dots, J_0$ for each posterior sample $q$ of the MCMC sampler following
+Prediction for a nonspatial single-species occupancy model is a simple composition sampling problem [@banerjee2003]. Given a set of occurrence covariates at a set of non-sampled locations ($\bm{X}_0$), we can derive the latent occurrence probability and the latent occurrence state at each non-sampled site $j = 1, \dots, J_0$ for each posterior sample $q$ of the MCMC sampler following
 
 \begin{equation}
 \begin{split}
@@ -137,13 +137,13 @@ Prediction for a nonspatial single species occupancy model is a simple compositi
 (\#eq:zPredPGOcc)
 \end{equation}
 
-# Single species spatial occupancy model (`spPGOcc`) {#spPGOcc}
+# Single-species spatial occupancy model (`spPGOcc`) {#spPGOcc}
 
 ## Gaussian Process formulation
 
 ### Model description {#modelGP}
 
-We extend the previous single species occupancy model to incorporate a spatial Gaussian Process that accounts for unexplained spatial variation in species occurrence across a region of interest. Let $\bm{s}_j$ denote the geographical coordinates of site $j$ for $j = 1, \dots, J$. The species-specific occurrence probability at site $j$ with coordinates $\bm{s}_j$, $\psi(\bm{s}_j)$, now takes the form 
+We extend the previous single-species occupancy model to incorporate a spatial Gaussian process that accounts for unexplained spatial variation in species occurrence across a region of interest. Let $\bm{s}_j$ denote the geographical coordinates of site $j$ for $j = 1, \dots, J$. The species-specific occurrence probability at site $j$ with coordinates $\bm{s}_j$, $\psi(\bm{s}_j)$, now takes the form 
 
 \begin{equation}
 \text{logit}(\psi(\bm{s}_j)) = \bm{x}(\bm{s}_j)^{\top}\bm{\beta} + w(\bm{s}_j),
@@ -211,7 +211,7 @@ The spatial variance parameter, $\sigma^2$, is sampled via a Gibbs update of the
 
 where $\bm{R}$ is a $J \times J$ spatial correlation matrix. 
 
-The full conditional distributions for the spatial range parameter, $\phi$, and spatial smoothness parameter, $\nu$, are not available in closed form, and thus we use random walk Metropolis updates (e.g., @robert2013monte) to update the parameters. We use a random-walk Metroplis step with a multivariate normal proposal distribution (either of dimension 1 or of dimension 2 if Matern covariance function is used). To use the normal distribution as a proposal distribution, we transform the parameters to have a support spanning the entire real line, including a Jacobian adjustment for the Metropolis step. Tuning parameters are adaptively updated using Adaptive MCMC following @roberts2009examples.  
+The full conditional distributions for the spatial range parameter, $\phi$, and spatial smoothness parameter, $\nu$, are not available in closed form, and thus we use random walk Metropolis updates (e.g., @robert2013monte) to update these parameters. We use a random-walk Metroplis step with a multivariate normal proposal distribution (either of dimension 1 or of dimension 2 if Matern covariance function is used). To use the normal distribution as a proposal distribution, we transform the parameters to have a support spanning the entire real line, including a Jacobian adjustment for the Metropolis step. Tuning parameters are adaptively updated using Adaptive MCMC following @roberts2009examples.  
 
 The $\pg$ data augmentation scheme also enables a Gibbs update for the latent spatial Gaussian process (\textbf{w}($\bm{s}$)), as opposed to a traditional spatial occupancy model that requires a Metropolis update for the latent spatial process. The spatial process is updated according to 
 
@@ -224,7 +224,7 @@ Finally, for all sites with no detections, the latent occurrence values $z_j$ ar
 
 ### Prediction {#predictionSpPGOcc}
 
-Prediction for spatial occupancy models requires use of standard results for conditional multivariate normal distributions [@banerjee2003]. To predict latent occurrence and occurrence probability at non-sampled sites, we first need to predict the spatial process at the unobserved locations. Let \textbf{w}$(\bm{s}_0)$ denote the spatial process at $J_0$ non-sampled locations. We assume that \textbf{w}$(\bm{s}_0)$ and \textbf{w}$(\bm{s})$ (the spatial process at observed locations) arise from a multivariate normal distribution following
+Prediction for spatial occupancy models requires use of standard results for conditional multivariate normal distributions [@banerjee2003]. To predict latent occurrence and occurrence probability at non-sampled sites, we first need to predict the spatial process at the unobserved locations. Let \textbf{w}$(\bm{s}_0)$ denote the spatial process at the $J_0$ non-sampled locations. We assume that \textbf{w}$(\bm{s}_0)$ and \textbf{w}$(\bm{s})$ (the spatial process at observed locations) arise from a multivariate normal distribution following
 
 \begin{equation}
 \begin{bmatrix} \text{\textbf{w}}(\bm{s}) \\ \text{\textbf{w}}(\bm{s}_0) \end{bmatrix} \mid \cdot \sim \text{Normal}\Bigg(\begin{bmatrix} \bm{0} \\ \bm{0} \end{bmatrix}, \begin{bmatrix} \bm{\Sigma}_{11} & \bm{\Sigma}_{12} \\ \bm{\Sigma}_{12}^{\top} & \bm{\Sigma}_{22} \end{bmatrix}\Bigg), 
@@ -248,7 +248,7 @@ Predicting all $J_0$ locations jointly can be expensive when $J_0$ is large. Thu
 
 ## Nearest Neighbor Gaussian Process formulation 
 
-When the number of sites is moderately large, say 1000, the above described spatial Gaussian process model can be drastically slow as a result of needing to take the inverse of the spatial covariance matrix $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ at each MCMC iteration. Numerous approximation methods exist to reduce this computational cost [@heaton2019case]. One attractive approach is the Nearest Neighbor Gaussian Process (NNGP; @datta2016hierarchical). Instead of modeling the spatial process using a full GP as shown in Equation \@ref(eq:fullGP), we replace the GP prior specification with a NNGP, which leads to drastic decreases in run time with nearly identicial inference and prediction as the full GP specification. See @datta2016hierarchical for theoretical details on the NNGP and its relationship to the full GP. 
+When the number of sites is moderately large, say 1000, the above described spatial Gaussian process model can be drastically slow as a result of the need to take the inverse of the spatial covariance matrix $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ at each MCMC iteration. Numerous approximation methods exist to reduce this computational cost [@heaton2019case]. One attractive approach is the Nearest Neighbor Gaussian Process (NNGP; @datta2016hierarchical). Instead of modeling the spatial process using a full GP as shown in Equation \@ref(eq:fullGP), we replace the GP prior specification with a NNGP, which leads to drastic decreases in run time with nearly identicial inference and prediction as the full GP specification. See @datta2016hierarchical for theoretical details on the NNGP and its relationship to the full GP. 
 
 ### Model description {#modelNNGP}
 
@@ -284,7 +284,7 @@ Our predictive algorithm thus takes the following steps for each posterior sampl
 3. Sample the latent occurrence from $z_{j}^{(q)} \sim \text{Bernoulli}(\psi^{(q)}(\bm{s}_j))$. 
 
 
-# Multispecies occupancy model (`msPGOcc`)
+# Multi-species occupancy model (`msPGOcc`)
 
 ## Model description
 
@@ -298,16 +298,16 @@ Let $z_{i, j}$ be the true presence (1) or absence (0) of a species $i$ at site 
 (\#eq:zmsPGOcc)
 \end{equation}
 
-where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of species-specific regression coefficients ($\bm{\beta}_i$). The regression coefficients in multispecies occupancy models are envisioned as random effects arising from a common community level distribution:
+where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of species-specific regression coefficients ($\bm{\beta}_i$). The regression coefficients in multi-species occupancy models are envisioned as random effects arising from a common community-level distribution:
 
 \begin{equation}
 \bm{\beta}_i \sim \text{Normal}(\bm{\mu_{\beta}}, \bm{T}_{\beta}),
 (\#eq:msBeta)
 \end{equation}
 
-where $\bm{\mu_{\beta}}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
+where $\bm{\mu_{\beta}}$ is a vector of community-level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
 
-We do not directly observe $z_{i, j}$ and rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+We do not directly observe $z_{i, j}$, but rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
 
 \begin{equation}
 \begin{split}
@@ -317,16 +317,16 @@ We do not directly observe $z_{i, j}$ and rather we observe an imperfect represe
 (\#eq:ymsPGOcc)
 \end{equation}
 
-where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate specific covariates $\bm{V}$ and a vector of species-specific regression coefficients ($\bm{\alpha}_i$). Similarly to the occurrence regression coefficients, the species specific detection coefficients are envisioned as random effects arising from a common community level distribution:
+where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate-specific covariates $\bm{V}$ and a vector of species-specific regression coefficients ($\bm{\alpha}_i$). Similarly to the occurrence regression coefficients, the species-specific detection coefficients are envisioned as random effects arising from a common community-level distribution:
 
 \begin{equation}
 \bm{\alpha}_i \sim \text{Normal}(\bm{\mu_{\alpha}}, \bm{T}_{\alpha}),
 (\#eq:msAlpha)
 \end{equation}
 
-where $\bm{\mu_{\alpha}}$ is a vector of community level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
+where $\bm{\mu_{\alpha}}$ is a vector of community-level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
 
-We assign multivariate normal priors for the community level occurrence ($\bm{\mu_{\beta}}$) and detection ($\bm{\mu_{\alpha}}$) means, and assign indepdent inverse-Gamma priors on the community level occurrence ($\tau^2_{\beta}$) and detection ($\tau^2_{\alpha}$) variance parameters. Analogous to the single species occupancy model, we implement the model using $\pg$ data augmentation which induces fully Gibbs updates for all parameters. We specify $\pg$ data augmented variables for each species ($\omega_{i, j, \beta}$, $\omega_{i, j, k, \alpha})$, which follow the same scheme as that for the single species model in Equation \@ref(eq:polyaGamma), except all parameters in the equation are now indexed by $i$ for each species. The full joint posterior distribution thus takes the following form: 
+We assign multivariate normal priors for the community-level occurrence ($\bm{\mu_{\beta}}$) and detection ($\bm{\mu_{\alpha}}$) means, and assign indepdent inverse-Gamma priors on the community-level occurrence ($\tau^2_{\beta}$) and detection ($\tau^2_{\alpha}$) variance parameters. Analogous to the single-species occupancy model, we implement the model using $\pg$ data augmentation which induces fully Gibbs updates for all parameters. We specify $\pg$ data augmented variables for each species ($\omega_{i, j, \beta}$, $\omega_{i, j, k, \alpha})$, which follow the same scheme as that for the single-species model in Equation \@ref(eq:polyaGamma), except all parameters in the equation are now indexed by $i$ for each species. The full joint posterior distribution thus takes the following form: 
 
 $$
 \begin{aligned}
@@ -348,28 +348,28 @@ where $r$ and $t$ index across the number of occurrence and detection regression
 
 ## MCMC sampler
 
-The $\pg$ data augmentation induces a Gibbs update for all parameters in the multispecies occupancy model. For each iteration, we first sample all community level parameters followed by species level parameters. We first sample the community level regression coefficients $\bm{\mu_{\beta}}$ from 
+The $\pg$ data augmentation induces a Gibbs update for all parameters in the multi-species occupancy model. For each iteration, we first sample all community-level parameters followed by species level parameters. We first sample the community-level regression coefficients $\bm{\mu_{\beta}}$ from 
 
 \begin{equation}
 \bm{\mu_{\beta}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\beta}\bm{\beta}_i) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu0}_{\beta}\Big], [\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}).
 (\#eq:betaBar)
 \end{equation}
 
-Similarly, we next sample the community level regression coefficients $\bm{\mu_{\alpha}}$ from 
+Similarly, we next sample the community-level regression coefficients $\bm{\mu_{\alpha}}$ from 
 
 \begin{equation}
 \bm{\mu_{\alpha}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\alpha}\bm{\alpha}_i) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu0}_{\alpha}\Big], [\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}).
 (\#eq:alphaBar)
 \end{equation}
 
-Next, we sample the community level occurrence variance parameter for each regression coefficient, $\tau^2_{r, \beta}$, from the following inverse-Gamma full conditional:
+Next, we sample the community-level occurrence variance parameter for each regression coefficient, $\tau^2_{r, \beta}$, from the following inverse-Gamma full conditional:
 
 \begin{equation}
 \tau^2_{r, \beta} \mid \cdot \sim \text{IG}(a_{r, \beta} + \frac{N}{2}, a_{r, \beta} + \frac{\sum_{i = 1}^N(\beta_{i, r} - \mu_{\beta_r})^2}{2}).
 (\#eq:tauBeta)
 \end{equation}
 
-Similarly, we next sample the community level detection variance parameter for each regression coefficient: 
+Similarly, we next sample the community-level detection variance parameter for each regression coefficient: 
 
 \begin{equation}
 \tau^2_{t, \alpha} \mid \cdot \sim \text{IG}(a_{t, \alpha} + \frac{N}{2}, a_{t, \alpha} + \frac{\sum_{i = 1}^N(\alpha_{i, t} - \mu_{\alpha_t})^2}{2}).
@@ -412,12 +412,12 @@ z_{i, j} \mid \cdot \sim \text{Bernoulli}\Bigg(\frac{\psi_{i, j} \prod_{k = 1}^{
 (\#eq:zPostmsPGOcc)
 \end{equation}
 
-Note the full conditional for $z_{i, j}$ is exactly the same as that for the single species occupancy model in Equation \@ref(eq:zPostPGOcc), except all values are now additionally indexed by species ($i$). 
+Note the full conditional for $z_{i, j}$ is exactly the same as that for the single-species occupancy model in Equation \@ref(eq:zPostPGOcc), except all values are now additionally indexed by species ($i$). 
 
 ## Prediction
 
 
-Prediction for a nonspatial multispecies occupancy model is a simple composition sampling problem exactly analogous to the single species model. Given a set of occurrence covariates at a set of non-sampled locations ($\bm{X}_0$), we can derive the latent occurrence probability and the latent occurrence state at each non-sampled site $j = 1, \dots, J_0$ for each species $i$ for each posterior sample $q$ of the MCMC sampler following
+Prediction for a nonspatial multi-species occupancy model is a simple composition sampling problem exactly analogous to the single-species model. Given a set of occurrence covariates at a set of non-sampled locations ($\bm{X}_0$), we can derive the latent occurrence probability and the latent occurrence state at each non-sampled site $j = 1, \dots, J_0$ for each species $i$ for each posterior sample $q$ of the MCMC sampler following
 
 \begin{equation}
 \begin{split}
@@ -427,19 +427,19 @@ Prediction for a nonspatial multispecies occupancy model is a simple composition
 (\#eq:zPredmsPGOcc)
 \end{equation}
 
-# Multispecies spatial occupancy model (`spMsPGOcc`)
+# Multi-species spatial occupancy model (`spMsPGOcc`)
 
 ## Gaussian Process formulation
 
 ### Model description
 
-We extend the previous multispecies occupancy model to incorporate a distinct spatial Gaussian Process (GP) for each species that accounts for unexplained spatial variation in each individual species occurrence across a spatial region. Occurrence probability for species $i$ at site $j$ with coordinates $\bm{s}_j$, $\psi_{i}(\bm{s}_j)$, now takes the form 
+We extend the previous multi-species occupancy model to incorporate a distinct spatial Gaussian Process (GP) for each species that accounts for unexplained spatial variation in each individual species occurrence across a spatial region. Occurrence probability for species $i$ at site $j$ with coordinates $\bm{s}_j$, $\psi_{i}(\bm{s}_j)$, now takes the form 
 
 \begin{equation}
 \text{logit}(\psi_{i}(\bm{s}_j)) = \bm{x}_j^{\top}\bm{\beta}_i + \text{w}_{i}(\bm{s}_j), 
 \end{equation}
 
-where the species-specific regression coefficients $\bm{\beta}_i$ follow the community level distribution in Equation \@ref(eq:msBeta), and \text{w}$_{i}(\bm{s}_j)$ is a realization from a zero-mean spatial GP, i.e., 
+where the species-specific regression coefficients $\bm{\beta}_i$ follow the community-level distribution in Equation \@ref(eq:msBeta), and \text{w}$_{i}(\bm{s}_j)$ is a realization from a zero-mean spatial GP, i.e., 
 
 \begin{equation}
 \text{\textbf{w}}_{i}(\bm{s}) \sim \text{Normal}(\bm{0}, \bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)).
@@ -448,9 +448,9 @@ where the species-specific regression coefficients $\bm{\beta}_i$ follow the com
 
 We define $\bm{\Sigma}_i(\bm{s}, \bm{s}', \bm{\theta}_i)$ as a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters $(\bm{\theta}_i)$ that govern the spatial process. The vector $\bm{\theta}_i$ is equal to $\bm{\theta}_i = \{\sigma^2_i, \phi_i, \nu_i\}$, where $\sigma^2_i$ is a spatial variance parameter for species $i$, $\phi_i$ is a spatial decay parameter for species $i$, and $\nu_i$ is a spatial smoothness parameter for species $i$. $\nu_i$ is only specified when using a Matern correlation function. 
 
-Note that we estimate a distinct parameter vector $\bm{\theta}_i$ for each species and assume the spatial processes are independent of each other. This is a naive approach for incorporating spatial processes in a multispecies occupancy model, as we do not leverage the potential correlation in spatial processes among species in a linear model of coregionalization approach [@gelfand2004nonstationary]. Despite the simplicity of the approach, such models have been shown to yield improved insight in species distributions across broad locations [@wright2021spatial], and the Bayesian shrinkage component of the multispecies model (Equation \@ref(eq:msBeta)) will make estimates in a multispecies spatial occupancy model more precise than a single species spatial occupancy model, in particular for rare species. In future implementations of `spOccupancy` we plan to implement multispecies occupancy models in a more rich inferential framework that leverages between species correlations in spatial processes and non-spatial components, similar to the models of @tobler2019joint and @taylor2019spatial. 
+Note that we estimate a distinct parameter vector $\bm{\theta}_i$ for each species and assume the spatial processes are independent of each other. This is a naive approach for incorporating spatial processes in a multi-species occupancy model, as we do not leverage the potential correlation in spatial processes among species in a linear model of coregionalization approach [@gelfand2004nonstationary]. Despite the simplicity of the approach, such models have been shown to yield improved insight in species distributions across broad locations [@wright2021spatial], and the Bayesian shrinkage component of the multi-species model (Equation \@ref(eq:msBeta)) will make estimates in a multi-species spatial occupancy model more precise than a single-species spatial occupancy model, in particular for rare species. In future implementations of `spOccupancy` we plan to implement multi-species occupancy models in a more rich inferential framework that leverages between species correlations in spatial processes and non-spatial components, similar to the models of @tobler2019joint and @taylor2019spatial. 
 
-The detection portion of the multispecies spatial occupancy model remains unchanged from the non-spatial multispecies occupancy model and follows Equations \@ref(eq:ymsPGOcc) and \@ref(eq:msAlpha). Formulation of $\pg$ latent variables is also exactly analogous to the nonspatial model (Equation \@ref(eq:polyaGamma)), with all parameters including an index for species ($i$) and all references to $\psi_{i}(\bm{s}_j)$ now including the latent spatial random effects in addition to the site-level covariates. 
+The detection portion of the multi-species spatial occupancy model remains unchanged from the non-spatial multi-species occupancy model and follows Equations \@ref(eq:ymsPGOcc) and \@ref(eq:msAlpha). Formulation of $\pg$ latent variables is also exactly analogous to the nonspatial model (Equation \@ref(eq:polyaGamma)), with all parameters including an index for species ($i$) and all references to $\psi_{i}(\bm{s}_j)$ now including the latent spatial random effects in addition to the site-level covariates. 
 
 Following standard recommendations for point-referenced spatial data [@banerjee2003], we assign an inverse-Gamma prior to the spatial variance parameter for each species and uniform priors to the spatial decay and spatial smoothness parameters for each species. Our full joint posterior distribution takes the following form, where IG stands for the inverse-Gamma distribution: 
 
@@ -475,7 +475,7 @@ $$
 
 ### MCMC sampler
 
-The $\pg$ data augmentation induces a Gibbs update for all parameters in the multispecies spatial occupancy model except the spatial range parameters ($\phi_i$) and the spatial smoothness parameters $\nu_i$ if specified. For each iteration, we first sample all community level parameters followed by species level parameters. Full conditional distributions for all community level parameters are exactly the same as those for the nonspatial multispecies model. See Equations \@ref(eq:betaBar)-\@ref(eq:tauAlpha). 
+The $\pg$ data augmentation induces a Gibbs update for all parameters in the multi-species spatial occupancy model except the spatial range parameters ($\phi_i$) and the spatial smoothness parameters $\nu_i$ if specified. For each iteration, we first sample all community-level parameters followed by species level parameters. Full conditional distributions for all community-level parameters are exactly the same as those for the nonspatial multi-species model. See Equations \@ref(eq:betaBar)-\@ref(eq:tauAlpha). 
 
 The species-level coefficients are sampled one at a time for each species. First, we sample the occurrence and detection auxiliary variables for species $i$ from 
 
@@ -503,7 +503,7 @@ The spatial variance parameter for species $i$, $\sigma^2_i$, is sampled via a G
 (\#eq:sigmaSqPostspMsPGOcc)
 \end{equation}
 
-where $\bm{R}$ is a $J \times J$ spatial correlation matrix. The full conditional distributions for the species-specific spatial range parameters, $\phi_i$, and spatial smoothness parameters, $\nu_i$ are not available in closed form, and so they are updated using random walk Metropolis updates following the same procedure as described for the single species spatial occupancy models. 
+where $\bm{R}$ is a $J \times J$ spatial correlation matrix. The full conditional distributions for the species-specific spatial range parameters, $\phi_i$, and spatial smoothness parameters, $\nu_i$ are not available in closed form, and so they are updated using random walk Metropolis updates following the same procedure as described for the single-species spatial occupancy models. 
 
 The $\pg$ data augmentation scheme induces a Gibbs update for the latent spatial Gaussian process for each species, which is updated according to
 
@@ -517,27 +517,27 @@ Finally, for all sites with no detections for a given species, the latent occurr
 
 ### Prediction
 
-Because we assume independence between the spatial processes of the different species, prediction for the multispecies spatial occupancy model is exactly analogous to prediction for the single species spatial occupancy model described in Section \@ref(predictionSpPGOcc), except prediction is done for each species $i$ using the species specific values for that species. See Section \@ref(predictionSpPGOcc) for the algorithm, noting that for the multispecies model all values are additionally indexed by species ($i$). 
+Because we assume independence between the spatial processes of the different species, prediction for the multi-species spatial occupancy model is exactly analogous to prediction for the single-species spatial occupancy model described in Section \@ref(predictionSpPGOcc), except prediction is done for each species $i$ using the species-specific values for that species. See Section \@ref(predictionSpPGOcc) for the algorithm, noting that for the multi-species model all values are additionally indexed by species ($i$). 
 
 ## Nearest Neighbor Gaussian Process formulation
 
-As with the single species model, we also implement `spMsPGOcc` with an NNGP. Use of the NNGP leads to even larger computational advances for the multispecies occupancy models, as we now replace each of the independent GPs for each of the $N$ species with an independent NNGP. 
+As with the single-species model, we also implement `spMsPGOcc` with an NNGP. Use of the NNGP leads to even larger computational benefits for the multi-species occupancy models, as we now replace each of the independent GPs for each of the $N$ species with an independent NNGP. 
 
 ### Model description
 
-The joint posterior distribution for the multispecies NNGP occupancy model is exactly the same as that of the full GP multispecies model except the GP prior assigned to the latent spatial random effects \textbf{w}$_i(\bm{s})$ for each species is replaced with an NNGP prior [@datta2016hierarchical]. 
+The joint posterior distribution for the multi-species NNGP occupancy model is exactly the same as that of the full GP multi-species model except the GP prior assigned to the latent spatial random effects \textbf{w}$_i(\bm{s})$ for each species is replaced with an NNGP prior [@datta2016hierarchical]. 
 
 ### MCMC sampler and prediction
 
-The full conditionals for all variables except the spatial variance parameters $\sigma^2_i$ and the latent spatial process \textbf{w}$_i(\bm{s})$ follow the same full conditionals as described in the full GP multispecies spatial occupancy model. The full conditionals for $\sigma^2_i$ and \textbf{w}$_i(\bm{s})$ follow exactly those described for the single species NNGP model in Section \@ref(samplerspPGOccNNGP), where all parameters are now indexed by each species $i$. Prediction is also exactly analogous to that described for the single species NNGP model in Section \@ref(predictionspPGOccNNGP).
+The full conditionals for all variables except the spatial variance parameters $\sigma^2_i$ and the latent spatial process \textbf{w}$_i(\bm{s})$ follow the same full conditionals as described in the full GP multi-species spatial occupancy model. The full conditionals for $\sigma^2_i$ and \textbf{w}$_i(\bm{s})$ follow exactly those described for the single-species NNGP model in Section \@ref(samplerspPGOccNNGP), where all parameters are now indexed by each species $i$. Prediction is also exactly analogous to that described for the single-species NNGP model in Section \@ref(predictionspPGOccNNGP).
 
-# Single species integrated occupancy model (`intPGOcc`)
+# Single-species integrated occupancy model (`intPGOcc`)
 
-Data integration is a model-based approach that leverages multiple data sources to provide inference and prediction on some latent process of interest [@miller2019recent]. Data integration is particularly relevant in ecology as many data sources are often collected to study a single ecological phenomenon, with each data source having pros and cons. Often, multiple detection-nondetection data sources are available to study the occurrence and distribution of some species of interest. For example, both human point count surveys and autonomous recording units could be used to monitor a bird species of conservation concern [@doser2021integrating]. Different types of data have different sources of observation error, which should be explicitly incorporated into a model to avoid attributing any variation in detection probability to the true ecological process. Here we describe single species integrated occupancy models, which combine multiple sources of detection-nondetection data (which may or may not be replicated) in a single hierarchical modeling framework.  
+Data integration is a model-based approach that leverages multiple data sources to provide inference and prediction on some latent process of interest [@miller2019recent]. Data integration is particularly relevant in ecology as many data sources are often collected to study a single ecological phenomenon, with each data source having advantages and disadvantages. Often, multiple detection-nondetection data sources are available to study the occurrence and distribution of some species of interest. For example, both human point count surveys and autonomous recording units could be used to monitor a bird species of conservation concern [@doser2021integrating]. Different types of data have different sources of observation error, which should be explicitly incorporated into a model to avoid attributing any variation in detection probability to the true ecological process. Here we describe single-species integrated occupancy models, which combine multiple sources of detection-nondetection data (which may or may not be replicated) in a single hierarchical modeling framework.  
 
 ## Model description {#integratedModel}
 
-The biological process model is exactly the same as single species occupancy models, which we now describe again for clarity. Let $z_j$ be the presence or absence of a species at site $j$, with $j = 1, \dots, J$. We assume this latent occurrence process arises from a Bernoulli process following
+The biological process model is exactly the same as single-species occupancy models, which we now describe again for clarity. Let $z_j$ be the presence or absence of a species at site $j$, with $j = 1, \dots, J$. We assume this latent occurrence variables arises from a Bernoulli process following
 
 \begin{equation}
 \begin{split}
@@ -549,7 +549,7 @@ The biological process model is exactly the same as single species occupancy mod
 
 where $\psi_j$ is the probability of occurrence at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of regression coefficients ($\bm{\beta}$). 
 
-We do not directly observe $z_j$ and rather we observe an imperfect representation of the latent occurrence process. In integrated models, we have $r = 1, \dots, R$ distinct sources of data that are all imperfect representations of a single, shared occurrence process. Let $y_{r, a, k}$ be the observed detection (1) or nondetection (0) of a species of interest in data set $r$ at site $a$ during replicate $k$. Because different data sources have different variables influencing the observation process, we envision a separate detection model for each data source that is conditional on a single, shared ecological process described by Equation \@ref(eq:zintPGOcc). We envision the detection-nondetection data from source $r$ as arising from a Bernoulli process conditional on the true latent occurrence process: 
+We do not directly observe $z_j$, but rather we observe an imperfect representation of the latent occurrence process. In integrated models, we have $r = 1, \dots, R$ distinct sources of data that are all imperfect representations of a single, shared occurrence process. Let $y_{r, a, k}$ be the observed detection (1) or nondetection (0) of a species of interest in data set $r$ at site $a$ during replicate $k$. Because different data sources have different variables influencing the observation process, we envision a separate detection model for each data source that is conditional on a single, shared ecological process described by Equation \@ref(eq:zintPGOcc). We envision the detection-nondetection data from source $r$ as arising from a Bernoulli process conditional on the true latent occurrence process: 
 
 
 \begin{equation}
@@ -562,13 +562,13 @@ We do not directly observe $z_j$ and rather we observe an imperfect representati
 
 where $p_{r, a, k}$ is the probability of detecting a species at site $a$ during replicate $k$ (given it is present at site $a$) for data source $r$, which is a function of site, replicate, and data source specific covariates $\bm{V}_r$ and a vector of regression coefficients specific to each data source ($\bm{\alpha}_r$). Note that $z_{j[a]}$ is the true occurrence status at site $j$ corresponding to the $a$th data source site in the given data set $r$. Each data source may be available at all $J$ sites in the region of interest or at a subset of the $J$ sites. Additionally, data sources can overlap in the sites they sample, or they can be obtained at distinct sites within all $J$ sites of interest in the overall region. 
 
-We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and data-set specific detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single species occupancy model. $\pg$ data augmentation is implemented analgoous to previous models, where there is a single set of occurrence auxiliary variables ($\bm{\omega}_{\beta}$) and a distinct set of detection auxiliary variables for each data source ($\bm{\omega}_{r, \alpha}$). 
+We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and data-set specific detection ($\bm{\alpha}$) regression coefficients to complete the Bayesian specification of a single-species occupancy model. $\pg$ data augmentation is implemented analgoous to previous models, where there is a single set of occurrence auxiliary variables ($\bm{\omega}_{\beta}$) and a distinct set of detection auxiliary variables for each data source ($\bm{\omega}_{r, \alpha}$). 
 
-In short, the integrated occupancy model has an identical process model to the single species occupancy model, and has a distinct detection model for each data source that are all conditional on the same shared ecological process (species occurrence). Our full joint posterior takes the same form as that of a single species occupancy model, except a separate conditional likelihood is specified for each data source which is dependent on its own unique set of detection regression cofficients and $\pg$ auxiliary variables.
+In short, the integrated occupancy model has an identical process model to the single-species occupancy model, and has a distinct detection model for each data source that are all conditional on the same shared ecological process (species occurrence). Our full joint posterior takes the same form as that of a single-species occupancy model, except a separate conditional likelihood is specified for each data source which is dependent on its own unique set of detection regression cofficients and $\pg$ auxiliary variables.
 
 ## MCMC sampler {#mcmcIntegrated}
 
-The $\pg$ data augmentation induces a Gibbs update for all parameters in the single species integrated occupancy model. We first sample the occurrence and detection auxiliary variables from 
+The $\pg$ data augmentation induces a Gibbs update for all parameters in the single-species integrated occupancy model. We first sample the occurrence and detection auxiliary variables from 
 
 \begin{equation}
 \begin{split}
@@ -578,7 +578,7 @@ The $\pg$ data augmentation induces a Gibbs update for all parameters in the sin
 (\#eq:omegaPostIntPGOcc)
 \end{equation}
 
-The occurrence regression coefficients are sampled from the same full conditional as that in the single species occupancy model in Equation \@ref(eq:betaPostPGOcc). 
+The occurrence regression coefficients are sampled from the same full conditional as that in the single-species occupancy model in Equation \@ref(eq:betaPostPGOcc). 
 
 The detection regression coefficients for a given data source $r$ follows Equation \@ref(eq:alphaPostPGOcc), with all parameters now indexed by $r$. 
 
@@ -593,12 +593,12 @@ where the product occurs over all the sites in the $R$ data sources that corresp
 
 ## Prediction
 
-Integrated occupancy models have an identical ecological process model to single species occupancy models, and so out-of-sample prediction follows the same approach. See Section \@ref(singleSpeciesPred) for details. 
+Integrated occupancy models have an identical ecological process model to single-species occupancy models, and so out-of-sample prediction follows the same approach. See Section \@ref(singleSpeciesPred) for details. 
 
 
-# Single species integrated spatial occupancy model (`spIntPGOcc`)
+# Single-species integrated spatial occupancy model (`spIntPGOcc`)
 
-Single species integrated spatial occupancy models are identical to integrated occupancy models except the ecological process model now incorporates a spatially-structured random effect following the discussion in Section \@ref(spPGOcc). All details for the single species integrated spatial occupancy model have already been presented. Here we present the sections to consult for necessary details for each portion of the single species integrated spatial occupancy model. 
+Single-species integrated spatial occupancy models are identical to integrated occupancy models except the ecological process model now incorporates a spatially-structured random effect following the discussion in Section \@ref(spPGOcc). All details for the single-species integrated spatial occupancy model have already been presented. Here we present the sections to consult for necessary details for each portion of the single-species integrated spatial occupancy model. 
 
 ## Gaussian Process formulation
 

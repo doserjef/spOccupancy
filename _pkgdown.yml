@@ -21,3 +21,20 @@ reference:
    - simOcc
    - simMsOcc
    - simIntOcc
+ - title: "Summary"
+ - contents: 
+   - summary.PGOcc
+   - summary.spPGOcc
+   - summary.msPGOcc
+   - summary.spMsPGOcc
+   - summary.intPGOcc
+   - summary.spIntPGocc
+ - title: "Prediction"
+ - contents:
+   - predict.PGOcc
+   - predict.spPGOcc
+   - predict.msPGOcc
+   - predict.spMsPGOcc
+   - predict.intPGOcc
+   - predict.spIntPGOcc
+ 
