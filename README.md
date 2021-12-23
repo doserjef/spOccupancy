@@ -1,11 +1,11 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139"/></a>
+# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
+[![](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -120,25 +120,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.8542
+#> Run Time (min): 1.9316
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat      ESS
-#> (Intercept)            4.1561 0.6237  3.1226  4.0885  5.5612 1.0104 300.7032
-#> scale(Elevation)      -0.5415 0.2388 -1.0491 -0.5332 -0.0844 1.0077 547.5959
-#> I(scale(Elevation)^2) -1.2135 0.2233 -1.7034 -1.1941 -0.8254 1.0130 470.8693
+#> (Intercept)            4.1679 0.6201  3.0796  4.1129  5.5253 1.0281 247.0541
+#> scale(Elevation)      -0.5374 0.2535 -1.0717 -0.5319 -0.0500 1.0330 558.6439
+#> I(scale(Elevation)^2) -1.2247 0.2262 -1.7324 -1.2051 -0.8373 1.0363 251.1803
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat      ESS
-#> (Intercept)      0.6659 0.1148  0.4408  0.6654 0.8891 1.0002 4891.728
-#> scale(day)       0.2912 0.0716  0.1532  0.2906 0.4312 1.0014 6000.000
-#> scale(tod)      -0.0306 0.0690 -0.1676 -0.0293 0.1036 1.0001 6000.000
-#> I(scale(day)^2) -0.0745 0.0846 -0.2414 -0.0733 0.0940 1.0009 6000.000
+#> (Intercept)      0.6628 0.1127  0.4479  0.6615 0.8826 1.0003 5010.936
+#> scale(day)       0.2900 0.0712  0.1511  0.2903 0.4301 1.0016 6000.000
+#> scale(tod)      -0.0312 0.0702 -0.1680 -0.0310 0.1059 1.0011 6000.000
+#> I(scale(day)^2) -0.0750 0.0858 -0.2424 -0.0762 0.0958 0.9999 6000.000
 #> 
 #> Spatial Covariance: 
-#>            Mean    SD   2.5%    50%  97.5%   Rhat      ESS
-#> sigma.sq 1.6349 1.120 0.4156 1.3439 4.4805 1.0175 116.6676
-#> phi      0.0057 0.006 0.0006 0.0034 0.0239 1.0507  85.6540
+#>            Mean     SD   2.5%    50%  97.5%   Rhat     ESS
+#> sigma.sq 1.7061 1.2382 0.3851 1.3643 5.0950 1.0312 96.9992
+#> phi      0.0064 0.0071 0.0006 0.0032 0.0268 1.1779 43.3338
 ```
 
 ### Posterior predictive check
@@ -164,7 +164,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4148333 
+#> Bayesian p-value:  0.4026667 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -177,7 +177,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -676.17106   25.30911 1402.96035
+#> -676.57521   25.20569 1403.56181
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -190,7 +190,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1496.43
+#> [1] 1496.396
 ```
 
 ### Prediction

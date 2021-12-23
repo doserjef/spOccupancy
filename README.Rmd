@@ -11,8 +11,7 @@ knitr::opts_chunk$set(
   out.width = "100%")
 ```
 
-# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139"/></a>
-
+# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
 ```{r, echo=FALSE, results='asis', message=FALSE}
 library(badger)

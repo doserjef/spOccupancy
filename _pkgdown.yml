@@ -28,7 +28,8 @@ reference:
    - summary.msPGOcc
    - summary.spMsPGOcc
    - summary.intPGOcc
-   - summary.spIntPGocc
+   - summary.spIntPGOcc
+   - summary.ppcOcc
  - title: "Prediction"
  - contents:
    - predict.PGOcc
@@ -37,4 +38,16 @@ reference:
    - predict.spMsPGOcc
    - predict.intPGOcc
    - predict.spIntPGOcc
- 
+ - title: "Fitted values"
+ - contents: 
+   - fitted.PGOcc
+   - fitted.spPGOcc
+   - fitted.msPGOcc
+   - fitted.spMsPGOcc
+   - fitted.intPGOcc
+   - fitted.spIntPGOcc
+ - title: "Data"
+ - contents: 
+   - hbef2015
+   - hbefElev
+   - neon2015 
