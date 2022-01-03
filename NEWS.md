@@ -1,3 +1,7 @@
+# spOccupancy 0.2.1
+
++ Minor changes related to arguments in C++ code in header files to pass CRAN additional issues.
+
 # spOccupancy 0.2.0
 
 + Added an `n.chains` argument to all model-fitting functions for running multiple chains in sequence.
