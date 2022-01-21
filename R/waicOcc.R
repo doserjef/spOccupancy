@@ -16,8 +16,9 @@ waicOcc <- function(object, ...) {
     stop("error: object must be specified")
   }
   if (!class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
-			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc')) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc\n")
+			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+			    'lfMsPGOcc', 'sfMsPGOcc')) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -76,7 +77,7 @@ waicOcc <- function(object, ...) {
     out <- c(elpd, pD, -2 * (elpd - pD))
     names(out) <- c("elpd", "pD", "WAIC")
   }
-  if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc')) {
     X.p <- object$X.p
     y <- object$y
     y.ind <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) == 0))

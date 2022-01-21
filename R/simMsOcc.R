@@ -1,6 +1,6 @@
 simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
 		     p.RE = list(), sp = FALSE, cov.model, 
-		     sigma.sq, phi, nu, ...) {
+		     sigma.sq, phi, nu, factor.model = FALSE, n.factors, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -59,7 +59,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   if (nrow(alpha) != N) {
     stop(paste("error: alpha must be a numeric matrix with ", N, " rows", sep = ''))
   }
-  if (sp) {
+  if (sp & !factor.model) {
     # sigma.sq --------------------------
     if (missing(sigma.sq)) {
       stop("error: sigma.sq must be specified when sp = TRUE")
@@ -74,6 +74,8 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     if (length(phi) != N) {
       stop(paste("error: phi must be a vector of length ", N, sep = ''))
     }
+  }
+  if (sp) {
     # Covariance model ----------------
     if(missing(cov.model)) {
       stop("error: cov.model must be specified when sp = TRUE")
@@ -85,6 +87,23 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     }
     if (cov.model == 'matern' & missing(nu)) {
       stop("error: nu must be specified when cov.model = 'matern'")
+    }
+  }
+  if (factor.model) {
+    # n.factors -----------------------
+    if (missing(n.factors)) {
+      stop("error: n.factors must be specified when factor.model = TRUE")
+    }
+    if (sp) {
+      if (!missing(sigma.sq)) {
+        message("sigma.sq is specified but will be set to 1 for spatial latent factor model")
+      }
+      if(missing(phi)) {
+        stop("error: phi must be specified when sp = TRUE")
+      }
+      if (length(phi) != n.factors) {
+        stop(paste("error: phi must be a vector of length ", n.factors, sep = ''))
+      }
     }
   }
   # psi.RE ----------------------------
@@ -149,26 +168,57 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     } # i
   }
 
-  # Simulate spatial random effect for each species -----------------------
+  # Simulate latent (spatial) random effect for each species --------------
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
   coords <- as.matrix(expand.grid(s.x, s.y))
-  if (sp) {
-    if (cov.model == 'matern') {
-      theta <- cbind(phi, nu)
-    } else {
-      theta <- as.matrix(phi)
+  w.star <- matrix(0, nrow = N, ncol = J)
+  if (factor.model) {
+    lambda <- matrix(rnorm(N * n.factors, 0, 0.5), N, n.factors) 
+    # Set diagonals to 1
+    diag(lambda) <- 1
+    # Set upper tri to 0
+    lambda[upper.tri(lambda)] <- 0
+    w <- matrix(NA, n.factors, J)
+    if (sp) { # sfMsPGOcc
+      if (cov.model == 'matern') {
+        theta <- cbind(phi, nu)
+      } else {
+        theta <- as.matrix(phi)
+      }
+      for (ll in 1:n.factors) {
+        Sigma <- mkSpCov(coords, as.matrix(1), as.matrix(0), 
+            	     theta[ll, ], cov.model)
+        w[ll, ] <- rmvn(1, rep(0, J), Sigma)
+      }
+
+    } else { # lsMsPGOcc
+      for (ll in 1:n.factors) {
+        w[ll, ] <- rnorm(J)
+      } # ll  
     }
-    # Spatial random effects for each species
-    w <- matrix(NA, nrow = N, ncol = J)
-    for (i in 1:N) {
-      Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), 
-          	     theta[i, ], cov.model)
-      w[i, ] <- rmvn(1, rep(0, J), Sigma)
+    for (j in 1:J) {
+      w.star[, j] <- lambda %*% w[, j]
     }
   } else {
-    w <- NA
+    if (sp) { # spMsPGOcc
+      lambda <- NA
+      if (cov.model == 'matern') {
+        theta <- cbind(phi, nu)
+      } else {
+        theta <- as.matrix(phi)
+      }
+      # Spatial random effects for each species
+      for (i in 1:N) {
+        Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), 
+            	     theta[i, ], cov.model)
+        w.star[i, ] <- rmvn(1, rep(0, J), Sigma)
+      }
+    }
+    # For naming consistency
+    w <- w.star
+    lambda <- NA
   }
 
   # Random effects --------------------------------------------------------
@@ -189,7 +239,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     }
     if (p.occ.re > 1) {
       for (j in 2:p.occ.re) {
-        X.re[, j] <- X.re[, j] + max(X.re[, j - 1])
+        X.re[, j] <- X.re[, j] + max(X.re[, j - 1], na.rm = TRUE)
       }
     } 
     beta.star.sites <- matrix(NA, N, J)
@@ -220,7 +270,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     }
     if (p.det.re > 1) {
       for (j in 2:p.det.re) {
-        X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1]) 
+        X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1], na.rm = TRUE) 
       }
     }
     alpha.star.sites <- array(NA, c(N, J, max(n.rep)))
@@ -238,9 +288,9 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   for (i in 1:N) {
     if (sp) {
       if (length(psi.RE) > 0) {
-        psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w[i, ] + beta.star.sites[i, ])
+        psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w.star[i, ] + beta.star.sites[i, ])
       } else {
-        psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w[i, ])
+        psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w.star[i, ])
       }
     } else {
       if (length(psi.RE) > 0) {
@@ -269,6 +319,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   return(
     list(X = X, X.p = X.p, coords = coords,
 	 w = w, psi = psi, z = z, p = p, y = y, X.p.re = X.p.re, 
-	 X.re = X.re, alpha.star = alpha.star, beta.star = beta.star)
+	 X.re = X.re, alpha.star = alpha.star, beta.star = beta.star, 
+	 lambda = lambda)
   )
 }

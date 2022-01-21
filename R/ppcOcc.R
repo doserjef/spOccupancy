@@ -16,8 +16,9 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     stop("error: object must be specified")
   }
   if (!class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
-			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc')) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc\n")
+			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+			    'lfMsPGOcc', 'sfMsPGOcc')) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -139,7 +140,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.chains <- object$n.chains
   } 
   # Multispecies models
-  if (class(object) %in% c('msPGOcc', 'spMsPGOcc')) {
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc')) {
     y <- object$y
     X.p <- object$X.p
     if (nrow(X.p) == nrow(y)) {
@@ -158,11 +159,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
     J <- dim(y)[2]
     N <- dim(y)[1]
-    if (class(object) == 'msPGOcc') {
-      y.rep.samples <- fitted.msPGOcc(object)
-    } else {
-      y.rep.samples <- fitted.spMsPGOcc(object)
-    }
+    # Fitted function is the same for all multispecies object types. 
+    y.rep.samples <- fitted.msPGOcc(object)
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
     # Get detection probability

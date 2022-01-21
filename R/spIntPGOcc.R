@@ -488,7 +488,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         stop("error: initial values for phi must be of length 1")
       }
     } else {
-      phi.inits <- runif(1, lower.unif, upper.unif)
+      phi.inits <- runif(1, phi.a, phi.b)
       if (verbose) {
         message("phi is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
       }

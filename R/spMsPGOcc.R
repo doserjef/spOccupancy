@@ -703,7 +703,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       phi.inits <- rep(phi.inits, N)
     }
   } else {
-    phi.inits <- runif(N, lower.unif, upper.unif)
+    phi.inits <- runif(N, phi.a, phi.b)
     if (verbose) {
       message("phi is not specified in initial values.\nSetting initial value to random values from the prior distribution\n")
     }
@@ -923,7 +923,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
 	        		      sqrt(tau.sq.alpha.inits)), N, p.det)
           sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-          phi.inits <- runif(N, lower.unif, upper.unif)
+          phi.inits <- runif(N, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(1, nu.a, nu.b)
           }
@@ -1302,7 +1302,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
 	        		      sqrt(tau.sq.alpha.inits)), N, p.det)
           sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-          phi.inits <- runif(N, lower.unif, upper.unif)
+          phi.inits <- runif(N, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(1, nu.a, nu.b)
           }
@@ -1754,7 +1754,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
 	        		      sqrt(tau.sq.alpha.inits)), N, p.det)
           sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-          phi.inits <- runif(N, lower.unif, upper.unif)
+          phi.inits <- runif(N, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(1, nu.a, nu.b)
           }
@@ -2188,7 +2188,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
 	        		      sqrt(tau.sq.alpha.inits)), N, p.det)
           sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-          phi.inits <- runif(N, lower.unif, upper.unif)
+          phi.inits <- runif(N, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(1, nu.a, nu.b)
           }

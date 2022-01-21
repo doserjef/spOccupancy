@@ -313,4 +313,49 @@ extern "C" {
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
       	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
 
+  SEXP lfMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XpRE_r, SEXP lambdaP_r, 
+		 SEXP pocc_r, SEXP pdet_r, SEXP pDetRE_r, 
+	         SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP N_r, 
+		 SEXP nDetRE_r, SEXP nDetRELong_r, SEXP q_r,  
+		 SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
+		 SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
+		 SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
+		 SEXP lambdaStarting_r, SEXP sigmaSqPStarting_r, SEXP alphaStarStarting_r,
+		 SEXP zLongIndx_r, SEXP alphaStarIndx_r, 
+		 SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+	         SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
+	         SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
+		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+		 SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+		 SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		 SEXP nChain_r);
+
+  SEXP sfMsPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XpRE_r, 
+		     SEXP lambdaP_r, SEXP pocc_r, SEXP pdet_r, SEXP pDetRE_r, 
+	             SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP N_r, SEXP nDetRE_r, 
+		     SEXP nDetRELong_r, SEXP q_r, SEXP m_r, SEXP nnIndx_r, 
+		     SEXP nnIndxLU_r, SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r, 
+		     SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
+		     SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
+		     SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
+		     SEXP phiStarting_r, SEXP lambdaStarting_r, SEXP nuStarting_r, 
+		     SEXP sigmaSqPStarting_r, SEXP alphaStarStarting_r, SEXP zLongIndx_r,
+		     SEXP alphaStarIndx_r, SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+	             SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
+	             SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, SEXP phiA_r, 
+		     SEXP phiB_r, SEXP nuA_r, SEXP nuB_r, 
+		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
+		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+		     SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, 
+		     SEXP nChain_r);
+
+  SEXP sfMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, SEXP q_r,
+		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
+			    SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+			    SEXP thetaSamples_r, SEXP lambdaSamples_r, 
+			    SEXP wSamples_r, SEXP nSamples_r, 
+			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+			    SEXP nReport_r);
+
 }

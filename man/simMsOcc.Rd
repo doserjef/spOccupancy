@@ -3,12 +3,13 @@
 \title{Simulate Multi-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simMsOcc} simulates multi-species detection-nondetection data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
+  The function \code{simMsOcc} simulates multi-species detection-nondetection data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model, as well as an option to allow for species correlations using a factor modeling approach. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
 simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
-         p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
+         p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, 
+	 factor.model = FALSE, n.factors, ...)
 }
 
 \arguments{
@@ -38,6 +39,10 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 \item{phi}{a numeric vector of length \eqn{N}{N} containing the spatial range parameter for each species. Ignored when \code{sp = FALSE}.}
 
 \item{nu}{a numeric vector of length \eqn{N}{N} containing the spatial smoothness parameter for each species. Only used when \code{sp = TRUE} and \code{cov.model = 'matern'}.} 
+
+\item{factor.model}{a logical value indicating whether to simulate data following a factor modeling approach that explicitly incoporates species correlations. If \code{sp = TRUE}, the latent factors are simulated from independent spatial processes. If \code{sp = FALSE}, the latent factors are simulated from standard normal distributions.}
+
+\item{n.factors}{a single numeric value specifying the number of latent factors to use to simulate the data if \code{factor.model = TRUE}.}
 
 \item{...}{currently no additional arguments}
 }
