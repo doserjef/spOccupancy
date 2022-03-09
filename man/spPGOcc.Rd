@@ -42,7 +42,9 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
     observation-level covariates are specified 
     as a matrix or data frame with the number of rows equal to \eqn{J}{J} and 
     number of columns equal to the maximum number of replicates at a given site. 
-    \code{coords} is a \eqn{J \times 2}{J x 2} matrix of the observation coordinates.}
+    \code{coords} is a \eqn{J \times 2}{J x 2} matrix of the observation coordinates. 
+    Note that \code{spOccupancy} assumes coordinates are specified 
+    in a projected coordinate system.}
   
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, 
@@ -278,7 +280,7 @@ data.list <- list(y = y,
 		  coords = coords)
 
 # Number of batches
-n.batch <- 40
+n.batch <- 10
 # Batch length
 batch.length <- 25
 n.iter <- n.batch * batch.length
@@ -305,11 +307,11 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       priors = prior.list,
 	       cov.model = "exponential", 
 	       tuning = tuning.list, 
-	       NNGP = TRUE, 
+	       NNGP = FALSE, 
 	       n.neighbors = 5, 
 	       search.type = 'cb', 
 	       n.report = 10, 
-	       n.burn = 500, 
+	       n.burn = 50, 
 	       n.chains = 1)
 
 summary(out)

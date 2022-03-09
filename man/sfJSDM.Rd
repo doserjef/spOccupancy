@@ -1,48 +1,37 @@
-\name{sfMsPGOcc}
-\alias{sfMsPGOcc}
-\title{Function for Fitting Multi-Species Spatial Occupancy Models with Species Correlations}
+\name{sfJSDM}
+\alias{sfJSDM}
+\title{Function for Fitting a Spatially-Explicit Joint Species Distribution Model}
 
 \description{
-  The function \code{sfMsPGOcc} fits multi-species spatial occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using full Gaussian Processes. 
-}
-
+  The function \code{sfJSDM} fits a spatially-explicit joint species distribution model. This model does not explicitly account for imperfect detection (see \code{sfMsPGOcc}). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using full Gaussian Process.}
+  
 \usage{
-sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-          cov.model = 'exponential', NNGP = TRUE, 
-          n.neighbors = 15, search.type = 'cb', n.factors, n.batch, 
-          batch.length, accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, n.report = 100, 
-          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
+sfJSDM(formula, data, inits, priors, tuning, 
+       cov.model = 'exponential', NNGP = TRUE, 
+       n.neighbors = 15, search.type = 'cb', n.factors, n.batch, 
+       batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+       verbose = TRUE, n.report = 100, 
+       n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
 }
 
 \arguments{
 
-  \item{occ.formula}{a symbolic description of the model to be fit
-    for the occurrence portion of the model using R's model syntax. Only
-    right-hand side of formula is specified. See example below.}
+  \item{formula}{a symbolic description of the model to be fit
+    for the model using R's model syntax. Only right-hand side of formula 
+    is specified. See example below. Random intercepts are allowed 
+    using \pkg{lme4} syntax (Bates et al. 2015).}
   
-  \item{det.formula}{a symbolic description of the model to be fit
-    for the detection portion of the model using R's model syntax. Only
-    right-hand side of formula is specified. See example below. Random 
-    intercepts are allowed using lme4 syntax (Bates et al. 2015).}
-
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, \code{coords}. 
-    \code{y} is a three-dimensional array with first dimension equal to the 
-    number of species, second dimension equal to the number of sites, and 
-    third dimension equal to the maximum number of replicates at a given site. 
-    \code{occ.covs} is a matrix or data frame containing the variables 
-    used in the occurrence portion of the model, with \eqn{J}{J} rows for 
-    each column (variable). \code{det.covs} is a list of variables included 
-    in the detection portion of the model. Each list element is a different 
-    detection covariate, which can be site-level or observational-level. 
-    Site-level covariates are specified as a vector of length \eqn{J}{J} while 
-    observation-level covariates are specified as a matrix or data frame 
-    with the number of rows equal to \eqn{J}{J} and number of columns equal 
-    to the maximum number of replicates at a given site. \code{coords} is a 
-    \eqn{J \times 2}{J x 2} matrix of the observation coordinates. Note that 
-    \code{spOccupancy} assumes coordinates are specified in a projected coordinate system.}
+    Valid tags are \code{y}, \code{covs}, and \code{coords}. \code{y}
+    is a two-dimensional array with first dimension equal to the number 
+    of species and second dimension equal to the number of sites. 
+    \code{covs} is a matrix or data frame containing the variables 
+    used in the model, with \eqn{J}{J} rows for 
+    each column (variable). \code{coords} is a matrix with \eqn{J}{J} 
+    rows and 2 columns consisting of the spatial coordinates of each site in 
+    the data. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
@@ -53,10 +42,9 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     of each parameter name.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
-  Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
-  (\code{alpha.comm}) regression coefficients are assumed to follow a 
+  Valid tags are \code{beta.comm.normal}, \code{tau.sq.beta.ig}, \code{phi.unif}, 
+  and \code{nu.unif}. Community-level occurrence (\code{beta.comm})
+  regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
   corresponding to the mean and variance of the normal distribution, 
@@ -64,8 +52,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   coefficients to be estimated or of length one if priors are the same for 
   all coefficients. If not specified, prior means are set 
   to 0 and prior variances set to 2.73. Community-level variance parameters 
-  for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
-  assumed to follow an inverse Gamma distribution. The hyperparameters of 
+  (\code{tau.sq.beta}) are assumed to follow an 
+  inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
   the first and second elements corresponding to the shape and scale parameters,
   which are each specified as vectors of length equal to the number of 
@@ -230,25 +218,16 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \value{
-  An object of class \code{sfMsPGOcc} that is a list comprised of: 
+  An object of class \code{sfJSDM} that is a list comprised of: 
 
   \item{beta.comm.samples}{a \code{coda} object of posterior samples
     for the community level occurrence regression coefficients.}
   
-  \item{alpha.comm.samples}{a \code{coda} object of posterior samples
-    for the community level detection regression coefficients.}
-
   \item{tau.sq.beta.samples}{a \code{coda} object of posterior samples
     for the occurrence community variance parameters.}
 
-  \item{tau.sq.alpha.samples}{a \code{coda} object of posterior samples
-    for the detection community variance parameters.}
-
   \item{beta.samples}{a \code{coda} object of posterior samples
     for the species level occurrence regression coefficients.}
-
-  \item{alpha.samples}{a \code{coda} object of posterior samples
-    for the species level detection regression coefficients.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
     for the species level correlation parameters.}
@@ -256,23 +235,20 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{lambda.samples}{a \code{coda} object of posterior samples
     for the latent spatial factor loadings.}
 
-  \item{z.samples}{a three-dimensional array of posterior samples for
-    the latent occurrence values for each species.}
-
   \item{psi.samples}{a three-dimensional array of posterior samples for
-    the latent occupancy probability values for each species.}
+    the latent occurrence probability values for each species.}
 
   \item{w.samples}{a three-dimensional array of posterior samples for 
     the latent spatial random effects for each latent factor.}
 
-  \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
-    for variances of random intercpets included in the detection portion 
+  \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
+    for variances of random intercepts included in the occurrence portion
     of the model. Only included if random intercepts are specified in 
-    \code{det.formula}.}
+    \code{formula}.}
 
-  \item{alpha.star.samples}{a \code{coda} object of posterior samples
-    for the detection random effects. Only included if random intercepts 
-    are specified in \code{det.formula}.}
+  \item{beta.star.samples}{a \code{coda} object of posterior samples
+    for the occurrence random effects. Only included if random intercepts
+    are specified in \code{formula}.}
 
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
@@ -285,30 +261,27 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \examples{
-set.seed(400)
-
-# Simulate Data -----------------------------------------------------------
-J.x <- 7
-J.y <- 7
+#set.seed(408)
+J.x <- 10
+J.y <- 10
 J <- J.x * J.y
-n.rep <- sample(2:4, size = J, replace = TRUE)
-N <- 8
+n.rep <- rep(1, J) 
+N <- 10
 # Community-level covariate effects
 # Occurrence
-beta.mean <- c(0.2, -0.15)
+beta.mean <- c(0.2, 1.3, 0.5)
 p.occ <- length(beta.mean)
-tau.sq.beta <- c(0.6, 0.3)
+tau.sq.beta <- c(0.6, .5, 1.6)
 # Detection
-alpha.mean <- c(0.5, 0.2, -.2)
-tau.sq.alpha <- c(0.2, 0.3, 0.8)
+# Fix this to be constant and really close to 1. 
+alpha.mean <- c(9)
+tau.sq.alpha <- c(0.05)
 p.det <- length(alpha.mean)
 # Random effects
 psi.RE <- list()
-psi.RE <- list(levels = c(20),
- 	       sigma.sq.psi = c(0.5))
+psi.RE <- list(levels = c(50), 
+ 	       sigma.sq.psi = c(1.5))
 p.RE <- list()
-p.RE <- list(levels = c(40, 10),
-	     sigma.sq.p = c(2, 0.5))
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
@@ -318,80 +291,53 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
+alpha.true <- alpha
+# Factor model
+factor.model <- TRUE
 n.factors <- 4
-phi <- runif(n.factors, 3/1, 3/.4)
+sigma.sq <- rep(1, n.factors)
+phi <- rep(3/.4, n.factors)
+sp <- TRUE
+cov.model <- "exponential"
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-                phi = phi, sp = TRUE, cov.model = 'exponential', 
-		factor.model = TRUE, n.factors = n.factors, psi.RE = psi.RE, 
-                p.RE = p.RE)
+	        psi.RE = psi.RE, p.RE = p.RE, sp = sp, sigma.sq = sigma.sq, 
+		phi = phi, cov.model = cov.model, factor.model = TRUE, n.factors = n.factors)
 
-# Number of batches
-n.batch <- 10
-# Batch length
-batch.length <- 25
-n.samples <- n.batch * batch.length
-
-y <- dat$y
 X <- dat$X
-X.p <- dat$X.p
-X.p.re <- dat$X.p.re
+y <- dat$y
+coords <- dat$coords
 X.re <- dat$X.re
-coords <- as.matrix(dat$coords)
 
-# Package all data into a list
-occ.covs <- cbind(X, X.re)
-colnames(occ.covs) <- c('int', 'occ.cov', 'occ.re')
-det.covs <- list(det.cov.1 = X.p[, , 2], 
-                 det.cov.2 = X.p[, , 3], 
-                 det.re = X.p.re[, , 1])
-data.list <- list(y = y, 
-                  occ.covs = occ.covs,
-                  det.covs = det.covs, 
-                  coords = coords)
+occ.covs <- data.frame(X, X.re)
+occ.covs$X.re <- occ.covs$X.re
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.re.1')
+data.list <- list(y = y[, , 1], 
+		  covs = occ.covs, 
+		  coords = coords)
 # Priors
-prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-                   alpha.comm.normal = list(mean = 0, var = 2.72), 
-                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-                   phi.unif = list(a = 3/1, b = 3/.1)) 
-# Initial values
-lambda.inits <- matrix(0, N, n.factors)
-diag(lambda.inits) <- 1
-lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   phi.unif = list(a = 3 / 1, b = 3 / .1))
+inits.list <- list(beta.comm = 0, 
+		   beta = 0, 
+		   tau.sq.beta = 1, 
+		   phi = 3 / .5) 
+tuning.list <- list(phi = 1)
 
-inits.list <- list(alpha.comm = 0, 
-                   beta.comm = 0, 
-                   beta = 0, 
-                   alpha = 0,
-                   tau.sq.beta = 1, 
-                   tau.sq.alpha = 1, 
-                   phi = 3 / .5, 
-		   lambda = lambda.inits,
-                   z = apply(y, c(1, 2), max, na.rm = TRUE))
-# Tuning
-tuning.list <- list(phi = 1) 
-
-out <- sfMsPGOcc(occ.formula = ~ occ.cov + (1 | occ.re), 
-                 det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.re), 
-                 data = data.list,
-                 inits = inits.list, 
-                 n.batch = n.batch, 
-                 batch.length = batch.length, 
-                 accept.rate = 0.43, 
-                 priors = prior.list, 
-                 cov.model = "exponential", 
-                 tuning = tuning.list, 
-                 n.omp.threads = 1, 
-                 verbose = TRUE, 
-                 NNGP = TRUE, 
-                 n.neighbors = 5, 
-		 n.factors = n.factors,
-                 search.type = 'cb', 
-                 n.report = 10, 
-                 n.burn = 50, 
-                 n.thin = 1, 
-		 n.chains = 1)
-
-summary(out)
+out <- sfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1), 
+              data = data.list, 
+              inits = inits.list, 
+              priors = prior.list, 
+              tuning = tuning.list, 
+              cov.model = 'spherical', 
+              NNGP = TRUE, 
+              n.neighbors = 5,
+              n.factors = 4, 
+              n.batch = 10, 
+              batch.length = 25, 
+              n.report = 250, 
+              n.burn = 50,
+              n.thin = 2,
+              n.chains = 1) 
 }

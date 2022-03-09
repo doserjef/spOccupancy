@@ -18,8 +18,8 @@ extern "C" {
 		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			    SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			    SEXP thetaSamples_r, SEXP lambdaSamples_r, 
-			    SEXP wSamples_r, SEXP nSamples_r, 
-			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+			    SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
+			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
 			    SEXP nReport_r){
 
     int i, j, k, l, s, info, nProtect=0, ll;
@@ -52,6 +52,7 @@ extern "C" {
     double *theta = REAL(thetaSamples_r);
     double *lambda = REAL(lambdaSamples_r);
     double *w = REAL(wSamples_r);
+    double *betaStarSite = REAL(betaStarSiteSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -206,7 +207,7 @@ extern "C" {
       for (s = 0; s < nSamples; s++) {
           F77_NAME(dgemv)(ntran, &N, &q, &one, &lambda[s * Nq], &N, &w0[s * JStrq + j*q], &inc, &zero, &w0Star[s * JStrN + j * N], &inc);
 	  for (i = 0; i < N; i++) {
-	    psi0[s * JStrN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &JStr, &beta[s*pOccN + i], &N) + w0Star[s * JStrN + j * N + i], zero, one);
+	    psi0[s * JStrN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &JStr, &beta[s*pOccN + i], &N) + w0Star[s * JStrN + j * N + i] + betaStarSite[s*JStrN + j * N + i], zero, one);
 	    z0[s * JStrN + j * N + i] = rbinom(one, psi0[s * JStrN + j * N + i]);
 	  } // i
       } // s

@@ -17,6 +17,7 @@ extern "C" {
   SEXP spPGOccPredict(SEXP J_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
 		      SEXP thetaSamples_r, SEXP wSamples_r, 
+		      SEXP betaStarSiteSamples_r,
 		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
 		      SEXP verbose_r, SEXP nReport_r){
     
@@ -47,6 +48,7 @@ extern "C" {
     double *betaSamples = REAL(betaSamples_r);
     double *thetaSamples = REAL(thetaSamples_r);
     double *wSamples = REAL(wSamples_r);
+    double *betaStarSite = REAL(betaStarSiteSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -131,11 +133,11 @@ extern "C" {
       phi = thetaSamples[s * nTheta + phiIndx]; 
       if (corName == "matern") {
         nu = thetaSamples[s * nTheta + nuIndx]; 
+        theta[nuIndx] = nu; 
       }
       sigmaSq = thetaSamples[s * nTheta + sigmaSqIndx]; 
       theta[sigmaSqIndx] = sigmaSq; 
       theta[phiIndx] = phi; 
-      theta[nuIndx] = nu; 
 
       // Get covariance matrices
       spCov(obsD, JJ, theta, corName, S_obs); 
@@ -158,7 +160,7 @@ extern "C" {
 	F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc);
         tmp_one2[0] = sigmaSq - tmp_one2[0];
 	w0[s * q + j] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
-	psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j], zero, one); 
+	psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j] + betaStarSite[s * q + j], zero, one); 
 	z0[s * q + j] = rbinom(one, psi0[s * q + j]);
       }
 

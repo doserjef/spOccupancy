@@ -1,21 +1,26 @@
 # Test spMsPGOcc.R  -------------------------------------------------------
 # NNGP --------------------------------------------------------------------
+
 skip_on_cran()
-set.seed(101)
-J.x <- 7
-J.y <- 7
+
+# Intercept Only ----------------------------------------------------------
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
-n.rep <- sample(2:4, size = J, replace = TRUE)
-N <- 5
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
 # Community-level covariate effects
 # Occurrence
-beta.mean <- c(0.2, -0.15)
+beta.mean <- c(0.2)
 p.occ <- length(beta.mean)
-tau.sq.beta <- c(0.6, 0.3)
+tau.sq.beta <- c(0.6)
 # Detection
-alpha.mean <- c(0.5, 0.2, -.2)
-tau.sq.alpha <- c(0.2, 0.3, 0.8)
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
 p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
@@ -25,63 +30,60 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
-phi <- runif(N, 3/1, 3/.4)
-sigma.sq <- runif(N, 0.3, 3)
-sp <- TRUE
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-                phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential')
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
 
-# Number of batches
-n.batch <- 40
-# Batch length
-batch.length <- 25
-n.samples <- n.batch * batch.length
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
 
-y <- dat$y
-X <- dat$X
-X.p <- dat$X.p
-coords <- as.matrix(dat$coords)
 
-# Package all data into a list
-occ.covs <- X[, 2, drop = FALSE]
-colnames(occ.covs) <- c('occ.cov')
-det.covs <- list(det.cov.1 = X.p[, , 2], 
-                 det.cov.2 = X.p[, , 3])
-data.list <- list(y = y, 
-                  occ.covs = occ.covs,
-                  det.covs = det.covs, 
-                  coords = coords)
+data.list <- list(y = y, coords = coords)
 # Priors
-prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-                   alpha.comm.normal = list(mean = 0, var = 2.72), 
-                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-                   phi.unif = list(a = 3/1, b = 3/.1), 
-                   sigma.sq.ig = list(a = 2, b = 2)) 
-# Initial values
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
 inits.list <- list(alpha.comm = 0, 
-                   beta.comm = 0, 
-                   beta = 0, 
-                   alpha = 0,
-                   tau.sq.beta = 1, 
-                   tau.sq.alpha = 1, 
-                   phi = 3 / .5, 
-                   sigma.sq = 2,
-                   w = matrix(0, nrow = N, ncol = nrow(X)),
-                   z = apply(y, c(1, 2), max, na.rm = TRUE))
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
 # Tuning
-tuning.list <- list(phi = 1) 
+tuning.list <- list(phi = 1, nu = 0.25)
 
-out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                 det.formula = ~ det.cov.1 + det.cov.2, 
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1
+det.formula <- ~ 1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
                  data = data.list,
                  inits = inits.list, 
                  n.batch = n.batch, 
                  batch.length = batch.length, 
                  accept.rate = 0.43, 
                  priors = prior.list, 
-                 cov.model = "exponential", 
+                 cov.model = "matern", 
                  tuning = tuning.list, 
                  n.omp.threads = 1, 
                  verbose = FALSE, 
@@ -89,66 +91,55 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
-                 n.thin = 1, 
-		 n.chains = 1)
-n.post.samples <- length(seq(from = out$n.burn + 1, 
-			     to = n.samples, 
-			     by = as.integer(out$n.thin))) * out$n.chains
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
 
+# To make sure it worked --------------
 test_that("out is of class spMsPGOcc", {
   expect_s3_class(out, "spMsPGOcc")
 })
 
-test_that("samples are the right size", {
-  n.post.samples <- length(seq(from = out$n.burn + 1, 
-			       to = out$n.samples, 
-			       by = as.integer(out$n.thin))) * out$n.chains
-  expect_equal(dim(out$beta.comm.samples), c(n.post.samples, length(beta.mean)))
-  expect_equal(dim(out$alpha.comm.samples), c(n.post.samples, length(alpha.mean)))
-  expect_equal(dim(out$beta.samples), c(n.post.samples, length(beta)))
-  expect_equal(dim(out$alpha.samples), c(n.post.samples, length(alpha)))
-  expect_equal(dim(out$z.samples), c(n.post.samples, N, J))
-  expect_equal(dim(out$psi.samples), c(n.post.samples, N, J))
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
 })
 
-test_that("random effects are empty", {
+# Check random effects ----------------
+test_that("random effects are correct", {
   expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
 })
 
+# Check output data output is correct -
 test_that("out$y == y", {
-  expect_equal(out$y, dat$y)
+  expect_equal(out$y, y)
 })
 
-test_that("default priors and inits work", {
-
-  set.seed(1010)
-  out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                   det.formula = ~ det.cov.1 + det.cov.2, 
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
                    data = data.list,
-                   #inits = inits.list, 
                    n.batch = n.batch, 
                    batch.length = batch.length, 
                    accept.rate = 0.43, 
-                   #priors = prior.list, 
                    cov.model = "exponential", 
                    tuning = tuning.list, 
-                   n.omp.threads = 1, 
-                   verbose = TRUE, 
-                   NNGP = TRUE, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
                    n.neighbors = 5, 
-                   search.type = 'cb', 
-                   n.report = 10, 
-                   n.burn = 500, 
-                   n.thin = 1, 
-		   n.chains = 2)
+		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
 
 test_that("all correlation functions work", {
-  set.seed(555)
-  out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                   det.formula = ~ det.cov.1 + det.cov.2, 
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
                    data = data.list,
                    inits = inits.list, 
                    n.batch = n.batch, 
@@ -168,9 +159,8 @@ test_that("all correlation functions work", {
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 
-  set.seed(557)
-  out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                   det.formula = ~ det.cov.1 + det.cov.2, 
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
                    data = data.list,
                    inits = inits.list, 
                    n.batch = n.batch, 
@@ -189,9 +179,9 @@ test_that("all correlation functions work", {
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
-  set.seed(556)
-  out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                   det.formula = ~ det.cov.1 + det.cov.2, 
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
                    data = data.list,
                    inits = inits.list, 
                    n.batch = n.batch, 
@@ -214,9 +204,8 @@ test_that("all correlation functions work", {
 
 test_that("verbose prints to the screen", {
 
-  set.seed(1010)		  
-  expect_output(spMsPGOcc(occ.formula = ~ occ.cov, 
-                 det.formula = ~ det.cov.1 + det.cov.2, 
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
                  data = data.list,
                  inits = inits.list, 
                  n.batch = n.batch, 
@@ -233,136 +222,10 @@ test_that("verbose prints to the screen", {
                  n.report = 10, 
                  n.burn = 500, 
                  n.thin = 1, 
-		 n.chains = 2))
+		 n.chains = 1))
 })
 
-test_that("cross-validation works", {
-  set.seed(117) 
-  out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-                   det.formula = ~ det.cov.1 + det.cov.2, 
-                   data = data.list,
-                   inits = inits.list, 
-                   n.batch = n.batch, 
-                   batch.length = batch.length, 
-                   accept.rate = 0.43, 
-                   priors = prior.list, 
-                   cov.model = "exponential", 
-                   tuning = tuning.list, 
-                   n.omp.threads = 1, 
-                   verbose = FALSE, 
-                   NNGP = TRUE, 
-                   n.neighbors = 5, 
-                   search.type = 'cb', 
-                   n.report = 10, 
-                   n.burn = 500, 
-                   n.thin = 1, 
-		   n.chains = 2, 
-		   k.fold = 2)
-
-  expect_equal(length(out$k.fold.deviance), N)
-  expect_type(out$k.fold.deviance, "double")
-  expect_equal(sum(out$k.fold.deviance < 0), 0)
-})
-
-test_that("random effects on detection work", {
-  set.seed(500)
-  J.x <- 8
-  J.y <- 8
-  J <- J.x * J.y
-  n.rep<- sample(2:4, size = J, replace = TRUE)
-  N <- 6
-  # Community-level covariate effects
-  # Occurrence
-  beta.mean <- c(0.2)
-  p.occ <- length(beta.mean)
-  tau.sq.beta <- c(0.6)
-  # Detection
-  alpha.mean <- c(0)
-  tau.sq.alpha <- c(1)
-  p.det <- length(alpha.mean)
-  # Random effects
-  psi.RE <- list()
-  p.RE <- list(levels = c(45), 
-  	     sigma.sq.p = c(1.2))
-  # Draw species-level effects from community means.
-  beta <- matrix(NA, nrow = N, ncol = p.occ)
-  alpha <- matrix(NA, nrow = N, ncol = p.det)
-  for (i in 1:p.occ) {
-    beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
-  }
-  for (i in 1:p.det) {
-    alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
-  }
-  alpha.true <- alpha
-  phi <- rep(3 / .7, N)
-  sigma.sq <- rep(2, N)
-  
-  dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-  	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
-  		phi = phi, cov.model = 'exponential')
-  y <- dat$y
-  X <- dat$X
-  X.p <- dat$X.p
-  X.p.re <- dat$X.p.re
-  coords <- as.matrix(dat$coords)
-  
-  det.covs <- list(det.factor = X.p.re[, , 1])
-  data.list <- list(y = y, coords = coords, det.covs = det.covs)
-  # Priors
-  prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-  		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-  		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-  		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1)) 
-  # Starting values
-  inits.list <- list(alpha.comm = 0, 
-  		      beta.comm = 0, 
-  		      beta = 0, 
-  		      alpha = 0,
-  		      tau.sq.beta = 1, 
-  		      tau.sq.alpha = 1, 
-  		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
-  # Tuning
-  tuning.list <- list(phi = 1, nu = 1)
-  
-  batch.length <- 25
-  n.batch <- 40
-  n.report <- 100
-
-
-  out <- spMsPGOcc(occ.formula = ~ 1,
-	         det.formula = ~ (1 | det.factor),
-	         data = data.list,
-	         inits = inits.list,
-		 batch.length = batch.length,
-		 n.batch = n.batch,
-	         priors = prior.list,
-		 accept.rate = 0.43,
-		 cov.model = 'exponential',
-		 tuning = tuning.list,
-	         n.omp.threads = 1,
-	         verbose = FALSE,
-		 NNGP = TRUE, 
-		 n.neighbors = 5,
-	         n.report = n.report,
-	         n.burn = 400,
-	         n.thin = 6, 
-		 n.chains = 2,
-	         k.fold = 2, 
-	         k.fold.threads = 2)
-
-  n.post.samples <- length(seq(from = out$n.burn + 1, 
-			       to = n.samples, 
-			       by = as.integer(out$n.thin))) * out$n.chains
-  expect_s3_class(out, "spMsPGOcc")
-  expect_equal(out$pRE, TRUE)
-  expect_equal(dim(out$sigma.sq.p.samples), c(n.post.samples, length(p.RE$sigma.sq.p)))
-  expect_equal(length(out$k.fold.deviance), N)
-  expect_type(out$k.fold.deviance, "double")
-  expect_equal(sum(out$k.fold.deviance < 0), 0)
-})
-
-
-# For helper functions ----------------------------------------------------
+# Check waicOcc -----------------------
 test_that("waicOCC works for spMsPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
@@ -372,20 +235,23 @@ test_that("waicOCC works for spMsPGOcc", {
 
 test_that("fitted works for spMsPGOcc", {
   fitted.out <- fitted(out)
-  expect_equal(class(fitted.out), "array")
-  expect_equal(dim(fitted.out), c(n.post.samples, N, J, max(n.rep)))
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
 })
 
 test_that("predict works for spMsPGOcc", {
-  X.0 <- rbind(dat$X, matrix(c(1, rnorm(p.occ - 1)), nrow = 1))
-  coords.0 <- rbind(dat$coords, matrix(c(0.538, 0.201), nrow = 1))
+  n.post.samples <- out$n.post * out$n.chains
   pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
   expect_type(pred.out, "list")
-  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J + 1))
-  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J + 1))
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
 })
 
-test_that("posterior predictive checks work for spMsPGOcc", {
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
   ppc.out <- ppcOcc(out, 'chi-square', 2)
   expect_type(ppc.out, "list")
   expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
@@ -397,15 +263,15 @@ test_that("posterior predictive checks work for spMsPGOcc", {
   expect_type(ppc.out, "list")
   expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
   expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
-  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J))
-  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
   
   ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
   expect_type(ppc.out, "list")
   expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
   expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
-  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J))
-  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
   
   ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
   expect_type(ppc.out, "list")
@@ -414,3 +280,5603 @@ test_that("posterior predictive checks work for spMsPGOcc", {
   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
 })
+
+# Occurrence coviarate only -----------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 0.5)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 2.3)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- X
+colnames(occ.covs) <- c('int', 'occ.cov.1')
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1
+det.formula <- ~ 1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+	               det.formula = det.formula,
+	               data = tmp.data,
+	               n.batch = 40,
+	               batch.length = batch.length,
+	               cov.model = "exponential",
+	               tuning = tuning.list,
+	               NNGP = TRUE,
+	               verbose = FALSE,
+	               n.neighbors = 5,
+	               search.type = 'cb',
+	               n.report = 10,
+	               n.burn = 500,
+	               n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$det.covs[[1]][1] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                      det.formula = det.formula,
+  #                      data = tmp.data,
+  #                      n.batch = 40,
+  #                      batch.length = batch.length,
+  #                      cov.model = "exponential",
+  #                      tuning = tuning.list,
+  #                      NNGP = TRUE,
+  #                      verbose = FALSE,
+  #                      n.neighbors = 5,
+  #                      search.type = 'cb',
+  #                      n.report = 10,
+  #                      n.burn = 500,
+  #                      n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$y[, 1, 1] <- NA
+  # out <- spMsPGOcc(occ.formula = occ.formula,
+  #                det.formula = det.formula,
+  #                data = tmp.data,
+  #                n.batch = 40,
+  #                batch.length = batch.length,
+  #                cov.model = "exponential",
+  #                tuning = tuning.list,
+  #                NNGP = TRUE,
+  #                verbose = FALSE,
+  #                n.neighbors = 5,
+  #                search.type = 'cb',
+  #                n.report = 10,
+  #                n.burn = 500,
+  #                n.chains = 1)
+  # expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Detection covariate only ------------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0, -0.5)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- X
+colnames(occ.covs) <- c('int')
+det.covs <- list(det.cov.1 = X.p[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1 
+det.formula <- ~ det.cov.1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  # tmp.data <- data.list
+  # tmp.data$occ.covs[3, ] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                        det.formula = det.formula,
+  #                        data = tmp.data,
+  #                        n.batch = 40,
+  #                        batch.length = batch.length,
+  #                        cov.model = "exponential",
+  #                        tuning = tuning.list,
+  #                        NNGP = TRUE,
+  #                        verbose = FALSE,
+  #                        n.neighbors = 5,
+  #                        search.type = 'cb',
+  #                        n.report = 10,
+  #                        n.burn = 500,
+  #                        n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Covariates on both ------------------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 0.5, 1.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 1.5, 2.3)
+# Detection
+alpha.mean <- c(0, -0.5)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- X
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2')
+det.covs <- list(det.cov.1 = X.p[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2
+det.formula <- ~ det.cov.1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Interactions on both ----------------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 0.5, 1.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 1.5, 2.3)
+# Detection
+alpha.mean <- c(0, -0.5, 1.2)
+tau.sq.alpha <- c(1, 2.3, 1.5)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq,
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- X
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+                 det.cov.2 = X.p[, , 3])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72),
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0,
+		      beta.comm = 0,
+		      beta = 0,
+		      alpha = 0,
+		      tau.sq.beta = 1,
+		      tau.sq.alpha = 1,
+		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 * occ.cov.2
+det.formula <- ~ det.cov.1 * det.cov.2
+
+out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = data.list,
+                 inits = inits.list,
+                 n.batch = n.batch,
+                 batch.length = batch.length,
+                 accept.rate = 0.43,
+                 priors = prior.list,
+                 cov.model = "matern",
+                 tuning = tuning.list,
+                 n.omp.threads = 1,
+                 verbose = FALSE,
+                 NNGP = TRUE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 400,
+		 n.thin = 2,
+		 n.chains = 2,
+                 k.fold = 2,
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                   det.formula = det.formula,
+                   data = data.list,
+                   n.batch = n.batch,
+                   batch.length = batch.length,
+                   accept.rate = 0.43,
+                   cov.model = "exponential",
+                   tuning = tuning.list,
+                   NNGP = TRUE,
+		   verbose = FALSE,
+                   n.neighbors = 5,
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                   det.formula = det.formula,
+                   data = data.list,
+                   inits = inits.list,
+                   n.batch = n.batch,
+                   batch.length = batch.length,
+                   accept.rate = 0.43,
+                   priors = prior.list,
+                   cov.model = "gaussian",
+                   tuning = list(phi = 0.3),
+                   n.omp.threads = 1,
+                   verbose = FALSE,
+                   NNGP = TRUE,
+                   n.neighbors = 5,
+                   search.type = 'cb',
+                   n.report = 10,
+                   n.burn = 500,
+                   n.thin = 1,
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                   det.formula = det.formula,
+                   data = data.list,
+                   inits = inits.list,
+                   n.batch = n.batch,
+                   batch.length = batch.length,
+                   accept.rate = 0.43,
+                   priors = prior.list,
+                   cov.model = "spherical",
+                   tuning = list(phi = 0.3),
+                   n.omp.threads = 1,
+                   verbose = FALSE,
+                   NNGP = TRUE,
+                   n.neighbors = 5,
+                   search.type = 'cb',
+                   n.report = 10,
+                   n.burn = 500,
+                   n.thin = 1,
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                   det.formula = det.formula,
+                   data = data.list,
+                   inits = inits.list,
+                   n.batch = n.batch,
+                   batch.length = batch.length,
+                   accept.rate = 0.43,
+                   priors = list(nu.unif = list(0.4, 3)),
+                   cov.model = "matern",
+                   tuning = list(phi = 0.3, nu = 0.2),
+                   n.omp.threads = 1,
+                   verbose = FALSE,
+                   NNGP = TRUE,
+                   n.neighbors = 5,
+                   search.type = 'cb',
+                   n.report = 10,
+                   n.burn = 500,
+                   n.thin = 1,
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = data.list,
+                 inits = inits.list,
+                 n.batch = n.batch,
+                 batch.length = batch.length,
+                 accept.rate = 0.43,
+                 priors = prior.list,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 n.omp.threads = 1,
+                 verbose = TRUE,
+                 NNGP = TRUE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.thin = 1,
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.0[, 2] * X.0[, 3])
+  colnames(X.0) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.cov.1:occ.cov.2')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Site covariate on detection ---------------------------------------------
+set.seed(400)
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 0.5, 1.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 1.5, 2.3)
+# Detection
+alpha.mean <- c(0, -0.5)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- X
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+                 occ.cov.1 = X[, 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1
+det.formula <- ~ occ.cov.1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  # tmp.data <- data.list
+  # tmp.data$occ.covs[3, ] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                        det.formula = det.formula,
+  #                        data = tmp.data,
+  #                        n.batch = 40,
+  #                        batch.length = batch.length,
+  #                        cov.model = "exponential",
+  #                        tuning = tuning.list,
+  #                        NNGP = TRUE,
+  #                        verbose = FALSE,
+  #                        n.neighbors = 5,
+  #                        search.type = 'cb',
+  #                        n.report = 10,
+  #                        n.burn = 500,
+  #                        n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[2]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- X.0[, 1, drop = FALSE]
+  colnames(X.0) <- c('int')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Random intercept on occurrence -------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(45), 
+               sigma.sq.psi = c(1.3))
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.factor.1')
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ (1 | occ.factor.1)
+det.formula <- ~ 1 
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  # data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$det.covs[[1]][1] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                      det.formula = det.formula,
+  #                      data = tmp.data,
+  #                      n.batch = 40,
+  #                      batch.length = batch.length,
+  #                      cov.model = "exponential",
+  #                      tuning = tuning.list,
+  #                      NNGP = TRUE,
+  #                      verbose = FALSE,
+  #                      n.neighbors = 5,
+  #                      search.type = 'cb',
+  #                      n.report = 10,
+  #                      n.burn = 500,
+  #                      n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$y[, 1, 1] <- NA
+  # out <- spMsPGOcc(occ.formula = occ.formula,
+  #                det.formula = det.formula,
+  #                data = tmp.data,
+  #                n.batch = 40,
+  #                batch.length = batch.length,
+  #                cov.model = "exponential",
+  #                tuning = tuning.list,
+  #                NNGP = TRUE,
+  #                verbose = FALSE,
+  #                n.neighbors = 5,
+  #                search.type = 'cb',
+  #                n.report = 10,
+  #                n.burn = 500,
+  #                n.chains = 1)
+  # expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.factor.1')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Multiple random intercepts on occurrence --------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(45, 20), 
+               sigma.sq.psi = c(1.3, 3.4))
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.factor.1', 'occ.factor.2')
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ (1 | occ.factor.1) + (1 | occ.factor.2)
+det.formula <- ~ 1 
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  # data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$det.covs[[1]][1] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                      det.formula = det.formula,
+  #                      data = tmp.data,
+  #                      n.batch = 40,
+  #                      batch.length = batch.length,
+  #                      cov.model = "exponential",
+  #                      tuning = tuning.list,
+  #                      NNGP = TRUE,
+  #                      verbose = FALSE,
+  #                      n.neighbors = 5,
+  #                      search.type = 'cb',
+  #                      n.report = 10,
+  #                      n.burn = 500,
+  #                      n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$y[, 1, 1] <- NA
+  # out <- spMsPGOcc(occ.formula = occ.formula,
+  #                det.formula = det.formula,
+  #                data = tmp.data,
+  #                n.batch = 40,
+  #                batch.length = batch.length,
+  #                cov.model = "exponential",
+  #                tuning = tuning.list,
+  #                NNGP = TRUE,
+  #                verbose = FALSE,
+  #                n.neighbors = 5,
+  #                search.type = 'cb',
+  #                n.report = 10,
+  #                n.burn = 500,
+  #                n.chains = 1)
+  # expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.factor.1', 'occ.factor.2')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Occurrence REs + covariates ---------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 1.2, -1.9)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 1.5, 2.3)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(20, 10), 
+               sigma.sq.psi = c(1.3, 3.4))
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1', 'occ.factor.2')
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2 + (1 | occ.factor.1) + (1 | occ.factor.2)
+det.formula <- ~ 1 
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  # data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$det.covs[[1]][1] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                      det.formula = det.formula,
+  #                      data = tmp.data,
+  #                      n.batch = 40,
+  #                      batch.length = batch.length,
+  #                      cov.model = "exponential",
+  #                      tuning = tuning.list,
+  #                      NNGP = TRUE,
+  #                      verbose = FALSE,
+  #                      n.neighbors = 5,
+  #                      search.type = 'cb',
+  #                      n.report = 10,
+  #                      n.burn = 500,
+  #                      n.chains = 1))
+  # tmp.data <- data.list
+  # tmp.data$y[, 1, 1] <- NA
+  # out <- spMsPGOcc(occ.formula = occ.formula,
+  #                det.formula = det.formula,
+  #                data = tmp.data,
+  #                n.batch = 40,
+  #                batch.length = batch.length,
+  #                cov.model = "exponential",
+  #                tuning = tuning.list,
+  #                NNGP = TRUE,
+  #                verbose = FALSE,
+  #                n.neighbors = 5,
+  #                search.type = 'cb',
+  #                n.report = 10,
+  #                n.burn = 500,
+  #                n.chains = 1)
+  # expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1', 'occ.factor.2')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Occurrence REs + covariates in everything -------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 1.2, -1.9)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 1.5, 2.3)
+# Detection
+alpha.mean <- c(0, 1.2)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(20, 10), 
+               sigma.sq.psi = c(1.3, 3.4))
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1', 'occ.factor.2')
+det.covs <- list(det.cov.1 = X.p[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2 + (1 | occ.factor.1) + (1 | occ.factor.2)
+det.formula <- ~ det.cov.1
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  # data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1', 'occ.factor.2')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Random intercept on detection -------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list(levels = c(50), 
+	     sigma.sq.p = c(2.50))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+# X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+# X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X)
+colnames(occ.covs) <- c('int')
+det.covs <- list(det.factor.1 = X.p.re[, , 1])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1 
+det.formula <- ~ (1 | det.factor.1) 
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  # data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  # tmp.data <- data.list
+  # tmp.data$occ.covs[3, ] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                        det.formula = det.formula,
+  #                        data = tmp.data,
+  #                        n.batch = 40,
+  #                        batch.length = batch.length,
+  #                        cov.model = "exponential",
+  #                        tuning = tuning.list,
+  #                        NNGP = TRUE,
+  #                        verbose = FALSE,
+  #                        n.neighbors = 5,
+  #                        search.type = 'cb',
+  #                        n.report = 10,
+  #                        n.burn = 500,
+  #                        n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0)
+  colnames(X.0) <- c('int')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Multiple random intercepts on detection ---------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list(levels = c(50, 10), 
+	     sigma.sq.p = c(2.50, 1.5))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+# X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+# X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X)
+colnames(occ.covs) <- c('int')
+det.covs <- list(det.factor.1 = X.p.re[, , 1], 
+                 det.factor.2 = X.p.re[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1 
+det.formula <- ~ (1 | det.factor.1) + (1 | det.factor.2)
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  # data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  # tmp.data <- data.list
+  # tmp.data$occ.covs[3, ] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                        det.formula = det.formula,
+  #                        data = tmp.data,
+  #                        n.batch = 40,
+  #                        batch.length = batch.length,
+  #                        cov.model = "exponential",
+  #                        tuning = tuning.list,
+  #                        NNGP = TRUE,
+  #                        verbose = FALSE,
+  #                        n.neighbors = 5,
+  #                        search.type = 'cb',
+  #                        n.report = 10,
+  #                        n.burn = 500,
+  #                        n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0)
+  colnames(X.0) <- c('int')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Detection random effects with covariates --------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0, 0.5)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list(levels = c(50, 10), 
+	     sigma.sq.p = c(2.50, 1.5))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+# X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+# X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X)
+colnames(occ.covs) <- c('int')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+		 det.factor.1 = X.p.re[, , 1], 
+                 det.factor.2 = X.p.re[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ 1 
+det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2)
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  # data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  # tmp.data <- data.list
+  # tmp.data$occ.covs[3, ] <- NA
+  # expect_error(spMsPGOcc(occ.formula = occ.formula,
+  #                        det.formula = det.formula,
+  #                        data = tmp.data,
+  #                        n.batch = 40,
+  #                        batch.length = batch.length,
+  #                        cov.model = "exponential",
+  #                        tuning = tuning.list,
+  #                        NNGP = TRUE,
+  #                        verbose = FALSE,
+  #                        n.neighbors = 5,
+  #                        search.type = 'cb',
+  #                        n.report = 10,
+  #                        n.burn = 500,
+  #                        n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0)
+  colnames(X.0) <- c('int')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Detection random effects with covariates on all -------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 1.5, 0.3)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 0.5, 3.3)
+# Detection
+alpha.mean <- c(0, 0.5)
+tau.sq.alpha <- c(1, 2.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list(levels = c(50, 10), 
+	     sigma.sq.p = c(2.50, 1.5))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+# X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+# X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X)
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+		 det.factor.1 = X.p.re[, , 1], 
+                 det.factor.2 = X.p.re[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2
+det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2)
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  # data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0)
+  colnames(X.0) <- c('int', 'occ.cov.1', 'occ.cov.2')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Random intercepts on both -----------------------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(20), 
+               sigma.sq.psi = c(2.5))
+p.RE <- list(levels = c(50, 10), 
+	     sigma.sq.p = c(2.50, 1.5))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.factor.1')
+det.covs <- list(det.factor.1 = X.p.re[, , 1], 
+                 det.factor.2 = X.p.re[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ (1 | occ.factor.1)
+det.formula <- ~ (1 | det.factor.1) + (1 | det.factor.2)
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.factor.1')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+
+# Random intercepts on both with covariates -------------------------------
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2, 1.2, -0.5)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6, 2.4, 0.3)
+# Detection
+alpha.mean <- c(0, 0.5)
+tau.sq.alpha <- c(1, 3.3)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(20), 
+               sigma.sq.psi = c(2.5))
+p.RE <- list(levels = c(50, 10), 
+	     sigma.sq.p = c(2.50, 1.5))
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+phi <- rep(3 / .7, N)
+sigma.sq <- rep(2, N)
+nu <- rep(2, N)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+		phi = phi, nu = nu, cov.model = 'matern')
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+X.re <- dat$X.re[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+X.re.0 <- dat$X.re[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+X.p.re <- dat$X.p.re[-pred.indx, , , drop = FALSE]
+
+occ.covs <- cbind(X, X.re)
+colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1')
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+		 det.factor.1 = X.p.re[, , 1], 
+                 det.factor.2 = X.p.re[, , 2])
+data.list <- list(y = y, coords = coords, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2 + (1 | occ.factor.1)
+det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2)
+
+out <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 400, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+                 k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class spMsPGOcc", {
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are correct", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, TRUE)
+})
+
+# Check RE error ----------------------
+test_that("random effect gives error when non-numeric", {
+  data.list$occ.covs <- as.data.frame(data.list$occ.covs)
+  data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
+  data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+  data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
+  data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula,
+	                      det.formula = det.formula,
+                              data = data.list,
+                              inits = inits.list, 
+                              n.batch = n.batch, 
+                              batch.length = batch.length, 
+                              accept.rate = 0.43, 
+                              priors = prior.list, 
+                              cov.model = "matern", 
+                              tuning = tuning.list, 
+                              n.omp.threads = 1, 
+                              verbose = FALSE, 
+                              NNGP = TRUE, 
+                              n.neighbors = 5, 
+                              search.type = 'cb', 
+                              n.report = 10, 
+                              n.burn = 400, 
+		              n.thin = 2,
+		              n.chains = 1))
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$re.level.names))),
+	       sort(unique(c(X.re))))
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.p.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, y)
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                         det.formula = det.formula,
+                         data = tmp.data,
+                         n.batch = 40,
+                         batch.length = batch.length,
+                         cov.model = "exponential",
+                         tuning = tuning.list,
+                         NNGP = TRUE,
+                         verbose = FALSE,
+                         n.neighbors = 5,
+                         search.type = 'cb',
+                         n.report = 10,
+                         n.burn = 500,
+                         n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$det.covs[[1]][1] <- NA
+  expect_error(spMsPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = tmp.data,
+                       n.batch = 40,
+                       batch.length = batch.length,
+                       cov.model = "exponential",
+                       tuning = tuning.list,
+                       NNGP = TRUE,
+                       verbose = FALSE,
+                       n.neighbors = 5,
+                       search.type = 'cb',
+                       n.report = 10,
+                       n.burn = 500,
+                       n.chains = 1))
+  tmp.data <- data.list
+  tmp.data$y[, 1, 1] <- NA
+  out <- spMsPGOcc(occ.formula = occ.formula,
+                 det.formula = det.formula,
+                 data = tmp.data,
+                 n.batch = 40,
+                 batch.length = batch.length,
+                 cov.model = "exponential",
+                 tuning = tuning.list,
+                 NNGP = TRUE,
+                 verbose = FALSE,
+                 n.neighbors = 5,
+                 search.type = 'cb',
+                 n.report = 10,
+                 n.burn = 500,
+                 n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+# Check default values ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   cov.model = "exponential", 
+                   tuning = tuning.list, 
+                   NNGP = TRUE,
+		   verbose = FALSE, 
+                   n.neighbors = 5, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("all correlation functions work", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "gaussian", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = prior.list, 
+                   cov.model = "spherical", 
+                   tuning = list(phi = 0.3), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(nu.unif = list(0.4, 3)), 
+                   cov.model = "matern", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = TRUE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 500, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+
+  expect_output(spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1, 
+		 n.chains = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for spMsPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for spMsPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for spMsPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  X.0 <- cbind(X.0, X.re.0)
+  colnames(X.0) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.factor.1')
+  pred.out <- predict(out, X.0, coords.0, verbose = FALSE)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, nrow(X.0)))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, nrow(X.0)))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  J.fit <- nrow(X)
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J.fit))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J.fit))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})
+

@@ -41,7 +41,9 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     observation-level covariates are specified as a matrix or data frame 
     with the number of rows equal to \eqn{J}{J} and number of columns equal 
     to the maximum number of replicates at a given site. \code{coords} is a 
-    \eqn{J \times 2}{J x 2} matrix of the observation coordinates.}
+    \eqn{J \times 2}{J x 2} matrix of the observation coordinates. 
+    Note that \code{spOccupancy} assumes coordinates are specified 
+    in a projected coordinate system.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 

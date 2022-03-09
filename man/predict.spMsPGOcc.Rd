@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{spMsPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-                            n.report = 100, ...)
+                            n.report = 100, ignore.RE = FALSE, ...)
 }
 
 \arguments{
@@ -17,7 +17,8 @@
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{intPGOcc}.}
 
-  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
+  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
   \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -30,6 +31,12 @@
     the screen.}
 
   \item{n.report}{the interval to report sampling progress.}
+
+  \item{ignore.RE}{a logical value indicating whether to include unstructured random 
+    effects for prediction. If FALSE, unstructured random effects will be ignored and 
+    prediction will only use the fixed effects and the spatial random effects. If TRUE, 
+    random effects will be included in the prediction for both observed and unobserved 
+    levels of the unstructured random effects.}
 
   \item{...}{currently no additional arguments}
 }

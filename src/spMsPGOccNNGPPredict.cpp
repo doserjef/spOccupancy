@@ -17,7 +17,8 @@ extern "C" {
   SEXP spMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, 
 		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP wSamples_r, SEXP nSamples_r, 
+			    SEXP thetaSamples_r, SEXP wSamples_r, 
+			    SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
 			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
 			    SEXP nReport_r){
 
@@ -45,6 +46,7 @@ extern "C" {
     double *beta = REAL(betaSamples_r);
     double *theta = REAL(thetaSamples_r);
     double *w = REAL(wSamples_r);
+    double *betaStarSite = REAL(betaStarSiteSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -188,7 +190,7 @@ extern "C" {
 
 	  w0[s * qN + j * N + i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 
-	  psi0[s * qN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &q, &beta[s*pOccN + i], &N) + w0[s * qN + j * N + i], zero, one);
+	  psi0[s * qN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &q, &beta[s*pOccN + i], &N) + w0[s * qN + j * N + i] + betaStarSite[s * qN + j * N + i], zero, one);
 	  z0[s * qN + j * N + i] = rbinom(one, psi0[s * qN + j * N + i]);
 	  
 	  vIndx++;

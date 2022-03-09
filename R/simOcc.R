@@ -154,7 +154,7 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     }
     if (p.occ.re > 1) {
       for (j in 2:p.occ.re) {
-        X.re[, j] <- X.re[, j] + max(X.re[, j - 1])
+        X.re[, j] <- X.re[, j] + max(X.re[, j - 1], na.rm = TRUE)
       }
     } 
     beta.star.sites <- apply(X.re, 1, function(a) sum(beta.star[a]))
@@ -180,7 +180,7 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     }
     if (p.det.re > 1) {
       for (j in 2:p.det.re) {
-        X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1]) 
+        X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1], na.rm = TRUE) 
       }
     }
     alpha.star.sites <- apply(X.p.re, c(1, 2), function(a) sum(alpha.star[a]))
@@ -188,7 +188,6 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     X.p.re <- NA
     alpha.star <- NA
   }
-
 
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {

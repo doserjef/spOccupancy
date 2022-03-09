@@ -127,10 +127,10 @@ extern "C" {
     double *z = (double *) R_alloc(J, sizeof(double));   
     F77_NAME(dcopy)(&J, REAL(zStarting_r), &inc, z, &inc);
     // Auxiliary variables
-    double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
-    double *omegaOcc = (double *) R_alloc(J, sizeof(double));
-    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
-    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); 
+    double *omegaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(omegaDet, nObs);
+    double *omegaOcc = (double *) R_alloc(J, sizeof(double)); zeros(omegaOcc, J);
+    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(kappaDet, nObs);
+    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); zeros(kappaOcc, J);
 
     /**********************************************************************
      * Return Stuff
@@ -183,8 +183,8 @@ extern "C" {
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
-    F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
+    F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, 
+        	    SigmaBetaInvMuBeta, &inc);
     // Detection regression coefficient priors. 
     // Have "separate" multivariate normal priors for the different sets of coefficients
     // that vary across the data sets. 
@@ -214,7 +214,8 @@ extern "C" {
       if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
       F77_NAME(dpotri)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info); 
       if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
-      F77_NAME(dgemv)(ytran, &pDetLong[q], &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc); 	  
+      F77_NAME(dsymv)(lower, &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, 
+                     &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc);
     } // q
 
 
@@ -236,7 +237,9 @@ extern "C" {
       // locations with z[j] == 1 actually effect the results. 
       for (i = 0; i < nObs; i++) {
         stAlpha = which(dataIndx[i], alphaIndx, pDet); 
-        omegaDet[i] = rpg(1.0, F77_NAME(ddot)(&pDetLong[dataIndx[i]], &Xp[i], &nObs, &alpha[stAlpha], &inc));
+	if (z[zLongIndx[i]] == 1.0) {
+          omegaDet[i] = rpg(1.0, F77_NAME(ddot)(&pDetLong[dataIndx[i]], &Xp[i], &nObs, &alpha[stAlpha], &inc));
+	}
         // Rprintf("omegaDet[%i]: %f\n", i, omegaDet[i]); 
       } // i
            

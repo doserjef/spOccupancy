@@ -9,7 +9,7 @@
 
 \usage{
 \method{predict}{spPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-                          n.report = 100, ...)
+                          n.report = 100, ignore.RE = FALSE, ...)
 }
 
 \arguments{
@@ -21,7 +21,8 @@
     Covariates should have the same column names as those used when fitting the model with 
     \code{spPGOcc}.}
 
-  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
+  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -32,6 +33,12 @@
   \item{verbose}{if \code{TRUE}, model specification and progress of the 
     sampler is printed to the screen. Otherwise, nothing is printed to
     the screen.}
+
+  \item{ignore.RE}{a logical value indicating whether to include unstructured random 
+    effects for prediction. If FALSE, unstructured random effects will be ignored and 
+    prediction will only use the fixed effects and the spatial random effects. If TRUE, 
+    random effects will be included in the prediction for both observed and unobserved 
+    levels of the unstructured random effects.}
 
   \item{n.report}{the interval to report sampling progress.}
 
@@ -104,7 +111,7 @@ data.list <- list(y = y,
 		  coords = coords)
 
 # Number of batches
-n.batch <- 50
+n.batch <- 10
 # Batch length
 batch.length <- 25
 n.iter <- n.batch * batch.length
@@ -134,11 +141,11 @@ out <- spPGOcc(occ.formula = ~ occ.cov,
 	       tuning = tuning.list, 
 	       n.omp.threads = 1, 
 	       verbose = TRUE, 
-	       NNGP = TRUE, 
+	       NNGP = FALSE, 
 	       n.neighbors = 15, 
 	       search.type = 'cb', 
 	       n.report = 10, 
-	       n.burn = 500, 
+	       n.burn = 50, 
 	       n.thin = 1)
 
 summary(out) 

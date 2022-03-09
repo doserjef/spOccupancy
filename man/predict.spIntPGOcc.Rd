@@ -17,7 +17,8 @@
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{spIntPGOcc}.}
 
-  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}.}
+  \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must

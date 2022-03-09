@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{PGOcc}(object, X.0, ...)
+\method{predict}{PGOcc}(object, X.0, ignore.RE = FALSE, ...)
 }
 
 \arguments{
@@ -15,6 +15,8 @@
   \item{object}{an object of class PGOcc}
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{PGOcc}. Covariates should have the same column names as those used when fitting the model with \code{PGOcc}.}
+
+  \item{ignore.RE}{logical value that specifies whether or not to remove random occurrence effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be obtained from the fixed effects.}
 
   \item{...}{currently no additional arguments}
 }

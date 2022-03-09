@@ -47,7 +47,8 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   while observation-level covariates are specified as a matrix or data frame 
   with the number of rows equal to the number of observed sites of that data source
   and number of columns equal to the maximum number of replicates at a given site. 
-  \code{coords} is a matrix of the observation site coordinates.}
+  \code{coords} is a matrix of the observation site coordinates. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 
@@ -337,7 +338,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 tuning.list <- list(phi = 0.3) 
 
 # Number of batches
-n.batch <- 40
+n.batch <- 10
 # Batch length
 batch.length <- 25
 
@@ -356,11 +357,11 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
 		  tuning = tuning.list, 
 		  n.omp.threads = 1, 
 		  verbose = TRUE, 
-		  NNGP = TRUE, 
+		  NNGP = FALSE, 
 		  n.neighbors = 5, 
 		  search.type = 'cb', 
 		  n.report = 10, 
-		  n.burn = 500, 
+		  n.burn = 50, 
 		  n.thin = 1)
 
 summary(out)

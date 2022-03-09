@@ -15,6 +15,9 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
+  if (class(object) %in% c('lfJSDM', 'sfJSDM')) {
+    stop("error: ppcOcc is not implemented for lfJSDM and sfJSDM")
+  }
   if (!class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
 			    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
 			    'lfMsPGOcc', 'sfMsPGOcc')) {
@@ -60,9 +63,9 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
     J <- nrow(y)
     if (class(object) == 'PGOcc') {
-      y.rep.samples <- fitted.PGOcc(object)
+      y.rep.samples <- fitted.PGOcc(object)$y.rep.samples
     } else {
-      y.rep.samples <- fitted.spPGOcc(object)
+      y.rep.samples <- fitted.spPGOcc(object)$y.rep.samples
     }
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
@@ -160,7 +163,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     J <- dim(y)[2]
     N <- dim(y)[1]
     # Fitted function is the same for all multispecies object types. 
-    y.rep.samples <- fitted.msPGOcc(object)
+    y.rep.samples <- fitted.msPGOcc(object)$y.rep.samples
     z.samples <- object$z.samples
     alpha.samples <- object$alpha.samples
     # Get detection probability

@@ -153,10 +153,10 @@ extern "C" {
     // Spatial smooth parameter for matern. 
     double nu = REAL(nuStarting_r)[0]; 
     // Auxiliary variables
-    double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
-    double *omegaOcc = (double *) R_alloc(J, sizeof(double));
-    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
-    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); 
+    double *omegaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(omegaDet, nObs);
+    double *omegaOcc = (double *) R_alloc(J, sizeof(double)); zeros(omegaOcc, J);
+    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(kappaDet, nObs);
+    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); zeros(kappaOcc, J);
 
     /**********************************************************************
      * Return Stuff
@@ -186,7 +186,6 @@ extern "C" {
     double *tmp_pOcc = (double *) R_alloc(pOcc, sizeof(double));
     double *tmp_pDet2 = (double *) R_alloc(pDet, sizeof(double));
     double *tmp_pOcc2 = (double *) R_alloc(pOcc, sizeof(double));
-    double * tmp_JJ = (double *) R_alloc(JJ, sizeof(double)); 
     int *tmp_J = (int *) R_alloc(J, sizeof(int));
     for (j = 0; j < J; j++) {
       tmp_J[j] = zero; 
@@ -194,10 +193,11 @@ extern "C" {
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
+    double *tmp_JJ = (double *) R_alloc(JJ, sizeof(double)); 
    
     // For latent occupancy
     double psiNum; 
-    double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
+    double *detProb = (double *) R_alloc(nObs, sizeof(double)); zeros(detProb, nObs);
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
@@ -214,8 +214,8 @@ extern "C" {
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
-    F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, SigmaBetaInvMuBeta, &inc); 	  
+    F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, 
+        	    SigmaBetaInvMuBeta, &inc);
     // Detection regression coefficient priors. 
     // Have "separate" multivariate normal priors for the different sets of coefficients
     // that vary across the data sets. 
@@ -245,7 +245,8 @@ extern "C" {
       if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
       F77_NAME(dpotri)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info); 
       if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
-      F77_NAME(dgemv)(ytran, &pDetLong[q], &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc); 	  
+      F77_NAME(dsymv)(lower, &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, 
+                     &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc);
     } // q
 
     /**********************************************************************
@@ -312,12 +313,12 @@ extern "C" {
         /********************************************************************
          *Update Detection Auxiliary Variables 
          *******************************************************************/
-        // Note that all of the variables are sampled, but only those at 
-        // locations with z[j] == 1 actually effect the results. 
         for (i = 0; i < nObs; i++) {
           stAlpha = which(dataIndx[i], alphaIndx, pDet); 
-          omegaDet[i] = rpg(1.0, F77_NAME(ddot)(&pDetLong[dataIndx[i]], &Xp[i], &nObs, &alpha[stAlpha], &inc));
-          // Rprintf("omegaDet[%i]: %f\n", i, omegaDet[i]); 
+          omegaDet[i] = 0.0;
+	  if (z[zLongIndx[i]] == 1.0) {
+            omegaDet[i] = rpg(1.0, F77_NAME(ddot)(&pDetLong[dataIndx[i]], &Xp[i], &nObs, &alpha[stAlpha], &inc));
+	  }
         } // i
            
         /********************************************************************
@@ -442,9 +443,7 @@ extern "C" {
 	// Probably a better way to do this operation. 
 	for (j = 0; j < J; j++) {
           wTRInv[j] = F77_NAME(ddot)(&J, &R[j], &J, w, &inc);  
-	  // Rprintf("wTRInv[j]: %f\n", wTRInv[j]); 
         } // j
-	// // // wTRInv %*% w
 	bSigmaSqPost = F77_NAME(ddot)(&J, wTRInv, &inc, w, &inc); 
 	bSigmaSqPost /= 2.0; 
 	bSigmaSqPost += sigmaSqB; 
@@ -457,11 +456,11 @@ extern "C" {
 	if (corName == "matern") {
           nu = theta[nuIndx]; 
 	  nuCand = logitInv(rnorm(logit(theta[nuIndx], nuA, nuB), exp(tuning[nuIndx])), nuA, nuB); 
+	  theta[nuIndx] = nuCand; 
         }
 	phi = theta[phiIndx]; 
 	phiCand = logitInv(rnorm(logit(phi, phiA, phiB), exp(tuning[phiIndx])), phiA, phiB); 
 	theta[phiIndx] = phiCand; 
-	theta[nuIndx] = nuCand; 
 
 	// Construct covariance matrix (stored in C). 
 	spCovLT(coordsD, J, theta, corName, CCand); 
@@ -492,7 +491,9 @@ extern "C" {
         /********************************
          * Current
          *******************************/
-	theta[nuIndx] = nu; 
+	if (corName == "matern") {
+	  theta[nuIndx] = nu; 
+	}
 	theta[phiIndx] = phi; 
 	// Construct covariance matrix (stored in C). 
 	spCovLT(coordsD, J, theta, corName, C); 

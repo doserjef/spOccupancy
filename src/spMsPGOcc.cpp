@@ -14,24 +14,32 @@
 #include <R_ext/BLAS.h>
 
 extern "C" {
-  SEXP spMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, SEXP pocc_r, SEXP pdet_r, 
-	         SEXP J_r, SEXP nObs_r, SEXP K_r, SEXP N_r, SEXP betaStarting_r, 
-	         SEXP alphaStarting_r, SEXP zStarting_r, SEXP betaCommStarting_r, 
-	         SEXP alphaCommStarting_r, SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
+  SEXP spMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coordsD_r, 
+		 SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, SEXP K_r, 
+		 SEXP nOccRELong_r, SEXP nDetRELong_r, 
+		 SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
+		 SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
+		 SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
 		 SEXP wStarting_r, SEXP phiStarting_r, SEXP sigmaSqStarting_r, 
-		 SEXP nuStarting_r, SEXP zLongIndx_r, SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+		 SEXP nuStarting_r, SEXP sigmaSqPsiStarting_r, 
+		 SEXP sigmaSqPStarting_r, SEXP betaStarStarting_r, 
+		 SEXP alphaStarStarting_r, SEXP zLongIndx_r, 
+		 SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+		 SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
+		 SEXP muBetaComm_r, SEXP muAlphaComm_r, 
 	         SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
 	         SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, SEXP phiA_r, 
-		 SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r, 
-		 SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
-		 SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, SEXP acceptRate_r, 
-	         SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, SEXP nBurn_r, 
-		 SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r){
+		 SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nuA_r, SEXP nuB_r, 
+		 SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r,
+		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+		 SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
+		 SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+		 SEXP samplesInfo_r, SEXP chainInfo_r){
    
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, a, b, q, r, info, nProtect=0;
+    int i, j, k, l, s, a, b, q, r, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
     const double zero = 0.0;
@@ -47,10 +55,20 @@ extern "C" {
     double *y = REAL(y_r);
     double *X = REAL(X_r);
     double *coordsD = REAL(coordsD_r); 
+    int *XpRE = INTEGER(XpRE_r); 
+    int *XRE = INTEGER(XRE_r);
     // Xp is sorted by parameter then site, then visit (parameter 1 site 1, p1 site 2, etc) 
     double *Xp = REAL(Xp_r);
-    int pOcc = INTEGER(pocc_r)[0];
-    int pDet = INTEGER(pdet_r)[0];
+    // Load constants
+    int N = INTEGER(consts_r)[0]; 
+    int J = INTEGER(consts_r)[1];
+    int nObs = INTEGER(consts_r)[2]; 
+    int pOcc = INTEGER(consts_r)[3];
+    int pOccRE = INTEGER(consts_r)[4];
+    int nOccRE = INTEGER(consts_r)[5];
+    int pDet = INTEGER(consts_r)[6];
+    int pDetRE = INTEGER(consts_r)[7];
+    int nDetRE = INTEGER(consts_r)[8];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc; 
     double *muBetaComm = REAL(muBetaComm_r); 
@@ -69,24 +87,31 @@ extern "C" {
     double *nuB = REAL(nuB_r); 
     double *sigmaSqA = REAL(sigmaSqA_r); 
     double *sigmaSqB = REAL(sigmaSqB_r); 
+    double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
+    double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
+    double *sigmaSqPA = REAL(sigmaSqPA_r); 
+    double *sigmaSqPB = REAL(sigmaSqPB_r); 
     double *tuning = REAL(tuning_r); 
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
-    int J = INTEGER(J_r)[0];
+    int *nDetRELong = INTEGER(nDetRELong_r); 
+    int *nOccRELong = INTEGER(nOccRELong_r);
     double *K = REAL(K_r); 
-    int nObs = INTEGER(nObs_r)[0];
-    int N = INTEGER(N_r)[0]; 
     double *phiAccept = (double *) R_alloc(N, sizeof(double)); 
     zeros(phiAccept, N); 
     int *zLongIndx = INTEGER(zLongIndx_r); 
+    int *alphaStarIndx = INTEGER(alphaStarIndx_r); 
+    int *alphaLevelIndx = INTEGER(alphaLevelIndx_r);
+    int *betaStarIndx = INTEGER(betaStarIndx_r); 
+    int *betaLevelIndx = INTEGER(betaLevelIndx_r);
     int nBatch = INTEGER(nBatch_r)[0]; 
     int batchLength = INTEGER(batchLength_r)[0]; 
     int nSamples = nBatch * batchLength; 
-    int nThin = INTEGER(nThin_r)[0];
-    int nBurn = INTEGER(nBurn_r)[0]; 
-    int nPost = INTEGER(nPost_r)[0]; 
-    int currChain = INTEGER(currChain_r)[0];
-    int nChain = INTEGER(nChain_r)[0];
+    int nBurn = INTEGER(samplesInfo_r)[0]; 
+    int nThin = INTEGER(samplesInfo_r)[1];
+    int nPost = INTEGER(samplesInfo_r)[2]; 
+    int currChain = INTEGER(chainInfo_r)[0];
+    int nChain = INTEGER(chainInfo_r)[1];
     double acceptRate = REAL(acceptRate_r)[0];
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
@@ -138,11 +163,14 @@ extern "C" {
     int pOccN = pOcc * N; 
     int pDetN = pDet * N; 
     int nObsN = nObs * N; 
+    int nDetREN = nDetRE * N; 
+    int nOccREN = nOccRE * N; 
     int JN = J * N;
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     int JJ = J * J; 
     double tmp_0; 
+    double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_pDet = (double *) R_alloc(pDet, sizeof(double));
@@ -157,6 +185,7 @@ extern "C" {
       tmp_J[j] = 0; 
     }
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
+    double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double)); 
     double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
 
@@ -175,9 +204,21 @@ extern "C" {
     // Species level
     double *beta = (double *) R_alloc(pOccN, sizeof(double));   
     F77_NAME(dcopy)(&pOccN, REAL(betaStarting_r), &inc, beta, &inc);
+    // Occurrence random effect variances
+    double *sigmaSqPsi = (double *) R_alloc(pOccRE, sizeof(double)); 
+    F77_NAME(dcopy)(&pOccRE, REAL(sigmaSqPsiStarting_r), &inc, sigmaSqPsi, &inc); 
     // Detection covariates
     double *alpha = (double *) R_alloc(pDetN, sizeof(double));   
     F77_NAME(dcopy)(&pDetN, REAL(alphaStarting_r), &inc, alpha, &inc);
+    // Detection random effect variances
+    double *sigmaSqP = (double *) R_alloc(pDetRE, sizeof(double)); 
+    F77_NAME(dcopy)(&pDetRE, REAL(sigmaSqPStarting_r), &inc, sigmaSqP, &inc); 
+    // Latent detection random effects
+    double *alphaStar = (double *) R_alloc(nDetREN, sizeof(double)); 
+    F77_NAME(dcopy)(&nDetREN, REAL(alphaStarStarting_r), &inc, alphaStar, &inc); 
+    // Latent occurrence random effects
+    double *betaStar = (double *) R_alloc(nOccREN, sizeof(double)); 
+    F77_NAME(dcopy)(&nOccREN, REAL(betaStarStarting_r), &inc, betaStar, &inc); 
     // Spatial random effects
     double *w = (double *) R_alloc(JN, sizeof(double));   
     F77_NAME(dcopy)(&JN, REAL(wStarting_r), &inc, w, &inc);
@@ -196,10 +237,10 @@ extern "C" {
     // Auxiliary variables
     // Only need to set aside J locations since you don't save these 
     // for each species
-    double *omegaDet = (double *) R_alloc(nObs, sizeof(double));
-    double *omegaOcc = (double *) R_alloc(J, sizeof(double));
-    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); 
-    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); 
+    double *omegaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(omegaDet, nObs);
+    double *omegaOcc = (double *) R_alloc(J, sizeof(double)); zeros(omegaOcc, J);
+    double *kappaDet = (double *) R_alloc(nObs, sizeof(double)); zeros(kappaDet, nObs);
+    double *kappaOcc = (double *) R_alloc(J, sizeof(double)); zeros(kappaOcc, J);
 
     /**********************************************************************
      * Return Stuff
@@ -225,7 +266,23 @@ extern "C" {
     // Spatial parameters
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
-
+    // Detection random effects
+    SEXP sigmaSqPSamples_r;
+    SEXP alphaStarSamples_r;
+    if (pDetRE > 0) {
+      PROTECT(sigmaSqPSamples_r = allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
+      PROTECT(alphaStarSamples_r = allocMatrix(REALSXP, nDetREN, nPost)); nProtect++;
+    }
+    // Occurrence random effects
+    SEXP sigmaSqPsiSamples_r; 
+    SEXP betaStarSamples_r; 
+    if (pOccRE > 0) {
+      PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+    }
+    // Likelihood samples for WAIC. 
+    SEXP likeSamples_r;
+    PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
     
     /**********************************************************************
      * Additional Sampler Prep
@@ -236,9 +293,12 @@ extern "C" {
     double *detProb = (double *) R_alloc(nObsN, sizeof(double)); 
     double *psi = (double *) R_alloc(JN, sizeof(double)); 
     zeros(psi, JN); 
-    double *piProd = (double *) R_alloc(J, sizeof(double)); 
-    ones(piProd, J); 
-    double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J);
+    double *yWAIC = (double *) R_alloc(JN, sizeof(double)); zeros(yWAIC, JN);
+    double *piProd = (double *) R_alloc(JN, sizeof(double)); 
+    ones(piProd, JN); 
+    double *piProdWAIC = (double *) R_alloc(JN, sizeof(double)); 
+    ones(piProdWAIC, JN); 
+    double *ySum = (double *) R_alloc(JN, sizeof(double)); zeros(ySum, JN);
 
     // For normal priors
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 
@@ -247,14 +307,16 @@ extern "C" {
     if(info != 0){error("c++ error: dpotri SigmaBetaCommInv failed\n");}
     double *SigmaBetaCommInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     // dgemv computes linear combinations of different variables. 
-    F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, SigmaBetaCommInvMuBeta, &inc); 	  
+    F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, 
+        	    SigmaBetaCommInvMuBeta, &inc);
     // Detection regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
     double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
-    F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, SigmaAlphaCommInvMuAlpha, &inc); 
+    F77_NAME(dsymv)(lower, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, 
+                   SigmaAlphaCommInvMuAlpha, &inc);
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
@@ -273,6 +335,42 @@ extern "C" {
     if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info); 
     if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
+
+    /**********************************************************************
+     * Prep for random effects
+     * *******************************************************************/
+    // Site-level sums of the occurrence random effects
+    double *betaStarSites = (double *) R_alloc(JN, sizeof(double)); 
+    zeros(betaStarSites, JN); 
+    // Initial sums (initiate with the first species)
+    for (i = 0; i < N; i++) {
+      for (j = 0; j < J; j++) {
+        for (l = 0; l < pOccRE; l++) {
+          betaStarSites[i * J + j] += betaStar[i * nOccRE + which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+        }
+      }
+    }
+    // Observation-level sums of the detection random effects
+    double *alphaStarObs = (double *) R_alloc(nObsN, sizeof(double)); 
+    zeros(alphaStarObs, nObsN); 
+    // Get sums of the current REs for each site/visit combo for all species
+    for (i = 0; i < N; i++) {
+      for (r = 0; r < nObs; r++) {
+        for (l = 0; l < pDetRE; l++) {
+          alphaStarObs[i * nObs + r] += alphaStar[i * nDetRE + which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)];
+        }
+      }
+    }
+    // Starting index for occurrence random effects
+    int *betaStarStart = (int *) R_alloc(pOccRE, sizeof(int)); 
+    for (l = 0; l < pOccRE; l++) {
+      betaStarStart[l] = which(l, betaStarIndx, nOccRE); 
+    }
+    // Starting index for detection random effects
+    int *alphaStarStart = (int *) R_alloc(pDetRE, sizeof(int)); 
+    for (l = 0; l < pDetRE; l++) {
+      alphaStarStart[l] = which(l, alphaStarIndx, nDetRE); 
+    }
 
     /**********************************************************************
      Set up spatial stuff
@@ -414,17 +512,10 @@ extern "C" {
           } // i
           tmp_0 *= 0.5;
           tauSqBeta[q] = rigamma(tauSqBetaA[q] + N / 2.0, tauSqBetaB[q] + tmp_0); 
-          // Rprintf("tauSqBetaB[%i]: %f\n", q, tauSqBetaB[q]); 
-          // Rprintf("tmp_0[%i]: %f\n", q, tmp_0 + tauSqBetaB[q]); 
         } // q
-        // This is correct, nothing wrong here. 
         for (q = 0; q < pOcc; q++) {
           TauBetaInv[q * pOcc + q] = tauSqBeta[q]; 
-          // Rprintf("TauBetaInv[%i]: %f\n", q * pOcc + q, TauBetaInv[q * pOcc + q]); 
         } // i
-        // for (q = 0; q < ppOcc; q++) {
-        //   Rprintf("TauBetaInv[%i]: %f\n", q, TauBetaInv[q]); 
-        // }
         F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
         if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
@@ -442,19 +533,45 @@ extern "C" {
         } // q
         for (q = 0; q < pDet; q++) {
           TauAlphaInv[q * pDet + q] = tauSqAlpha[q]; 
-          // Rprintf("TauAlphaInv[%i]: %f\n", q * pDet + q, TauAlphaInv[q * pDet + q]); 
         } // i
         F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
         if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
         F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info); 
         if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
-         
+
+        /********************************************************************
+         *Update Occupancy random effects variance
+         *******************************************************************/
+        for (l = 0; l < pOccRE; l++) {
+          tmp_0 = 0.0; 
+          for (i = 0; i < N; i++) {
+            tmp_0 += F77_NAME(ddot)(&nOccRELong[l], &betaStar[i*nOccRE + betaStarStart[l]], &inc, &betaStar[i*nOccRE + betaStarStart[l]], &inc); 
+          }
+          tmp_0 *= 0.5; 
+          sigmaSqPsi[l] = rigamma(sigmaSqPsiA[l] + nOccRELong[l] * N / 2.0, sigmaSqPsiB[l] + tmp_0);
+        }
+
+        /********************************************************************
+         *Update Detection random effects variance
+         *******************************************************************/
+        for (l = 0; l < pDetRE; l++) {
+          tmp_0 = 0.0; 
+          for (i = 0; i < N; i++) {
+            tmp_0 += F77_NAME(ddot)(&nDetRELong[l], &alphaStar[i*nDetRE + alphaStarStart[l]], &inc, &alphaStar[i*nDetRE + alphaStarStart[l]], &inc); 
+          }
+          tmp_0 *= 0.5; 
+          sigmaSqP[l] = rigamma(sigmaSqPA[l] + nDetRELong[l] * N / 2.0, sigmaSqPB[l] + tmp_0);
+        }
+
+        /********************************************************************
+         *Update Species-Specific Regression Parameters
+         *******************************************************************/
         for (i = 0; i < N; i++) {  
           /********************************************************************
            *Update Occupancy Auxiliary Variables 
            *******************************************************************/
           for (j = 0; j < J; j++) {
-            omegaOcc[j] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + w[j * N + i]);
+            omegaOcc[j] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + w[j * N + i] + betaStarSites[i * J + j]);
           } // j
           /********************************************************************
            *Update Detection Auxiliary Variables 
@@ -463,11 +580,15 @@ extern "C" {
           // locations with z[j] == 1 actually effect the results. 
           if (nObs == J) {
             for (r = 0; r < nObs; r++) {
-              omegaDet[r] = rpg(K[r], F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N));
+              if (z[zLongIndx[r] * N + i] == 1.0) {
+                omegaDet[r] = rpg(K[r], F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r]);
+	      }
             } // r
           } else {
             for (r = 0; r < nObs; r++) {
-              omegaDet[r] = rpg(1.0, F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N));
+              if (z[zLongIndx[r] * N + i] == 1.0) {
+                omegaDet[r] = rpg(1.0, F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r]);
+	      }
             } // r
           }
              
@@ -476,7 +597,7 @@ extern "C" {
            *******************************************************************/
           for (j = 0; j < J; j++) {
             kappaOcc[j] = z[j * N + i] - 1.0 / 2.0; 
-	    tmp_J1[j] = kappaOcc[j] - omegaOcc[j] * w[j * N + i]; 
+	    tmp_J1[j] = kappaOcc[j] - omegaOcc[j] * (w[j * N + i] + betaStarSites[i * J + j]); 
           } // j
           /********************************
            * Compute b.beta
@@ -528,14 +649,18 @@ extern "C" {
           if (nObs == J) {
             for (r = 0; r < nObs; r++) {
               kappaDet[r] = (y[r * N + i] - K[r]/2.0) * z[zLongIndx[r] * N + i];
+              tmp_nObs[r] = kappaDet[r] - omegaDet[r] * alphaStarObs[i * nObs + r]; 
+              tmp_nObs[r] *= z[zLongIndx[r] * N + i]; 
             } // r
           } else { 
             for (r = 0; r < nObs; r++) {
               kappaDet[r] = (y[r * N + i] - 1.0/2.0) * z[zLongIndx[r] * N + i];
+              tmp_nObs[r] = kappaDet[r] - omegaDet[r] * alphaStarObs[i * nObs + r]; 
+              tmp_nObs[r] *= z[zLongIndx[r] * N + i]; 
             } // r
           }
           
-          F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, kappaDet, &inc, &zero, tmp_pDet, &inc); 	  
+          F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, tmp_nObs, &inc, &zero, tmp_pDet, &inc);  
           F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, TauAlphaInv, &pDet, alphaComm, &inc, &one, tmp_pDet, &inc); 
           /********************************
            * Compute A.alpha
@@ -696,7 +821,7 @@ extern "C" {
            * Compute b.w
            *******************************/
           for(j = 0; j < J; j++){
-            tmp_JD[j] = kappaOcc[j] - F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) * omegaOcc[j];
+            tmp_JD[j] = kappaOcc[j] - omegaOcc[j] * (F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + betaStarSites[i * J + j]);
           }
           /********************************
            * Compute A.w
@@ -720,39 +845,120 @@ extern "C" {
           }
 
           /********************************************************************
+           *Update Occupancy random effects
+           *******************************************************************/
+	  if (pOccRE > 0) {
+            // Update each individual random effect one by one. 
+            for (l = 0; l < nOccRE; l++) {
+              /********************************
+               * Compute b.beta.star
+               *******************************/
+              zeros(tmp_one, inc);
+              tmp_0 = 0.0;	      
+	      // Only allow information to come from when XRE == betaLevelIndx[l]. 
+	      // aka information only comes from the sites with any given level 
+	      // of a random effect. 
+              for (j = 0; j < J; j++) {
+                if (XRE[betaStarIndx[l] * J + j] == betaLevelIndx[l]) {
+                  tmp_one[0] += kappaOcc[j] - (F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + betaStarSites[i * J + j] - betaStar[i * nOccRE + l] + w[j * N + i]) * omegaOcc[j];
+	          tmp_0 += omegaOcc[j];
+	        }
+              }
+              /********************************
+               * Compute A.beta.star
+               *******************************/
+              tmp_0 += 1.0 / sigmaSqPsi[betaStarIndx[l]]; 
+              tmp_0 = 1.0 / tmp_0; 
+              betaStar[i * nOccRE + l] = rnorm(tmp_0 * tmp_one[0], sqrt(tmp_0)); 
+            }
+
+            // Update the RE sums for the current species
+            zeros(&betaStarSites[i * J], J);
+            for (j = 0; j < J; j++) {
+              for (l = 0; l < pOccRE; l++) {
+                betaStarSites[i * J + j] += betaStar[i * nOccRE + which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+              }
+            }
+	  }
+
+          /********************************************************************
+           *Update Detection random effects
+           *******************************************************************/
+          if (pDetRE > 0) {
+            // Update each individual random effect one by one. 
+            for (l = 0; l < nDetRE; l++) {
+              /********************************
+               * Compute b.alpha.star
+               *******************************/
+              // Only allow information to come from when z[r] == 1 and XpRE == alphaLevelIndx[l]
+	      zeros(tmp_one, inc);
+	      tmp_0 = 0.0;
+              for (r = 0; r < nObs; r++) {
+                if ((z[zLongIndx[r] * N + i] == 1.0) && (XpRE[alphaStarIndx[l] * nObs + r] == alphaLevelIndx[l])) {
+                  tmp_one[0] += kappaDet[r] - (F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r] - alphaStar[i * nDetRE + l]) * omegaDet[r];
+	  	  tmp_0 += omegaDet[r];
+	        }
+	      }
+              /********************************
+               * Compute A.alpha.star
+               *******************************/
+              tmp_0 += 1.0 / sigmaSqP[alphaStarIndx[l]]; 
+              tmp_0 = 1.0 / tmp_0; 
+              alphaStar[i * nDetRE + l] = rnorm(tmp_0 * tmp_one[0], sqrt(tmp_0)); 
+            }
+            zeros(&alphaStarObs[i * nObs], nObs); 
+            // Update the RE sums for the current species
+            for (r = 0; r < nObs; r++) {
+              for (l = 0; l < pDetRE; l++) {
+                alphaStarObs[i * nObs + r] += alphaStar[i * nDetRE + which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)]; 
+              }
+            }
+          }
+
+          /********************************************************************
            *Update Latent Occupancy
            *******************************************************************/
-          // Compute detection probability 
           if (nObs == J) {
             for (r = 0; r < nObs; r++) {
-              detProb[i * nObs + r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N), zero, one);
-              psi[zLongIndx[r] * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[r]], &J, &beta[i], &N) + w[zLongIndx[r] * N + i], zero, one); 
-              piProd[zLongIndx[r]] = pow(1.0 - detProb[i * nObs + r], K[r]);
-              ySum[zLongIndx[r]] = y[r * N + i]; 
+              detProb[i * nObs + r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r], zero, one);
+              psi[zLongIndx[r] * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[r]], &J, &beta[i], &N) + w[zLongIndx[r] * N + i] + betaStarSites[i * J + zLongIndx[r]], zero, one); 
+              piProd[zLongIndx[r] * N + i] = pow(1.0 - detProb[i * nObs + r], K[r]);
+	      piProdWAIC[zLongIndx[r] * N + i] *= pow(detProb[i * nObs + r], y[r * N + i]);
+	      piProdWAIC[zLongIndx[r] * N + i] *= pow(1.0 - detProb[i * nObs + r], K[r] - y[r * N + i]);
+              ySum[zLongIndx[r] * N + i] = y[r * N + i]; 
             } // r
           } else {
             for (r = 0; r < nObs; r++) {
-              detProb[i * nObs + r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N), zero, one);
+              detProb[i * nObs + r] = logitInv(F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r], zero, one);
               if (tmp_J[zLongIndx[r]] == 0) {
-                psi[zLongIndx[r] * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[r]], &J, &beta[i], &N) + w[zLongIndx[r] * N + i], zero, one); 
+                psi[zLongIndx[r] * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[r]], &J, &beta[i], &N) + w[zLongIndx[r] * N + i] + betaStarSites[i * J + zLongIndx[r]], zero, one); 
               }
-              piProd[zLongIndx[r]] *= (1.0 - detProb[i * nObs + r]);
-              ySum[zLongIndx[r]] += y[r * N + i]; 	
+              piProd[zLongIndx[r] * N + i] *= (1.0 - detProb[i * nObs + r]);
+	      piProdWAIC[zLongIndx[r] * N + i] *= pow(detProb[i * nObs + r], y[r * N + i]);
+	      piProdWAIC[zLongIndx[r] * N + i] *= pow(1.0 - detProb[i * nObs + r], 
+	          	                            1.0 - y[r * N + i]);
+              ySum[zLongIndx[r] * N + i] += y[r * N + i]; 
               tmp_J[zLongIndx[r]]++;
             } // r
           }
+
           // Compute occupancy probability 
           for (j = 0; j < J; j++) {
-            psiNum = psi[j * N + i] * piProd[j]; 
-            if (ySum[j] == zero) {
-              z[j * N + i] = rbinom(one, psiNum / (psiNum + (1.0 - psi[j * N + i])));           
+            psiNum = psi[j * N + i] * piProd[j * N + i]; 
+            if (ySum[j * N + i] == zero) {
+              z[j * N + i] = rbinom(one, psiNum / (psiNum + (1.0 - psi[j * N + i])));
+              yWAIC[j * N + i] = (1.0 - psi[j * N + i]) + psi[j * N + i] * piProdWAIC[j * N + i];
             } else {
               z[j * N + i] = one; 
+              yWAIC[j * N + i] = psi[j * N + i] * piProdWAIC[j * N + i]; 
             }
-            piProd[j] = one;
-            ySum[j] = zero; 
+            // Reset variables
+            piProd[j * N + i] = one;
+	    piProdWAIC[j * N + i] = one;
+            ySum[j * N + i] = zero; 
             tmp_J[j] = 0; 
           } // j
+
         } // i
 
         /********************************************************************
@@ -771,6 +977,19 @@ extern "C" {
             F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[sPost*JN], &inc); 
             F77_NAME(dcopy)(&JN, w, &inc, &REAL(wSamples_r)[sPost*JN], &inc); 
             F77_NAME(dcopy)(&nThetaN, theta, &inc, &REAL(thetaSamples_r)[sPost*nThetaN], &inc); 
+	    if (pDetRE > 0) {
+              F77_NAME(dcopy)(&pDetRE, sigmaSqP, &inc, 
+			      &REAL(sigmaSqPSamples_r)[sPost*pDetRE], &inc);
+              F77_NAME(dcopy)(&nDetREN, alphaStar, &inc, 
+			      &REAL(alphaStarSamples_r)[sPost*nDetREN], &inc);
+	    }
+	    if (pOccRE > 0) {
+              F77_NAME(dcopy)(&pOccRE, sigmaSqPsi, &inc, 
+			      &REAL(sigmaSqPsiSamples_r)[sPost*pOccRE], &inc);
+              F77_NAME(dcopy)(&nOccREN, betaStar, &inc, 
+			      &REAL(betaStarSamples_r)[sPost*nOccREN], &inc);
+	    }
+            F77_NAME(dcopy)(&JN, yWAIC, &inc, &REAL(likeSamples_r)[sPost*JN], &inc); 
 	    sPost++; 
 	    thinIndx = 0; 
 	  }
@@ -823,7 +1042,13 @@ extern "C" {
 
     // make return object (which is a list)
     SEXP result_r, resultName_r;
-    int nResultListObjs = 12;
+    int nResultListObjs = 13;
+    if (pDetRE > 0) {
+      nResultListObjs += 2; 
+    }
+    if (pOccRE > 0) {
+      nResultListObjs += 2;
+    }
 
     PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
     PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -841,6 +1066,20 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 9, wSamples_r); 
     SET_VECTOR_ELT(result_r, 10, tuningSamples_r); 
     SET_VECTOR_ELT(result_r, 11, acceptSamples_r); 
+    SET_VECTOR_ELT(result_r, 12, likeSamples_r); 
+    if (pDetRE > 0) {
+      SET_VECTOR_ELT(result_r, 13, sigmaSqPSamples_r);
+      SET_VECTOR_ELT(result_r, 14, alphaStarSamples_r);
+    }
+    if (pOccRE > 0) {
+      if (pDetRE > 0) {
+        tmp_0 = 15;
+      } else {
+        tmp_0 = 13;
+      }
+      SET_VECTOR_ELT(result_r, tmp_0, sigmaSqPsiSamples_r);
+      SET_VECTOR_ELT(result_r, tmp_0 + 1, betaStarSamples_r);
+    }
 
     // mkChar turns a C string into a CHARSXP
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
@@ -855,6 +1094,15 @@ extern "C" {
     SET_VECTOR_ELT(resultName_r, 9, mkChar("w.samples")); 
     SET_VECTOR_ELT(resultName_r, 10, mkChar("tune")); 
     SET_VECTOR_ELT(resultName_r, 11, mkChar("accept")); 
+    SET_VECTOR_ELT(resultName_r, 12, mkChar("like.samples")); 
+    if (pDetRE > 0) {
+      SET_VECTOR_ELT(resultName_r, 13, mkChar("sigma.sq.p.samples")); 
+      SET_VECTOR_ELT(resultName_r, 14, mkChar("alpha.star.samples")); 
+    }
+    if (pOccRE > 0) {
+      SET_VECTOR_ELT(resultName_r, tmp_0, mkChar("sigma.sq.psi.samples")); 
+      SET_VECTOR_ELT(resultName_r, tmp_0 + 1, mkChar("beta.star.samples")); 
+    }
    
     // Set the names of the output list.  
     namesgets(result_r, resultName_r);
