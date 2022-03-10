@@ -1,7 +1,7 @@
 # Test spMsPGOcc.R  -------------------------------------------------------
 # GP ----------------------------------------------------------------------
 
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept Only ----------------------------------------------------------
 J.x <- 8
@@ -91,7 +91,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -154,7 +154,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -175,7 +175,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -196,7 +196,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -220,7 +220,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -370,7 +370,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -415,7 +415,7 @@ test_that("missing value error handling works", {
 	               n.neighbors = 5,
 	               search.type = 'cb',
 	               n.report = 10,
-	               n.burn = 500,
+	               n.burn = 50,
 	               n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs[[1]][1] <- NA
@@ -431,7 +431,7 @@ test_that("missing value error handling works", {
   #                      n.neighbors = 5,
   #                      search.type = 'cb',
   #                      n.report = 10,
-  #                      n.burn = 500,
+  #                      n.burn = 50,
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$y[, 1, 1] <- NA
@@ -447,7 +447,7 @@ test_that("missing value error handling works", {
   #                n.neighbors = 5,
   #                search.type = 'cb',
   #                n.report = 10,
-  #                n.burn = 500,
+  #                n.burn = 50,
   #                n.chains = 1)
   # expect_s3_class(out, "spMsPGOcc")
 })
@@ -486,7 +486,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -507,7 +507,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -528,7 +528,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -552,7 +552,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -703,7 +703,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -748,7 +748,7 @@ test_that("missing value error handling works", {
   #                        n.neighbors = 5,
   #                        search.type = 'cb',
   #                        n.report = 10,
-  #                        n.burn = 500,
+  #                        n.burn = 50,
   #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -764,7 +764,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -780,7 +780,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -819,7 +819,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -840,7 +840,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -861,7 +861,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -885,7 +885,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -1036,7 +1036,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -1081,7 +1081,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -1097,7 +1097,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -1113,7 +1113,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -1152,7 +1152,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1173,7 +1173,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1194,7 +1194,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1218,7 +1218,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -1370,7 +1370,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 400,
+                 n.burn = 40,
 		 n.thin = 2,
 		 n.chains = 2,
                  k.fold = 2,
@@ -1415,7 +1415,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -1431,7 +1431,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -1447,7 +1447,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -1486,7 +1486,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5,
                    search.type = 'cb',
                    n.report = 10,
-                   n.burn = 500,
+                   n.burn = 50,
                    n.thin = 1,
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1507,7 +1507,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5,
                    search.type = 'cb',
                    n.report = 10,
-                   n.burn = 500,
+                   n.burn = 50,
                    n.thin = 1,
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1528,7 +1528,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5,
                    search.type = 'cb',
                    n.report = 10,
-                   n.burn = 500,
+                   n.burn = 50,
                    n.thin = 1,
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1552,7 +1552,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.thin = 1,
 		 n.chains = 1))
 })
@@ -1707,7 +1707,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -1752,7 +1752,7 @@ test_that("missing value error handling works", {
   #                        n.neighbors = 5,
   #                        search.type = 'cb',
   #                        n.report = 10,
-  #                        n.burn = 500,
+  #                        n.burn = 50,
   #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[2]][1] <- NA
@@ -1768,7 +1768,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -1784,7 +1784,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -1823,7 +1823,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1844,7 +1844,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1865,7 +1865,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -1889,7 +1889,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -2044,7 +2044,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -2089,7 +2089,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -2110,7 +2110,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -2142,7 +2142,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs[[1]][1] <- NA
@@ -2158,7 +2158,7 @@ test_that("missing value error handling works", {
   #                      n.neighbors = 5,
   #                      search.type = 'cb',
   #                      n.report = 10,
-  #                      n.burn = 500,
+  #                      n.burn = 50,
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$y[, 1, 1] <- NA
@@ -2174,7 +2174,7 @@ test_that("missing value error handling works", {
   #                n.neighbors = 5,
   #                search.type = 'cb',
   #                n.report = 10,
-  #                n.burn = 500,
+  #                n.burn = 50,
   #                n.chains = 1)
   # expect_s3_class(out, "spMsPGOcc")
 })
@@ -2213,7 +2213,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2234,7 +2234,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2255,7 +2255,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2279,7 +2279,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -2434,7 +2434,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -2479,7 +2479,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -2500,7 +2500,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -2532,7 +2532,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs[[1]][1] <- NA
@@ -2548,7 +2548,7 @@ test_that("missing value error handling works", {
   #                      n.neighbors = 5,
   #                      search.type = 'cb',
   #                      n.report = 10,
-  #                      n.burn = 500,
+  #                      n.burn = 50,
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$y[, 1, 1] <- NA
@@ -2564,7 +2564,7 @@ test_that("missing value error handling works", {
   #                n.neighbors = 5,
   #                search.type = 'cb',
   #                n.report = 10,
-  #                n.burn = 500,
+  #                n.burn = 50,
   #                n.chains = 1)
   # expect_s3_class(out, "spMsPGOcc")
 })
@@ -2603,7 +2603,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2624,7 +2624,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2645,7 +2645,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -2669,7 +2669,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -2824,7 +2824,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -2869,7 +2869,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -2890,7 +2890,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -2922,7 +2922,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs[[1]][1] <- NA
@@ -2938,7 +2938,7 @@ test_that("missing value error handling works", {
   #                      n.neighbors = 5,
   #                      search.type = 'cb',
   #                      n.report = 10,
-  #                      n.burn = 500,
+  #                      n.burn = 50,
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$y[, 1, 1] <- NA
@@ -2954,7 +2954,7 @@ test_that("missing value error handling works", {
   #                n.neighbors = 5,
   #                search.type = 'cb',
   #                n.report = 10,
-  #                n.burn = 500,
+  #                n.burn = 50,
   #                n.chains = 1)
   # expect_s3_class(out, "spMsPGOcc")
 })
@@ -2993,7 +2993,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3014,7 +3014,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3035,7 +3035,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3059,7 +3059,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -3215,7 +3215,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -3260,7 +3260,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -3281,7 +3281,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -3313,7 +3313,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -3329,7 +3329,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -3345,7 +3345,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -3384,7 +3384,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3405,7 +3405,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3426,7 +3426,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3450,7 +3450,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -3607,7 +3607,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -3652,7 +3652,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -3673,7 +3673,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -3705,7 +3705,7 @@ test_that("missing value error handling works", {
   #                        n.neighbors = 5,
   #                        search.type = 'cb',
   #                        n.report = 10,
-  #                        n.burn = 500,
+  #                        n.burn = 50,
   #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -3721,7 +3721,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -3737,7 +3737,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -3776,7 +3776,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3797,7 +3797,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3818,7 +3818,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -3842,7 +3842,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -4000,7 +4000,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -4045,7 +4045,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -4066,7 +4066,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -4098,7 +4098,7 @@ test_that("missing value error handling works", {
   #                        n.neighbors = 5,
   #                        search.type = 'cb',
   #                        n.report = 10,
-  #                        n.burn = 500,
+  #                        n.burn = 50,
   #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -4114,7 +4114,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -4130,7 +4130,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -4169,7 +4169,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4190,7 +4190,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4211,7 +4211,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4235,7 +4235,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -4394,7 +4394,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -4439,7 +4439,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -4460,7 +4460,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -4492,7 +4492,7 @@ test_that("missing value error handling works", {
   #                        n.neighbors = 5,
   #                        search.type = 'cb',
   #                        n.report = 10,
-  #                        n.burn = 500,
+  #                        n.burn = 50,
   #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -4508,7 +4508,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -4524,7 +4524,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -4563,7 +4563,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4584,7 +4584,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4605,7 +4605,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4629,7 +4629,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -4788,7 +4788,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -4833,7 +4833,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -4854,7 +4854,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -4886,7 +4886,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -4902,7 +4902,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -4918,7 +4918,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -4958,7 +4958,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -4979,7 +4979,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5000,7 +5000,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5024,7 +5024,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -5183,7 +5183,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -5228,7 +5228,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -5249,7 +5249,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -5283,7 +5283,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -5299,7 +5299,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -5315,7 +5315,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -5354,7 +5354,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5375,7 +5375,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5396,7 +5396,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5420,7 +5420,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })
@@ -5580,7 +5580,7 @@ out <- spMsPGOcc(occ.formula = occ.formula,
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 400, 
+                 n.burn = 40, 
 		 n.thin = 2,
 		 n.chains = 2, 
                  k.fold = 2, 
@@ -5625,7 +5625,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
@@ -5646,7 +5646,7 @@ test_that("random effect gives error when non-numeric", {
                               n.neighbors = 5, 
                               search.type = 'cb', 
                               n.report = 10, 
-                              n.burn = 400, 
+                              n.burn = 40, 
 		              n.thin = 2,
 		              n.chains = 1))
 })
@@ -5680,7 +5680,7 @@ test_that("missing value error handling works", {
                          n.neighbors = 5,
                          search.type = 'cb',
                          n.report = 10,
-                         n.burn = 500,
+                         n.burn = 50,
                          n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs[[1]][1] <- NA
@@ -5696,7 +5696,7 @@ test_that("missing value error handling works", {
                        n.neighbors = 5,
                        search.type = 'cb',
                        n.report = 10,
-                       n.burn = 500,
+                       n.burn = 50,
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[, 1, 1] <- NA
@@ -5712,7 +5712,7 @@ test_that("missing value error handling works", {
                  n.neighbors = 5,
                  search.type = 'cb',
                  n.report = 10,
-                 n.burn = 500,
+                 n.burn = 50,
                  n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
 })
@@ -5751,7 +5751,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5772,7 +5772,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5793,7 +5793,7 @@ test_that("all correlation functions work", {
                    n.neighbors = 5, 
                    search.type = 'cb', 
                    n.report = 10, 
-                   n.burn = 500, 
+                   n.burn = 50, 
                    n.thin = 1, 
 		   n.chains = 1)
   expect_s3_class(out, "spMsPGOcc")
@@ -5817,7 +5817,7 @@ test_that("verbose prints to the screen", {
                  n.neighbors = 5, 
                  search.type = 'cb', 
                  n.report = 10, 
-                 n.burn = 500, 
+                 n.burn = 50, 
                  n.thin = 1, 
 		 n.chains = 1))
 })

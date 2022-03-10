@@ -19,7 +19,7 @@ sfJSDM <- function(formula, data, inits, priors,
   # Make it look nice
   if (verbose) {
     cat("----------------------------------------\n");
-    cat("\tPreparing the data\n");
+    cat("\tPreparing to run the model\n");
     cat("----------------------------------------\n");
   }
   # Check for unused arguments ------------------------------------------	

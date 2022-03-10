@@ -1,0 +1,31 @@
+---
+title: "Fitting occupancy models with random intercepts in `spOccupancy`"
+author: "Jeffrey W. Doser"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{randomEffects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", cache = TRUE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+
+# Introduction
+
+This vignette details how to include random intercepts when fitting single-species or multi-species occupancy models in `spOccupancy`. For an introduction to the basic `spOccupancy` functionality, see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). As of v0.3.0, `spOccupancy` supports random intercepts in the occurrence and detection portions of all single-species and multi-species occupancy models. That is, random intercepts are supported in `PGOcc`, `spPGOcc`, `msPGOcc`, `spMsPGOcc`, `lfMsPGOcc`, `sfMsPGOcc`, `lfJSDM`, and `sfJSDM`. Future updates will allow for random intercepts in integrated occupancy models (approx. summer 2022) as well as random slopes in all models (approx. fall 2022). Here I show how to simulate data for a spatially explicit single-species occupancy model with random intercepts in occurrence and detection using `simOcc`, and subsequently show how to include random intercepts using `lme4` syntax [@bates2015] with `spPGOcc`. Random intercepts are included in all other single-species and multi-species models in an analogous manner. 
+
+# References {-}
+
