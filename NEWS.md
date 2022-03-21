@@ -1,3 +1,20 @@
+# spOccupancy 0.3.0
+
+spOccupancy Version 0.3.0 contains numerous substantial updates that provide new functionality, improved computational performance for model fitting and subsequent model checking/comparison, and minor bug fixes. The changes include: 
+
++ Additional functionality for fitting spatial and non-spatial multi-species occupancy models with residual species correlations (i.e., joint species distribution models with imperfect detection). See documentation for `lfMsPGOcc()` and `sfMsPGOcc()`. We also included the functions `lfJSDM()` and `sfJSDM()` which are more typical joint species distribution models that fail to explicitly account for imperfect detection.
++ All single-species and multi-species models allow for unstructured random intercepts in both the occurrence and detection portions of the occupancy model. Prior to this version, random intercepts were not supported in the occurrence portion of spatially-explicit models. 
++ All `predict()` functions now include the argument `type`, which allows for prediction of detection probability (`type = 'detection'`) at a set of covariate values as well as predictions of occurrence (`type = 'occupancy'`). 
++ All models are substantially faster than version 0.2.1. We improved performance by implementing a change in how we sample the latent Polya-Gamma variables in the detection component of the model. This results in substantial increases in speed for models where the number of replicates varies across sites. We additionally updated how non-spatial random effects were sampled, which also contributes to improved computational performance.
++ All model fitting functions now include the object `like.samples` in the resulting model object, which contains model likelihood values needed for calculation of WAIC. This leads to much shorter run times for `waicOcc()` compared to previous versions.
++ All `fitted.*()` functions now return both the fitted values and the estimated detection probability samples from a fitted `spOccupancy` model. 
++ Improved error handling for models with missing values and random effects.
++ Added the argument `ignore.RE` to all `predict()` functions. If non-spatial random intercepts are included when fitting the model, setting `ignore.RE = TRUE` will yield predictions that ignore the values of the random effects. If `ignore.RE = FALSE`, the model will predict new values using the random intercepts for both sampled and non-sampled levels of the effects.  
++ Fixed a bug in the cross-validation component of all `spOccupancy` model fitting functions that occurred when random effects were included in the occurrence and/or detection component of the model.
++ Fixed minor bug in `simOcc()` and `simMsOcc()` that prevented simulating data with multiple random intercepts on detection. 
++ Fixed minor bug in spatially-explicit models that resulted in an error when setting `NNGP = FALSE` and not specifying initial values for the spatial range parameter `phi`. 
++ Fixed a bug in the `predict()` functions for `spMsPGOcc` and `spPGOcc` objects that resulted in potentially inaccurate predictions when `n.omp.threads` > 1. 
+
 # spOccupancy 0.2.1
 
 + Minor changes related to arguments in C++ code in header files to pass CRAN additional issues.

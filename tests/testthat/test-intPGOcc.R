@@ -1,6 +1,6 @@
 # Test intPGOcc.R  ----------------------------------------------------------
 
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
 J.x <- 15
@@ -47,6 +47,7 @@ J <- length(dat$z.obs)
 # Initial values
 inits.list <- list(alpha = list(0, 0, 0, 0), 
 		   beta = 0, 
+		   fix = TRUE,
 		   z = rep(1, J))
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 

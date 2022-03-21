@@ -4,7 +4,7 @@
 
 
 \description{
-Function for fitting multi-species occupancy models with species correlations (i.e., a joint species distribution model with imperfect detection). WE use Polya-gamma latent variables and a factor modeling approach.}
+Function for fitting multi-species occupancy models with species correlations (i.e., a joint species distribution model with imperfect detection). We use Polya-gamma latent variables and a factor modeling approach for dimension reduction.}
 
 \usage{
 lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors, 
@@ -48,7 +48,10 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
   \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{lambda}, \code{z}. 
   The value portion of each tag is the parameter's initial value. See 
-  \code{priors} description for definition of each parameter name.}
+  \code{priors} description for definition of each parameter name.
+  Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 

@@ -1,6 +1,6 @@
 # Test spIntPGOcc.R  ------------------------------------------------------
 # NNGP --------------------------------------------------------------------
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
 set.seed(1010)
@@ -68,6 +68,7 @@ inits.list <- list(alpha = list(0, 0, 0, 0),
 		   phi = 3 / .5, 
 		   sigma.sq = 2, 
 		   w = rep(0, J), 
+		   fix = TRUE,
 		   z = rep(1, J))
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 

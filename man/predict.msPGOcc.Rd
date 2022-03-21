@@ -3,22 +3,25 @@
 \title{Function for prediction at new locations for multi-species occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `msPGOcc`. When non-spatial random effects are included in the occurrence portion of the model, \code{predict} only allows prediction at random effect levels that are included in the fitted data.
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `msPGOcc`. Prediction is possible for both the latent occupancy state as well as detection.
 }
 
 \usage{
-\method{predict}{msPGOcc}(object, X.0, ignore.RE = FALSE, ...)
+\method{predict}{msPGOcc}(object, X.0, ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
 
   \item{object}{an object of class msPGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. Covariates should have the same column names as those used when fitting the model with \code{msPGOcc}.}
+  \item{X.0}{the design matrix of covariates at the prediction locations. This should include a column of 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{msPGOcc}. Columns should correspond to the order of how covariates were specified in the corresponding formula argument of \code{msPGOcc}. Column names of the random effects must match the name of the random effects, if specified in the corresponding formula argument of \code{msPGOcc}.}
 
   \item{ignore.RE}{a logical value indicating whether to include unstructured random effects for prediction. If FALSE, random effects will be ignored and prediction will only use the fixed effects. If TRUE, random effects will be included in the prediction for both observed and unobserved levels of the random effect.}
 
   \item{...}{currently no additional arguments}
+
+  \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
+
 }
 
 \author{
@@ -27,13 +30,18 @@
 }
 
 \value{
-  An object of class \code{predict.msPGOcc} that is a list comprised of: 
+  A list object of class \code{predict.msPGOcc}. When \code{type = 'occupancy'}, the list consists of:  
 
   \item{psi.0.samples}{a three-dimensional array of posterior predictive samples for the
     latent occurrence probability values.}
 
   \item{z.0.samples}{a three-dimensional array of posterior predictive samples for the
     latent occurrence values.}
+
+  When \code{type = 'detection'}, the list consists of: 
+
+  \item{p.0.samples}{a three-dimensional array of posterior predictive samples for the 
+    detection probability values.}
 
   The return object will include additional objects used for standard 
   extractor functions. 

@@ -46,7 +46,10 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
   \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}. 
   The value portion of each tag is the parameter's initial value. See 
-  \code{priors} description for definition of each parameter name.}
+  \code{priors} description for definition of each parameter name.
+  Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 

@@ -175,7 +175,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   coords <- as.matrix(expand.grid(s.x, s.y))
   w.star <- matrix(0, nrow = N, ncol = J)
   if (factor.model) {
-    lambda <- matrix(rnorm(N * n.factors, 0, 0.5), N, n.factors) 
+    lambda <- matrix(rnorm(N * n.factors, 0, 1), N, n.factors) 
     # Set diagonals to 1
     diag(lambda) <- 1
     # Set upper tri to 0

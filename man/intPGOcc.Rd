@@ -53,7 +53,9 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   initial values for all detection parameters in the given data source or a single value
   for each data source to assign all parameters for a given data source
   the same initial value. See \code{priors} description for definition of 
-  each parameter name.}
+  each parameter name. Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal} and \code{alpha.normal}. Occurrence 

@@ -365,7 +365,7 @@ Similarly, we next sample the community-level regression coefficients $\bm{\mu_{
 Next, we sample the community-level occurrence variance parameter for each regression coefficient, $\tau^2_{r, \beta}$, from the following inverse-Gamma full conditional:
 
 \begin{equation}
-\tau^2_{r, \beta} \mid \cdot \sim \text{IG}(a_{r, \beta} + \frac{N}{2}, a_{r, \beta} + \frac{\sum_{i = 1}^N(\beta_{i, r} - \mu_{\beta_r})^2}{2}).
+\tau^2_{r, \beta} \mid \cdot \sim \text{IG}(a_{r, \beta} + \frac{N}{2}, b_{r, \beta} + \frac{\sum_{i = 1}^N(\beta_{i, r} - \mu_{\beta_r})^2}{2}).
 (\#eq:tauBeta)
 \end{equation}
 

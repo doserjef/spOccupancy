@@ -119,10 +119,10 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (!is.null(findbars(occ.formula))) {
       occ.re.names <- sapply(findbars(occ.formula), all.vars)
       for (i in 1:length(occ.re.names)) {
-        if (class(data$occ.covs[, occ.re.names[i]]) == 'factor') {
+        if (is(data$occ.covs[, occ.re.names[i]], 'factor')) {
           stop(paste("error: random effect variable ", occ.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
         } 
-        if (class(data$occ.covs[, occ.re.names[i]]) == 'character') {
+        if (is(data$occ.covs[, occ.re.names[i]], 'character')) {
           stop(paste("error: random effect variable ", occ.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
         }
       }
@@ -131,10 +131,10 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (!is.null(findbars(det.formula))) {
       det.re.names <- sapply(findbars(det.formula), all.vars)
       for (i in 1:length(det.re.names)) {
-        if (class(data$det.covs[, det.re.names[i]]) == 'factor') {
+        if (is(data$det.covs[, det.re.names[i]], 'factor')) {
           stop(paste("error: random effect variable ", det.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
         } 
-        if (class(data$det.covs[, det.re.names[i]]) == 'character') {
+        if (is(data$det.covs[, det.re.names[i]], 'character')) {
           stop(paste("error: random effect variable ", det.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
         }
       }
@@ -179,7 +179,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------
-    if (class(occ.formula) == 'formula') {
+    if (is(occ.formula, 'formula')) {
       tmp <- parseFormula(occ.formula, data$occ.covs)
       X <- as.matrix(tmp[[1]])
       X.re <- as.matrix(tmp[[4]])
@@ -193,7 +193,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			     function (a) sort(unique(a)))
 
     # Detection -----------------------
-    if (class(det.formula) == 'formula') {
+    if (is(det.formula, 'formula')) {
       tmp <- parseFormula(det.formula, data$det.covs)
       X.p <- as.matrix(tmp[[1]])
       X.p.re <- as.matrix(tmp[[4]])
@@ -581,6 +581,18 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       alpha.star.indx <- 0
       alpha.star.inits <- 0
     }
+    # Should initial values be fixed --
+    if ("fix" %in% names(inits)) {
+      fix.inits <- inits[["fix"]]
+      if ((fix.inits != TRUE) & (fix.inits != FALSE)) {
+        stop(paste("error: inits$fix must take value TRUE or FALSE"))
+      }
+    } else {
+      fix.inits <- FALSE
+    }
+    if (verbose & fix.inits & (n.chains > 1)) {
+      message("Fixing initial values across all chains\n")
+    }
 
     curr.chain <- 1
     # Set storage for all variables ---------------------------------------
@@ -634,7 +646,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out.tmp <- list()
     for (i in 1:n.chains) {
       # Change initial values if i > 1
-      if (i > 1) {
+      if ((i > 1) & (!fix.inits)) {
         beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
         alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
 	if (p.occ.re > 0) {

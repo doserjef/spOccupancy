@@ -859,7 +859,7 @@ extern "C" {
 	    piProdWAIC[zLongIndx[r] * N + i] *= pow(1.0 - detProb[i * nObs + r], 
 			                            1.0 - y[r * N + i]);
             ySum[zLongIndx[r] * N + i] += y[r * N + i]; 
-            tmp_J[zLongIndx[r]]++;
+            tmp_JInt[zLongIndx[r]]++;
           } // r
         }
         // Compute occupancy probability and the integrated likelihood for WAIC
@@ -876,7 +876,7 @@ extern "C" {
           piProd[j * N + i] = one;
 	  piProdWAIC[j * N + i] = one;
           ySum[j * N + i] = zero; 
-          tmp_J[j] = 0; 
+          tmp_JInt[j] = 0; 
         } // j
       } // i
 

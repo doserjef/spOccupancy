@@ -12,6 +12,10 @@ reference:
    - spMsPGOcc
    - intPGOcc
    - spIntPGOcc
+   - lfJSDM
+   - sfJSDM
+   - lfMsPGOcc
+   - sfMsPGOcc
  - title: Goodness of Fit and Model Assessment
  - contents:
    - ppcOcc
@@ -29,6 +33,10 @@ reference:
    - summary.spMsPGOcc
    - summary.intPGOcc
    - summary.spIntPGOcc
+   - summary.lfJSDM
+   - summary.sfJSDM
+   - summary.lfMsPGOcc
+   - summary.sfMsPGOcc
    - summary.ppcOcc
  - title: "Prediction"
  - contents:
@@ -38,6 +46,10 @@ reference:
    - predict.spMsPGOcc
    - predict.intPGOcc
    - predict.spIntPGOcc
+   - predict.lfJSDM
+   - predict.sfJSDM
+   - predict.lfMsPGOcc
+   - predict.sfMsPGOcc
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -46,6 +58,10 @@ reference:
    - fitted.spMsPGOcc
    - fitted.intPGOcc
    - fitted.spIntPGOcc
+   - fitted.lfJSDM
+   - fitted.sfJSDM
+   - fitted.lfMsPGOcc
+   - fitted.sfMsPGOcc
  - title: "Data"
  - contents: 
    - hbef2015

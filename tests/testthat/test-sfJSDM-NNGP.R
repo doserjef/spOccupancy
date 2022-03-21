@@ -1,7 +1,7 @@
 # Test sfJSDM.R  -------------------------------------------------------
 # NNGP --------------------------------------------------------------------
 
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept Only ----------------------------------------------------------
 J.x <- 8
@@ -61,6 +61,7 @@ prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 # Starting values
 inits.list <- list(beta.comm = 0, 
 		   beta = 0, 
+		   fix = TRUE,
 		   tau.sq.beta = 1) 
 # Tuning
 tuning.list <- list(phi = 1, nu = 0.25)

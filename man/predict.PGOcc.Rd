@@ -3,20 +3,22 @@
 \title{Function for prediction at new locations for single-species occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `PGOcc`. When non-spatial random effects are included in the occurrence portion of the model, \code{predict} only allows prediction at random effect levels that are included in the fitted data.
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `PGOcc`. Prediction is possible for both the latent occupancy state as well as detection. 
 }
 
 \usage{
-\method{predict}{PGOcc}(object, X.0, ignore.RE = FALSE, ...)
+\method{predict}{PGOcc}(object, X.0, ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
 
   \item{object}{an object of class PGOcc}
 
-  \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. If random effects are included in the occurrence portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{PGOcc}. Covariates should have the same column names as those used when fitting the model with \code{PGOcc}.}
+  \item{X.0}{the design matrix of covariates at the prediction locations. This should include a column of 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{PGOcc}. Columns should correspond to the order of how covariates were specified in the corresponding formula argument of \code{PGOcc}. Column names of the random effects must match the name of the random effects, if specified in the corresponding formula argument of \code{PGOcc}.}
 
-  \item{ignore.RE}{logical value that specifies whether or not to remove random occurrence effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be obtained from the fixed effects.}
+  \item{ignore.RE}{logical value that specifies whether or not to remove random occurrence (or detection if \code{type = 'detection'}) effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be generated from the fixed effects.}
+
+  \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
 
   \item{...}{currently no additional arguments}
 }
@@ -27,13 +29,18 @@
 }
 
 \value{
-  An object of class \code{predict.PGOcc} that is a list comprised of: 
+  A list object of class \code{predict.PGOcc}. When \code{type = 'occupancy'}, the list consists of: 
 
   \item{psi.0.samples}{a \code{coda} object of posterior predictive samples for the
     latent occupancy probability values.}
 
   \item{z.0.samples}{a \code{coda} object of posterior predictive samples for the
     latent occupancy values.}
+
+  When \code{type = 'detection'}, the list consists of: 
+
+  \item{p.0.samples}{a \code{coda} object of posterior predictive samples for the 
+    detection probability values.}
 
   The return object will include additional objects used for standard 
   extractor functions. 
@@ -97,7 +104,7 @@ out <- PGOcc(occ.formula = ~ occ.cov,
 summary(out)
 
 # Predict at new locations ------------------------------------------------
-
+colnames(X.0) <- c('intercept', 'occ.cov')
 out.pred <- predict(out, X.0)
 psi.0.quants <- apply(out.pred$psi.0.samples, 2, quantile, c(0.025, 0.5, 0.975))
 plot(dat$psi[pred.indx], psi.0.quants[2, ], pch = 19, xlab = 'True', 

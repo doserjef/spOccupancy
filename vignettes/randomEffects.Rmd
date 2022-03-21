@@ -27,5 +27,159 @@ knitr::opts_chunk$set(
 
 This vignette details how to include random intercepts when fitting single-species or multi-species occupancy models in `spOccupancy`. For an introduction to the basic `spOccupancy` functionality, see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). As of v0.3.0, `spOccupancy` supports random intercepts in the occurrence and detection portions of all single-species and multi-species occupancy models. That is, random intercepts are supported in `PGOcc`, `spPGOcc`, `msPGOcc`, `spMsPGOcc`, `lfMsPGOcc`, `sfMsPGOcc`, `lfJSDM`, and `sfJSDM`. Future updates will allow for random intercepts in integrated occupancy models (approx. summer 2022) as well as random slopes in all models (approx. fall 2022). Here I show how to simulate data for a spatially explicit single-species occupancy model with random intercepts in occurrence and detection using `simOcc`, and subsequently show how to include random intercepts using `lme4` syntax [@bates2015] with `spPGOcc`. Random intercepts are included in all other single-species and multi-species models in an analogous manner. 
 
+# Simulating data with `simOcc`
+
+The function `simOcc` simulates single-species detection-nondetection data. `simOcc` has the following arguments. 
+
+```{r, eval = FALSE}
+simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
+       p.RE = list(), sp = FALSE, cov.model, sigma.sq, 
+       phi, nu, ...)
+```
+
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.rep` is a numeric vector of length `J` that indicates the number of replicates at each of the J sites. `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively. These are only specified when we want to simulate data with random intercepts. Each list should be comprised of two tags: `levels`, a vector that specifies the number of levels for each random effect included in the model, and `sigma.sq.psi` or `sigma.sq.p`, which specify the variances of the random effects for each random effect included in the model. `sp` is a logical value indicating whether to simulate data with a spatial Gaussian process. `cov.model` specifies the covariance function used to model the spatial dependence structure, with supported values of `exponential`, `matern`, `spherical`, and `gaussian`. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial range parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`. Below we simulate data across 225 sites with 1-4 replicates at a given site, a single covariate effect on occurrence, a single covariate effect on detection, spatial autocorrelation following a spherical correlation function, and a random intercept on occurrence and detection. 
+
+```{r}
+library(spOccupancy)
+set.seed(100)
+J.x <- 20
+J.y <- 20
+# Total number of sites
+(J <- J.x * J.y)
+# Number of replicates at each site
+n.rep <- sample(1:4, J, replace = TRUE)
+# Intercept and covariate effect on occurrence
+beta <- c(0, 0.7)
+# Intercept and covariate effect on detection
+alpha <- c(-0.5, 0.2)
+# Single random intercept on occurrence.
+psi.RE <- list(levels = 10, sigma.sq.psi = 2.5)
+# Single random intercept on detection. 
+p.RE <- list(levels = 25, sigma.sq.p = 1.5)
+# Spatial range
+phi <- 3 / .7
+# Spatial variance
+sigma.sq <- 2
+# Simulate the data
+dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, 
+	      alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, 
+	      sp = TRUE, sigma.sq = sigma.sq, phi = phi, 
+	      cov.model = 'spherical')
+```
+
+For the occurrence random effect, we assumed there were 10 levels and a variance of 2.5. For example, we could suppose these levels corresponded to different administrative units across the 225 sites we simulated, and we want to account for potential correlation between sites within each of the units. For the detection random effect, we assumed there were 25 levels and a variance of 1.5. For example, we could suppose there were 25 different observers that collected the data, and we wanted to account for variation in observer skill (and thus detection probability) across the different observers.
+
+Next, let's explore the simulated data a bit before we move on (plotting code adapted from @hooten2019bringing). 
+
+```{r}
+str(dat)
+```
+
+The simulated data object consists of the following objects: `X` (the occurrence design matrix), `X.p` (the detection design matrix), `coords` (the spatial coordinates of each site), `w` (the latent spatial process, `psi` (occurrence probability), `z` (the latent occupancy status), `y` (the detection-nondetection data, `X.p.re` (the detection random effect levels for each site), `X.re` (the occurrence random effect levels for each site), `alpha.star` (the detection random effects for each level of the random effect), `beta.star` (the occurrence random effects for each level of the random effect). 
+
+```{r}
+# Detection-nondetection data
+y <- dat$y
+# Occurrence design matrix for fixed effects
+X <- dat$X
+# Detection design matrix for fixed effets
+X.p <- dat$X.p
+# Occurrence design matrix for random effects
+X.re <- dat$X.re
+# Detection design matrix for random effects
+X.p.re <- dat$X.p.re
+# Occurrence values
+psi <- dat$psi
+# Spatial coordinates
+coords <- dat$coords
+# Simple plot of the occurrence probability across space.
+# Dark points indicate high occurrence. 
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Simulated Occurrence", 
+     bty = 'n')
+points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi-min(psi))/diff(range(psi))))
+```
+
+We see there is clear variation in occurrence probability across the simulated spatial region. The final step before we can fit the model is to package up the data in a list for use in `spOccupancy` model fitting functions. This requires creating a list that consists of the detection-nondetection data (`y`), occurrence covariates (`occ.covs`), detection covariates (`det.covs`), and coordinates (`coords`). See the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details. 
+
+```{r}
+# Package all data into a list
+# Occurrence covariates consists of the fixed effects and random effect
+occ.covs <- cbind(X[, 2], X.re)
+colnames(occ.covs) <- c('occ.cov.1', 'occ.factor.1')
+# Detection covariates consists of the fixed effects and random effect
+det.covs <- list(det.cov.1 = X.p[, , 2], 
+                 det.factor.1 = X.p.re[, , 1])
+# Package into a list for spOccupancy
+data.list <- list(y = y, 
+		  occ.covs = occ.covs, 
+		  det.covs = det.covs, 
+		  coords = coords)
+# Take a look at the data structure.
+str(data.list)
+# Take a look at the occurrence covariates
+head(occ.covs)
+```
+
+One important thing to note about including random effects in `spOccupancy` is that we must supply the random effects in as numeric values. Notice in the `occ.factor.1` column in `occ.covs`, the random effect levels are specified as a numeric value, which indicates the specific level of the random effect at that given site. `spOccupancy` will return an informative error if we supply random effects as factors or character vectors and will tell us to convert them to numeric in order to fit the model.  
+
+# Fit the model using `spPGOcc`
+
+We now fit the model using `spPGOcc`. Random effects are included in the model formulas using standard `lme4` notation. Below we run a spatially-explicit occupancy model for 400 batches each of length 25 (10000 total MCMC iterations) using a spherical correlation function. We use the default intial values, priors, and tuning values that `spOccupancy` provides. We use a Nearest Neighbor Gaussian Process with 5 neighbors. 
+
+```{r}
+n.batch <- 400
+batch.length <- 25
+out.full <- spPGOcc(occ.formula = ~ occ.cov.1 + (1 | occ.factor.1), 
+	            det.formula = ~ det.cov.1 + (1 | det.factor.1), 
+	            data = data.list, 
+	            n.batch = n.batch, 
+	            batch.length = batch.length, 
+	            accept.rate = 0.43, 
+	            cov.model = "spherical", 
+	            NNGP = TRUE, 
+	            n.neighbors = 5,
+	            n.report = 100, 
+	            n.burn = 2000, 
+	            n.thin = 4, 
+	            n.chains = 2) 
+summary(out.full)
+```
+
+The summary of the model output shows our model recovers the values we used to simulate the data. Let's also fit a model that doesn't include the occurrence and detection random effects, and compare their performance using the WAIC [@watanabe2010]. 
+
+```{r}
+out.no.re <- spPGOcc(occ.formula = ~ occ.cov.1, 
+	             det.formula = ~ det.cov.1, 
+	             data = data.list, 
+	             n.batch = n.batch, 
+	             batch.length = batch.length, 
+	             accept.rate = 0.43, 
+	             cov.model = "spherical", 
+	             NNGP = TRUE, 
+	             n.neighbors = 5,
+	             n.report = 100, 
+	             n.burn = 2000, 
+	             n.thin = 2, 
+	             n.chains = 2) 
+waicOcc(out.full)
+waicOcc(out.no.re)
+```
+
+We see the WAIC is substantially smaller for the model that includes the occurrence and detection random effects. Finally, let's look at the predicted occurrence values from the model to see how they compare to the values we used to simulate the data. 
+
+```{r}
+par(mfrow = c(1, 2))
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Simulated Occurrence", 
+     bty = 'n')
+points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi-min(psi))/diff(range(psi))))
+# Predicted mean occurrence values
+psi.means <- apply(out.full$psi.samples, 2, mean)
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Predicted Occurrence", 
+     bty = 'n')
+points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi.means-min(psi.means))/diff(range(psi.means))))
+```
+
+TODO: need to add in something about prediction and how that is slightly complicated with random effects. 
+
 # References {-}
 

@@ -52,7 +52,10 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
     \code{nu} is only specified if \code{cov.model = "matern"} and \code{sigma.sq.p}
     is only specified if there are random effects in \code{det.formula}. 
     The value portion of each tag is the parameter's initial value. See \code{priors}
-    description for definition of each parameter name.}
+    description for definition of each parameter name.
+    Additionally, the tag \code{fix} can be set to \code{TRUE} 
+    to fix the starting values across all chains. If \code{fix} is not specified
+    (the default), starting values are varied randomly across chains.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 

@@ -44,7 +44,10 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
   detection portion of the occupancy model, respectively. See \code{priors} 
-  description for definition of each parameter name.}
+  description for definition of each parameter name.
+  Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{sigma.sq.psi.ig}, 
@@ -172,13 +175,19 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
+  \item{like.samples}{a \code{coda} object of posterior samples
+    for the likelihood value associated with each site. Used for calculating
+    WAIC.}
+
   \item{run.time}{execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{scoring rule (deviance) from k-fold cross-validation. 
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection
+  probability values are not included in the model object, but can be 
+  extracted using \code{fitted()}. 
 
 }
 

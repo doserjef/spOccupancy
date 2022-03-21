@@ -1,6 +1,6 @@
 # Test msPGOcc.R  --------------------------------------------------------
 
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
 J.x <- 8
@@ -50,6 +50,7 @@ inits.list <- list(alpha.comm = 0,
 		      alpha = 0,
 		      tau.sq.beta = 1, 
 		      tau.sq.alpha = 1, 
+		      fix = TRUE,
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 1000
@@ -134,6 +135,7 @@ test_that("fitted works for msPGOcc", {
   expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
 })
 
+# Check predictions -------------------
 test_that("predict works for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
   X.0 <- dat$X
@@ -141,6 +143,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  J.str <- 100
+  X.p.0 <- matrix(1, nrow = J.str, ncol = p.det)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J.str))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -345,6 +354,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  J.str <- 100
+  X.p.0 <- matrix(1, nrow = J.str, ncol = p.det)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J.str))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -552,6 +568,12 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  X.p.0 <- dat$X.p[, 1, ]
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -758,6 +780,12 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  X.p.0 <- dat$X.p[, 1, ]
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -790,7 +818,7 @@ test_that("posterior predictive checks work for msPGOcc", {
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
 })
 
-# Covariates on both ------------------------------------------------------
+# Interactions on both ----------------------------------------------------
 J.x <- 8
 J.y <- 8
 J <- J.x * J.y
@@ -964,6 +992,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- dat$X.p[, 1, ]
+  X.p.0 <- cbind(X.p.0, X.p.0[, 2] * X.p.0[, 3])
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -1171,6 +1206,12 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(1, data.list$det.covs$occ.cov.1)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -1418,6 +1459,13 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  J.str <- 100
+  X.p.0 <- matrix(1, nrow = J.str, ncol = p.det)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J.str))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -1664,6 +1712,13 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  J.str <- 100
+  X.p.0 <- matrix(1, nrow = J.str, ncol = p.det)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J.str))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -1909,6 +1964,14 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  J.str <- 100
+  X.p.0 <- matrix(1, nrow = J.str, ncol = p.det)
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J.str))
+})
+
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -2153,6 +2216,12 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- dat$X.p[, 1, ]
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -2399,6 +2468,13 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, 1], dat$X.p.re[, 1, 1])
+  colnames(X.p.0) <- c('intercept', 'det.factor.1')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -2644,6 +2720,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, 1], dat$X.p.re[, 1, 1:2])
+  colnames(X.p.0) <- c('intercept', 'det.factor.1', 'det.factor.2')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -2892,6 +2975,13 @@ test_that("predict works for msPGOcc", {
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
 })
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, ], dat$X.p.re[, 1, 1:2])
+  colnames(X.p.0) <- c('intercept', 'det.cov.1', 'det.factor.1', 'det.factor.2')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
+})
 
 test_that("posterior predictive checks work for msPGOcc", {
   n.post.samples <- out$n.post * out$n.chains
@@ -3138,6 +3228,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, ], dat$X.p.re[, 1, 1:2])
+  colnames(X.p.0) <- c('intercept', 'det.cov.1', 'det.factor.1', 'det.factor.2')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -3387,6 +3484,13 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, ], dat$X.p.re[, 1, 1:2])
+  colnames(X.p.0) <- c('intercept', 'det.factor.1', 'det.factor.2')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {
@@ -3638,6 +3742,14 @@ test_that("predict works for msPGOcc", {
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
   expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, ], dat$X.p.re[, 1, 1:3])
+  colnames(X.p.0) <- c('intercept', 'det.cov.1', 'det.factor.1', 'det.factor.2', 
+                       'det.factor.3')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
 })
 
 test_that("posterior predictive checks work for msPGOcc", {

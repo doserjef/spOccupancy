@@ -4,22 +4,20 @@
 
 \description{
   The function \code{predict} collects posterior predictive samples for a set of new 
-  locations given an object of class `spPGOcc`. 
+  locations given an object of class `spPGOcc`. Prediction is possible for both the 
+  latent occupancy state as well as detection.
 }
 
 \usage{
 \method{predict}{spPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-                          n.report = 100, ignore.RE = FALSE, ...)
+                          n.report = 100, ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
 
   \item{object}{an object of class \code{spPGOcc}}
 
-  \item{X.0}{the design matrix for prediction locations. This should 
-    include a column of 1s for the intercept if an intercept is included in the original model fit.
-    Covariates should have the same column names as those used when fitting the model with 
-    \code{spPGOcc}.}
+  \item{X.0}{the design matrix of covariates at the prediction locations. This should include a column of 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{spPGOcc}. Columns should correspond to the order of how covariates were specified in the corresponding formula argument of \code{spPGOcc}. Column names of the random effects must match the name of the random effects, if specified in the corresponding formula argument of \code{spPGOcc}.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
   in a projected coordinate system.}
@@ -42,6 +40,8 @@
 
   \item{n.report}{the interval to report sampling progress.}
 
+  \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
+
   \item{...}{currently no additional arguments}
 }
 
@@ -55,7 +55,7 @@
 }
 
 \value{
-  An object of class \code{predict.spPGOcc} that is a list comprised of: 
+  A list object of class \code{predict.spPGOcc}. When \code{type = 'occupancy'}, the list consists of:  
 
   \item{psi.0.samples}{a \code{coda} object of posterior predictive samples 
     for the latent occurrence probability values.}
@@ -65,6 +65,13 @@
   
   \item{w.0.samples}{a \code{coda} object of posterior predictive samples 
     for the latent spatial random effects.}
+
+  \item{run.time}{execution time reported using \code{proc.time()}.}
+
+  When \code{type = 'detection'}, the list consists of: 
+
+  \item{p.0.samples}{a \code{coda} object of posterior predictive samples for the 
+    detection probability values.}
 
   \item{run.time}{execution time reported using \code{proc.time()}.}
 

@@ -103,10 +103,10 @@ sfJSDM <- function(formula, data, inits, priors,
   if (!is.null(findbars(formula))) {
     re.names <- sapply(findbars(formula), all.vars)
     for (i in 1:length(re.names)) {
-      if (class(data$covs[, re.names[i]]) == 'factor') {
+      if (is(data$covs[, re.names[i]], 'factor')) {
         stop(paste("error: random effect variable ", re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
       } 
-      if (class(data$covs[, re.names[i]]) == 'character') {
+      if (is(data$covs[, re.names[i]], 'character')) {
         stop(paste("error: random effect variable ", re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
       }
     }
@@ -118,7 +118,7 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: formula must be specified")
   }
 
-  if (class(formula) == 'formula') {
+  if (is(formula, 'formula')) {
     tmp <- parseFormula(formula, data$covs)
     X <- as.matrix(tmp[[1]])
     X.re <- as.matrix(tmp[[4]])
@@ -544,6 +544,18 @@ sfJSDM <- function(formula, data, inits, priors,
     beta.star.indx <- 0
     beta.star.inits <- 0
   }
+  # Should initial values be fixed --
+  if ("fix" %in% names(inits)) {
+    fix.inits <- inits[["fix"]]
+    if ((fix.inits != TRUE) & (fix.inits != FALSE)) {
+      stop(paste("error: inits$fix must take value TRUE or FALSE"))
+    }
+  } else {
+    fix.inits <- FALSE
+  }
+  if (verbose & fix.inits & (n.chains > 1)) {
+    message("Fixing initial values across all chains\n")
+  }
   # Covariance Model ----------------------------------------------------
   # Order must match util.cpp spCor.
   cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
@@ -698,7 +710,7 @@ sfJSDM <- function(formula, data, inits, priors,
     out.tmp <- list()
     for (i in 1:n.chains) {
       # Change initial values if i > 1
-      if (i > 1) {
+      if ((i > 1) & (!fix.inits)) {
         beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
         tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
         beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
@@ -751,6 +763,10 @@ sfJSDM <- function(formula, data, inits, priors,
       out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
+      lambda.mat <- matrix(lambda.inits, N, q)
+      out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+						       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+						       autoburnin = FALSE)$psrf[, 2])
       if (p.occ.re > 0) {
         out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
 						      mcmc(t(a$sigma.sq.psi.samples)))), 
@@ -803,7 +819,7 @@ sfJSDM <- function(formula, data, inits, priors,
     # Return things back in the original order. 
     out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
       								dim = c(q, J, n.post.samples))))
-    out$w.samples <- out$w.samples[, order(ord), ]
+    out$w.samples <- out$w.samples[, order(ord), , drop = FALSE]
     out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
     out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
       								dim = c(N, J, n.post.samples))))

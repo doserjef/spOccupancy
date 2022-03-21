@@ -1,6 +1,6 @@
 # Test lfJSDM.R  -------------------------------------------------------
 
-skip_on_cran()
+# skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
 J.x <- 8
@@ -52,6 +52,7 @@ prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 # Starting values
 inits.list <- list(beta.comm = 0, 
 		   beta = 0, 
+		   fix = TRUE,
 	           tau.sq.beta = 1) 
 
 n.samples <- 1000

@@ -58,7 +58,10 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   Each element of the list should be a vector of initial values for all detection 
   parameters in the given data source or a single value for each data source to 
   assign all parameters for a given data source the same initial value. See 
-  \code{priors} description for definition of each parameter name.}
+  \code{priors} description for definition of each parameter name.
+  Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 

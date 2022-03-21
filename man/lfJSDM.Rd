@@ -35,7 +35,10 @@ lfJSDM(formula, data, inits, priors, n.factors,
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{beta.comm}, \code{beta}, \code{tau.sq.beta}, 
   \code{lambda}. The value portion of each tag is the parameter's initial value. See 
-  \code{priors} description for definition of each parameter name.}
+  \code{priors} description for definition of each parameter name.
+  Additionally, the tag \code{fix} can be set to \code{TRUE} 
+  to fix the starting values across all chains. If \code{fix} is not specified
+  (the default), starting values are varied randomly across chains.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal} and \code{tau.sq.beta.ig}. Community-level

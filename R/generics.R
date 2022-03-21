@@ -1,5 +1,6 @@
 # PGOcc -------------------------------------------------------------------
-predict.PGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
+predict.PGOcc <- function(object, X.0, ignore.RE = FALSE, 
+			  type = 'occupancy', ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -18,8 +19,11 @@ predict.PGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (class(object) != "PGOcc") {
+  if (!is(object, "PGOcc")) {
     stop("error: requires an output object of class PGOcc\n")
+  }
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
 
   # Check X.0 -------------------------------------------------------------
@@ -29,56 +33,56 @@ predict.PGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
   if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  p.occ <- ncol(object$X)
-  p.design <- p.occ
-  if (object$psiRE) {
-    p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
-  }
-  if (ncol(X.0) != p.design) {
-    stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
-  }
-
-  # Composition sampling --------------------------------------------------
-  beta.samples <- as.matrix(object$beta.samples)
-  n.post <- object$n.post * object$n.chains
-  out <- list()
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
-  }
-
-  if (object$psiRE) {
-    beta.star.samples <- object$beta.star.samples
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0) %in% x.re.names)
-    if (length(indx) == 0) {
-      stop("error: column names in X.0 must match variable names in data$occ.covs")
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type) == 'occupancy') {  
+    p.occ <- ncol(object$X)
+    p.design <- p.occ
+    if (object$psiRE & !ignore.RE) {
+      p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
     }
-    X.re <- as.matrix(X.0[, indx, drop = FALSE])
-    X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
-    n.occ.re <- length(unlist(re.level.names))
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    # TODO: need to double check this works with multiple random effects. 
-    for (i in 1:p.occ.re) {
-      for (j in 1:nrow(X.re)) {
-	tmp <- which(re.level.names[[i]] == X.re[j, i])
-        if (length(tmp) > 0) {
-          if (i > 1) {
-            X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
-	  } else {
-            X.re.ind[j, i] <- tmp 
-	  }
-	}
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+
+    # Composition sampling --------------------------------------------------
+    beta.samples <- as.matrix(object$beta.samples)
+    n.post <- object$n.post * object$n.chains
+    out <- list()
+    if (object$psiRE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
+
+    if (object$psiRE & !ignore.RE) {
+      beta.star.samples <- object$beta.star.samples
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
       }
-    }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site.
-    beta.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
-    if (!ignore.RE) {
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.occ.re <- length(unlist(re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      for (i in 1:p.occ.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      beta.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
       for (t in 1:p.occ.re) {
         for (j in 1:nrow(X.re)) {
           if (!is.na(X.re.ind[j, t])) {
@@ -92,19 +96,90 @@ predict.PGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
           }
         } # j
       } # t
+    } else {
+      X.fix <- X.0
+      beta.star.sites.0.samples <- matrix(0, n.post, nrow(X.0))
+      p.occ.re <- 0
     }
-  } else {
-    X.fix <- X.0
-    beta.star.sites.0.samples <- matrix(0, n.post, nrow(X.0))
-    p.occ.re <- 0
+    J.str <- nrow(X.0)
+    out$psi.0.samples <- mcmc(logit.inv(t(X.fix %*% t(beta.samples) + 
+          				t(beta.star.sites.0.samples))))
+
+    out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)), 
+    		                 nrow = n.post, ncol = nrow(X.0)))
+
   }
-  J.str <- nrow(X.0)
-  out$psi.0.samples <- mcmc(logit.inv(t(X.fix %*% t(beta.samples) + 
-					t(beta.star.sites.0.samples))))
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE & !ignore.RE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
 
-  out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)), 
-  		                 nrow = n.post, ncol = nrow(X.0)))
+    # Composition sampling --------------------------------------------------
+    alpha.samples <- as.matrix(object$alpha.samples)
+    n.post <- object$n.post * object$n.chains
+    out <- list()
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
 
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      alpha.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
+      for (t in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          if (!is.na(X.re.ind[j, t])) {
+            alpha.star.sites.0.samples[, j] <- 
+              alpha.star.samples[, X.re.ind[j, t]] + 
+              alpha.star.sites.0.samples[, j]
+          } else {
+            alpha.star.sites.0.samples[, j] <- 
+              rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+              alpha.star.sites.0.samples[, j]
+          }
+        } # j
+      } # t
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, nrow(X.0))
+      p.det.re <- 0
+    }
+    J.str <- nrow(X.0)
+    out$p.0.samples <- mcmc(logit.inv(t(X.fix %*% t(alpha.samples) + 
+          				t(alpha.star.sites.0.samples))))
+  }
   out$call <- cl
 
   class(out) <- "predict.PGOcc"
@@ -135,7 +210,7 @@ fitted.PGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (class(object) != "PGOcc") {
+  if (!is(object, "PGOcc")) {
     stop("error: object must be one of class PGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -274,7 +349,7 @@ summary.ppcOcc <- function(object, level = 'both',
   cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n\n", sep=""))
 
   if (object$class %in% c('PGOcc', 'spPGOcc')) {
-    cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
+    cat("Bayesian p-value: ", round(mean(object$fit.y.rep > object$fit.y), digits), "\n")
     cat("Fit statistic: ", object$fit.stat, "\n")
   }
 
@@ -284,7 +359,7 @@ summary.ppcOcc <- function(object, level = 'both',
       cat("----------------------------------------\n");
       cat("\tCommunity Level\n");
       cat("----------------------------------------\n");
-      cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
+      cat("Bayesian p-value: ", round(mean(object$fit.y.rep > object$fit.y), digits), "\n")
       cat("Fit statistic: ", object$fit.stat, "\n")
     }
 
@@ -295,7 +370,7 @@ summary.ppcOcc <- function(object, level = 'both',
       N <- ncol(object$fit.y)
       for (i in 1:N) {
         cat(paste(object$sp.names[i], " Bayesian p-value: ", 
-		  mean(object$fit.y.rep[, i] > object$fit.y[, i]), "\n", sep = '')) 
+		  round(mean(object$fit.y.rep[, i] > object$fit.y[, i]), digits), "\n", sep = '')) 
       }
       cat("Fit statistic: ", object$fit.stat, "\n")
     }
@@ -304,7 +379,7 @@ summary.ppcOcc <- function(object, level = 'both',
       cat("----------------------------------------\n");
       cat("\tCommunity Level\n");
       cat("----------------------------------------\n");
-      cat("Bayesian p-value: ", mean(object$fit.y.rep > object$fit.y), "\n")
+      cat("Bayesian p-value: ", round(mean(object$fit.y.rep > object$fit.y), digits), "\n")
       cat("\n")
       cat("----------------------------------------\n");
       cat("\tSpecies Level\n");
@@ -312,7 +387,7 @@ summary.ppcOcc <- function(object, level = 'both',
       N <- ncol(object$fit.y)
       for (i in 1:N) {
         cat(paste(object$sp.names[i], " Bayesian p-value: ", 
-		  mean(object$fit.y.rep[, i] > object$fit.y[, i]), "\n", sep = '')) 
+		  round(mean(object$fit.y.rep[, i] > object$fit.y[, i]), digits), "\n", sep = '')) 
       }
       cat("Fit statistic: ", object$fit.stat, "\n")
     }
@@ -322,7 +397,7 @@ summary.ppcOcc <- function(object, level = 'both',
     n.data <- length(object$fit.y.rep)
     for (q in 1:n.data) {
       cat("Data Source", q, "\n\n")	    
-      cat("Bayesian p-value:", mean(object$fit.y.rep[[q]] > object$fit.y[[q]]), "\n")
+      cat("Bayesian p-value:", round(mean(object$fit.y.rep[[q]] > object$fit.y[[q]])), "\n")
       cat("Fit statistic:", object$fit.stat, "\n\n")
     }
   }
@@ -333,8 +408,9 @@ summary.ppcOcc <- function(object, level = 'both',
 
 predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1, 
 			    verbose = TRUE, n.report = 100, 
-			    ignore.RE = FALSE, ...) {
+			    ignore.RE = FALSE, type = 'occupancy', ...) {
 
+  ptm <- proc.time()
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -353,92 +429,94 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!(class(object) %in% c("spPGOcc", "spIntPGOcc"))) {
+  if (!is(object, c('spPGOcc', 'spIntPGOcc'))) {
     stop("error: requires an output object of class spPGOcc or spIntPGOcc\n")
   }
 
-  # Data prep -------------------------------------------------------------
-  n.post <- object$n.post * object$n.chains
-  X <- object$X
-  coords <- object$coords 
-  J <- nrow(X)
-  p.occ <- ncol(X)
-  theta.samples <- object$theta.samples
-  beta.samples <- object$beta.samples
-  w.samples <- object$w.samples
-  n.neighbors <- object$n.neighbors
-  cov.model.indx <- object$cov.model.indx
-  type <- object$type
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
-
+  
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
   }
   if (!any(is.data.frame(X.0), is.matrix(X.0))){
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  if (ncol(X.0) != p.occ + p.occ.re){
-    stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n", sep = ''))
-  }
   X.0 <- as.matrix(X.0)
 
-  if (missing(coords.0)) {
-    stop("error: coords.0 must be specified\n")
-  }
-  if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
-    stop("error: coords.0 must be a data.frame or matrix\n")
-  }
-  if (!ncol(coords.0) == 2){
-    stop("error: coords.0 must have two columns\n")
-  }
-  coords.0 <- as.matrix(coords.0)
-  
-  # Eliminate prediction sites that have already sampled been for now
-  match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
-  coords.0.indx <- which(is.na(match.indx))
-  coords.indx <- match.indx[!is.na(match.indx)]
-  coords.place.indx <- which(!is.na(match.indx))
-  coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-  X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-
-  if (length(coords.indx) == nrow(X.0)) {
-    stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-  }
-
-  if (object$psiRE) {
-    beta.star.samples <- object$beta.star.samples
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0.new) %in% x.re.names)
-    if (length(indx) == 0) {
-      stop("error: column names in X.0 must match variable names in data$occ.covs")
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type) == 'occupancy') {
+    if (missing(coords.0)) {
+      stop("error: coords.0 must be specified\n")
     }
-    X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
-    X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
-    n.occ.re <- length(unlist(re.level.names))
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    for (i in 1:p.occ.re) {
-      for (j in 1:nrow(X.re)) {
-	tmp <- which(re.level.names[[i]] == X.re[j, i])
-        if (length(tmp) > 0) {
-          if (i > 1) {
-            X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
-	  } else {
-            X.re.ind[j, i] <- tmp 
-	  }
-	}
+    if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
+      stop("error: coords.0 must be a data.frame or matrix\n")
+    }
+    if (!ncol(coords.0) == 2){
+      stop("error: coords.0 must have two columns\n")
+    }
+    coords.0 <- as.matrix(coords.0)
+    n.post <- object$n.post * object$n.chains
+    X <- object$X
+    coords <- object$coords 
+    J <- nrow(X)
+    p.occ <- ncol(X)
+    theta.samples <- object$theta.samples
+    beta.samples <- object$beta.samples
+    w.samples <- object$w.samples
+    n.neighbors <- object$n.neighbors
+    cov.model.indx <- object$cov.model.indx
+    sp.type <- object$type
+    if (object$psiRE & !ignore.RE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
+    if (ncol(X.0) != p.occ + p.occ.re){
+      stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n", sep = ''))
+    }
+    # Eliminate prediction sites that have already sampled been for now
+    match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
+    coords.0.indx <- which(is.na(match.indx))
+    coords.indx <- match.indx[!is.na(match.indx)]
+    coords.place.indx <- which(!is.na(match.indx))
+    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
+    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
+
+    if (length(coords.indx) == nrow(X.0)) {
+      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
+    }
+
+    if (object$psiRE & !ignore.RE) {
+      beta.star.samples <- object$beta.star.samples
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0.new) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
       }
-    }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site.
-    beta.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
-    if (!ignore.RE) {
+      X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
+      n.occ.re <- length(unlist(re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      for (i in 1:p.occ.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      beta.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
       for (t in 1:p.occ.re) {
         for (j in 1:nrow(X.re)) {
           if (!is.na(X.re.ind[j, t])) {
@@ -452,107 +530,173 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
           }
         } # j
       } # t
+    } else {
+      X.fix <- X.0.new
+      beta.star.sites.0.samples <- matrix(0, n.post, nrow(X.0.new))
+      p.occ.re <- 0
     }
-  } else {
-    X.fix <- X.0.new
-    beta.star.sites.0.samples <- matrix(0, n.post, nrow(X.0.new))
-    p.occ.re <- 0
+
+    # Sub-sample previous 
+    theta.samples <- t(theta.samples)
+    beta.samples <- t(beta.samples)
+    w.samples <- t(w.samples)
+    beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
+
+    q <- nrow(X.0.new)
+
+    if (sp.type == 'GP') {
+    
+      obs.pred.D <- iDist(coords, coords.0.new)
+      obs.D <- iDist(coords)
+      
+      storage.mode(obs.pred.D) <- "double"
+      storage.mode(obs.D) <- "double"
+      storage.mode(J) <- "integer"
+      storage.mode(p.occ) <- "integer"
+      storage.mode(X.0.new) <- "double"
+      storage.mode(q) <- "integer"
+      storage.mode(beta.samples) <- "double"
+      storage.mode(theta.samples) <- "double"
+      storage.mode(w.samples) <- "double"
+      storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(n.post) <- "integer"
+      storage.mode(cov.model.indx) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      storage.mode(verbose) <- "integer"
+      storage.mode(n.report) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+
+      out <- .Call("spPGOccPredict", J, p.occ, X.0.new, q, obs.D, 
+          	 obs.pred.D, beta.samples, theta.samples, 
+          	 w.samples, beta.star.sites.0.samples, 
+          	 n.post, cov.model.indx, n.omp.threads, 
+          	 verbose, n.report)
+    } else { 
+      # Get nearest neighbors 
+      # nn2 is a function from RANN. 
+      nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1 
+
+      storage.mode(coords) <- "double"
+      storage.mode(J) <- "integer"
+      storage.mode(p.occ) <- "integer"
+      storage.mode(n.neighbors) <- "integer"
+      storage.mode(X.0.new) <- "double"
+      storage.mode(coords.0.new) <- "double"
+      storage.mode(q) <- "integer"
+      storage.mode(beta.samples) <- "double"
+      storage.mode(theta.samples) <- "double"
+      storage.mode(w.samples) <- "double"
+      storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(n.post) <- "integer"
+      storage.mode(cov.model.indx) <- "integer"
+      storage.mode(nn.indx.0) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      storage.mode(verbose) <- "integer"
+      storage.mode(n.report) <- "integer"
+      
+      ptm <- proc.time()
+
+      out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors, 
+                   X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
+                   theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
+                   cov.model.indx, n.omp.threads, verbose, n.report)
+    }
+
+    if (nrow(X.0) == q) {
+      out$z.0.samples <- mcmc(t(out$z.0.samples))
+      out$psi.0.samples <- mcmc(t(out$psi.0.samples))
+      out$w.0.samples <- mcmc(t(out$w.0.samples))
+    } else {
+      tmp <- matrix(NA, n.post, nrow(X.0))
+      tmp[, coords.0.indx] <- t(out$z.0.samples)
+      tmp[, coords.place.indx] <- object$z.samples[, coords.indx]
+      out$z.0.samples <- mcmc(tmp)
+      tmp <- matrix(NA, n.post, nrow(X.0))
+      tmp[, coords.0.indx] <- t(out$psi.0.samples)
+      tmp[, coords.place.indx] <- object$psi.samples[, coords.indx]
+      out$psi.0.samples <- mcmc(tmp)
+      tmp <- matrix(NA, n.post, nrow(X.0))
+      tmp[, coords.0.indx] <- t(out$w.0.samples)
+      tmp[, coords.place.indx] <- object$w.samples[, coords.indx]
+      out$w.0.samples <- mcmc(tmp)
+    }
   }
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE & !ignore.RE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
 
-  # Sub-sample previous 
-  theta.samples <- t(theta.samples)
-  beta.samples <- t(beta.samples)
-  w.samples <- t(w.samples)
-  beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
+    # Composition sampling --------------------------------------------------
+    alpha.samples <- as.matrix(object$alpha.samples)
+    n.post <- object$n.post * object$n.chains
+    out <- list()
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
 
-  q <- nrow(X.0.new)
-
-  if (type == 'GP') {
-  
-    obs.pred.D <- iDist(coords, coords.0.new)
-    obs.D <- iDist(coords)
-    
-    storage.mode(obs.pred.D) <- "double"
-    storage.mode(obs.D) <- "double"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(X.0.new) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(beta.star.sites.0.samples) <- "double"
-    storage.mode(n.post) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    
-    ptm <- proc.time()
-
-    out <- .Call("spPGOccPredict", J, p.occ, X.0.new, q, obs.D, 
-		 obs.pred.D, beta.samples, theta.samples, 
-		 w.samples, beta.star.sites.0.samples, 
-		 n.post, cov.model.indx, n.omp.threads, 
-		 verbose, n.report)
-  } else { 
-    # Get nearest neighbors 
-    # nn2 is a function from RANN. 
-    nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1 
-
-    storage.mode(coords) <- "double"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(n.neighbors) <- "integer"
-    storage.mode(X.0.new) <- "double"
-    storage.mode(coords.0.new) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(beta.star.sites.0.samples) <- "double"
-    storage.mode(n.post) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(nn.indx.0) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-    
-    ptm <- proc.time()
-
-    out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors, 
-                 X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
-                 theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
-                 cov.model.indx, n.omp.threads, verbose, n.report)
-  }
-
-  if (nrow(X.0) == q) {
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))
-  } else {
-    tmp <- matrix(NA, n.post, nrow(X.0))
-    tmp[, coords.0.indx] <- t(out$z.0.samples)
-    tmp[, coords.place.indx] <- object$z.samples[, coords.indx]
-    out$z.0.samples <- mcmc(tmp)
-    tmp <- matrix(NA, n.post, nrow(X.0))
-    tmp[, coords.0.indx] <- t(out$psi.0.samples)
-    tmp[, coords.place.indx] <- object$psi.samples[, coords.indx]
-    out$psi.0.samples <- mcmc(tmp)
-    tmp <- matrix(NA, n.post, nrow(X.0))
-    tmp[, coords.0.indx] <- t(out$w.0.samples)
-    tmp[, coords.place.indx] <- object$w.samples[, coords.indx]
-    out$w.0.samples <- mcmc(tmp)
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      alpha.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
+      for (t in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          if (!is.na(X.re.ind[j, t])) {
+            alpha.star.sites.0.samples[, j] <- 
+              alpha.star.samples[, X.re.ind[j, t]] + 
+              alpha.star.sites.0.samples[, j]
+          } else {
+            alpha.star.sites.0.samples[, j] <- 
+              rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+              alpha.star.sites.0.samples[, j]
+          }
+        } # j
+      } # t
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, nrow(X.0))
+      p.det.re <- 0
+    }
+    J.str <- nrow(X.0)
+    out$p.0.samples <- mcmc(logit.inv(t(X.fix %*% t(alpha.samples) + 
+          				t(alpha.star.sites.0.samples))))
   }
   out$run.time <- proc.time() - ptm
   out$call <- cl
   out$object.class <- class(object)
-
   class(out) <- "predict.spPGOcc"
-
   out
-
 }
 
 print.spPGOcc <- function(x, ...) {
@@ -661,7 +805,7 @@ fitted.spPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (class(object) != "spPGOcc") {
+  if (!is(object, 'spPGOcc')) {
     stop("error: object must be one of class spPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -713,7 +857,8 @@ fitted.spPGOcc <- function(object, ...) {
 
 # msPGOcc -----------------------------------------------------------------
 
-predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
+predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE, 
+			    type = 'occupancy', ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -732,8 +877,12 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (class(object) != "msPGOcc") {
+  if (!is(object, 'msPGOcc')) {
     stop("error: requires an output object of class msPGOcc\n")
+  }
+
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
 
   # Check X.0 -------------------------------------------------------------
@@ -743,55 +892,56 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
   if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  p.occ <- ncol(object$X)
-  p.design <- p.occ
-  if (object$psiRE) {
-    p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
-  }
-  if (ncol(X.0) != p.design) {
-    stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
-  }
-  # Composition sampling --------------------------------------------------
-  N <- dim(object$y)[1]
-  sp.indx <- rep(1:N, p.occ)
-  n.post <- object$n.post * object$n.chains
-  beta.samples <- as.matrix(object$beta.samples)
-  out <- list()
-  out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
-  out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
-  }
-  if (object$psiRE) {
-    beta.star.samples <- object$beta.star.samples
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0) %in% x.re.names)
-    X.re <- as.matrix(X.0[, indx, drop = FALSE])
-    X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
-    n.occ.re <- length(unlist(re.level.names))
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    # TODO: need to double check this works with multiple random effects. 
-    for (i in 1:p.occ.re) {
-      for (j in 1:nrow(X.re)) {
-	tmp <- which(re.level.names[[i]] == X.re[j, i])
-        if (length(tmp) > 0) {
-          if (i > 1) {
-            X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
-	  } else {
-            X.re.ind[j, i] <- tmp 
-	  }
-	}
-      }
+
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type) == 'occupancy') {
+    p.occ <- ncol(object$X)
+    p.design <- p.occ
+    if (object$psiRE) {
+      p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
     }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site.
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
-    if (!ignore.RE) {
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    sp.indx <- rep(1:N, p.occ)
+    n.post <- object$n.post * object$n.chains
+    beta.samples <- as.matrix(object$beta.samples)
+    out <- list()
+    out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    if (object$psiRE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
+    if (object$psiRE & !ignore.RE) {
+      beta.star.samples <- object$beta.star.samples
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0) %in% x.re.names)
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.occ.re <- length(unlist(re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      for (i in 1:p.occ.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
       for (i in 1:N) {
         for (t in 1:p.occ.re) {
           for (j in 1:nrow(X.re)) {
@@ -807,22 +957,104 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
           } # j
         } # t
       } # i 
+    } else {
+      X.fix <- X.0
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
+      p.occ.re <- 0
     }
-  } else {
-    X.fix <- X.0
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
-    p.occ.re <- 0
+    J.str <- nrow(X.0)
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+        out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				     t(beta.samples[, sp.indx == i]) + 
+                                               beta.star.sites.0.samples[, (j - 1) * N + i])
+        out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
+      } # j
+    } # i
+  } # occurrence predictions
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    sp.indx <- rep(1:N, p.det)
+    n.post <- object$n.post * object$n.chains
+    alpha.samples <- as.matrix(object$alpha.samples)
+    out <- list()
+    out$p.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
+      for (i in 1:N) {
+        for (t in 1:p.det.re) {
+          for (j in 1:nrow(X.re)) {
+            if (!is.na(X.re.ind[j, t])) {
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                alpha.star.samples[, (i - 1) * n.det.re + X.re.ind[j, t]] + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
+            } else {
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
+            }
+          } # j
+        } # t
+      } # i 
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
+      p.det.re <- 0
+    }
+    J.str <- nrow(X.0)
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+        out$p.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				     t(alpha.samples[, sp.indx == i]) + 
+                                               alpha.star.sites.0.samples[, (j - 1) * N + i])
+      } # j
+    } # i
+
   }
-  J.str <- nrow(X.0)
-  # Make predictions
-  for (i in 1:N) {
-    for (j in 1:J.str) {
-      out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
-					     t(beta.samples[, sp.indx == i]) + 
-                                             beta.star.sites.0.samples[, (j - 1) * N + i])
-      out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
-    } # j
-  } # i
   out$call <- cl
 
   class(out) <- "predict.msPGOcc"
@@ -981,7 +1213,7 @@ fitted.msPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!(class(object) %in% c("msPGOcc", "spMsPGOcc", "lfMsPGOcc", "sfMsPGOcc"))) {
+  if (!is(object, c("msPGOcc", "spMsPGOcc", "lfMsPGOcc", "sfMsPGOcc"))) {
     stop("error: object must be of class msPGOcc, spMsPGOcc, lfMsPGOcc, or sfMsPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -1197,7 +1429,7 @@ print.spMsPGOcc <- function(x, ...) {
 
 predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1, 
 			      verbose = TRUE, n.report = 100, 
-			      ignore.RE = FALSE, ...) {
+			      ignore.RE = FALSE, type = 'occupancy', ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -1217,103 +1449,111 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (class(object) != "spMsPGOcc") {
+  if (!is(object, 'spMsPGOcc')) {
     stop("error: requires an output object of class spMsPGOcc\n")
   }
 
-  # Data prep -------------------------------------------------------------
-  n.post <- object$n.post * object$n.chains
-  X <- object$X
-  y <- object$y
-  coords <- object$coords 
-  J <- nrow(X)
-  N <- dim(y)[1]
-  p.occ <- ncol(X)
-  theta.samples <- object$theta.samples
-  beta.samples <- object$beta.samples
-  w.samples <- object$w.samples
-  n.neighbors <- object$n.neighbors
-  cov.model.indx <- object$cov.model.indx
-  type <- object$type
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
 
+  # Check X.0 -------------------------------------------------------------
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
   }
-  if (!any(is.data.frame(X.0), is.matrix(X.0))){
+  if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  if (ncol(X.0) != p.occ + p.occ.re){
-    stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n", sep = ''))
-  }
-  X.0 <- as.matrix(X.0)
 
-  if (missing(coords.0)) {
-    stop("error: coords.0 must be specified\n")
-  }
-  if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
-    stop("error: coords.0 must be a data.frame or matrix\n")
-  }
-  if (!ncol(coords.0) == 2){
-    stop("error: coords.0 must have two columns\n")
-  }
-  coords.0 <- as.matrix(coords.0)
+  ptm <- proc.time()
 
-  # Eliminate prediction sites that have already been sampled for now
-  match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
-  coords.0.indx <- which(is.na(match.indx))
-  coords.indx <- match.indx[!is.na(match.indx)]
-  coords.place.indx <- which(!is.na(match.indx))
-  coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-  X.0.new <- X.0[coords.0.indx, , drop = FALSE]
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type == 'occupancy')) {
+    n.post <- object$n.post * object$n.chains
+    X <- object$X
+    y <- object$y
+    coords <- object$coords 
+    J <- nrow(X)
+    N <- dim(y)[1]
+    p.occ <- ncol(X)
+    theta.samples <- object$theta.samples
+    beta.samples <- object$beta.samples
+    w.samples <- object$w.samples
+    n.neighbors <- object$n.neighbors
+    cov.model.indx <- object$cov.model.indx
+    sp.type <- object$type
+    if (object$psiRE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
 
-  if (length(coords.indx) == nrow(X.0)) {
-    stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-  }
+    if (ncol(X.0) != p.occ + p.occ.re){
+      stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n", sep = ''))
+    }
+    X.0 <- as.matrix(X.0)
 
-  if (object$psiRE) {
-    # Random effects of fitted values
-    beta.star.samples <- object$beta.star.samples
-    # Level names of the fitted random effects
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0.new) %in% x.re.names)
-    # Random effect columns in predicted values
-    X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
-    # Fixed effects in predicted values
-    X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
-    # Number of random effect levels in the fitted values. 
-    n.occ.re <- length(unlist(re.level.names))
-    # Matrix that indicates which random effect level in 
-    # beta.star.samples corresponds to the current 
-    # random effect in the predicted values. 
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    if (!ignore.RE) {
-      for (i in 1:p.occ.re) {
-        for (j in 1:nrow(X.re)) {
-          # Which level in the fitted data equals the current level, and 
-	  # where is it located in beta.star.samples 	
-          tmp <- which(re.level.names[[i]] == X.re[j, i])
-          if (length(tmp) > 0) {
-            if (i > 1) {
-              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
-            } else {
-              X.re.ind[j, i] <- tmp 
+    if (missing(coords.0)) {
+      stop("error: coords.0 must be specified\n")
+    }
+    if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
+      stop("error: coords.0 must be a data.frame or matrix\n")
+    }
+    if (!ncol(coords.0) == 2){
+      stop("error: coords.0 must have two columns\n")
+    }
+    coords.0 <- as.matrix(coords.0)
+
+    # Eliminate prediction sites that have already been sampled for now
+    match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
+    coords.0.indx <- which(is.na(match.indx))
+    coords.indx <- match.indx[!is.na(match.indx)]
+    coords.place.indx <- which(!is.na(match.indx))
+    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
+    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
+
+    if (length(coords.indx) == nrow(X.0)) {
+      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
+    }
+
+    if (object$psiRE & !ignore.RE) {
+      # Random effects of fitted values
+      beta.star.samples <- object$beta.star.samples
+      # Level names of the fitted random effects
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0.new) %in% x.re.names)
+      # Random effect columns in predicted values
+      X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
+      # Fixed effects in predicted values
+      X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
+      # Number of random effect levels in the fitted values. 
+      n.occ.re <- length(unlist(re.level.names))
+      # Matrix that indicates which random effect level in 
+      # beta.star.samples corresponds to the current 
+      # random effect in the predicted values. 
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      if (!ignore.RE) {
+        for (i in 1:p.occ.re) {
+          for (j in 1:nrow(X.re)) {
+            # Which level in the fitted data equals the current level, and 
+            # where is it located in beta.star.samples 	
+            tmp <- which(re.level.names[[i]] == X.re[j, i])
+            if (length(tmp) > 0) {
+              if (i > 1) {
+                X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+              } else {
+                X.re.ind[j, i] <- tmp 
+              }
             }
           }
         }
       }
-    }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site. 
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
-    if (!ignore.RE) {
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site. 
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
       for (i in 1:N) {
         for (t in 1:p.occ.re) {
           for (j in 1:nrow(X.re)) {
@@ -1329,105 +1569,186 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
           } # j
         } # t
       } # i
-    } 
-  } else {
-    X.fix <- X.0.new
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
-    p.occ.re <- 0
+    } else {
+      X.fix <- X.0.new
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
+      p.occ.re <- 0
+    }
+
+    # Sub-sample previous
+    theta.samples <- t(theta.samples)
+    beta.samples <- t(beta.samples)
+    w.samples <- aperm(w.samples, c(2, 3, 1))
+    beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
+    
+    q <- nrow(X.0.new)
+
+    if (sp.type == 'GP') {
+    
+      obs.pred.D <- iDist(coords, coords.0.new)
+      obs.D <- iDist(coords)
+      
+      storage.mode(obs.pred.D) <- "double"
+      storage.mode(obs.D) <- "double"
+      storage.mode(J) <- "integer"
+      storage.mode(N) <- "integer"
+      storage.mode(p.occ) <- "integer"
+      storage.mode(X.0.new) <- "double"
+      storage.mode(q) <- "integer"
+      storage.mode(beta.samples) <- "double"
+      storage.mode(theta.samples) <- "double"
+      storage.mode(w.samples) <- "double"
+      storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(n.post) <- "integer"
+      storage.mode(cov.model.indx) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      storage.mode(verbose) <- "integer"
+      storage.mode(n.report) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      
+
+      out <- .Call("spMsPGOccPredict", J, N, p.occ, X.0.new, q, obs.D, 
+          	 obs.pred.D, beta.samples, theta.samples, 
+          	 w.samples, beta.star.sites.0.samples, 
+          	 n.post, cov.model.indx, n.omp.threads, 
+          	 verbose, n.report)
+
+    } else { 
+      # Get nearest neighbors 
+      # nn2 is a function from RANN. 
+      nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1 
+
+      storage.mode(coords) <- "double"
+      storage.mode(N) <- "integer"
+      storage.mode(J) <- "integer"
+      storage.mode(p.occ) <- "integer"
+      storage.mode(n.neighbors) <- "integer"
+      storage.mode(X.fix) <- "double"
+      storage.mode(coords.0.new) <- "double"
+      storage.mode(q) <- "integer"
+      storage.mode(beta.samples) <- "double"
+      storage.mode(theta.samples) <- "double"
+      storage.mode(w.samples) <- "double"
+      storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(n.post) <- "integer"
+      storage.mode(cov.model.indx) <- "integer"
+      storage.mode(nn.indx.0) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      storage.mode(verbose) <- "integer"
+      storage.mode(n.report) <- "integer"
+      
+      ptm <- proc.time()
+
+      out <- .Call("spMsPGOccNNGPPredict", coords, J, N, p.occ, n.neighbors, 
+                   X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
+                   theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
+                   cov.model.indx, n.omp.threads, verbose, n.report)
+
+    }
+    out$z.0.samples <- array(out$z.0.samples, dim = c(N, q, n.post))
+    out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))
+    out$w.0.samples <- array(out$w.0.samples, dim = c(N, q, n.post))
+    out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
+    out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, q, n.post))
+    out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
+
+    # If some of the sites are sampled
+    if (nrow(X.0) != q) {
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$z.0.samples
+      tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
+      out$z.0.samples <- tmp
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$psi.0.samples
+      tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
+      out$psi.0.samples <- tmp
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$w.0.samples
+      tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
+      out$w.0.samples <- tmp
+    }
   }
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    sp.indx <- rep(1:N, p.det)
+    n.post <- object$n.post * object$n.chains
+    alpha.samples <- as.matrix(object$alpha.samples)
+    out <- list()
+    out$p.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
+      for (i in 1:N) {
+        for (t in 1:p.det.re) {
+          for (j in 1:nrow(X.re)) {
+            if (!is.na(X.re.ind[j, t])) {
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                alpha.star.samples[, (i - 1) * n.det.re + X.re.ind[j, t]] + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
+            } else {
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
+            }
+          } # j
+        } # t
+      } # i 
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
+      p.det.re <- 0
+    }
+    J.str <- nrow(X.0)
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+        out$p.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				     t(alpha.samples[, sp.indx == i]) + 
+                                               alpha.star.sites.0.samples[, (j - 1) * N + i])
+      } # j
+    } # i
 
-  # Sub-sample previous
-  theta.samples <- t(theta.samples)
-  beta.samples <- t(beta.samples)
-  w.samples <- aperm(w.samples, c(2, 3, 1))
-  beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
-  
-  q <- nrow(X.0.new)
-
-  if (type == 'GP') {
-  
-    obs.pred.D <- iDist(coords, coords.0.new)
-    obs.D <- iDist(coords)
-    
-    storage.mode(obs.pred.D) <- "double"
-    storage.mode(obs.D) <- "double"
-    storage.mode(J) <- "integer"
-    storage.mode(N) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(X.0.new) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(beta.star.sites.0.samples) <- "double"
-    storage.mode(n.post) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    
-    ptm <- proc.time()
-
-    out <- .Call("spMsPGOccPredict", J, N, p.occ, X.0.new, q, obs.D, 
-		 obs.pred.D, beta.samples, theta.samples, 
-		 w.samples, beta.star.sites.0.samples, 
-		 n.post, cov.model.indx, n.omp.threads, 
-		 verbose, n.report)
-
-  } else { 
-    # Get nearest neighbors 
-    # nn2 is a function from RANN. 
-    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1 
-
-    storage.mode(coords) <- "double"
-    storage.mode(N) <- "integer"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(n.neighbors) <- "integer"
-    storage.mode(X.fix) <- "double"
-    storage.mode(coords.0.new) <- "double"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(beta.star.sites.0.samples) <- "double"
-    storage.mode(n.post) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(nn.indx.0) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-    
-    ptm <- proc.time()
-
-    out <- .Call("spMsPGOccNNGPPredict", coords, J, N, p.occ, n.neighbors, 
-                 X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
-                 theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
-                 cov.model.indx, n.omp.threads, verbose, n.report)
-
-  }
-  out$z.0.samples <- array(out$z.0.samples, dim = c(N, q, n.post))
-  out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))
-  out$w.0.samples <- array(out$w.0.samples, dim = c(N, q, n.post))
-  out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
-  out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, q, n.post))
-  out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
-
-  # If some of the sites are sampled
-  if (nrow(X.0) != q) {
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$z.0.samples
-    tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
-    out$z.0.samples <- tmp
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$psi.0.samples
-    tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
-    out$psi.0.samples <- tmp
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$w.0.samples
-    tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
-    out$w.0.samples <- tmp
   }
 
   out$run.time <- proc.time() - ptm
@@ -1460,7 +1781,7 @@ predict.intPGOcc <- function(object, X.0, ...) {
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (class(object) != "intPGOcc") {
+  if (!is(object, 'intPGOcc')) {
     stop("error: requires an output object of class intPGOcc\n")
   }
 
@@ -1513,8 +1834,8 @@ fitted.intPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!(class(object) %in% c("intPGOcc", 'spIntPGOcc'))) {
-    stop("error: object must be one of class intPGOcc\n")
+  if (!is(object, c('intPGOcc', 'spIntPGOcc'))) {
+    stop("error: object must be one of class intPGOcc or spIntPGOcc\n")
   }
 
   y <- object$y
@@ -1816,7 +2137,8 @@ fitted.lfMsPGOcc <- function(object, ...) {
   fitted.msPGOcc(object)
 }
 
-predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE, ...) {
+predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE, 
+			      type = 'occupancy', ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -1835,8 +2157,12 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE, ...) {
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!(class(object) %in% c("lfMsPGOcc", "lfJSDM"))) {
+  if (!is(object, c('lfMsPGOcc', 'lfJSDM'))) {
     stop("error: requires an output object of class lfMsPGOcc or lfJSDM\n")
+  }
+
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
 
   # Check X.0 -------------------------------------------------------------
@@ -1846,129 +2172,214 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE, ...) {
   if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  p.occ <- ncol(object$X)
-  p.design <- p.occ
-  if (object$psiRE) {
-    p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
-  }
-  if (ncol(X.0) != p.design) {
-    stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
-  }
-  # Composition sampling --------------------------------------------------
-  N <- dim(object$y)[1]
-  J.0 <- nrow(X.0)
-  q <- object$q
-  coords <- object$coords
-  sp.indx <- rep(1:N, p.occ)
-  n.post <- object$n.post * object$n.chains
-  beta.samples <- as.matrix(object$beta.samples)
-  lambda.samples <- array(object$lambda.samples, dim = c(n.post, N, q))
-  w.samples <- object$w.samples
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
-  }
-
-  # Eliminate prediction sites that have already been sampled for now
-  match.indx <- match(do.call("paste", as.data.frame(coords.0)), 
-		      do.call("paste", as.data.frame(coords)))
-  coords.0.indx <- which(is.na(match.indx))
-  coords.indx <- match.indx[!is.na(match.indx)]
-  coords.place.indx <- which(!is.na(match.indx))
-  coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-  X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-
-  if (length(coords.indx) == nrow(X.0)) {
-    stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-  }
-
-  if (object$psiRE) {
-    beta.star.samples <- object$beta.star.samples
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0.new) %in% x.re.names)
-    X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
-    X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
-    n.occ.re <- length(unlist(re.level.names))
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    # TODO: need to double check this works with multiple random effects. 
-    for (i in 1:p.occ.re) {
-      for (j in 1:nrow(X.re)) {
-	tmp <- which(re.level.names[[i]] == X.re[j, i])
-        if (length(tmp) > 0) {
-          if (i > 1) {
-            X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
-	  } else {
-            X.re.ind[j, i] <- tmp 
-	  }
-	}
-      }
+  
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type == 'occupancy')) {
+    p.occ <- ncol(object$X)
+    p.design <- p.occ
+    if (object$psiRE) {
+      p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
     }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site.
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
-    if (!ignore.RE) {
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    J.0 <- nrow(X.0)
+    q <- object$q
+    coords <- object$coords
+    sp.indx <- rep(1:N, p.occ)
+    n.post <- object$n.post * object$n.chains
+    beta.samples <- as.matrix(object$beta.samples)
+    lambda.samples <- array(object$lambda.samples, dim = c(n.post, N, q))
+    w.samples <- object$w.samples
+    if (object$psiRE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
+
+    # Eliminate prediction sites that have already been sampled for now
+    match.indx <- match(do.call("paste", as.data.frame(coords.0)), 
+          	      do.call("paste", as.data.frame(coords)))
+    coords.0.indx <- which(is.na(match.indx))
+    coords.indx <- match.indx[!is.na(match.indx)]
+    coords.place.indx <- which(!is.na(match.indx))
+    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
+    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
+
+    if (length(coords.indx) == nrow(X.0)) {
+      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
+    }
+
+    if (object$psiRE) {
+      beta.star.samples <- object$beta.star.samples
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0.new) %in% x.re.names)
+      X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
+      n.occ.re <- length(unlist(re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      # TODO: need to double check this works with multiple random effects. 
+      for (i in 1:p.occ.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
+      if (!ignore.RE) {
+        for (i in 1:N) {
+          for (t in 1:p.occ.re) {
+            for (j in 1:nrow(X.re)) {
+              if (!is.na(X.re.ind[j, t])) {
+                beta.star.sites.0.samples[, (j - 1) * N + i] <- 
+                  beta.star.samples[, (i - 1) * n.occ.re + X.re.ind[j, t]] + 
+                  beta.star.sites.0.samples[, (j - 1) * N + i]
+              } else {
+                beta.star.sites.0.samples[, (j - 1) * N + i] <- 
+                  rnorm(n.post, 0, sqrt(object$sigma.sq.psi.samples[, t])) + 
+                  beta.star.sites.0.samples[, (j - 1) * N + i]
+              }
+            } # j
+          } # t
+        } # i 
+      }
+    } else {
+      X.fix <- X.0.new
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
+      p.occ.re <- 0
+    }
+    J.str <- nrow(X.0.new)
+    # Create new random normal latent factors at unobserved sites. 
+    w.0.samples <- array(rnorm(n.post * q * J.str), dim = c(n.post, q, J.str))
+    w.star.0.samples <- array(NA, dim = c(n.post, N, J.str))
+
+    for (i in 1:n.post) {
+      w.star.0.samples[i, , ] <- matrix(lambda.samples[i, , ], N, q) %*%
+                               matrix(w.0.samples[i, , ], q, J.str)
+    }
+    out <- list()
+    out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
+    out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+      out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				   t(beta.samples[, sp.indx == i]) + 
+          				   w.star.0.samples[, i, j] + 
+                                             beta.star.sites.0.samples[, (j - 1) * N + i])
+      out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
+    				     
+      } # j
+    } # i
+
+    # If some of the sites are sampled
+    if (nrow(X.0) != J.str) {
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$z.0.samples
+      tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
+      out$z.0.samples <- tmp
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$psi.0.samples
+      tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
+      out$psi.0.samples <- tmp
+    }
+  }
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    sp.indx <- rep(1:N, p.det)
+    n.post <- object$n.post * object$n.chains
+    alpha.samples <- as.matrix(object$alpha.samples)
+    out <- list()
+    out$p.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
+        for (j in 1:nrow(X.re)) {
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
+          if (length(tmp) > 0) {
+            if (i > 1) {
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
+            } else {
+              X.re.ind[j, i] <- tmp 
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
       for (i in 1:N) {
-        for (t in 1:p.occ.re) {
+        for (t in 1:p.det.re) {
           for (j in 1:nrow(X.re)) {
             if (!is.na(X.re.ind[j, t])) {
-              beta.star.sites.0.samples[, (j - 1) * N + i] <- 
-                beta.star.samples[, (i - 1) * n.occ.re + X.re.ind[j, t]] + 
-                beta.star.sites.0.samples[, (j - 1) * N + i]
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                alpha.star.samples[, (i - 1) * n.det.re + X.re.ind[j, t]] + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
             } else {
-              beta.star.sites.0.samples[, (j - 1) * N + i] <- 
-                rnorm(n.post, 0, sqrt(object$sigma.sq.psi.samples[, t])) + 
-                beta.star.sites.0.samples[, (j - 1) * N + i]
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
             }
           } # j
         } # t
       } # i 
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
+      p.det.re <- 0
     }
-  } else {
-    X.fix <- X.0.new
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
-    p.occ.re <- 0
+    J.str <- nrow(X.0)
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+        out$p.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				     t(alpha.samples[, sp.indx == i]) + 
+                                               alpha.star.sites.0.samples[, (j - 1) * N + i])
+      } # j
+    } # i
   }
-  J.str <- nrow(X.0.new)
-  # Create new random normal latent factors at unobserved sites. 
-  w.0.samples <- array(rnorm(n.post * q * J.str), dim = c(n.post, q, J.str))
-  w.star.0.samples <- array(NA, dim = c(n.post, N, J.str))
 
-  for (i in 1:n.post) {
-    w.star.0.samples[i, , ] <- matrix(lambda.samples[i, , ], N, q) %*%
-	                     matrix(w.0.samples[i, , ], q, J.str)
-  }
-  out <- list()
-  out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
-  out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
-  # Make predictions
-  for (i in 1:N) {
-    for (j in 1:J.str) {
-    out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
-					   t(beta.samples[, sp.indx == i]) + 
-					   w.star.0.samples[, i, j] + 
-                                           beta.star.sites.0.samples[, (j - 1) * N + i])
-    out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
-  				     
-    } # j
-  } # i
   out$call <- cl
-
-  # If some of the sites are sampled
-  if (nrow(X.0) != J.str) {
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$z.0.samples
-    tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
-    out$z.0.samples <- tmp
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$psi.0.samples
-    tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
-    out$psi.0.samples <- tmp
-  }
-
   class(out) <- "predict.lfMsPGOcc"
   out
 }
@@ -2128,7 +2539,7 @@ fitted.sfMsPGOcc <- function(object, ...) {
 
 predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 			      verbose = TRUE, n.report = 100, 
-			      ignore.RE = FALSE, ...) {
+			      ignore.RE = FALSE, type = 'occupancy', ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -2148,185 +2559,273 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!(class(object) %in% c("sfMsPGOcc", 'sfJSDM'))) {
+  if (!is(object, c('sfMsPGOcc', 'sfJSDM'))) {
     stop("error: requires an output object of class sfMsPGOcc or sfJSDM\n")
   }
-
-  # Data prep -------------------------------------------------------------
-  n.post <- object$n.post * object$n.chains
-  X <- object$X
-  y <- object$y
-  coords <- object$coords
-  J <- nrow(X)
-  N <- dim(y)[1]
-  q <- object$q
-  p.occ <- ncol(X)
-  theta.samples <- object$theta.samples
-  beta.samples <- object$beta.samples
-  lambda.samples <- object$lambda.samples
-  w.samples <- object$w.samples
-  n.neighbors <- object$n.neighbors
-  cov.model.indx <- object$cov.model.indx
-  type <- object$type
-  if (object$psiRE) {
-    p.occ.re <- length(object$re.level.names)
-  } else {
-    p.occ.re <- 0
+  if (!(tolower(type) %in% c('occupancy', 'detection'))) {
+    stop("error: prediction type must be either 'occupancy' or 'detection'")
   }
 
+  # Check X.0 -------------------------------------------------------------
   if (missing(X.0)) {
     stop("error: X.0 must be specified\n")
   }
-  if (!any(is.data.frame(X.0), is.matrix(X.0))){
+  if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  if (ncol(X.0) != p.occ + p.occ.re){
-    stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n"))
-  }
-  X.0 <- as.matrix(X.0)
 
-  if (missing(coords.0)) {
-    stop("error: coords.0 must be specified\n")
-  }
-  if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
-    stop("error: coords.0 must be a data.frame or matrix\n")
-  }
-  if (!ncol(coords.0) == 2){
-    stop("error: coords.0 must have two columns\n")
-  }
-  coords.0 <- as.matrix(coords.0)
+  ptm <- proc.time()
 
-  # Eliminate prediction sites that have already been sampled for now
-  match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
-  coords.0.indx <- which(is.na(match.indx))
-  coords.indx <- match.indx[!is.na(match.indx)]
-  coords.place.indx <- which(!is.na(match.indx))
-  coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-  X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-  
-  if (length(coords.indx) == nrow(X.0)) {
-    stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-  }
+  # Occurrence predictions ------------------------------------------------
+  if (tolower(type == 'occupancy')) {
+    n.post <- object$n.post * object$n.chains
+    X <- object$X
+    y <- object$y
+    coords <- object$coords
+    J <- nrow(X)
+    N <- dim(y)[1]
+    q <- object$q
+    p.occ <- ncol(X)
+    theta.samples <- object$theta.samples
+    beta.samples <- object$beta.samples
+    lambda.samples <- object$lambda.samples
+    w.samples <- object$w.samples
+    n.neighbors <- object$n.neighbors
+    cov.model.indx <- object$cov.model.indx
+    sp.type <- object$type
+    if (object$psiRE) {
+      p.occ.re <- length(object$re.level.names)
+    } else {
+      p.occ.re <- 0
+    }
 
-  if (object$psiRE) {
-    beta.star.samples <- object$beta.star.samples
-    re.level.names <- object$re.level.names
-    # Get columns in design matrix with random effects
-    x.re.names <- colnames(object$X.re)
-    indx <- which(colnames(X.0.new) %in% x.re.names)
-    X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
-    X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
-    n.occ.re <- length(unlist(re.level.names))
-    X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-    # TODO: need to double check this works with multiple random effects. 
-    if (!ignore.RE) {
-      for (i in 1:p.occ.re) {
+    if (ncol(X.0) != p.occ + p.occ.re){
+      stop(paste("error: X.0 must have ", p.occ + p.occ.re," columns\n"))
+    }
+    X.0 <- as.matrix(X.0)
+
+    if (missing(coords.0)) {
+      stop("error: coords.0 must be specified\n")
+    }
+    if (!any(is.data.frame(coords.0), is.matrix(coords.0))) {
+      stop("error: coords.0 must be a data.frame or matrix\n")
+    }
+    if (!ncol(coords.0) == 2){
+      stop("error: coords.0 must have two columns\n")
+    }
+    coords.0 <- as.matrix(coords.0)
+
+    # Eliminate prediction sites that have already been sampled for now
+    match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
+    coords.0.indx <- which(is.na(match.indx))
+    coords.indx <- match.indx[!is.na(match.indx)]
+    coords.place.indx <- which(!is.na(match.indx))
+    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
+    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
+    
+    if (length(coords.indx) == nrow(X.0)) {
+      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
+    }
+
+    if (object$psiRE) {
+      beta.star.samples <- object$beta.star.samples
+      re.level.names <- object$re.level.names
+      # Get columns in design matrix with random effects
+      x.re.names <- colnames(object$X.re)
+      indx <- which(colnames(X.0.new) %in% x.re.names)
+      X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
+      n.occ.re <- length(unlist(re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
+      # TODO: need to double check this works with multiple random effects. 
+      if (!ignore.RE) {
+        for (i in 1:p.occ.re) {
+          for (j in 1:nrow(X.re)) {
+            tmp <- which(re.level.names[[i]] == X.re[j, i])
+            if (length(tmp) > 0) {
+              if (i > 1) {
+                X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+              } else {
+                X.re.ind[j, i] <- tmp 
+              }
+            }
+          }
+        }
+      }
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site. 
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
+      if (!ignore.RE) {
+        for (i in 1:N) {
+          for (t in 1:p.occ.re) {
+            for (j in 1:nrow(X.re)) {
+              if (!is.na(X.re.ind[j, t])) {
+                beta.star.sites.0.samples[, (j - 1) * N + i] <- 
+                  beta.star.samples[, (i - 1) * n.occ.re + X.re.ind[j, t]] + 
+                  beta.star.sites.0.samples[, (j - 1) * N + i]
+              } else {
+                beta.star.sites.0.samples[, (j - 1) * N + i] <- 
+                  rnorm(n.post, 0, sqrt(object$sigma.sq.psi.samples[, t])) + 
+                  beta.star.sites.0.samples[, (j - 1) * N + i]
+              }
+            } # j
+          } # t
+        } # i
+      } 
+    } else {
+      X.fix <- X.0.new
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
+      p.occ.re <- 0
+    }
+
+    # Sub-sample previous
+    theta.samples <- t(theta.samples)
+    lambda.samples <- t(lambda.samples)
+    beta.samples <- t(beta.samples)
+    w.samples <- aperm(w.samples, c(2, 3, 1))
+    beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
+
+    J.str <- nrow(X.0.new)
+
+    if (sp.type == 'GP') {
+      # Not currently implemented or accessed. 
+    } else {
+      # Get nearest neighbors
+      # nn2 is a function from RANN.
+      nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
+
+      storage.mode(coords) <- "double"
+      storage.mode(N) <- "integer"
+      storage.mode(J) <- "integer"
+      storage.mode(p.occ) <- "integer"
+      storage.mode(n.neighbors) <- "integer"
+      storage.mode(X.fix) <- "double"
+      storage.mode(coords.0.new) <- "double"
+      storage.mode(J.str) <- "integer"
+      storage.mode(q) <- "integer"
+      storage.mode(beta.samples) <- "double"
+      storage.mode(theta.samples) <- "double"
+      storage.mode(lambda.samples) <- "double"
+      storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(w.samples) <- "double"
+      storage.mode(n.post) <- "integer"
+      storage.mode(cov.model.indx) <- "integer"
+      storage.mode(nn.indx.0) <- "integer"
+      storage.mode(n.omp.threads) <- "integer"
+      storage.mode(verbose) <- "integer"
+      storage.mode(n.report) <- "integer"
+
+      out <- .Call("sfMsPGOccNNGPPredict", coords, J, N, q, p.occ, n.neighbors,
+                   X.0.new, coords.0.new, J.str, nn.indx.0, beta.samples,
+                   theta.samples, lambda.samples, w.samples, 
+          	 beta.star.sites.0.samples, n.post,
+                   cov.model.indx, n.omp.threads, verbose, n.report)
+
+    }
+    out$z.0.samples <- array(out$z.0.samples, dim = c(N, J.str, n.post))
+    out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))
+    out$w.0.samples <- array(out$w.0.samples, dim = c(q, J.str, n.post))
+    out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
+    out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, J.str, n.post))
+    out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
+
+    # If some of the sites are sampled
+    if (nrow(X.0) != J.str) {
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$z.0.samples
+      tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
+      out$z.0.samples <- tmp
+      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$psi.0.samples
+      tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
+      out$psi.0.samples <- tmp
+      tmp <- array(NA, dim = c(n.post, q, nrow(X.0)))
+      tmp[, , coords.0.indx] <- out$w.0.samples
+      tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
+      out$w.0.samples <- tmp
+    }
+  } # occurrence predictions
+  # Detection predictions -------------------------------------------------
+  if (tolower(type) == 'detection') {
+    p.det <- ncol(object$X.p)
+    p.design <- p.det
+    if (object$pRE) {
+      p.design <- p.det + ncol(object$sigma.sq.p.samples)
+    }
+    if (ncol(X.0) != p.design) {
+      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
+    }
+    # Composition sampling --------------------------------------------------
+    N <- dim(object$y)[1]
+    sp.indx <- rep(1:N, p.det)
+    n.post <- object$n.post * object$n.chains
+    alpha.samples <- as.matrix(object$alpha.samples)
+    out <- list()
+    out$p.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
+    if (object$pRE) {
+      p.det.re <- length(object$p.re.level.names)
+    } else {
+      p.det.re <- 0
+    }
+    if (object$pRE & !ignore.RE) {
+      alpha.star.samples <- object$alpha.star.samples
+      p.re.level.names <- object$p.re.level.names
+      # Get columns in design matrix with random effects
+      x.p.re.names <- colnames(object$X.p.re)
+      indx <- which(colnames(X.0) %in% x.p.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$det.covs")
+      }
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
+      n.det.re <- length(unlist(p.re.level.names))
+      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
+      for (i in 1:p.det.re) {
         for (j in 1:nrow(X.re)) {
-          tmp <- which(re.level.names[[i]] == X.re[j, i])
+          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
           if (length(tmp) > 0) {
             if (i > 1) {
-              X.re.ind[j, i] <- tmp + length(re.level.names[[i - 1]]) 
+              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]]) 
             } else {
               X.re.ind[j, i] <- tmp 
             }
           }
         }
       }
-    }
-    # Create the random effects corresponding to each 
-    # new location
-    # ORDER: ordered by site, then species within site. 
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
-    if (!ignore.RE) {
+      # Create the random effects corresponding to each 
+      # new location
+      # ORDER: ordered by site, then species within site.
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
       for (i in 1:N) {
-        for (t in 1:p.occ.re) {
+        for (t in 1:p.det.re) {
           for (j in 1:nrow(X.re)) {
             if (!is.na(X.re.ind[j, t])) {
-              beta.star.sites.0.samples[, (j - 1) * N + i] <- 
-                beta.star.samples[, (i - 1) * n.occ.re + X.re.ind[j, t]] + 
-                beta.star.sites.0.samples[, (j - 1) * N + i]
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                alpha.star.samples[, (i - 1) * n.det.re + X.re.ind[j, t]] + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
             } else {
-              beta.star.sites.0.samples[, (j - 1) * N + i] <- 
-                rnorm(n.post, 0, sqrt(object$sigma.sq.psi.samples[, t])) + 
-                beta.star.sites.0.samples[, (j - 1) * N + i]
+              alpha.star.sites.0.samples[, (j - 1) * N + i] <- 
+                rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) + 
+                alpha.star.sites.0.samples[, (j - 1) * N + i]
             }
           } # j
         } # t
-      } # i
-    } 
-  } else {
-    X.fix <- X.0.new
-    beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
-    p.occ.re <- 0
-  }
-
-  # Sub-sample previous
-  theta.samples <- t(theta.samples)
-  lambda.samples <- t(lambda.samples)
-  beta.samples <- t(beta.samples)
-  w.samples <- aperm(w.samples, c(2, 3, 1))
-  beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
-
-  J.str <- nrow(X.0.new)
-
-  if (type == 'GP') {
-    # Not currently implemented or accessed. 
-  } else {
-    # Get nearest neighbors
-    # nn2 is a function from RANN.
-    nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
-
-    storage.mode(coords) <- "double"
-    storage.mode(N) <- "integer"
-    storage.mode(J) <- "integer"
-    storage.mode(p.occ) <- "integer"
-    storage.mode(n.neighbors) <- "integer"
-    storage.mode(X.fix) <- "double"
-    storage.mode(coords.0.new) <- "double"
-    storage.mode(J.str) <- "integer"
-    storage.mode(q) <- "integer"
-    storage.mode(beta.samples) <- "double"
-    storage.mode(theta.samples) <- "double"
-    storage.mode(lambda.samples) <- "double"
-    storage.mode(beta.star.sites.0.samples) <- "double"
-    storage.mode(w.samples) <- "double"
-    storage.mode(n.post) <- "integer"
-    storage.mode(cov.model.indx) <- "integer"
-    storage.mode(nn.indx.0) <- "integer"
-    storage.mode(n.omp.threads) <- "integer"
-    storage.mode(verbose) <- "integer"
-    storage.mode(n.report) <- "integer"
-
-    ptm <- proc.time()
-
-    out <- .Call("sfMsPGOccNNGPPredict", coords, J, N, q, p.occ, n.neighbors,
-                 X.0.new, coords.0.new, J.str, nn.indx.0, beta.samples,
-                 theta.samples, lambda.samples, w.samples, 
-		 beta.star.sites.0.samples, n.post,
-                 cov.model.indx, n.omp.threads, verbose, n.report)
-
-  }
-  out$z.0.samples <- array(out$z.0.samples, dim = c(N, J.str, n.post))
-  out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))
-  out$w.0.samples <- array(out$w.0.samples, dim = c(q, J.str, n.post))
-  out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
-  out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, J.str, n.post))
-  out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
-
-  # If some of the sites are sampled
-  if (nrow(X.0) != J.str) {
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$z.0.samples
-    tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
-    out$z.0.samples <- tmp
-    tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$psi.0.samples
-    tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
-    out$psi.0.samples <- tmp
-    tmp <- array(NA, dim = c(n.post, q, nrow(X.0)))
-    tmp[, , coords.0.indx] <- out$w.0.samples
-    tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
-    out$w.0.samples <- tmp
+      } # i 
+    } else {
+      X.fix <- X.0
+      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
+      p.det.re <- 0
+    }
+    J.str <- nrow(X.0)
+    # Make predictions
+    for (i in 1:N) {
+      for (j in 1:J.str) {
+        out$p.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				     t(alpha.samples[, sp.indx == i]) + 
+                                               alpha.star.sites.0.samples[, (j - 1) * N + i])
+      } # j
+    } # i
   }
 
   out$run.time <- proc.time() - ptm

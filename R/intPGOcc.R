@@ -157,7 +157,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       stop("error: occ.formula must be specified")
     }
 
-    if (class(occ.formula) == 'formula') {
+    if (is(occ.formula, 'formula')) {
       tmp <- parseFormula(occ.formula, data$occ.covs)
       X <- as.matrix(tmp[[1]])
       X.re <- as.matrix(tmp[[4]])
@@ -183,7 +183,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # x.p.re.names <- list()
     # p.re.level.names <- list()
     for (i in 1:n.data) {
-      if (class(det.formula[[i]]) == 'formula') {
+      if (is(det.formula[[i]], 'formula')) {
         tmp <- parseFormula(det.formula[[i]], data$det.covs[[i]])
         X.p[[i]] <- as.matrix(tmp[[1]])
         # X.p.re[[i]] <- as.matrix(tmp[[4]])
@@ -437,6 +437,19 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
     alpha.indx.c <- alpha.indx.r - 1
 
+    # Should initial values be fixed --
+    if ("fix" %in% names(inits)) {
+      fix.inits <- inits[["fix"]]
+      if ((fix.inits != TRUE) & (fix.inits != FALSE)) {
+        stop(paste("error: inits$fix must take value TRUE or FALSE"))
+      }
+    } else {
+      fix.inits <- FALSE
+    }
+    if (verbose & fix.inits & (n.chains > 1)) {
+      message("Fixing initial values across all chains\n")
+    }
+
     # Set model.deviance to NA for returning when no cross-validation
     model.deviance <- NA
 
@@ -480,7 +493,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out.tmp <- list()
     for (i in 1:n.chains) {
       # Change initial values if i > 1
-      if (i > 1) {
+      if ((i > 1) & (!fix.inits)) {
         beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
         alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
       }
