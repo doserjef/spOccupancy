@@ -21,7 +21,8 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
 
   \item{occ.formula}{a symbolic description of the model to be fit
     for the occurrence portion of the model using R's model syntax. Only
-    right-hand side of formula is specified. See example below.}
+    right-hand side of formula is specified. See example below. Random intercepts
+    are allowed using lme4 syntax (Bates et al. 2015).}
   
   \item{det.formula}{a symbolic description of the model to be fit
   for the detection portion of the model using R's model syntax. Only
@@ -48,9 +49,10 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
   
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, 
-    \code{phi}, \code{w}, \code{nu}, and \code{sigma.sq.p}. 
-    \code{nu} is only specified if \code{cov.model = "matern"} and \code{sigma.sq.p}
-    is only specified if there are random effects in \code{det.formula}. 
+    \code{phi}, \code{w}, \code{nu}, \code{sigma.sq.psi}, \code{sigma.sq.p}. 
+    \code{nu} is only specified if \code{cov.model = "matern"}, \code{sigma.sq.p}
+    is only specified if there are random effects in \code{det.formula}, and \code{sigma.sq.psi}
+    is only specified if there are random effects in \code{occ.formula}. 
     The value portion of each tag is the parameter's initial value. See \code{priors}
     description for definition of each parameter name.
     Additionally, the tag \code{fix} can be set to \code{TRUE} 
@@ -59,7 +61,7 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, \code{nu.unif}, and \code{sigma.sq.p.ig}. Occurrence 
+    \code{sigma.sq.ig}, \code{nu.unif}, \code{sigma.sq.psi.ig}, and \code{sigma.sq.p.ig}. Occurrence 
     (\code{beta}) and detection (\code{alpha}) regression coefficients 
     are assumed to follow a normal distribution. The hyperparameters of the 
     normal distribution are passed as a list of length two with the first
@@ -76,9 +78,10 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
     elements corresponding to the \emph{shape} and \emph{scale}, respectively. 
     The hyperparameters of the Uniform are also passed as a vector of 
     length two with the first and second elements corresponding to 
-    the lower and upper support, respectively. \code{sigma.sq.p} is the random 
-    effect variance for any detection random effects and is assumed to follow an 
-    inverse-Gamma distribution. For \code{sigma.sq.p}, the hyperparameters of
+    the lower and upper support, respectively. \code{sigma.sq.psi} and 
+    \code{sigma.sq.p} are the random effect variances for any occurrence or 
+    detection random effects, respectively, and are assumed to follow an 
+    inverse-Gamma distribution. The hyperparameters of
     the inverse-Gamma distribution are passed as a list of length two with the 
     first and second elements corresponding to the shape and scale parameters, 
     respectively, which are each specified as vectors of length equal to the 
@@ -234,14 +237,32 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
   \item{w.samples}{a \code{coda} object of posterior samples
     for latent spatial random effects.}
 
+  \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
+    for variances of random intercepts included in the occupancy portion
+    of the model. Only included if random intercepts are specified in 
+    \code{occ.formula}.}
+
   \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
     for variances of random intercpets included in the detection portion 
     of the model. Only included if random intercepts are specified in 
     \code{det.formula}.}
 
+  \item{beta.star.samples}{a \code{coda} object of posterior samples
+    for the occurrence random effects. Only included if random intercepts
+    are specified in \code{occ.formula}.}
+
   \item{alpha.star.samples}{a \code{coda} object of posterior samples
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
+
+  \item{like.samples}{a \code{coda} object of posterior samples
+    for the likelihood value associated with each site. Used for calculating
+    WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
 
   \item{run.time}{execution time reported using \code{proc.time()}.}
 
@@ -249,7 +270,9 @@ spPGOcc(occ.formula, det.formula, data, inits, priors,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection
+  probability values are not included in the model object, but can be 
+  extracted using \code{fitted()}.
 }
 
 \examples{
@@ -276,11 +299,11 @@ coords <- as.matrix(dat$coords)
 occ.covs <- X[, -1, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3])
+                 det.cov.2 = X.p[, , 3])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs, 
-		  det.covs = det.covs, 
-		  coords = coords)
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs, 
+                  coords = coords)
 
 # Number of batches
 n.batch <- 10
@@ -289,33 +312,33 @@ batch.length <- 25
 n.iter <- n.batch * batch.length
 # Priors 
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = 0, var = 2.72),
-		   sigma.sq.ig = c(2, 2), 
-		   phi.unif = c(3/1, 3/.1)) 
+                   alpha.normal = list(mean = 0, var = 2.72),
+                   sigma.sq.ig = c(2, 2), 
+                   phi.unif = c(3/1, 3/.1)) 
 # Initial values
 inits.list <- list(alpha = 0, beta = 0,
-		   phi = 3 / .5, 
-		   sigma.sq = 2,
-		   w = rep(0, nrow(X)),
-		   z = apply(y, 1, max, na.rm = TRUE))
+                   phi = 3 / .5, 
+                   sigma.sq = 2,
+                   w = rep(0, nrow(X)),
+                   z = apply(y, 1, max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
 
 out <- spPGOcc(occ.formula = ~ occ.cov, 
-	       det.formula = ~ det.cov.1 + det.cov.2, 
-	       data = data.list, 
-	       inits = inits.list, 
-	       n.batch = n.batch, 
-	       batch.length = batch.length, 
-	       priors = prior.list,
-	       cov.model = "exponential", 
-	       tuning = tuning.list, 
-	       NNGP = FALSE, 
-	       n.neighbors = 5, 
-	       search.type = 'cb', 
-	       n.report = 10, 
-	       n.burn = 50, 
-	       n.chains = 1)
+               det.formula = ~ det.cov.1 + det.cov.2, 
+               data = data.list, 
+               inits = inits.list, 
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               priors = prior.list,
+               cov.model = "exponential", 
+               tuning = tuning.list, 
+               NNGP = FALSE, 
+               n.neighbors = 5, 
+               search.type = 'cb', 
+               n.report = 10, 
+               n.burn = 50, 
+               n.chains = 1)
 
 summary(out)
 }

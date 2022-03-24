@@ -1,9 +1,9 @@
 \name{sfJSDM}
 \alias{sfJSDM}
-\title{Function for Fitting a Spatially-Explicit Joint Species Distribution Model}
+\title{Function for Fitting a Spatial Factor Joint Species Distribution Model}
 
 \description{
-  The function \code{sfJSDM} fits a spatially-explicit joint species distribution model. This model does not explicitly account for imperfect detection (see \code{sfMsPGOcc}). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using full Gaussian Process.}
+  The function \code{sfJSDM} fits a spatially-explicit joint species distribution model. This model does not explicitly account for imperfect detection (see \code{sfMsPGOcc()}). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using a full Gaussian Process.}
   
 \usage{
 sfJSDM(formula, data, inits, priors, tuning, 
@@ -25,8 +25,10 @@ sfJSDM(formula, data, inits, priors, tuning,
   \item{data}{a list containing data necessary for model fitting.
     Valid tags are \code{y}, \code{covs}, and \code{coords}. \code{y}
     is a two-dimensional array with first dimension equal to the number 
-    of species and second dimension equal to the number of sites. 
-    \code{covs} is a matrix or data frame containing the variables 
+    of species and second dimension equal to the number of sites. Note how this differs
+    from other \code{spOccupancy} functions in that \code{y} does not have any 
+    replicate surveys. This is because \code{sfJSDM} does not account for imperfect
+    detection. \code{covs} is a matrix or data frame containing the variables 
     used in the model, with \eqn{J}{J} rows for 
     each column (variable). \code{coords} is a matrix with \eqn{J}{J} 
     rows and 2 columns consisting of the spatial coordinates of each site in 
@@ -34,10 +36,11 @@ sfJSDM(formula, data, inits, priors, tuning,
   in a projected coordinate system.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
-    Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, 
-    \code{phi}, \code{lambda}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}. The value portion of each tag is 
+    Valid tags are \code{beta.comm}, \code{beta},  \code{tau.sq.beta}, 
+    \code{phi}, \code{lambda}, \code{sigma.sq.psi}, and \code{nu}. 
+    \code{nu} is only specified if \code{cov.model = "matern"}. 
+    \code{sigma.sq.psi} is only specified if
+    random intercepts are included in \code{formula}. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
     of each parameter name. Additionally, the tag \code{fix} can be set to \code{TRUE} 
     to fix the starting values across all chains. If \code{fix} is not specified
@@ -45,8 +48,8 @@ sfJSDM(formula, data, inits, priors, tuning,
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{tau.sq.beta.ig}, \code{phi.unif}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm})
-  regression coefficients are assumed to follow a 
+  \code{nu.unif}, and \code{sigma.sq.psi.ig}. Community-level occurrence 
+  (\code{beta.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
   corresponding to the mean and variance of the normal distribution, 
@@ -72,7 +75,13 @@ sfJSDM(formula, data, inits, priors, tuning,
   identifiability (Christensen and Amemlya 2002). The
   upper triangular elements of the \code{N x n.factors} matrix are fixed at 0 and the 
   diagonal elements are fixed at 1. The lower triangular elements are assigned a 
-  standard normal prior (i.e., mean 0 and variance 1).}
+  standard normal prior (i.e., mean 0 and variance 1).
+  \code{sigma.sq.psi} is the random effect variance for any random effects, and is assumed
+  to follow an inverse Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding to the shape
+  and scale parameters, respectively, which are each specified as vectors of length equal to 
+  the number of random intercepts or of length one if priors are the same for all random 
+  effect variances.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each
@@ -252,6 +261,15 @@ sfJSDM(formula, data, inits, priors, tuning,
     for the occurrence random effects. Only included if random intercepts
     are specified in \code{formula}.}
 
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
@@ -259,11 +277,13 @@ sfJSDM(formula, data, inits, priors, tuning,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection probability
+  estimated values are not included in the model object, but can be extracted
+  using \code{fitted()}.
 }
 
 \examples{
-#set.seed(408)
+set.seed(408)
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
@@ -281,8 +301,9 @@ tau.sq.alpha <- c(0.05)
 p.det <- length(alpha.mean)
 # Random effects
 psi.RE <- list()
+# Include a single random effect
 psi.RE <- list(levels = c(50), 
- 	       sigma.sq.psi = c(1.5))
+               sigma.sq.psi = c(1.5))
 p.RE <- list()
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
@@ -303,8 +324,8 @@ sp <- TRUE
 cov.model <- "exponential"
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-	        psi.RE = psi.RE, p.RE = p.RE, sp = sp, sigma.sq = sigma.sq, 
-		phi = phi, cov.model = cov.model, factor.model = TRUE, n.factors = n.factors)
+                psi.RE = psi.RE, p.RE = p.RE, sp = sp, sigma.sq = sigma.sq, 
+                phi = phi, cov.model = cov.model, factor.model = TRUE, n.factors = n.factors)
 
 X <- dat$X
 y <- dat$y
@@ -315,16 +336,16 @@ occ.covs <- data.frame(X, X.re)
 occ.covs$X.re <- occ.covs$X.re
 colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.re.1')
 data.list <- list(y = y[, , 1], 
-		  covs = occ.covs, 
-		  coords = coords)
+                  covs = occ.covs, 
+                  coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   phi.unif = list(a = 3 / 1, b = 3 / .1))
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   phi.unif = list(a = 3 / 1, b = 3 / .1))
 inits.list <- list(beta.comm = 0, 
-		   beta = 0, 
-		   tau.sq.beta = 1, 
-		   phi = 3 / .5) 
+                   beta = 0, 
+                   tau.sq.beta = 1, 
+                   phi = 3 / .5) 
 tuning.list <- list(phi = 1)
 
 out <- sfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1), 
@@ -342,4 +363,5 @@ out <- sfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1),
               n.burn = 50,
               n.thin = 2,
               n.chains = 1) 
+summary(out)
 }

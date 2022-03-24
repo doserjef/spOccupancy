@@ -20,7 +20,8 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{occ.formula}{a symbolic description of the model to be fit
     for the occurrence portion of the model using R's model syntax. Only
-    right-hand side of formula is specified. See example below.}
+    right-hand side of formula is specified. See example below. Random 
+    intercepts are allowed using lme4 syntax (Bates et al. 2015).}
   
   \item{det.formula}{a symbolic description of the model to be fit
     for the detection portion of the model using R's model syntax. Only
@@ -47,9 +48,12 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, \code{sigma.sq}, 
+    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{sigma.sq.psi}, 
+    \code{sigma.sq.p}, \code{z}, \code{sigma.sq}, 
     \code{phi}, \code{w}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}. The value portion of each tag is 
+    \code{cov.model = "matern"}, \code{sigma.sq.psi} is only specified if
+    there are random intercepts in \code{occ.formula}, and \code{sigma.sq.p} is
+    only specified if there are random intercpets in \code{det.formula}. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
     of each parameter name. Additionally, the tag \code{fix} can be set to \code{TRUE} 
     to fix the starting values across all chains. If \code{fix} is not specified
@@ -58,7 +62,8 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, \code{sigma.sq.ig}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
+  \code{nu.unif}, \code{sigma.sq.psi}, \code{sigma.sq.p}. 
+  Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
@@ -84,7 +89,14 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   The hyperparameters of the Uniform are also passed as a list with two elements, 
   with both elements being vectors of length N corresponding to the lower and 
   upper support, respectively, or as a single value if the same value is assigned
-  for all species.}
+  for all species. \code{sigma.sq.psi} and 
+  \code{sigma.sq.p} are the random effect variances for any occurrence or 
+  detection random effects, respectively, and are assumed to follow an inverse
+  Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding
+  to the shape and scale parameters, respectively, which are each specified as
+  vectors of length equal to the number of random intercepts or of length one 
+  if priors are the same for all random effect variances.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each
@@ -122,7 +134,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
 
-  \item{n.batch}{the number of MCMC batches  in each chain to run for the Adaptive MCMC 
+  \item{n.batch}{the number of MCMC batches in each chain to run for the Adaptive MCMC 
     sampler. See Roberts and Rosenthal (2009) for details.}
   
   \item{batch.length}{the length of each MCMC batch to run for the Adaptive 
@@ -253,6 +265,11 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{w.samples}{a three-dimensional array of posterior samples for 
     the latent spatial random effects for each species.}
 
+  \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
+    for variances of random intercepts included in the occurrence portion
+    of the model. Only included if random intercepts are specified in 
+    \code{occ.formula}.}
+
   \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
     for variances of random intercpets included in the detection portion 
     of the model. Only included if random intercepts are specified in 
@@ -262,6 +279,19 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
+  \item{beta.star.samples}{a \code{coda} object of posterior samples
+    for the occurrence random effects. Only included if random intercepts
+    are specified in \code{occ.formula}.}
+
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
@@ -269,7 +299,9 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection probability
+  estimated values are not included in the model object, but can be extracted using
+  \code{fitted()}.
 }
 
 \examples{
@@ -365,7 +397,7 @@ out <- spMsPGOcc(occ.formula = ~ occ.cov,
                  n.report = 10, 
                  n.burn = 500, 
                  n.thin = 1, 
-		 n.chains = 1)
+                 n.chains = 1)
 
 summary(out, level = 'both')
 }

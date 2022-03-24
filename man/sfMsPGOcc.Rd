@@ -1,6 +1,6 @@
 \name{sfMsPGOcc}
 \alias{sfMsPGOcc}
-\title{Function for Fitting Multi-Species Spatial Occupancy Models with Species Correlations}
+\title{Function for Fitting Spatial Factor Multi-Species Occupancy Models}
 
 \description{
   The function \code{sfMsPGOcc} fits multi-species spatial occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using full Gaussian Processes. 
@@ -19,7 +19,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 \arguments{
 
   \item{occ.formula}{a symbolic description of the model to be fit
-    for the occurrence portion of the model using R's model syntax. Only
+    for the occurrence portion of the model using R's model syntax. Random
+    intercepts are allowed using lme4 syntax (Bates et al. 2015). Only
     right-hand side of formula is specified. See example below.}
   
   \item{det.formula}{a symbolic description of the model to be fit
@@ -46,9 +47,12 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}, 
+    \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, 
+    \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{z}, 
     \code{phi}, \code{lambda}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}. The value portion of each tag is 
+    \code{cov.model = "matern"}, and \code{sigma.sq.psi} and \code{sigma.sq.p} are
+    only specified if random effects are included in \code{occ.formula} or 
+    \code{det.formula}, respectively. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
     of each parameter name. Additionally, the tag \code{fix} can be set to \code{TRUE} 
     to fix the starting values across all chains. If \code{fix} is not specified
@@ -56,7 +60,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, 
+  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi}, 
+  \code{sigma.sq.p}, \code{phi.unif}, 
   and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
@@ -84,7 +89,15 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   identifiability (Christensen and Amemlya 2002). The
   upper triangular elements of the \code{N x n.factors} matrix are fixed at 0 and the 
   diagonal elements are fixed at 1. The lower triangular elements are assigned a 
-  standard normal prior (i.e., mean 0 and variance 1).}
+  standard normal prior (i.e., mean 0 and variance 1).
+  \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
+  effect variances for any occurrence or
+  detection random effects, respectively, and are assumed to follow an inverse
+  Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding
+  to the shape and scale parameters, respectively, which are each specified as
+  vectors of length equal to the number of random intercepts or of length one 
+  if priors are the same for all random effect variances.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each
@@ -267,14 +280,32 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{w.samples}{a three-dimensional array of posterior samples for 
     the latent spatial random effects for each latent factor.}
 
+  \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
+    for variances of random intercepts included in the occurrence portion
+    of the model. Only included if random intercepts are specified in 
+    \code{occ.formula}.}
+
   \item{sigma.sq.p.samples}{a \code{coda} object of posterior samples
     for variances of random intercpets included in the detection portion 
     of the model. Only included if random intercepts are specified in 
     \code{det.formula}.}
 
+  \item{beta.star.samples}{a \code{coda} object of posterior samples
+    for the occurrence random effects. Only included if random intercepts
+    are specified in \code{occ.formula}.}
+
   \item{alpha.star.samples}{a \code{coda} object of posterior samples
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
+
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
 
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
@@ -283,7 +314,9 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection 
+  probability estimated values are not included in the model object, but can
+  be extracted using \code{fitted()}.
 }
 
 \examples{
@@ -306,11 +339,13 @@ tau.sq.alpha <- c(0.2, 0.3, 0.8)
 p.det <- length(alpha.mean)
 # Random effects
 psi.RE <- list()
+# Include a non-spatial random effect on occurrence
 psi.RE <- list(levels = c(20),
- 	       sigma.sq.psi = c(0.5))
+               sigma.sq.psi = c(0.5))
 p.RE <- list()
-p.RE <- list(levels = c(40, 10),
-	     sigma.sq.p = c(2, 0.5))
+# Include a random effect on detection
+p.RE <- list(levels = c(40),
+	     sigma.sq.p = c(2))
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
@@ -325,7 +360,7 @@ phi <- runif(n.factors, 3/1, 3/.4)
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
                 phi = phi, sp = TRUE, cov.model = 'exponential', 
-		factor.model = TRUE, n.factors = n.factors, psi.RE = psi.RE, 
+                factor.model = TRUE, n.factors = n.factors, psi.RE = psi.RE, 
                 p.RE = p.RE)
 
 # Number of batches
@@ -369,7 +404,7 @@ inits.list <- list(alpha.comm = 0,
                    tau.sq.beta = 1, 
                    tau.sq.alpha = 1, 
                    phi = 3 / .5, 
-		   lambda = lambda.inits,
+                   lambda = lambda.inits,
                    z = apply(y, c(1, 2), max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
@@ -388,7 +423,7 @@ out <- sfMsPGOcc(occ.formula = ~ occ.cov + (1 | occ.re),
                  verbose = TRUE, 
                  NNGP = TRUE, 
                  n.neighbors = 5, 
-		 n.factors = n.factors,
+                 n.factors = n.factors,
                  search.type = 'cb', 
                  n.report = 10, 
                  n.burn = 50, 

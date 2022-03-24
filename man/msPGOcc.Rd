@@ -44,7 +44,8 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-  \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{z}. 
+  \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{sigma.sq.psi}, 
+  \code{sigma.sq.p}, and \code{z}. 
   The value portion of each tag is the parameter's initial value. See 
   \code{priors} description for definition of each parameter name.
   Additionally, the tag \code{fix} can be set to \code{TRUE} 
@@ -53,7 +54,8 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, and \code{tau.sq.alpha.ig}. Community-level occurrence 
+  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi.ig}, and 
+  \code{sigma.sq.p.ig}. Community-level occurrence 
   (\code{beta.comm}) and detection (\code{alpha.comm}) regression coefficients 
   are assumed to follow a normal distribution. The hyperparameters of the 
   normal distribution are passed as a list of length two with the first
@@ -69,7 +71,14 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   corresponding to the shape and scale parameters, which are each specified
   as vectors of length equal to the number of coefficients to be estimated 
   or a single value if all parameters are assigned the same prior. 
-  If not specified, prior shape and scale parameters are set to 0.1.}
+  If not specified, prior shape and scale parameters are set to 0.1. \code{sigma.sq.psi} and 
+  \code{sigma.sq.p} are the random effect variances for any occurrence or 
+  detection random effects, respectively, and are assumed to follow an inverse
+  Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding
+  to the shape and scale parameters, respectively, which are each specified as
+  vectors of length equal to the number of random intercepts or of length one 
+  if priors are the same for all random effect variances.}
 
 \item{n.samples}{the number of posterior samples to collect in each chain.}
 
@@ -77,7 +86,8 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   to use for SMP parallel processing. The package must be compiled for 
   OpenMP support. For most Intel-based machines, we recommend setting 
   \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
-  \code{n.omp.threads} > 1 might not work on some systems.}
+  \code{n.omp.threads} > 1 might not work on some systems. Currently only 
+  relevant for spatial models.}
 
 \item{verbose}{if \code{TRUE}, messages about data preparation, 
   model specification, and progress of the sampler are printed to the screen. 
@@ -192,6 +202,15 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
@@ -199,7 +218,9 @@ msPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection probability
+  estimated values are not included in the model object, but can be extracted
+  using \code{fitted()}. 
 }
 
 \examples{
@@ -207,7 +228,7 @@ set.seed(400)
 J.x <- 8
 J.y <- 8
 J <- J.x * J.y
-n.rep<- sample(2:4, size = J, replace = TRUE)
+n.rep <- sample(2:4, size = J, replace = TRUE)
 N <- 6
 # Community-level covariate effects
 # Occurrence
@@ -229,7 +250,7 @@ for (i in 1:p.det) {
 }
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		sp = FALSE)
+                sp = FALSE)
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
@@ -237,42 +258,41 @@ X.p <- dat$X.p
 occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3]
-		 )
+                 det.cov.2 = X.p[, , 3])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs)
 
 # Occupancy initial values
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 # Initial values
 inits.list <- list(alpha.comm = 0, 
-		   beta.comm = 0, 
-		   beta = 0, 
-		   alpha = 0,
-		   tau.sq.beta = 1, 
-		   tau.sq.alpha = 1, 
-		   z = apply(y, c(1, 2), max, na.rm = TRUE))
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 3000
 n.burn <- 2000
 n.thin <- 1
 
 out <- msPGOcc(occ.formula = ~ occ.cov, 
-	       det.formula = ~ det.cov.1 + det.cov.2, 
-	       data = data.list, 
-	       inits = inits.list, 
-	       n.samples = n.samples, 
-	       priors = prior.list, 
+               det.formula = ~ det.cov.1 + det.cov.2, 
+               data = data.list, 
+               inits = inits.list, 
+               n.samples = n.samples, 
+               priors = prior.list, 
                n.omp.threads = 1, 
-	       verbose = TRUE, 
-	       n.report = 1000, 
-	       n.burn = n.burn, 
-	       n.thin = n.thin, 
-	       n.chains = 1)
+               verbose = TRUE, 
+               n.report = 1000, 
+               n.burn = n.burn, 
+               n.thin = n.thin, 
+               n.chains = 1)
 
 summary(out, level = 'community')
 }

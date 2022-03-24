@@ -71,10 +71,10 @@ alpha <- c(0.7, 0.4)
 phi <- 3 / .6
 sigma.sq <- 2
 psi.RE <- list(levels = 10, 
-	       sigma.sq.psi = 1.2)
+               sigma.sq.psi = 1.2)
 p.RE <- list(levels = 15, 
-	     sigma.sq.p = 0.8)
+             sigma.sq.p = 0.8)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-	      psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, cov.model = 'spherical', 
-	      sigma.sq = sigma.sq, phi = phi)
+              psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, cov.model = 'spherical', 
+              sigma.sq = sigma.sq, phi = phi)
 }

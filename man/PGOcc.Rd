@@ -73,7 +73,8 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   to use for SMP parallel processing. The package must be compiled for 
   OpenMP support. For most Intel-based machines, we recommend setting 
   \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
-  \code{n.omp.threads} > 1 might not work on some systems.}
+  \code{n.omp.threads} > 1 might not work on some systems. Currently only 
+  relevant for spatial models.}
 
 \item{verbose}{if \code{TRUE}, messages about data preparation, 
   model specification, and progress of the sampler are printed to the screen. 
@@ -186,7 +187,7 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. Note that detection
-  probability values are not included in the model object, but can be 
+  probability estimated values are not included in the model object, but can be 
   extracted using \code{fitted()}. 
 
 }
@@ -202,36 +203,36 @@ p.occ <- length(beta)
 alpha <- c(0.7, 0.4)
 p.det <- length(alpha)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-	      sp = FALSE)
+              sp = FALSE)
 occ.covs <- dat$X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov = dat$X.p[, , 2])
 # Data bundle
 data.list <- list(y = dat$y, 
-		  occ.covs = occ.covs, 
-		  det.covs = det.covs)
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs)
 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
-		   alpha.normal = list(mean = 0, var = 2.72))
+                   alpha.normal = list(mean = 0, var = 2.72))
 # Initial values
 inits.list <- list(alpha = 0, beta = 0,
-		      z = apply(data.list$y, 1, max, na.rm = TRUE))
+                   z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
 n.report <- 1000
 
 out <- PGOcc(occ.formula = ~ occ.cov, 
-	     det.formula = ~ det.cov, 
-	     data = data.list, 
-	     inits = inits.list,
-	     n.samples = n.samples,
-	     priors = prior.list,
-	     n.omp.threads = 1,
-	     verbose = TRUE,
-	     n.report = n.report, 
-	     n.burn = 1000, 
-	     n.thin = 1, 
-	     n.chains = 1)
+             det.formula = ~ det.cov, 
+             data = data.list, 
+             inits = inits.list,
+             n.samples = n.samples,
+             priors = prior.list,
+             n.omp.threads = 1,
+             verbose = TRUE,
+             n.report = n.report, 
+             n.burn = 1000, 
+             n.thin = 1, 
+             n.chains = 1)
 summary(out)
 }

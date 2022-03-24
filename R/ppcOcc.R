@@ -15,12 +15,13 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (is(object, c('lfJSDM', 'sfJSDM'))) {
+  # if (is(object, c('lfJSDM', 'sfJSDM'))) {
+  if (class(object) %in% c('lfJSDM', 'sfJSDM')) {
     stop("error: ppcOcc is not implemented for lfJSDM and sfJSDM")
   }
-  if (!is(object, c('PGOcc', 'spPGOcc', 'msPGOcc', 
-                    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                    'lfMsPGOcc', 'sfMsPGOcc'))) {
+  if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
+                             'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+                             'lfMsPGOcc', 'sfMsPGOcc'))) {
     stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc\n")
   }
   # Fit statistic ---------------------
@@ -35,7 +36,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(group)) {
     stop("error: group must be specified")
   }
-  if (!(group %in% c(1, 2)) & is(object, c('PGOcc', 'spPGOcc', 'intPGOcc', 'spIntPGOcc'))) {
+  if (!(group %in% c(1, 2)) & (class(object) %in% c('PGOcc', 'spPGOcc', 
+						    'intPGOcc', 'spIntPGOcc'))) {
     stop("error: group must be 1 (row) or 2 (columns) for objects of class PGOcc, spPGOcc, intPGOcc, spIntPGOcc")
   }
   # Functions -------------------------------------------------------------
@@ -44,7 +46,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
 
   out <- list()
   # For single species models
-  if (is(object, c('PGOcc', 'spPGOcc'))) {
+  #if (is(object, c('PGOcc', 'spPGOcc'))) {
+  if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     y <- object$y
     J <- nrow(y)
     if (is(object, 'PGOcc')) {
@@ -121,7 +124,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.chains <- object$n.chains
   } 
   # Multispecies models
-  if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
+  # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc')) {
     y <- object$y
     J <- dim(y)[2]
     N <- dim(y)[1]
@@ -163,8 +167,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     } else if (group == 2) {
       y.grouped <- apply(y, c(1, 3), sum, na.rm = TRUE)
       y.rep.grouped <- apply(y.rep.samples, c(1, 2, 4), sum, na.rm = TRUE)
-      fit.big.y <- array(NA, dim = c(n.samples, N, max(n.rep)))
-      fit.big.y.rep <- array(NA, dim = c(n.samples, N, max(n.rep)))
+      fit.big.y <- array(NA, dim = c(n.samples, N, dim(y)[3]))
+      fit.big.y.rep <- array(NA, dim = c(n.samples, N, dim(y)[3]))
       for (i in 1:N) {
         message(noquote(paste("Currently on species ", i, " out of ", N, sep = '')))
         if (fit.stat %in% c('chi-squared', 'chi-square')) {
@@ -203,7 +207,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$sp.names <- object$sp.names
   }
   # For integrated models
-  if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     y <- object$y
     n.data <- length(y)
     sites <- object$sites

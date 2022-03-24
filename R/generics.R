@@ -20,6 +20,7 @@ predict.PGOcc <- function(object, X.0, ignore.RE = FALSE,
     stop("error: predict expects object\n")
   }
   if (!is(object, "PGOcc")) {
+  # if (class(object) != "PGOcc") {
     stop("error: requires an output object of class PGOcc\n")
   }
   if (!(tolower(type) %in% c('occupancy', 'detection'))) {
@@ -211,6 +212,7 @@ fitted.PGOcc <- function(object, ...) {
     stop("error: object must be specified")
   }
   if (!is(object, "PGOcc")) {
+  # if (class(object) != "PGOcc") {
     stop("error: object must be one of class PGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -429,7 +431,8 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!is(object, c('spPGOcc', 'spIntPGOcc'))) {
+  #if (!is(object, c('spPGOcc', 'spIntPGOcc'))) {
+  if (!(class(object) %in% c('spPGOcc', 'spIntPGOcc'))) {
     stop("error: requires an output object of class spPGOcc or spIntPGOcc\n")
   }
 
@@ -806,6 +809,7 @@ fitted.spPGOcc <- function(object, ...) {
     stop("error: object must be specified")
   }
   if (!is(object, 'spPGOcc')) {
+  # if (class(object) != 'spPGOcc') {
     stop("error: object must be one of class spPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -878,6 +882,7 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE,
     stop("error: predict expects object\n")
   }
   if (!is(object, 'msPGOcc')) {
+  # if (class(object) != 'msPGOcc') {
     stop("error: requires an output object of class msPGOcc\n")
   }
 
@@ -1213,7 +1218,8 @@ fitted.msPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!is(object, c("msPGOcc", "spMsPGOcc", "lfMsPGOcc", "sfMsPGOcc"))) {
+  # if (!is(object, c("msPGOcc", "spMsPGOcc", "lfMsPGOcc", "sfMsPGOcc"))) {
+  if (!(class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
     stop("error: object must be of class msPGOcc, spMsPGOcc, lfMsPGOcc, or sfMsPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
@@ -1450,6 +1456,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     stop("error: predict expects object\n")
   }
   if (!is(object, 'spMsPGOcc')) {
+  # if (object != 'spMsPGOcc') {
     stop("error: requires an output object of class spMsPGOcc\n")
   }
 
@@ -1782,6 +1789,7 @@ predict.intPGOcc <- function(object, X.0, ...) {
     stop("error: predict expects object\n")
   }
   if (!is(object, 'intPGOcc')) {
+  # if (object != 'intPGOcc') {
     stop("error: requires an output object of class intPGOcc\n")
   }
 
@@ -1834,7 +1842,8 @@ fitted.intPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  #if (!is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  if (!(class(object) %in% c('intPGOcc', 'spIntPGOcc'))) {
     stop("error: object must be one of class intPGOcc or spIntPGOcc\n")
   }
 
@@ -2157,7 +2166,8 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!is(object, c('lfMsPGOcc', 'lfJSDM'))) {
+  # if (!is(object, c('lfMsPGOcc', 'lfJSDM'))) {
+  if (!(class(object) %in% c('lfMsPGOcc', 'lfJSDM'))) {
     stop("error: requires an output object of class lfMsPGOcc or lfJSDM\n")
   }
 
@@ -2559,7 +2569,8 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!is(object, c('sfMsPGOcc', 'sfJSDM'))) {
+  # if (!is(object, c('sfMsPGOcc', 'sfJSDM'))) {
+  if (!(class(object) %in% c('sfMsPGOcc', 'sfJSDM'))) {
     stop("error: requires an output object of class sfMsPGOcc or sfJSDM\n")
   }
   if (!(tolower(type) %in% c('occupancy', 'detection'))) {

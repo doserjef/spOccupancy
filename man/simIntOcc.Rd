@@ -97,6 +97,6 @@ sp <- TRUE
 
 # Simulate occupancy data. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sp = TRUE, 
-		 cov.model = 'gaussian', sigma.sq = sigma.sq, phi = phi)
+                 n.rep = n.rep, beta = beta, alpha = alpha, sp = TRUE, 
+                 cov.model = 'gaussian', sigma.sq = sigma.sq, phi = phi)
 }

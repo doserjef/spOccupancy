@@ -237,7 +237,7 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   if (nrow(X.p.re) == length(y) / N & p.det.re > 0) {
     if (!binom) {
-      X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
+      X.p.re <- X.p.re[!is.na(c(y.big[1, , ])), , drop = FALSE]
     }
   }
   y <- y[!is.na(y)]

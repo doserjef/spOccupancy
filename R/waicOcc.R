@@ -15,9 +15,12 @@ waicOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!is(object, c('PGOcc', 'spPGOcc', 'msPGOcc', 
-                    'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                    'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
+  # if (!is(object, c('PGOcc', 'spPGOcc', 'msPGOcc', 
+  #                   'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+  #                   'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
+  if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
+                             'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+                             'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
     stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM\n")
   }
 
@@ -26,20 +29,24 @@ waicOcc <- function(object, ...) {
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
-  if (is(object, c('PGOcc', 'spPGOcc'))) {
+  # if (is(object, c('PGOcc', 'spPGOcc'))) {
+  if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     elpd <- sum(apply(object$like.samples, 2, function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, 2, function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))
     names(out) <- c("elpd", "pD", "WAIC")
   }
-  if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
+  # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 
+			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM')) {
     elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))
     names(out) <- c("elpd", "pD", "WAIC")
   }
 
-  if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
+  if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     X.p <- object$X.p
     y <- object$y
     y.sum <- lapply(y, function(q) apply(q, 1, sum, na.rm = TRUE))

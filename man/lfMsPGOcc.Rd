@@ -1,6 +1,6 @@
 \name{lfMsPGOcc}
 \alias{lfMsPGOcc}
-\title{Function for Fitting Multi-Species Occupancy Models with Species Correlations}
+\title{Function for Fitting Latent Factor Multi-Species Occupancy Models}
 
 
 \description{
@@ -8,7 +8,7 @@ Function for fitting multi-species occupancy models with species correlations (i
 
 \usage{
 lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors, 
-	  n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+          n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
           n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
           k.fold, k.fold.threads = 1, k.fold.seed, ...)
 
@@ -46,7 +46,8 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
 
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
-  \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{lambda}, \code{z}. 
+  \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, \code{lambda}, 
+  \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{z}. 
   The value portion of each tag is the parameter's initial value. See 
   \code{priors} description for definition of each parameter name.
   Additionally, the tag \code{fix} can be set to \code{TRUE} 
@@ -55,7 +56,8 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, and \code{tau.sq.alpha.ig}. Community-level occurrence 
+  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi.ig}, and 
+  \code{sigma.sq.p.ig}. Community-level occurrence 
   (\code{beta.comm}) and detection (\code{alpha.comm}) regression coefficients 
   are assumed to follow a normal distribution. The hyperparameters of the 
   normal distribution are passed as a list of length two with the first
@@ -73,12 +75,20 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
   or a single value if all parameters are assigned the same prior. 
   If not specified, prior shape and scale parameters are set to 0.1. The 
   factor model fits \code{n.factors} independent latent factors. The priors for the 
-  factor loadings matrix \code{lambda} are ifxed following standard approaches to 
+  factor loadings matrix \code{lambda} are fixed following standard approaches to 
   ensure parameter identifiability. The upper triangular elements of the \code{N x n.factors} 
   matrix are fixed at 0 and the diagonal elements are fixed at 1. The lower 
-  triangular elements are assigned a standard normal prior (i.e., mean 0 and variance 1).}
+  triangular elements are assigned a standard normal prior (i.e., mean 0 and variance 1). 
+  \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
+  effect variances for any occurrence or
+  detection random effects, respectively, and are assumed to follow an inverse
+  Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding
+  to the shape and scale parameters, respectively, which are each specified as
+  vectors of length equal to the number of random intercepts or of length one 
+  if priors are the same for all random effect variances.}
 
-\item{n.factors}{the number of factors to use in the spatial factor model approach.
+\item{n.factors}{the number of factors to use in the latent factor model approach.
     Typically, the number of factors is set to be small (e.g., 4-5) relative to the
     total number of species in the community, which will lead to substantial
     decreases in computation time. However, the value can be anywhere
@@ -211,6 +221,15 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
@@ -218,7 +237,9 @@ lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection 
+  probability estimated values are not included in the model object, but can
+  be extracted using \code{fitted()}.
 }
 
 \examples{
@@ -241,8 +262,9 @@ p.det <- length(alpha.mean)
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
 p.RE <- list()
-p.RE <- list(levels = c(40, 10),
-	     sigma.sq.p = c(2, 0.5))
+# Include a random intercept on detection
+p.RE <- list(levels = c(40),
+             sigma.sq.p = c(2))
 for (i in 1:p.occ) {
   beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
 }
@@ -252,7 +274,7 @@ for (i in 1:p.det) {
 n.factors <- 4
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		sp = FALSE, factor.model = TRUE, n.factors = n.factors, p.RE = p.RE)
+                sp = FALSE, factor.model = TRUE, n.factors = n.factors, p.RE = p.RE)
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
@@ -261,49 +283,48 @@ X.p.re <- dat$X.p.re
 occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3],
-		 det.re = X.p.re[, , 1]
-		 )
+                 det.cov.2 = X.p[, , 3],
+                 det.re = X.p.re[, , 1])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
                   coords = dat$coords)
 
 # Occupancy initial values
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 # Initial values
 lambda.inits <- matrix(0, N, n.factors)
 diag(lambda.inits) <- 1
 lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
 inits.list <- list(alpha.comm = 0, 
-		   beta.comm = 0, 
-		   beta = 0, 
-		   alpha = 0,
-		   tau.sq.beta = 1, 
-		   tau.sq.alpha = 1, 
-		   lambda = lambda.inits,
-		   z = apply(y, c(1, 2), max, na.rm = TRUE))
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   lambda = lambda.inits,
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 n.samples <- 3000
 n.burn <- 2000
 n.thin <- 1
 
 out <- lfMsPGOcc(occ.formula = ~ occ.cov, 
-	         det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.re), 
-	         data = data.list, 
-	         inits = inits.list, 
-	         n.samples = n.samples, 
-	         priors = prior.list, 
-		 n.factors = n.factors,
+                 det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.re), 
+                 data = data.list, 
+                 inits = inits.list, 
+                 n.samples = n.samples, 
+                 priors = prior.list, 
+                 n.factors = n.factors,
                  n.omp.threads = 1, 
-	         verbose = TRUE, 
-	         n.report = 1000, 
-	         n.burn = n.burn, 
-	         n.thin = n.thin, 
-	         n.chains = 1)
+                 verbose = TRUE, 
+                 n.report = 1000, 
+                 n.burn = n.burn, 
+                 n.thin = n.thin, 
+                 n.chains = 1)
 
 summary(out, level = 'community')
 }

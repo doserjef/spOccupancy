@@ -1,17 +1,16 @@
 \name{lfJSDM}
 \alias{lfJSDM}
-\title{Function for Fitting a Joint Species Distribution Model}
+\title{Function for Fitting a Latent Factor Joint Species Distribution Model}
 
 
 \description{
-Function for fitting a joint species distribution model with species correlations. This model does not explicitly account for imperfect detection (see \code{lfMsPGOcc}). We use Polya-gamma latent variables and a factor modeling approach.}
+Function for fitting a joint species distribution model with species correlations. This model does not explicitly account for imperfect detection (see \code{lfMsPGOcc()}). We use Polya-gamma latent variables and a factor modeling approach.}
 
 \usage{
 lfJSDM(formula, data, inits, priors, n.factors, 
-	  n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-          n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-          k.fold, k.fold.threads = 1, k.fold.seed, ...)
-
+       n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+       n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
+       k.fold, k.fold.threads = 1, k.fold.seed, ...)
 }
 
 \arguments{
@@ -24,8 +23,10 @@ lfJSDM(formula, data, inits, priors, n.factors,
 \item{data}{a list containing data necessary for model fitting.
   Valid tags are \code{y}, \code{covs}, and \code{coords}. \code{y}
   is a two-dimensional array with first dimension equal to the number 
-  of species and second dimension equal to the number of sites. 
-  \code{covs} is a matrix or data frame containing the variables 
+  of species and second dimension equal to the number of sites. Note how this differs
+  from other \code{spOccupancy} functions in that \code{y} does not have any 
+  replicate surveys. This is because \code{lfJSDM} does not account for imperfect
+  detection. \code{covs} is a matrix or data frame containing the variables 
   used in the model, with \eqn{J}{J} rows for 
   each column (variable). \code{coords} is a matrix with \eqn{J}{J} 
   rows and 2 columns consisting of the spatial coordinates of each site in 
@@ -33,7 +34,7 @@ lfJSDM(formula, data, inits, priors, n.factors,
   in a projected coordinate system.}
 
 \item{inits}{a list with each tag corresponding to a parameter name.
-  Valid tags are \code{beta.comm}, \code{beta}, \code{tau.sq.beta}, 
+  Valid tags are \code{beta.comm}, \code{beta}, \code{tau.sq.beta}, \code{sigma.sq.psi},
   \code{lambda}. The value portion of each tag is the parameter's initial value. See 
   \code{priors} description for definition of each parameter name.
   Additionally, the tag \code{fix} can be set to \code{TRUE} 
@@ -41,8 +42,8 @@ lfJSDM(formula, data, inits, priors, n.factors,
   (the default), starting values are varied randomly across chains.}
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
-  Valid tags are \code{beta.comm.normal} and \code{tau.sq.beta.ig}. Community-level
-  (\code{beta.comm}) regression coefficients 
+  Valid tags are \code{beta.comm.normal}, \code{tau.sq.beta.ig}, and 
+  \code{sigma.sq.psi.ig}. Community-level (\code{beta.comm}) regression coefficients 
   are assumed to follow a normal distribution. The hyperparameters of the 
   normal distribution are passed as a list of length two with the first
   and second elements corresponding to the mean and variance of the normal
@@ -62,9 +63,15 @@ lfJSDM(formula, data, inits, priors, n.factors,
   factor loadings matrix \code{lambda} are fixed following standard approaches to 
   ensure parameter identifiability. The upper triangular elements of the \code{N x n.factors} 
   matrix are fixed at 0 and the diagonal elements are fixed at 1. The lower 
-  triangular elements are assigned a standard normal prior (i.e., mean 0 and variance 1).}
+  triangular elements are assigned a standard normal prior (i.e., mean 0 and variance 1). 
+  \code{sigma.sq.psi} is the random effect variance for any random effects, and is assumed
+  to follow an inverse Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+  are passed as a list of length two with first and second elements corresponding to the shape
+  and scale parameters, respectively, which are each specified as vectors of length equal to 
+  the number of random intercepts or of length one if priors are the same for all random 
+  effect variances.}
 
-\item{n.factors}{the number of factors to use in the spatial factor model approach.
+\item{n.factors}{the number of factors to use in the latent factor model approach.
     Typically, the number of factors is set to be small (e.g., 4-5) relative to the
     total number of species in the community, which will lead to substantial
     decreases in computation time. However, the value can be anywhere
@@ -158,7 +165,7 @@ lfJSDM(formula, data, inits, priors, n.factors,
     for the latent factor loadings.}
 
   \item{psi.samples}{a three-dimensional array of posterior samples for
-    the latent provability of occurrence/detection values for each species.}
+    the latent probability of occurrence/detection values for each species.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occurrence portion
@@ -172,6 +179,15 @@ lfJSDM(formula, data, inits, priors, n.factors,
     for the occurrence random effects. Only included if random intercepts
     are specified in \code{occ.formula}.}
 
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood value associated with each site and species. 
+    Used for calculating WAIC.}
+
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{MCMC sampler execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{vector of scoring rules (deviance) from k-fold cross-validation. 
@@ -179,7 +195,9 @@ lfJSDM(formula, data, inits, priors, n.factors,
     Only included if \code{k.fold} is specified in function call.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection probability
+  estimated values are not included in the model object, but can be extracted
+  using \code{fitted()}. 
 }
 
 \examples{
@@ -200,9 +218,9 @@ alpha.mean <- c(9)
 tau.sq.alpha <- c(0.05)
 p.det <- length(alpha.mean)
 # Random effects
-psi.RE <- list()
+# Include a single random effect
 psi.RE <- list(levels = c(20), 
- 	       sigma.sq.psi = c(2))
+               sigma.sq.psi = c(2))
 p.RE <- list()
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
@@ -219,8 +237,8 @@ factor.model <- TRUE
 n.factors <- 4
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-	        psi.RE = psi.RE, p.RE = p.RE, sp = FALSE,
-		factor.model = TRUE, n.factors = 4)
+                psi.RE = psi.RE, p.RE = p.RE, sp = FALSE,
+                factor.model = TRUE, n.factors = 4)
 
 X <- dat$X
 y <- dat$y
@@ -229,11 +247,11 @@ coords <- dat$coords
 occ.covs <- cbind(X, X.re)
 colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.re.1')
 data.list <- list(y = y[, , 1], 
-		  covs = occ.covs, 
+                  covs = occ.covs, 
                   coords = coords) 
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1)) 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1)) 
 inits.list <- list(beta.comm = 0, beta = 0, tau.sq.beta = 1) 
 out <- lfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1), 
               data = data.list, 
@@ -245,4 +263,5 @@ out <- lfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1),
               n.burn = 500,
               n.thin = 2,
               n.chains = 1) 
+summary(out)
 }

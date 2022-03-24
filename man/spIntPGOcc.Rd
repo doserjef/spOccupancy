@@ -245,6 +245,11 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   \item{w.samples}{a \code{coda} object of posterior samples
     for latent spatial random effects.}
 
+  \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
+    parameters.}
+
+  \item{ESS}{a list of effective sample sizes for some of the model parameters.}
+
   \item{run.time}{execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{scoring rule (deviance) from k-fold cross-validation. A 
@@ -253,7 +258,9 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
     if \code{k.fold.data} is specified.}
 
   The return object will include additional objects used for 
-  subsequent prediction and/or model fit evaluation. 
+  subsequent prediction and/or model fit evaluation. Note that detection
+  probability estimated values are not included in the model object, but can be 
+  extracted using \code{fitted()}.
 
 }
 
@@ -292,8 +299,8 @@ sp <- TRUE
 
 # Simulate occupancy data from multiple data sources. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sp = sp, 
-		 sigma.sq = sigma.sq, phi = phi, cov.model = 'exponential')
+                 n.rep = n.rep, beta = beta, alpha = alpha, sp = sp, 
+                 sigma.sq = sigma.sq, phi = phi, cov.model = 'exponential')
 
 y <- dat$y
 X <- dat$X.obs
@@ -311,32 +318,32 @@ det.covs <- list()
 # Add covariates one by one
 det.covs[[1]] <- list(det.cov.1.1 = X.p[[1]][, , 2])
 det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2], 
-		      det.cov.2.2 = X.p[[2]][, , 3])
+                      det.cov.2.2 = X.p[[2]][, , 3])
 det.covs[[3]] <- list(det.cov.3.1 = X.p[[3]][, , 2])
 det.covs[[4]] <- list(det.cov.4.1 = X.p[[4]][, , 2], 
-		      det.cov.4.2 = X.p[[4]][, , 3], 
-		      det.cov.4.3 = X.p[[4]][, , 4])
+                      det.cov.4.2 = X.p[[4]][, , 3], 
+                      det.cov.4.3 = X.p[[4]][, , 4])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
-		  sites = sites, 
-		  coords = coords)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
+                  sites = sites, 
+                  coords = coords)
 
 J <- length(dat$z.obs)
 
 # Initial values
 inits.list <- list(alpha = list(0, 0, 0, 0), 
-		      beta = 0, 
-		      phi = 3 / .5, 
-		      sigma.sq = 2, 
-		      w = rep(0, J), 
-		      z = rep(1, J))
+                   beta = 0, 
+                   phi = 3 / .5, 
+                   sigma.sq = 2, 
+                   w = rep(0, J), 
+                   z = rep(1, J))
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = list(0, 0, 0, 0), 
-				       var = list(2.72, 2.72, 2.72, 2.72)),
-		   phi.unif = c(3/1, 3/.1), 
-		   sigma.sq.ig = c(2, 2))
+                   alpha.normal = list(mean = list(0, 0, 0, 0), 
+                                       var = list(2.72, 2.72, 2.72, 2.72)),
+                   phi.unif = c(3/1, 3/.1), 
+                   sigma.sq.ig = c(2, 2))
 # Tuning
 tuning.list <- list(phi = 0.3) 
 
@@ -346,26 +353,24 @@ n.batch <- 10
 batch.length <- 25
 
 out <- spIntPGOcc(occ.formula = ~ occ.cov, 
-		  det.formula = list(f.1 = ~ det.cov.1.1, 
-				     f.2 = ~ det.cov.2.1 + det.cov.2.2, 
-				     f.3 = ~ det.cov.3.1, 
-				     f.4 = ~ det.cov.4.1 + det.cov.4.2 + det.cov.4.3), 
-		  data = data.list,  
-		  inits = inits.list, 
-		  n.batch = n.batch, 
-		  batch.length = batch.length, 
-		  accept.rate = 0.43, 
-		  priors = prior.list, 
-		  cov.model = "exponential", 
-		  tuning = tuning.list, 
-		  n.omp.threads = 1, 
-		  verbose = TRUE, 
-		  NNGP = FALSE, 
-		  n.neighbors = 5, 
-		  search.type = 'cb', 
-		  n.report = 10, 
-		  n.burn = 50, 
-		  n.thin = 1)
+                  det.formula = list(f.1 = ~ det.cov.1.1, 
+                                     f.2 = ~ det.cov.2.1 + det.cov.2.2, 
+                                     f.3 = ~ det.cov.3.1, 
+                                     f.4 = ~ det.cov.4.1 + det.cov.4.2 + det.cov.4.3), 
+                  data = data.list,  
+                  inits = inits.list, 
+                  n.batch = n.batch, 
+                  batch.length = batch.length, 
+                  accept.rate = 0.43, 
+                  priors = prior.list, 
+                  cov.model = "exponential", 
+                  tuning = tuning.list, 
+                  n.omp.threads = 1, 
+                  verbose = TRUE, 
+                  NNGP = FALSE, 
+                  n.report = 10, 
+                  n.burn = 50, 
+                  n.thin = 1)
 
 summary(out)
 }

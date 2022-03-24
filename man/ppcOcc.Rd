@@ -12,7 +12,8 @@ ppcOcc(object, fit.stat, group, ...)
 
 \arguments{
 \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
-\code{spMsPGOcc}, \code{intPGOcc}, or \code{spIntPGOcc}.}
+\code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc},
+or \code{sfMsPGOcc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
@@ -73,36 +74,36 @@ p.occ <- length(beta)
 alpha <- c(0.7, 0.4)
 p.det <- length(alpha)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-	      sp = FALSE)
+              sp = FALSE)
 occ.covs <- dat$X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov = dat$X.p[, , 2])
 # Data bundle
 data.list <- list(y = dat$y, 
-		  occ.covs = occ.covs, 
-		  det.covs = det.covs)
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs)
 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
-		   alpha.normal = list(mean = 0, var = 2.72))
+                   alpha.normal = list(mean = 0, var = 2.72))
 # Initial values
 inits.list <- list(alpha = 0, beta = 0,
-		      z = apply(data.list$y, 1, max, na.rm = TRUE))
+                   z = apply(data.list$y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
 n.report <- 1000
 
 out <- PGOcc(occ.formula = ~ occ.cov, 
-	     det.formula = ~ det.cov, 
-	     data = data.list, 
-	     inits = inits.list,
-	     n.samples = n.samples,
-	     priors = prior.list,
-	     n.omp.threads = 1,
-	     verbose = TRUE,
-	     n.report = n.report, 
-	     n.burn = 4000, 
-	     n.thin = 1)
+             det.formula = ~ det.cov, 
+             data = data.list, 
+             inits = inits.list,
+             n.samples = n.samples,
+             priors = prior.list,
+             n.omp.threads = 1,
+             verbose = TRUE,
+             n.report = n.report, 
+             n.burn = 4000, 
+             n.thin = 1)
 
 # Posterior predictive check
 ppc.out <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
