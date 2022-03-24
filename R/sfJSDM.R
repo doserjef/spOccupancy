@@ -77,12 +77,6 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: n.factors must be specified for a spatial factor occupancy model")
   }
 
-  # Checking missing values ---------------------------------------------
-  y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
-  if (sum(y.na.test == 0) > 0) {
-    stop("error: some sites in y have missing data. Remove these from the data, and subsequently predict at those sites if interested.")
-  }
-
   # Neighbors and Ordering ----------------------------------------------
   if (NNGP) {
     u.search.type <- 2 
@@ -96,6 +90,16 @@ sfJSDM <- function(formula, data, inits, priors,
   }
 
   data$covs <- as.data.frame(data$covs)
+
+  # Checking missing values ---------------------------------------------
+  y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
+  if (sum(y.na.test == 0) > 0) {
+    stop("error: some sites in y have missing data. Remove these from the data, and subsequently predict at those sites if interested.")
+  }
+  # occ.covs ------------------------
+  if (sum(is.na(data$covs)) != 0) {
+    stop("error: missing values in covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).")
+  }
 
   # Check whether random effects are sent in as numeric, and
   # return error if they are. 

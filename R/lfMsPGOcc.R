@@ -80,13 +80,7 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: coords must be specified in data for a latent factor occupancy model.")
   }
   coords <- as.matrix(data$coords)
-
-  # Checking missing values ---------------------------------------------
-  y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
-  if (sum(y.na.test == 0) > 0) {
-    stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
-  }
-
+  
   # First subset detection covariates to only use those that are included in the analysis. 
   data$det.covs <- data$det.covs[names(data$det.covs) %in% all.vars(det.formula)]
   # Null model support
@@ -131,6 +125,44 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (is(data$det.covs[, det.re.names[i]], 'character')) {
         stop(paste("error: random effect variable ", det.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
       }
+    }
+  }
+
+  # Checking missing values ---------------------------------------------
+  # y -------------------------------
+  y.na.test <- apply(y.big, c(1, 2), function(a) sum(!is.na(a)))
+  if (sum(y.na.test == 0) > 0) {
+    stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
+  }
+  # occ.covs ------------------------
+  if (sum(is.na(data$occ.covs)) != 0) {
+    stop("error: missing values in occ.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
+  }
+  # det.covs ------------------------
+  if (!binom) {
+    for (i in 1:ncol(data$det.covs)) {
+      # Note that this assumes the same detection history for each species.  
+      if (sum(is.na(data$det.covs[, i])) > sum(is.na(y.big[1, , ]))) {
+        stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
+      }
+    }
+    # Misalignment between y and det.covs
+    y.missing <- which(is.na(y[1, , ]))
+    det.covs.missing <- lapply(data$det.covs, function(a) which(is.na(a)))
+    for (i in 1:length(det.covs.missing)) {
+      tmp.indx <- !(y.missing %in% det.covs.missing[[i]])
+      if (sum(tmp.indx) > 0) {
+        if (i == 1 & verbose) {
+          message("There are missing values in data$y with corresponding non-missing values in data$det.covs.\nRemoving these site/replicate combinations for fitting the model.")
+        }
+        data$det.covs[y.missing, i] <- NA
+      }
+    }
+  }
+  # det.covs when binom == TRUE -----
+  if (binom) {
+    if (sum(is.na(data$det.covs)) != 0) {
+      stop("error: missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
     }
   }
 

@@ -70,15 +70,19 @@ lfJSDM <- function(formula, data, inits, priors,
     stop("error: coords must be specified in data for a latent factor occupancy model.")
   }
   coords <- as.matrix(data$coords)
+  
+  # First subset detection covariates to only use those that are included in the analysis. 
+  data$covs <- as.data.frame(data$covs)
 
   # Checking missing values ---------------------------------------------
   y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
   if (sum(y.na.test == 0) > 0) {
     stop("error: some sites in y have missing data. Remove these from the data, and subsequently predict at those sites if interested.")
   }
-
-  # First subset detection covariates to only use those that are included in the analysis. 
-  data$covs <- as.data.frame(data$covs)
+  # occ.covs ------------------------
+  if (sum(is.na(data$covs)) != 0) {
+    stop("error: missing values in covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).")
+  }
 
   # Check whether random effects are sent in as numeric, and
   # return error if they are. 
