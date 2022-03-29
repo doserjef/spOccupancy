@@ -10,5 +10,8 @@ _pkgdown.yml
 src/*.o
 src/*.so
 vignettes/modelFitting_cache
+vignettes/modelFitting_files
 vignettes/randomEffects_cache
 vignettes/randomEffects_files
+vignettes/factorModels_files
+vignettes/factorModels_cache

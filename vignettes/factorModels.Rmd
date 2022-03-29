@@ -1,0 +1,937 @@
+---
+title: "Joint species distribution models with imperfect detection in `spOccupancy`"
+author: "Jeffrey W. Doser, Andrew O. Finley, Sudipto Banerjee"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+bibliography: [referencesJSDM.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{factorModels}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", cache = TRUE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+
+# Introduction
+
+This vignette provides worked examples for fitting joint species distribution models in the `spOccupancy` R package [@doser2021spoccupancy]. Joint species distribution models (JSDMs) are a series of regression-based approaches that explicitly accommodate residual species correlations [@latimer2009hierarchical; @ovaskainen2010modeling]. `spOccupancy` provides a series of functions that account for various combinations of the three major complexities often encountered in multi-species detection-nondetection data: (1) residual species correlations [@ovaskainen2010modeling], (2) imperfect detection [@mackenzie2002], and (3) spatial autocorrelation [@finley2009aoas]. In this vignette, we will provide step by step examples on how to fit the following models: 
+
+1. A latent factor multi-species occupancy model using `lfMsPGOcc()` that accommodates residual species correlations and imperfect detection. 
+2. A spatial latent factor multi-species occupancy model using `sfMsPGOcc()` that accommodates residual species correlations, imperfect detection, and spatial autocorrelation. 
+4. A spatial latent factor joint species distribution model using `sfJSDM()` that accommodates residual species correlations and spatial autocorrelation.
+3. A latent factor joint species distribution model using `lfJSDM()` that accommodates residual species correlations. 
+
+For a detailed vignette on non-spatial and spatial multi-species occupancy models that do not account for residual species correlations, see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting#multi-species-occupancy-models). 
+
+As with all models implemented in `spOccupancy`, we use P&oacute;lya-Gamma data augmentation for computational efficiency [@polson2013]. Here we provide a brief description of each model, with full statistical details provided on the Gibbs sampler implementations of the models in Appendix S2. In addition to fitting each model, we will show how `spOccupancy` provides functionality for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out-of-sample predictions using standard R helper functions (e.g., `predict()`). 
+
+Below, we first load the `spOccupancy` package, the `coda` package for some additional MCMC diagnostics, as well as the `stars` and `ggplot2` packages to create some basic plots of our results. We also set a seed so you can reproduce the same results we do. 
+
+```{r, message = FALSE}
+library(spOccupancy)
+library(stars)
+library(ggplot2)
+set.seed(100)
+```
+
+## Example data set: Foliage-gleaning birds at Hubbard Brook
+
+As an example data set throughout this vignette, we will use data from twelve foliage-gleaning bird species collected from point count surveys at Hubbard Brook Experimental Forest (HBEF) in New Hampshire, USA. Specific details on the data set, which is just a small subset from a long-term survey, are available on the [Hubbard Brook website](https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) and @doser2022integrated. The data are provided as part of the `spOccupancy` package and are loaded with `data(hbef2015)`. Point count surveys were conducted at 373 sites over three replicates, each of 10 minutes in length and with a detection radius of 100m. In the data set provided here, we converted these data to detection-nondetection data. Some sites were not visited for all three replicates. Additional information on the data set (including individual species in the data set) can be viewed in the man page using `help(hbef2015)`.
+
+```{r}
+data(hbef2015) # Load the data set.
+str(hbef2015) # Get an overview of what's in the data.
+# Species codes
+sp.names <- rownames(hbef2015$y)
+```
+
+The object `hbef2015` is a list comprised of the detection-nondetection data (`y`), covariates on the occurrence portion of the model (`occ.covs`), covariates on the detection portion of the model (`det.covs`), and the spatial coordinates of each site (`coords`) for use in spatial occupancy models and in plotting. Note that `spOccupancy` functions assume the spatial coordinates are specified in a projected coordinate system. This list is the format required for input to `spOccupancy` model functions. `hbef2015` contains data on 12 species in the three-dimensional array `y`, where the dimensions of `y` correspond to species (12), sites (373), and replicates (3). 
+
+# Latent factor multi-species occupancy models
+
+## Basic model description
+
+Let $z_{i, j}$ be the true presence (1) or absence (0) of some species $i$ at site $j$ for a total of $i = 1, \dots, N$ species and $j = 1, \dots, J$ sites. For our HBEF example, $N = 12$ and $J = 373$. We assume $z_{i, j}$ arises from a Bernoulli process following
+
+\begin{equation}
+\begin{split}
+&z_{i, j} \sim \text{Bernoulli}(\psi_{i, j}), \\
+&\text{logit}(\psi_{i, j}) = \bm{x}^{\top}_{j} \bm{\beta}_i + \text{w}^*_{i, j},
+\end{split}
+\end{equation}
+
+where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$, which is a function of site-specific covariates $\bm{X}$, a vector of species-specific regression coefficients ($\bm{\beta}_i$) for those covariates, and a latent process $\text{w}^*_{i, j}$. We incorporate residual species correlations through the formulation of the latent process $\text{w}^*_{i, j}$. We use a factor modeling approach, which is a dimension reduction technique that can account for correlations among a large number of species without a massive computational cost [@hogan2004bayesian]. Specifically, we decompose $\text{w}^*_{i, j}$ into a linear combination of $q$ latent variables (i.e., factors) and their associated species-specific coefficients (i.e., factor loadings). Thus, we have 
+
+\begin{equation}
+  \text{w}^*_{i, j} = \bm{\lambda}_i^\top\textbf{w}_j, 
+\end{equation}
+
+where $\bm{\lambda}_i$ is the $i$th row of factor loadings from an $N \times q$ matrix $\bm{\Lambda}$, and $\textbf{w}_j$ is a $q \times 1$ vector of independent latent factors at site $j$. We achieve computational improvements by setting $q << N$, where often a small number of factors (e.g., $q = 5$) is sufficient [@taylor2019spatial]. For our HBEF example, our community is relatively small ($N = 12$) and so we use $q = 2$ latent factors as our initial choice, and will discuss assessing this choice of the number of factors later in the example. We account for residual species correlations via their individual responses (i.e., loadings) to the $q$ latent spatial factors. We can envision the latent variables $\textbf{w}_j$ as unmeasured site-specific covariates that are treated as random variables in the model estimation procedure. For the non-spatial latent factor model, we assign a standard normal prior distribution to the latent factors (i.e., we assume each latent factor is independent and arises from a normal distribution with mean 0 and standard deviation 1).  
+
+We envision the species-specific regression coefficients ($\bm{\beta}_i$) as random effects arising from a common community-level distribution:
+
+\begin{equation}
+\bm{\beta}_i \sim \text{Normal}(\bm{\mu_{\beta}}, \bm{T}_{\beta}),
+\end{equation}
+
+where $\bm{\mu_{\beta}}$ is a vector of community-level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variance of each occurrence covariate effect among species in the community.
+
+We do not directly observe $z_{i, j}$, but rather we observe an imperfect representation of the latent occurrence process. Let $y_{i, j, k}$ be the observed detection (1) or nondetection (0) of a species $i$ of interest at site $j$ during replicate $k$ for each of $k = 1, \dots, K_j$ replicates at each site $j$. We envision the detection-nondetection data as arising from a Bernoulli process conditional on the true latent occurrence process:
+
+\begin{equation}
+\begin{split}
+&y_{i, j, k} \sim \text{Bernoulli}(p_{i, j, k}z_{i, j}), \\
+&\text{logit}(p_{i, j, k}) = \bm{v}^{\top}_{i, j, k}\bm{\alpha}_i,
+\end{split}
+\end{equation}
+
+where $p_{i, j, k}$ is the probability of detecting species $i$ at site $j$ during replicate $k$ (given it is present at site $j$), which is a function of site and replicate-specific covariates $\bm{V}$ and a vector of species-specific regression coefficients ($\bm{\alpha}_i$). Similarly to the occurrence regression coefficients, the species-specific detection coefficients are envisioned as random effects arising from a common community-level distribution:
+
+\begin{equation}
+\bm{\alpha}_i \sim \text{Normal}(\bm{\mu_{\alpha}}, \bm{T}_{\alpha}),
+\end{equation}
+
+where $\bm{\mu_{\alpha}}$ is a vector of community-level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
+
+We assign multivariate normal priors for the community-level occurrence ($\bm{\mu_{\beta}}$) and detection ($\bm{\mu_{\alpha}}$) means, and assign independent inverse-Gamma priors on the community-level occurrence ($\tau^2_{\beta}$) and detection ($\tau^2_{\alpha}$) variance parameters. To ensure identifiability of the latent factors and factor loadings, we set all elements in the upper triangle of the factor loadings matrix $\bm{\Lambda}$ equal to 0 and its diagonal elements equal to 1. 
+
+## Fitting latent factor multi-species occupancy models with `lfMsPGOcc()`
+
+The `lfMsPGOcc()` function fits latent factor multi-species occupancy models. `lfMsPGOcc()` has the following arguments: 
+
+```{r, eval = FALSE}
+lfMsPGOcc(occ.formula, det.formula, data, inits, priors, n.factors, 
+          n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+          n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
+          k.fold, k.fold.threads = 1, k.fold.seed, ...)
+```
+
+The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to denote the covariates to be included in the occurrence and detection portions of the model, respectively. We only specify the right hand side of the formula. We can include random intercepts in both the occurrence and detection portions of the model using `lme4` syntax [@bates2015]. The names of variables given in the formulas should correspond to those found in `data`, which is a list consisting of the following tags: `y` (detection-nondetection data), `occ.covs` (occurrence covariates), `det.covs` (detection covariates), and `coords` (spatial coordinates of sites). `y` is a three-dimensional array with dimensions corresponding to species, sites, and replicates, `occ.covs` is a matrix or data frame with site-specific covariate values, and `det.covs` is a list with each list element corresponding to a covariate to include in the detection portion of the model. Covariates on detection can vary by site and/or survey, and so these covariates may be specified as a site by survey matrix for survey-level covariates or as a one-dimensional vector for survey level covariates. The `hbef2015` list is already in the required format. For our example, we will model species-specific occurrence as a function of linear and quadratic elevation, and will include three observational covariates (linear and quadratic day of survey, time of day of survey) on the detection portion of the model. We standardize all covariates by using the `scale()` function in our model specification, and use the `I()` function to specify quadratic effects. 
+
+```{r}
+occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
+det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
+```
+
+Next, we will specify the number of latent factors to use in our model. This is not an arbitrary decision, and it is difficult to determine the optimal number of latent factors in the model. While other approaches exist to estimate the "optimal" number of factors directly in the modeling framework [@tikhonov2020computationally; @ovaskainen2016uncovering], these approaches do not allow for interpretability of the latent factors and the latent factor loadings (see Figure 2 in Doser, Finley, Banerjee (2022)). The specific restraints and priors we place on the factor loadings matrix ($\bm{\Lambda}$) in our approach allows for interpretation of the latent factors and the factor loadings, but does not automatically determine the number of factors for optimal predictive performance. Thus, there is a tradeoff between interpretability of the latent factor and factor loadings and optimal predictive performance. In the `spOccupancy` implementation, we chose to allow for interpretability of the factor and factor loadings at risk of inferior predictive performance if too many or too few factors are specified by the user. 
+
+The number of latent factors can range from 1 to $N$ (the total number of species in the modeled community). Conceptually, choosing the number of factors is similar to performing a Principal Components Analysis and looking at which components explain a large amount of variation. We want to choose the number of factors that explains an adequate amount of variability among species in the community, but we want to keep this number as small as possible to avoid overfitting the model and large model run times. When initially specifying the number of factors, we suggest the following: 
+
+1. Consider the size of the community and how much variation you expect from species to species. If you expect large variation in occurrence patterns for all species in the community, you may require a larger number of factors. If your modeled community is comprised of certain groups of species that you expect to behave similarly (e.g., insectivores, frugivores, granivores), then a smaller number of factors may suffice. Further, as shown by @tikhonov2020computationally, as the number of species increases, you will likely need more factors to adequately represent the community. 
+2. Consider how much time you have to run the model. The more factors included in the model, the longer the model will take to run. Under certain circumstances, like when you are running a model across a large number of spatial locations, you may simply be restricted to a small number of factors in order to achieve reasonable run times. 
+3. Consider how rare your species in the community are, how many data locations you have (i.e., sites), and how many replicates you have at each site. Models with more latent factors have more parameters to estimate, and thus require more data. If you have a lot of rare species in the community, you will likely be limited to a very small number of factors, as models with more than a few factors may not be identifiable. The same can be said if you are working with a small number of spatial locations (e.g., 30 sites) or replicates (e.g., 1 or 2 replicates at each site). 
+
+In our HBEF example, the community is relatively small ($N = 12$) and the species are all quite similar (after all, they are all classified as foliage-gleaning birds). Let's take a look at the raw probabilities of occurrence from the detection-nondetection data (ignoring imperfect detection) to give an idea of how rare the species are 
+
+```{r}
+apply(hbef2015$y, 1, mean, na.rm = TRUE)
+```
+
+It looks like we have some really rare species (e.g., AMRE, NAWA, BAWW) and some pretty common species (e.g., OVEN, REVI, BTBW). Taking all of this in consideration, it makes sense to initially try the model with a small number of factors, and so we will work with $q = 2$ factors.
+
+```{r}
+# Number of latent factors (q in statistical notation)
+n.factors <- 2
+```
+
+Because of the restrictions we place on the factor loadings matrix (diagonal elements equal to 1 and upper triangle elements equal to 0), another important modeling decision we need to make is how to order the species in our detection-nondetection array. More specifically, we need to carefully choose the first $q$ species in the our array, as these are the species that will have restrictions on their factor loadings. While from a theoretical perspective the order of the species will only influence the resulting interpretation of the latent factors and factor loadings matrix and not the model estimates, this decision does have practical implications. We have found that careful consideration of the ordering of species can lead to (1) increased interpretability of the factors and factor loadings; (2) faster model convergence; and (3) improved mixing. Determining the order of the factors is less important when you have an adequate number of observations for all species in the community, but it becomes increasingly important the more rare species you have in your data set. We suggest the following when considering the order of the species in the detection-nondetection array (`y`): 
+
+1. Place a common species first. The first species has all of its factor loadings set to fixed values, and so it can have a large influence on the resulting interpretation on the factor loadings and latent factors. We have also found that having a very rare species first can result in very slow mixing and increased sensitivity to initial values of the latent factor loadings matrix. 
+2. For the remaining $q - 1$ factors, place species that you believe will show different occurrence patterns than the first species, and the other species placed before it. Place these remaining $q - 1$ species in order of decreasing differences from the initial factor. For example, if I had $q = 3$, for the second species in the array, I would place a species that I a priori think is most different from the first species. For the third species in the array, I would place a species that I think will show different occurrence patterns than both the first and second species, but its patterns may not be as noticeably different compared to the first and second species. 
+
+In our HBEF example, it is clear that there is a set of fairly common species as well as very rare species. This is likely related to the specific elevation these species tend to occurr at as a result of varied habitat requirements. Accordingly, we will reorder the species matrix (`hbef2015$y`) to place one of the common species first that occurs at relatively moderate elevations (`OVEN`) and then place a rare species second that tends to occurr at high elevational habitat (`BLPW`). The order of the remaining $N - q = 10$ species does not matter. Below we reorder the species following this logic, and then create a new data object `hbef.ordered` that we will supply to `lfMsPGOcc()`. 
+
+```{r}
+# Current species ordering
+sp.names
+# Reorder species. 
+sp.ordered <- c('OVEN', 'BLPW', 'AMRE', 'BAWW', 'BHVI', 'BLBW', 
+	        'BTBW', 'BTNW', 'CAWA', 'MAWA', 'NAWA', 'REVI')
+# Create new detection-nondetection data matrix in the new order
+y.new <- hbef2015$y[sp.ordered, , ]
+# Create a new data array
+hbef.ordered <- hbef2015
+# Change the data to the new ordered data
+hbef.ordered$y <- y.new
+str(hbef.ordered)
+```
+
+Next we specify the initial values in `inits` and the prior distributions in `priors`. These arguments are optional, as `spOccupancy` will set default initial values and prior distributions if these arguments are not specified. If `verbose = TRUE`, messages will be printed to the screen to indicate what initial values and priors are used by default for each model parameter. Here (and throughout this vignette), we will explicitly specify initial values and priors. 
+
+However, we will point out that all models in `spOccupancy` that use a factor modeling approach can be fairly sensitive to the initial values of the latent factor loadings. This is primarily an issue when there are a large number of rare species. If you encounter difficulties in model convergence when running factor models in `spOccupancy` across multiple chains, we recommend first running a single chain of the model for a moderate number of iterations until the traceplots look like they are settling around a value (i.e., convergence is closed to being reached). Then extract the estimated mean values for the factor loadings matrix ($\bm{\Lambda}$) and supply these as initial values to the `spOccupancy` function when running the full model across multiple chains. When running multiple chains when not paying much attention to the initial values, you may see large discrepancies between certain chains with very large Rhat values for the latent factor loadings matrix (and spatial range parameters for spatially-explicit factor models). However, this may not necessarily be a convergence issue. Rather, what may happen is that depending on the initial values, the specific factors in the model may be estimated in a different order. For example, if estimating a model with two latent factors with two chains, the latent factors may correspond to a latitudinal and a longitudinal gradient in the first chain, but in the second chain these factors could be reversed with the first factor corresponding to the longitudinal gradient and the second factor corresponding to the latitudinal gradient. This is because it is only the sum of the product of the factor loadings and factors that influences occurrence probability, and so the specific ordering of the factors may switch depending on (1) the first $q$ species relationships to the latent factors and (2) the initial values. Thus, we encourage looking at the traceplots of each individual chain for the latent factor loadings (and spatial range parameters if using a spatial factor model). If the chain has an adequately large effective sample size for the parameters and appears to have reached convergence, we then recommend fixing the initial values at the estimated means from the preliminary model run and then running multiple chains to further assess convergence. 
+
+In `lfMsPGOcc()`, we will supply initial values for the following parameters: `alpha.comm` (community-level detection coefficients), `beta.comm` (community-level occurrence coefficients), `alpha` (species-level detection coefficients), `beta` (species-level occurrence coefficients), `tau.sq.beta` (community-level occurrence variance parameters), `tau.sq.alpha` (community-level detection variance parameters), `lambda` (the species-specific factor loadings), and `z` (latent occurrence variables for all species). These are all specified in a single list. Initial values for community-level parameters are either vectors of length corresponding to the number of community-level detection or occurrence parameters in the model (including the intercepts) or a single value if all parameters are assigned the same initial values. Initial values for species level regression coefficients are either matrices with the number of rows indicating the number of species, and each column corresponding to a different regression parameter, or a single value if the same initial value is used for all species and parameters. Initial values for the species-specific factor loadings (`lambda`) are specified as a numeric matrix with $N$ rows and $q$ columns, where $N$ is the number of species and $q$ is the number of latent factors used in the model. The diagonal elements of the matrix must be 1, and values in the upper triangle must be set to 0 to ensure identifiability of the latent factors. The initial values for the latent occurrence matrix are specified as a matrix with $N$ rows corresponding to the number of species and $J$ columns corresponding to the number of sites.
+
+
+```{r}
+# Number of species
+N <- nrow(hbef.ordered$y)
+# Initiate all lambda initial values to 0. 
+lambda.inits <- matrix(0, N, n.factors)
+# Set diagonal elements to 1
+diag(lambda.inits) <- 1
+# Set lower triangular elements to random values from a standard normal distribution
+lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+# Check it out. Note this is also how spOccupancy specifies default
+# initial values for lambda.
+lambda.inits
+# Create list of initial values. 
+inits <- list(alpha.comm = 0,
+              beta.comm = 0,
+              beta = 0,
+              alpha = 0,
+              tau.sq.beta = 1,
+              tau.sq.alpha = 1,
+              lambda = lambda.inits, 
+              z = apply(hbef.ordered$y, c(1, 2), max, na.rm = TRUE))
+```
+
+Notice that we set initial values of the latent species occurrence ($z$) to 1 if there was at least one observation of the species at the given site, and 0 if the species was not detected at that site (this is also the default value `spOccupancy` will use if initial values for $z$ are not provided). We set the lower triangular elements of the factor loadings matrix to random values from a standard normal distribution, as we have found these parameters to be relatively insensitive to initial values for this specific data set.
+
+We specify the priors in the `priors` argument with the following tags: `beta.comm.normal` (normal prior on the community-level occurrence mean effects), `alpha.comm.normal` (normal prior on the community-level detection mean effects), `tau.sq.beta.ig` (inverse-Gamma prior on the community-level occurrence variance parameters), `tau.sq.alpha.ig` (inverse-Gamma prior on the community-level detection variance parameters). Each tag consists of a list with elements corresponding to the mean and variance for normal priors and scale and shape for inverse-Gamma priors. Values can be specified individually for each parameter or as a single value if the same prior is assigned to all parameters of a given type.
+
+Below we specify normal priors to be relatively vague on the probability scale with a mean of 0 and a variance of 2.72, and specify vague inverse gamma priors on the community-level variance parameters setting both the shape and scale parameters to 0.1.
+
+```{r}
+priors <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+               alpha.comm.normal = list(mean = 0, var = 2.72),
+               tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+               tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+```
+
+Our next step is to specify the number of samples to produce with the MCMC algorithm (`n.samples`), the length of burn-in (`n.burn`), the rate at which we want to thin the posterior samples (`n.thin`), and the number of MCMC chains to run (`n.chains`). Note that currently `spOccupancy` runs multiple chains sequentially and does not allow chains to be run simultaneously in parallel across multiple threads. Instead, we allow for within-chain parallelization using the `n.omp.threads` argument. We can set `n.omp.threads` to a number greater than 1 and smaller than the number of threads on the computer you are using. Generally, setting `n.omp.threads > 1` will not result in decreased run times for non-spatial joint species distribution models in `spOccupancy`, but can substantially decrease run time when fitting spatially-explicit models [@finley2020spnngp]. Here we set `n.omp.threads = 1`.
+
+```{r}
+n.samples <- 5000
+n.burn <- 1000
+n.thin <- 8
+n.chains <- 3
+```
+
+We are now nearly set to run the latent factor multi-species occupancy model. The verbose argument is a logical value indicating whether or not MCMC sampler progress is reported to the screen. If `verbose = TRUE`, sampler progress is reported after every multiple of the specified number of iterations in the n.report argument. We set `verbose = TRUE` and `n.report = 1000` to report progress after every 1000th MCMC iteration. Additionally, the last three arguments of `lfMsPGOcc()` (and all `spOccupancy` model fitting functions), `k.fold`, `k.fold.threads`, and `k.fold.seed`, allow us to perform k-fold cross-validation after fitting the model. Here we will not perform k-fold cross-validation, but see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting#kFold) for details and examples of running `spOccupancy` functions for k-fold cross-validation. 
+
+```{r}
+# Approx run time: 78 seconds
+out.lfMsPGOcc <- lfMsPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
+                           data = hbef.ordered, inits = inits, priors = priors, 
+                           n.factors = n.factors, n.samples = n.samples, 
+                           n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
+                           n.burn = n.burn, n.thin = n.thin, n.chains = n.chains)
+```
+
+The resulting object `out.lfMsPGOcc` is a list of class `lfMsPGOcc` consisting primarily of posterior samples of all community and species-level parameters, as well as some additional objects that are used for summaries, prediction, and model fit/evaluation. We can display a nice summary of these results using the `summary()` function. When using summary, we can specify the level of parameters we want to summarize. We do this using the argument `level`, which takes values `community`, `species`, or `both` to print results for community-level parameters, species-level parameters, or all parameters. The default value prints a summary for all model parameters. 
+
+```{r}
+summary(out.lfMsPGOcc)
+```
+
+We see the `summary()` function displays the posterior mean, standard deviation, and posterior quantiles (2.5%, 50%, and 97.5%) for a quick summarization of model findings, with all summaries of parameters on the logit scale. Note that all `spOccupancy` `summary()` functions have a `quantiles` argument where you can supply the specific quantiles you want to be displayed in the summary output (by default, this is set to `quantiles = c(0.025, 0.5, 0.975)`). Looking at the community-level parameters, we see there is large variation in average occurrence (i.e., the occurrence intercept) across the study region, and more moderate variation in the effect of elevation on occurrence of the 12 bird species across the region. On average, bird occurrence in the community tends to peak at mid-level elevations (i.e., the community-level quadratic effect of elevation is negative). 
+
+Additionally, `summary()` returns Rhat (the Gelman-Rubin diagnostic; @brooks1998) as well as the effective sample size (ESS) for convergence assessments. Here we see most Rhat values are less than 1.1 and the ESS values are sufficiently large. For a complete analysis, we would run the model for longer to ensure all Rhat values were less than 1.1 and ESS values were sufficiently large. Further, we can use the `coda::plot()` function to plot traceplots of the individual model parameters that are contained in the resulting `lfMsPGOcc` object. All posterior samples are stored in objects that end in "samples" in the resulting `out.lfMsPGOcc` object. 
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+# Check out traceplot of the community-level occurrence means. 
+plot(out.lfMsPGOcc$beta.comm.samples, density = FALSE)
+```
+
+The `summary()` function does not present any information on the latent factor loadings or latent factors, but the full posterior samples are available in the `lambda.samples` and `w.samples` tags in the `out.lfMsPGOcc` object, respectively. Below we display the posterior summaries of the latent factor loadings.  
+
+```{r}
+summary(out.lfMsPGOcc$lambda.samples)
+```
+
+The latent factor loadings and latent factors can provide information on the additional environmental drivers of species occurrence patterns, and what species are respondingly similarly to these environmental gradients. See Figure 2 in Doser, Finley, Banerjee (2022) for an example using North American Breeding Bird Survey data. 
+
+As previously discussed, determining the number of factors to include in the model is not straightforward. However, looking at the posterior summaries of the latent factor loadings can provide information on how many factors are necessary for the given data set. In particular, we can look at the posterior mean or median of the latent factor loadings for each factor. If the factor loadings for all species are very close to zero for a given factor, that suggests that factor is not an important driver of species-specific occurrence across space, and thus you may consider removing it from the model. Additionally, we can look at the 95% credible intervals, and if the 95% credible intervals for the factor loadings of all species for a specific factor all contain zero this is further support to reduce the number of factors in the model. In our HBEF example, we see the factor loadings for the second factor for all species are very close to zero, and zero is contained in all 95% credible intervals. On the other hand, the estimated factor loadings for the first factor range from significantly positive to significantly negative values for different species, indicating it is an important driver of occurrence across space. Given these findings, we refit the model below with only a single latent factor. Note also that we fit the model with default initial values and priors, and when we set `verbose = TRUE` this information is clearly printed out to the screen.
+
+```{r}
+# Use default initial values and priors
+# Approx. run time: 75 seconds
+out.lfMsPGOcc.2 <- lfMsPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
+                             data = hbef.ordered, n.factors = 1, n.samples = n.samples, 
+                             n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
+                             n.burn = n.burn, n.thin = n.thin, n.chains = n.chains)
+```
+
+## Posterior Predictive Checks
+
+The `spOccupancy` function `ppcOcc()` performs a posterior predictive check for all `spOccupancy` model objects as an assessment of Goodness of Fit (GoF). The key idea of GoF testing is that a good model should generate data that closely align with the observed data. If there are large differences in the observed data from the model-generated data, our model is likely not very useful [@hooten2015guide]. We can use the `ppcOcc()` and `summary()` functions to generate a Bayesian p-value as a quick assessment of model fit. A Bayesian p-value that hovers around 0.5 indicates adequate model fit, while values less than 0.1 or greater than 0.9 suggest our model does not fit the data well. `ppcOcc` will return an overall Bayesian p-value for the entire community, as well as an individual Bayesian p-value for each species. See [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting#posterior-predictive-checks) and the `ppcOcc()` help page for additional details. Below we perform a posterior predictive check with the Freeman-Tukey statistic, grouping the data by individual sites. 
+
+```{r}
+# Approx run time: 30 seconds
+ppc.out <- ppcOcc(out.lfMsPGOcc.2, fit.stat = 'freeman-tukey', group = 1)
+# Calculate Bayesian p-values
+summary(ppc.out)
+```
+Here, our overall Bayesian p-value for the full community is close to 0.5, and the individual species Bayesian p-values also indicate adequate model fit. 
+
+## Model Selection using WAIC
+
+The `spOccupancy` function `waicOCC()` calculates the Widely Applicable Information Criterion [@watanabe2010] for all `spOccupancy` fitted model objects. The WAIC is a useful fully Bayesian information criterion that is adequate for comparing a set of hierarchical models and selecting the best-performing model for final analysis (see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting#kFold) for further details on WAIC implementation in `spOccupancy`). Smaller values of WAIC indicate a better performing model. Below, we fit a multi-species occupancy model without species correlations using the `msPGOcc()` function, and subsequently compare the model to the model that does account for species correlations. Syntax for the `msPGOcc()` function is identical to that for `lfMsPGOcc()`, with the exception of the `n.factors` argument no longer being included (since species correlations are not accommodated).
+
+```{r}
+# Approx run time: 71 seconds
+out.msPGOcc <- msPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
+                       data = hbef.ordered, inits = inits, priors = priors, 
+                       n.samples = n.samples, n.omp.threads = 1, 
+                       verbose = TRUE, n.report = 1000, n.burn = n.burn, 
+                       n.thin = n.thin, n.chains = n.chains)
+# Compute WAIC for the the latent factor multi-species occupancy model.
+waicOcc(out.lfMsPGOcc.2)
+# Compute WAIC for the basic multi-species occupancy model.
+waicOcc(out.msPGOcc)
+```
+
+Here, we see the WAIC for the latent factor multi-species occupancy model is substantially lower than the WAIC for the multi-species occupancy model, suggesting that accommodating residual species correlations leads to improved model performance in the foliage-gleaning bird data set. 
+
+## Prediction
+
+Finally, we can use the `predict()` function with all `spOccupancy` model-fitting functions to generate a series of posterior predictive samples at new locations, given a set of covariates and their spatial locations. `spOccupancy` supports prediction of both new occurrence values at a set of spatial locations and as of v0.3.0, `spOccupancy` supports predictions of detection probability over a range of covariate values. 
+
+First, we show how to use `predict()` to create a map of species richness across HBEF. The object `hbefElev` (which comes as part of the `spOccupancy` package) contains elevation data at a 30x30m resolution from the National Elevation Dataset across the entire HBEF. We load the data below.
+
+```{r}
+data(hbefElev)
+str(hbefElev)
+```
+
+The column `val` contains the elevation values, while `Easting` and `Northing` contain the spatial coordinates of the prediction sites. Below we standardize our new elevation values using the mean and standard deviation of the elevation values we used to fit the data, and then predict occurrence for each species across all `r nrow(hbefElev)` spatial locations. The `out.pred` object consists of posterior predictive samples of the latent occurrence probability (`psi.0.samples`) as well as the latent occurrence state (`z.0.samples`). We can calculate species richness as a derived quantity by summing up the latent occurrence states for each species at each MCMC sample. 
+
+```{r, eval = FALSE}
+# Not run (note this takes a large amount of memory to run).
+elev.pred <- (hbefElev$val - mean(hbef2015$occ.covs[, 1])) / sd(hbef2015$occ.covs[, 1])
+# Order: intercept, elevation (linear), elevation (quadratic)
+X.0 <- cbind(1, elev.pred, elev.pred^2) 
+# Spatial coordinates
+coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
+# type = 'occupancy' specifies prediction of occupancy (or occurrence). 
+# This is also the default.
+# Approximate run time: 30 sec
+out.pred <- predict(out.lfMsPGOcc, X.0, coords.0, type = 'occupancy')
+str(out.pred)
+# Species richness samples
+rich.pred <- apply(out.pred$z.0.samples, c(1, 3), sum)
+plot.dat <- data.frame(x = hbefElev$Easting, 
+                       y = hbefElev$Northing, 
+                       rich.mean = apply(rich.pred, 2, mean), 
+                       rich.sd = apply(rich.pred, 2, sd))
+# Plot species richness of the foliage-gleaning bird community
+# across the Hubbard Brook Experimental Forest
+dat.stars <- st_as_stars(plot.dat, dims = c('x', 'y'))
+ggplot() + 
+  geom_stars(data = dat.stars, aes(x = x, y = y, fill = rich.mean)) +
+  scale_fill_viridis_c(na.value = 'transparent') +
+  labs(x = 'Easting', y = 'Northing', fill = '', 
+       title = 'Mean Species Richness') +
+  theme_bw()
+```
+
+Note that when predicting new values using a latent factor multi-species occupancy model (or a latent factor joint species distribution model as we will see with `lfJSDM()`), we make predictions at both sampled and non-sampled locations using the latent factors. At sampled locations, we directly use the posterior samples from the model fit in the prediction algorithm, which will generally lead to improved predictions at the sampled sites compared to a multi-species model that does not account for species correlations and incorporate these factors. At non-sampled sites, we do not know the value of the latent factors, and so we simply draw random values from a standard normal distribution at each iteration of the posterior predictive sampling algorithm. Because these values are drawn form a normal distribution with a mean of 0, including these predictions of the latent factors at new sites will not change the overall mean estimate of occurrence probability at that site, but it will account for the uncertainty we have in the latent factor values, and thus will fully propagate uncertainty from our model fit to the resulting predictions.  
+
+Finally, we can generate predicted values of detection probability across a range of covariate values to generate a marginal response curve for each individual species across any given covariate value. Below we predict and plot the relationships between detection probability and time of day for each of the 12 species, while holding the day of the year at it's mean value (0).
+
+```{r}
+# Minimum observed time of day
+min.tod <- min(hbef2015$det.covs$tod, na.rm = TRUE)
+# Maximum
+max.tod <- max(hbef2015$det.covs$tod, na.rm = TRUE)
+# Generate 100 time of day values between the observed range
+J.0 <- 100
+tod.pred.vals <- seq(from = min.tod, to = max.tod, length.out = J.0)
+# Standardize the new values by the mean and sd of the data
+# used to fit the model. 
+mean.tod <- mean(hbef2015$det.covs$tod, na.rm = TRUE)
+sd.tod <- sd(hbef2015$det.covs$tod, na.rm = TRUE)
+tod.stand <- (tod.pred.vals - mean.tod) / sd.tod
+# Generate covariate matrix for prediction
+X.p.0 <- cbind(1, 0, tod.stand, 0)
+colnames(X.p.0) <- c('intercept', 'day', 'tod', 'day2')
+out.det.pred <- predict(out.lfMsPGOcc, X.p.0, type = 'detection')
+str(out.det.pred)
+```
+
+The `p.0.samples` tag in the `out.det.pred` object consists of the posterior predictive samples of detection probability for each species across the 100 generated time of day values. We finally create a marginal response curve for each species using `ggplot2`. 
+
+```{r, fig.width = 7, fig.height = 5, fig.align = 'center', units = 'in'}
+# Extract the means from the posterior samples and convert to vector
+p.0.ests <- c(apply(out.det.pred$p.0.samples, c(2, 3), mean))
+p.plot.dat <- data.frame(det.prob = p.0.ests, 
+                         sp = rep(sp.names, J.0), 
+                         tod = rep(tod.pred.vals, each = N))
+ggplot(p.plot.dat, aes(x = tod, y = det.prob)) + 
+  geom_line() + 
+  theme_bw() + 
+  scale_y_continuous(limits = c(0, 1)) + 
+  facet_wrap(vars(sp)) + 
+  labs(x = 'Time of day (min since sunrise)', y = 'Detection Probability') 
+```
+
+The relatively flat lines here for most species indicates that detection probability does not vary to a large extent across the time of day range that is sampled in the data, although there is some apparent variability in the effect across species (e.g., BAWW vs. MAWA). 
+
+# Spatial factor multi-species occupancy models
+
+## Basic model description
+
+While the latent factor multi-species occupancy model accounts for species correlations and imperfect detection, it fails to address spatial autocorrelation. The spatial factor multi-species occupancy model is identical to the latent factor multi-species occupancy model (`lfMsPGOcc()`), except the latent factors are now assumed to arise from a spatial process rather than a standard normal distribution, which accounts for spatial autocorrelation in latent species occurrence. More specifically, each latent factor (now called a spatial factor) $\textbf{w}_r$ for each $r = 1, \dots, q$ is modeled using a Nearest Neighbor Gaussian Process [@datta2016hierarchical], i.e., 
+
+\begin{equation}
+    \text{w}_r(\bm{s}_j) \sim N(\bm{0}, \tilde{\bm{C}}_r(\bm{\theta}_r)),
+\end{equation}
+
+where $\tilde{\bm{C}}_r(\bm{\theta}_r)$ is the NNGP-derived covariance matrix for the $r^{\text{th}}$ spatial factor. The vector $\bm{\theta}_r$ consists of parameters governing the spatial process according to a spatial correlation function [@banerjee2014hierarchical]. `spOccupancy` implements four spatial correlation functions: exponential, spherical, Gaussian, and Matern. For the exponential, spherical, and Gaussian functions, $\bm{\theta}_r$ includes a spatial variance parameter, $\sigma^2_r$, and a spatial range parameter, $\phi_r$, while the Matern correlation function includes an additional spatial smoothness parameter, $\nu_r$. 
+
+We assume the same priors and identifiability constraints as the latent factor multi-species occupancy model. We assign a uniform prior the spatial range parameters, $\phi_r$, and the spatial smoothness parameters, $\nu_r$, if using a Matern correlation function. 
+
+## Fitting spatial factor multi-species occupancy models with `sfMsPGOcc`
+
+The function `sfMsPGOcc()` fits spatial factor multi-species occupancy models using P&oacute;lya-Gamma data augmentation. `sfMsPGOcc()` has the following arguments: 
+
+```{r, eval = FALSE}
+sfMsPGOcc(occ.formula, det.formula, data, inits, priors, 
+          tuning, cov.model = 'exponential', NNGP = TRUE, 
+          n.neighbors = 15, search.type = "cb", n.factors, 
+          n.batch, batch.length, accept.rate = 0.43,
+          n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+          n.burn = round(.10 * n.batch * batch.length), 
+          n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+          k.fold.seed = 100, ...){
+```
+
+We will walk through each of the arguments to `sfMsPGOcc()` in the context of our HBEF example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`) follow the same form as we saw in `lfMsPGOcc()`. We will specify these again below for clarity.
+
+```{r}
+occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
+det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
+# Remind ourselves what the data look like
+str(hbef.ordered)
+```
+
+Following our findings from using `lfMsPGOcc()`, we will use 1 latent spatial factor. 
+
+```{r}
+n.factors <- 1
+```
+
+We will next specify the initial values in the `inits` argument. Just as before, this argument is optional as `spOccupancy` will by default set the initial values based on the prior distributions. Valid tags for initial values include all the parameters described for the latent factor multi-species occupancy model using `lfMsPGOcc()` as well as parameters associated with the spatial latent processes. These include: `phi` (the spatial range parameter) and `nu` (the spatial smoothness parameter), where the latter is only specified if adopting a Matern covariance function (i.e., `cov.model = 'matern'`). `spOccupancy` supports four spatial covariance models (`exponential`, `spherical`, `gaussian`, and `matern`), which are specified in the `cov.model` argument. Here we will use an exponential correlation function.  When using an exponential correlation function, $\frac{3}{\phi}$ is the effective range, or the distance at which the residual spatial correlation between two sites drops to 0.05 [@banerjee2014hierarchical]. As an initial value for the spatial range parameter `phi`, we compute the mean distance between points in HBEF and then set it equal to 3 divided by this mean distance. Thus, our initial guess for the effective range is the average distance between sites across HBEF. We will set all other initial values to the same values we used for `lfMsPGOcc()`. 
+
+```{r}
+# Pair-wise distance between all sites
+dist.hbef <- dist(hbef.ordered$coords)
+# Exponential correlation model
+cov.model <- "exponential"
+# Specify all other initial values identical to lfMsPGOcc() from before
+# Number of species
+N <- nrow(hbef.ordered$y)
+# Initiate all lambda initial values to 0. 
+lambda.inits <- matrix(0, N, n.factors)
+# Set diagonal elements to 1
+diag(lambda.inits) <- 1
+# Set lower triangular elements to random values from a standard normal dist
+lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+# Check it out
+lambda.inits
+# Create list of initial values. 
+inits <- list(alpha.comm = 0,
+              beta.comm = 0,
+              beta = 0,
+              alpha = 0,
+              tau.sq.beta = 1,
+              tau.sq.alpha = 1,
+              lambda = lambda.inits, 
+              phi = 3 / mean(dist.hbef),
+              z = apply(hbef.ordered$y, c(1, 2), max, na.rm = TRUE))
+```
+
+The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler used when we fit the model. Updates for the spatial range parameter (and the smoothness parameter if `cov.model = 'matern'`) require the use of a Metropolis-Hastings algorithm. We implement an adaptive Metropolis-Hastings algorithm as discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". In `lfMsPGOcc()`, we specified an `n.samples` argument which consisted of the total number of samples to run each chain of the MCMC. For `sfMsPGOcc()` (and all spatially-explicit models in `spOccupancy`), we break up the total number of MCMC samples into a set of "batches", where each batch has a specific number of samples. We must specify both the total number of batches (`n.batch`) as well as the number of MCMC samples each batch contains (`batch.length`). Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. We recommend keeping this at 25 unless you have a specific reason to change it. Here we set `n.batch = 200` for a total of 5000 MCMC samples in each of 3 chains. We will additionally specify a burn-in period of length 3000 and a thinning rate of 2. Importantly, we also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are supplied as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger or smaller than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial exploratory runs of the model.
+
+```{r}
+batch.length <- 25
+n.batch <- 200
+n.burn <- 3000
+n.thin <- 2
+n.chains <- 3
+```
+
+Priors are again specified in a list in the `priors` argument. We assume uniform priors for the spatial decay parameter `phi` and smoothness parameter `nu` (if using the Matern correlation function), with the associated tags `phi.unif` and `nu.unif`. The lower and upper bounds of the uniform distribution are passed as a two-element vector for the uniform priors.
+
+Here we use an exponential correlation function, so we only need to specify priors for the spatial decay parameter `phi` for each of the spatial factors (which in this case is just 1). We recommend determining the bounds of the uniform distribution by computing the smallest distance between sites and the largest distance between sites in the observed data set. We then set the lower bound of the uniform to `3/max` and the upper bound to `3/min`, where `min` and `max` correspond to the predetermined distances between sites. This equates to a vague prior that states that spatial autocorrelation in the spatial factors could only be between sites that are very close to each other, or could span across the entire observed study area. We recommend using these bounds for the prior unless you have prior information about the range of the spatial autocorrelation. The remaining priors are identical to what we saw in `lfMsPGOcc()`. We use the same priors for all other parameters as those we used for `lfMsPGOcc()`. 
+
+```{r}
+min.dist <- min(dist.hbef)
+max.dist <- max(dist.hbef)
+priors <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+               alpha.comm.normal = list(mean = 0, var = 2.72),
+               tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+               tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+               phi.unif = list(3 / max.dist, 3 / min.dist))
+```
+
+Importantly, we also need to specify an initial value for the tuning parameters for the spatial decay and smoothness parameters (if applicable). These values are supplied as input in the form of a list with tags `phi` and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger or smaller than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 1 after some initial exploratory runs of the model.
+
+```{r}
+tuning <- list(phi = 1)
+```
+
+The argument `n.omp.threads` specifies the number of threads to use for within-chain parallelization, which can greatly decrease run time for spatially-explicit models [@finley2020spnngp], while `verbose` specifies whether or not to print the progress of the sampler. We *highly* recommend setting `verbose = TRUE` for all spatial models to ensure the adaptive MCMC is working as you want (and this is the reason for why this is the default for this argument). The argument `n.report` specifies the interval to report the Metropolis-Hastings sampler acceptance rate. Note that `n.report` is specified in terms of batches, not the overall number of samples. Below we set `n.report = 50`, which will result in information on the acceptance rate and tuning parameters every 50th batch (not sample). Ideally, you should see the printed acceptance rate values however around the value supplied to the `accept.rate` argument (which by default is 0.43). If by the end of the MCMC run you see the values are well below the target acceptance rate, we recommend rerunning the model with a larger initial tuning parameter (higher than the final reported value in the displayed output of model progress). If you see the values are well above the target acceptance rate, we recommend rerunning the model with a smaller initial tuning parameter (smaller than the final reported value). 
+
+```{r}
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 50 # Report progress at every 50th batch.
+```
+
+The parameters `NNGP`, `n.neighbors`, and `search.type` relate to whether or not you want to fit the model with a Gaussian Process or with NNGP, which is a much more computationally efficient approximation. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). Currently, `sfMsPGOcc()` only supports NNGP models, so you will receive an error message if you set `NNGP = FALSE` that tells you to switch to `NNGP = TRUE`. We plan to implement these models with a full Gaussian Process in future development. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as few as five neighbors, which could substantially decrease run time for the model. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`. Here we choose 5 neighbors because we found in @doser2021spoccupancy that estimates from a spatial multi-species occupancy model for this data set were relatively robust to the number of neighbors in the model. Generally, we recommend using the default value of `n.neighbors = 15`, and if additional decreases in computation time are desired, you can fit the model with `n.neighbors = 5` and compare their performance using WAIC and/or k-fold cross-validation. 
+
+We now fit the model using `sfMsPGOcc()` and summarize the results using `summary()`. 
+
+```{r}
+# Approx run time: 2 min
+out.sfMsPGOcc <- sfMsPGOcc(occ.formula = occ.formula, 
+                           det.formula = det.formula, 
+                           data = hbef.ordered, 
+                           inits = inits, 
+                           n.batch = n.batch, 
+                           batch.length = batch.length, 
+                           accept.rate = 0.43, 
+                           priors = priors, 
+                           n.factors = n.factors,
+                           cov.model = cov.model, 
+                           tuning = tuning, 
+                           n.omp.threads = n.omp.threads, 
+                           verbose = TRUE, 
+                           NNGP = TRUE, 
+                           n.neighbors = 5, 
+                           n.report = n.report, 
+                           n.burn = n.burn, 
+                           n.thin = n.thin, 
+                           n.chains = n.chains)
+# Take a look at the resulting object
+names(out.sfMsPGOcc)
+summary(out.sfMsPGOcc)
+```
+
+We see pretty adequate convergence and effective sample sizes for the parameters, although we certainly would run the model longer for a full analysis to ensure all Rhat values are less than 1.1. If we compare the community-level parameters from `sfMsPGOcc()` with those from `lfMsPGOcc()`, we see their is a fair amount of correspondence between the two models. 
+
+Next we summarize the spatial factor loadings
+
+```{r}
+summary(out.sfMsPGOcc$lambda.samples)
+```
+
+Here we see variable responses to the latent spatial factor. In particular, we see that common species (OVEN, BTBW, BTNW, REVI) that occur at low-mid level elevations have a positive coefficent, while more rare species (MAWA, NAWA) have negative values of the coefficient. As we did in Figure 2 of Doser, Finley, Banerjee (2022) for the Breeding Bird Survey data, we could plot the factor loadings and the estimated spatial factor side-by-side to better understand what these effects mean for the specific community of interest. 
+
+## Posterior predictive checks
+
+Analogous to `lfMsPGOcc()`, we can perform a posterior predictive check using `ppcOcc()`. 
+
+```{r}
+# Takes a few seconds to run. 
+ppc.occ.out <- ppcOcc(out.sfMsPGOcc, 'freeman-tukey', group = 2)
+summary(ppc.occ.out)
+```
+
+## Model selection using WAIC
+
+Below we compute the WAIC using `waicOcc()` and compare it to the WAIC for the non-spatial multi-species occupancy model. 
+
+```{r}
+waicOcc(out.sfMsPGOcc)
+waicOcc(out.lfMsPGOcc.2)
+```
+
+As always, remember there is Monte Carlo error in these numbers, and so the values you receive will be slightly different if you run this on your own machine. The WAIC for the spatial factor model is much smaller than the WAIC for the latent factor model, suggesting that accounting for spatial autocorrelation improves model fit. However, in a complete analysis we should ensure the models fully converge (and we have adequate ESS) before performing any model selection or comparison. 
+
+## Prediction
+
+Finally, we can use the `predict()` function as we saw with `lfMsPGOcc()` to predict new occurrence or detection probability values given a set of covariates and spatial locations.  
+
+Below, we provide code to produce a map of species richness across HBEF, which is exactly analogous to our code for `lfMsPGOcc()`. 
+
+```{r, eval = FALSE}
+# Not run (note this takes a large amount of memory to run).
+data(hbefElev)
+str(hbefElev)
+elev.pred <- (hbefElev$val - mean(hbef.ordered$occ.covs[, 1])) / sd(hbef.ordered$occ.covs[, 1])
+# Order: intercept, elevation (linear), elevation (quadratic)
+X.0 <- cbind(1, elev.pred, elev.pred^2) 
+# Spatial coordinates
+coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
+# type = 'occupancy' specified prediction of occupancy (or occurrence). 
+# This is also the default.
+# Approximate run time: 30 sec
+out.pred <- predict(out.sfMsPGOcc, X.0, coords.0, type = 'occupancy')
+str(out.pred)
+# Species richness samples
+rich.pred <- apply(out.pred$z.0.samples, c(1, 3), sum)
+plot.dat <- data.frame(x = hbefElev$Easting, 
+                       y = hbefElev$Northing, 
+                       rich.mean = apply(rich.pred, 2, mean), 
+                       rich.sd = apply(rich.pred, 2, sd))
+# Plot species richness of the foliage-gleaning bird community
+# across the Hubbard Brook Experimental Forest
+dat.stars <- st_as_stars(plot.dat, dims = c('x', 'y'))
+ggplot() + 
+  geom_stars(data = dat.stars, aes(x = x, y = y, fill = rich.mean)) +
+  scale_fill_viridis_c(na.value = 'transparent') +
+  labs(x = 'Easting', y = 'Northing', fill = '', 
+       title = 'Mean Species Richness') +
+  theme_bw()
+```
+
+Additionally, we can generate predicted values of detection probability across a range of covariate values to generate a marginal response curve for each individual species across any given covariate value. As we saw with `lfMsPGOcc()`, below we predict and plot the relationships between detection probability and time of day for each of the 12 species, while holding the day of the year at it's mean value (0).
+
+```{r, fig.width = 7, fig.height = 5, fig.align = 'center', units = 'in'}
+# Minimum observed time of day
+min.tod <- min(hbef2015$det.covs$tod, na.rm = TRUE)
+# Maximum
+max.tod <- max(hbef2015$det.covs$tod, na.rm = TRUE)
+# Generate 100 time of day values between the observed range
+J.0 <- 100
+tod.pred.vals <- seq(from = min.tod, to = max.tod, length.out = J.0)
+mean.tod <- mean(hbef2015$det.covs$tod, na.rm = TRUE)
+sd.tod <- sd(hbef2015$det.covs$tod, na.rm = TRUE)
+tod.stand <- (tod.pred.vals - mean.tod) / sd.tod
+# Generate covariate matrix for prediction
+X.p.0 <- cbind(1, 0, tod.stand, 0)
+colnames(X.p.0) <- c('intercept', 'day', 'tod', 'day2')
+out.det.pred <- predict(out.sfMsPGOcc, X.p.0, type = 'detection')
+str(out.det.pred)
+# Extract the means from the posterior samples and convert to vector
+p.0.ests <- c(apply(out.det.pred$p.0.samples, c(2, 3), mean))
+p.plot.dat <- data.frame(det.prob = p.0.ests, 
+                         sp = rep(sp.names, J.0), 
+                         tod = rep(tod.pred.vals, each = N))
+ggplot(p.plot.dat, aes(x = tod, y = det.prob)) + 
+  geom_line() + 
+  theme_bw() + 
+  scale_y_continuous(limits = c(0, 1)) + 
+  facet_wrap(vars(sp)) + 
+  labs(x = 'Time of day (min since sunrise)', y = 'Detection Probability') 
+```
+
+# Spatial factor joint species distribution models
+
+The `spOccupancy` function `sfJSDM()` fits a spatial factor joint species distribution model. The spatial factor JSDM is a joint species distribution model that ignores imperfect detection, but accounts for species residual correlations and spatial autocorrelation. As in the spatial factor multi-species occupancy model, we account for species correlations using a spatial factor model, where the spatial factors arise from $q$ independent NNGPs. This model is very similar to the NNGP model of @tikhonov2020joint, with the only differences being in the prior distributions and the identifiability constraints placed on the spatial factor loadings matrix. 
+
+While `sfJSDM()` (and it's non-spatial counterpart `lfJSDM()`) are not occupancy models since they do not account for imperfect detection, we included them in `spOccupancy` to allow for direct comparison of these traditional JSDMs (which historically have not accounted for imperfect detection) with the JSDMs with imperfect detection fit by `lfMSPGOcc()` and `sfMsPGOcc()`. We hope inclusion of these functions, together with `lfMsPGOcc()`, `sfMsPGOcc()`, and the multi-species occupancy models that do not account for species correlations (`msPGOcc()` and `spMsPGOcc()`), will provide users and practitioners with practical tools to assess whether or not they need to account for species correlations, imperfect detection, and/or spatial autocorrelation in their specific data sets. 
+
+## Basic model description
+
+Because this model does not account for imperfect detection, we eliminate the detection sub-model and rather directly model a simplifieid version of the replicated detection-nondetection data. Define $y^*_{i, j} = I(\sum_{k = 1}^{K_j}y_{i, j, k} > 0)$, with $I(\cdot)$ an indicator function denoting whether or not species $i$ was detected during at least one of the $K_j$ replicate surveys at site $j$. Note that this model does not require there to be more than one replicate survey at any location (since we do not account for imperfect detection), and thus may be fit to data where `lfMsPGOcc()` and `sfMsPGOcc()` will not provide reliable estimates. However, this comes at the cost of not explicitly accounting for imperfect detection, and thus we need to interpret all covariate effects as effects on a confounded process of detection and occurrence rather than explicitly separating the two as we have seen in the previous two models. The model description of the spatial factor joint species distribution model is identical to the occurrence model of the spatial factor multi-species occupancy model, except we replace the latent occurrence $z_{i, j}$ with the observed data $y^*_{i, j}$. This model can be thought of as a Generalized Linear Mixed Model with a binary response and spatial random effects that are modeled using a spatial factor approach.
+
+## Fitting spatial factor joint species distribution models with `sfJSDM`
+
+The function `sfJSDM()` fits spatial factor joint species distribution models using P&oacute;lya-Gamma data augmentation. `sfJSDM()` has the following arguments: 
+
+```{r, eval = FALSE}
+sfJSDM(formula, data, inits, priors, tuning, 
+       cov.model = 'exponential', NNGP = TRUE, 
+       n.neighbors = 15, search.type = 'cb', n.factors, n.batch, 
+       batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+       verbose = TRUE, n.report = 100, 
+       n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
+```
+
+Notice the similarity between the arguments for `sfJSDM()` and `sfMsPGOcc()`. The main differences when fitting JSDMs in `spOccupancy` is that there is now only a single formula that is specified in the model (`formula`), which is where we specify all covariate effects we think influences our observations. Let's walk through the arguments in the context of our HBEF example. The `data` argument for JSDMs in `spOccupancy` has three required elements: `y` (the collapsed detection-nondetection data), `covs` (the covariates), and `coords` (spatial coordinates of sites). `y` is a matrix with rows corresponding to species and columns corresponding to sites. `covs` is a matrix or data frame with site-specific covariate values. `coords` is a matrix of spatial coordinates that is exactly the same as we have seen before. For our example, we need to collapse the replicated detection-nondetection data into the required format for JSDMs. We can do this using our good friend the `apply()` function.
+
+```{r}
+# Form collapsed detection-nondetection data
+y.star <- apply(hbef.ordered$y, c(1, 2), max, na.rm = TRUE)
+str(y.star)
+```
+
+Notice in the code above we set the value for each site $j$ and each species $i$ to the maximum value observed across the 3 replicate surveys, which is equivalent to setting the value to 1 if the species was observed at that site and 0 if not. Next we specify our covariates. Because we have eliminated the replicate surveys, we can only include site-level covariates in our formula. In the context of our example, this means we cannot include the `day` or `tod` covariates that we placed on the detection portion of our occupancy models, as these covariates vary across the replicate surveys. Instead, we will simply include elevation in our model (which is what we used for modeling latent occurrence in our occupancy models). 
+
+```{r}
+covs <- hbef.ordered$occ.covs
+str(covs)
+```
+
+We finally can just grab the spatial coordinates we used in our occupancy models, and then combine all three elements into a list that we will use to fit the JSDM. 
+
+```{r}
+# Grab spatial coordinates of the sites
+coords <- hbef.ordered$coords
+# Put it all together in a list
+jsdm.list <- list(y = y.star, 
+                  covs = covs, 
+                  coords = coords)
+str(jsdm.list)
+```
+
+We next specify the covariates we wish to include in the model with `formula`, as well as the number of latent spatial factors to include in the model. We will include linear and quadratic elevation as covariates in the model, and fit the model with a single spatial factor. 
+
+```{r}
+jsdm.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
+n.factors <- 1
+```
+
+The remaining arguments are all identical to those we saw with the spatial factor multi-species occupancy model using `sfMsPGOcc()`. We specify values for all additional arguments below. See the section on "Fitting models with `sfMsPGOcc()`" for specific details on each of these arguments. Note that for the initial values and priors, we only need to specify these values for the "occurrence" values since there is no detection sub-model. Further, we do not need to specify initial values for the latent occurrence values $z$ (since there aren't any). 
+
+```{r}
+# Initial values ----------------------
+# Pair-wise distance between all sites
+dist.hbef <- dist(hbef.ordered$coords)
+# Exponential correlation model
+cov.model <- "exponential"
+# Specify all other initial values identical to sfMsPGOcc() from before
+# Number of species
+N <- nrow(jsdm.list$y)
+# Initiate all lambda initial values to 0. 
+lambda.inits <- matrix(0, N, n.factors)
+# Set diagonal elements to 1
+diag(lambda.inits) <- 1
+# Set lower triangular elements to random values from a standard normal dist
+lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+# Check it out
+lambda.inits
+# Create list of initial values. 
+inits <- list(beta.comm = 0,
+              beta = 0,
+              tau.sq.beta = 1,
+              lambda = lambda.inits, 
+              phi = 3 / mean(dist.hbef))
+# Priors ------------------------------
+min.dist <- min(dist.hbef)
+max.dist <- max(dist.hbef)
+priors <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+               tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+               phi.unif = list(3 / max.dist, 3 / min.dist))
+# Additional arguments ----------------
+batch.length <- 25
+n.batch <- 200
+n.burn <- 3000
+n.thin <- 2
+n.chains <- 3
+tuning <- list(phi = 1)
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 50 # Report progress at every 50th batch.
+```
+
+We are now ready to run the model. We run the model for 200 batches of length 25 (a total of 5000 MCMC samples), discarding the first 3000 as burn-in and thinning by every 2 samples. We fit the model with 5 nearest neighbors. 
+
+```{r}
+# Approx run time: 1.25 min
+out.sfJSDM <- sfJSDM(formula = jsdm.formula, 
+                     data = jsdm.list, 
+                     inits = inits, 
+                     n.batch = n.batch, 
+                     batch.length = batch.length, 
+                     accept.rate = 0.43, 
+                     priors = priors, 
+                     n.factors = n.factors,
+                     cov.model = cov.model, 
+                     tuning = tuning, 
+                     n.omp.threads = n.omp.threads, 
+                     verbose = TRUE, 
+                     NNGP = TRUE, 
+                     n.neighbors = 5, 
+                     n.report = n.report, 
+                     n.burn = n.burn, 
+                     n.thin = n.thin, 
+                     n.chains = n.chains)
+# Take a look at the resulting object
+names(out.sfJSDM)
+summary(out.sfJSDM)
+```
+
+Notice the difference in run time between `sfJSDM()` and `sfMsPGOcc()`. The run time for `sfJSDM()` is almost half that of `sfMsPGOcc()`. This is a nice benefit of models that don't account for imperfect detection, but of course it comes with big sacrifices. Looking at the above output, we see all parameters have converged. 
+
+## Model selection using WAIC
+
+We can compute the WAIC for spatial factor JSDMs using the `waicOcc()` function just as we have seen previously. 
+
+```{r}
+waicOcc(out.sfJSDM)
+```
+
+However, the WAIC values for JSDM models are **not** directly comparable to those from `lfMsPGOcc()` or `sfMsPGOcc()` because they do not use the same data (JSDMs use a collapsed form of the replicated detection-nondetection data used in the occupancy models). This makes comparisons between models that do and do not account for imperfect detection a bit tricky. See Doser, Finley, Banerjee (2022) for one cross-validation approach to comparing predictive performance of JSDMs and occupancy models. While k-fold cross-validation is implemented for JSDMs in `spOccupancy` and all other model-fitting functions, we have yet to implement the specific approach we used in Doser, Finley, Banerjee (2022) to directly compare predictive performance JSDMs and occupancy models. We plan to do this in future development of the package. 
+
+For now, we can do some visual comparisons of the predicted occurrence probabilities from the spatial factor JSDM and the spatial factor multi-species occupancy model. 
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+# Extract mean occurrence probabilities for each species from sfMsPGOcc
+psi.mean.sfMsPGOcc <- apply(out.sfMsPGOcc$psi.samples, c(2, 3), mean)
+# Extract mean occurrence probabilities for each species from sfJSDM
+psi.mean.sfJSDM <- apply(out.sfJSDM$psi.samples, c(2, 3), mean)
+# Plot results for the Red-eyed Vireo (REVI)
+curr.sp <- which(sp.ordered == 'REVI')
+# Color the points blue if sfJSDM > sfMsPGOcc, red otherwise
+my.col <- ifelse(psi.mean.sfMsPGOcc[curr.sp, ] > psi.mean.sfJSDM[curr.sp, ], 
+		 'lightsalmon', 'lightskyblue1')
+plot(psi.mean.sfMsPGOcc[curr.sp, ], psi.mean.sfJSDM[curr.sp, ], pch = 21,
+     bg = my.col, xlab = 'sfMsPGOcc', ylab = 'sfJSDM', main = 'Red-eyed Vireo', 
+     ylim = c(0, 1), xlim = c(0, 1))
+abline(0, 1)
+```
+
+Not surprisingly, most estimates of occurrence probability are smaller for the model that does not account for imperfect detection (`sfJSDM()`). However, the differences here are not very large for this species, which is exactly what we would expect for a fairly common species. Let's take a look at the results for a more rare species (CAWA (Canda Warbler)). 
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+curr.sp <- which(sp.ordered == 'CAWA')
+# Color the points blue if sfJSDM > sfMsPGOcc, red otherwise
+my.col <- ifelse(psi.mean.sfMsPGOcc[curr.sp, ] > psi.mean.sfJSDM[curr.sp, ], 
+		 'lightsalmon', 'lightskyblue1')
+plot(psi.mean.sfMsPGOcc[curr.sp, ], psi.mean.sfJSDM[curr.sp, ], pch = 21,
+     bg = my.col, xlab = 'sfMsPGOcc', ylab = 'sfJSDM', main = 'Canada Warbler', 
+     ylim = c(0, 1), xlim = c(0, 1))
+abline(0, 1)
+```
+
+Here we see a clear discrepancy between the occurrence probability estimates from models that do and do not account for imperfect detection. 
+
+## Prediction
+
+We can use the `predict()` function to generate new predictions of "occurrence" probability values given a set of covariates and spatial locations. Note that these predictions are estimates of a confounded probability of occurrence and detection (hence the quotations around occurrence throughout this section). This code looks analogous to what we saw with `sfMsPGOcc()`. 
+
+```{r, eval = FALSE}
+# Not run (note this takes a large amount of memory to run).
+data(hbefElev)
+str(hbefElev)
+elev.pred <- (hbefElev$val - mean(hbef.ordered$occ.covs[, 1])) / sd(hbef.ordered$occ.covs[, 1])
+# Order: intercept, elevation (linear), elevation (quadratic)
+X.0 <- cbind(1, elev.pred, elev.pred^2) 
+# Spatial coordinates
+coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
+# Approximate run time: 30 sec
+out.pred <- predict(out.sfJSDM, X.0, coords.0)
+```
+
+# Latent factor joint species distribution models
+
+The `spOccupancy` function `lfJSDM()` fits a latent factor joint species distribution model. This model is analogous to the latent factor multi-species occupancy model, except it does not account for imperfect detection. Alternatively, the model can be viewed as a non-spatial alternative to `sfJSDM()`. Just as we saw with `lfMsPGOcc()`, we will account for species correlations using a latent factor model, where the latent factors are assumed to arise from independent standard normal distributions. 
+
+## Basic model description
+
+The latent factor joint species distribution model is identical to the spatial factor joint species distribution model fit by `sfJSDM()`, except now the latent factors do not have spatial structure and are modeled using independent standard normal distributions. See previous model descriptions for the spatial factor joint species distribution model as well as the latent factor multi-species occupancy model for additional details. 
+
+## Fitting latent factor joint species distribution models with `lfJSDM`
+
+The function `lfJSDM()` fits latent factor joint species distribution models using P&oacute;lya-Gamma data augmentation. `lfJSDM()` has the following arguments. 
+
+```{r, eval = FALSE}
+lfJSDM(formula, data, inits, priors, n.factors, 
+       n.samples, n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+       n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
+       k.fold, k.fold.threads = 1, k.fold.seed, ...)
+```
+
+There are no new arguments in `lfJSDM()` that we have not seen before in previous factor model functions. Notice that like `sfJSDM()`, there is only a single `formula` since we do not explicitly separate imperfect detection from latent occurrence. Similar to `sfJSDM()`, the `data` list should consist of the collapsed detection-nondetection data matrix (`y`), the covariates (`covs`), and the spatial coordinates (`coords`). We can use the same data list we constructed previously for `sfJSDM()`, and we remind ourselves of it's structure below. 
+
+```{r}
+str(jsdm.list)
+```
+
+Specifying covariates in `lfJSDM()` is exactly analogous to what we saw with `sfJSDM()`. Again, note that we can include random intercepts in `formula` using lme4 syntax [@bates2015]. As we have done before, we will use a single latent factor. 
+
+```{r}
+jsdm.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
+n.factors <- 1
+```
+
+The remaining arguments are all identical to the arguments we saw in `lfMsPGOcc()` when fitting a latent factor multi-species occupancy model. See the section on "Fitting models with `lfMsPGOcc()`" for specific details on these arguments. Note that for the initial values and priors, we only need to specify these values for the "occurrence" values since there is no detection sub-model. Just like with `sfJSDM()`, we do not need to specify initial values for the latent occurrence values $z$ (since we assume perfect detection). 
+
+```{r}
+# Initial values ----------------------
+# Number of species
+N <- nrow(jsdm.list$y)
+# Initiate all lambda initial values to 0. 
+lambda.inits <- matrix(0, N, n.factors)
+# Set diagonal elements to 1
+diag(lambda.inits) <- 1
+# Set lower triangular elements to random values from a standard normal dist
+lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+# Create list of initial values. 
+inits <- list(beta.comm = 0,
+              beta = 0,
+              tau.sq.beta = 1,
+              lambda = lambda.inits)
+# Priors ------------------------------
+priors <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+               tau.sq.beta.ig = list(a = 0.1, b = 0.1))
+# Additional arguments ----------------
+n.samples <- 5000
+n.burn <- 3000
+n.thin <- 2
+n.chains <- 3
+n.report <- 1000
+```
+
+With all the arguments set for `lfJSDM()`, we are now ready to run the model. We run the model for 5000 MCMC samples, eliminating the first 3000 as burn-in and thinning by every 2 samples.
+
+```{r}
+# Approx run time: 32 seconds
+out.lfJSDM <- lfJSDM(formula = jsdm.formula, 
+                     data = jsdm.list, 
+                     inits = inits, 
+                     priors = priors, 
+                     n.factors = n.factors, 
+                     n.samples = n.samples, 
+                     n.report = n.report, 
+                     n.burn = n.burn, 
+                     n.thin = n.thin, 
+                     n.chains = n.chains)
+# Quick summary of model results
+summary(out.lfJSDM)
+```
+
+Not surprisingly, `lfJSDM()` is the fastest of the four models we have fit to the Hubbard Brook data. This makes sense since it only accounts for one (residual species correlations) of the three complexities and ignores the other two (imperfect detection and spatial autocorrelation). Note that we also see nice converging and mixing of all model parameters. This is a constant battle we fight with fitting Bayesian models. Generally, the more complex a model is, the longer it takes to run to reach convergence. For more simple models like the latent factor joint species distribution model, models usually run quite fast and we often will see adequate convergence and mixing without having to run too many MCMC samples.
+
+## Model selection using WAIC
+
+We compute the WAIC for latent factor JSDMs using the `waicOcc()` function, and we compare this value to the WAIC for the spatial factor JSDM we fit with `sfJSDM()`. 
+
+```{r}
+waicOcc(out.lfJSDM)
+waicOcc(out.sfJSDM)
+```
+
+The WAIC value for the spatial factor JSDM is smaller than that of the latnet factor JSDM, indicating that accounting for spatial autocorrelation improves model fit. As we noted for `sfJSDM()`, we cannot directly compare the WAIC value from a latent factor JSDM to those obtained from `lfMsPGOcc()` or `sfMsPGOcc()` since they do not use the same data. As with all factor model functions, we can additionaly use k-fold cross-validation to assess out-of-sample predictive performance. See [the main `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for examples of cross-validation using `spOccupancy` model functions. 
+
+## Prediction
+
+We can use the `predict()` function to generate new predictions of "occurrence" probability values given a set of covariates and spatial locations. Again, note that these predictions are estimates of a confounded probability of occurrence and detection. This code is analogous to what we saw with `lfMsPGOcc()`. 
+
+```{r, eval = FALSE}
+# Not run (note this takes a large amount of memory to run).
+data(hbefElev)
+elev.pred <- (hbefElev$val - mean(hbef2015$occ.covs[, 1])) / sd(hbef2015$occ.covs[, 1])
+# Order: intercept, elevation (linear), elevation (quadratic)
+X.0 <- cbind(1, elev.pred, elev.pred^2) 
+# Spatial coordinates
+coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
+# Approximate run time: 30 sec
+out.pred <- predict(out.lfJSDM, X.0, coords.0)
+str(out.pred)
+# Species richness samples
+rich.pred <- apply(out.pred$z.0.samples, c(1, 3), sum)
+plot.dat <- data.frame(x = hbefElev$Easting, 
+                       y = hbefElev$Northing, 
+                       rich.mean = apply(rich.pred, 2, mean), 
+                       rich.sd = apply(rich.pred, 2, sd))
+# Plot species richness of the foliage-gleaning bird community
+# across the Hubbard Brook Experimental Forest
+dat.stars <- st_as_stars(plot.dat, dims = c('x', 'y'))
+ggplot() + 
+  geom_stars(data = dat.stars, aes(x = x, y = y, fill = rich.mean)) +
+  scale_fill_viridis_c(na.value = 'transparent') +
+  labs(x = 'Easting', y = 'Northing', fill = '', 
+       title = 'Mean Species Richness') +
+  theme_bw()
+```
+ 
+# References {-}
+

@@ -491,8 +491,6 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   # phi -----------------------------
   coords.D <- iDist(coords)
-  lower.unif <- 3 / max(coords.D)
-  upper.unif <- 3 / sort(unique(c(coords.D)))[2]
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -545,10 +543,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
   } else {
     if (verbose) {
-      message("No prior specified for sigma.sq.ig.\nSetting the shape and scale parameters to 2.\n")
+      message("No prior specified for sigma.sq.ig.\nSetting the shape parameter to 2 and scale parameter to 1.\n")
     }
     sigma.sq.a <- rep(2, N)
-    sigma.sq.b <- rep(2, N)
+    sigma.sq.b <- rep(1, N)
   }
 
   # nu -----------------------------

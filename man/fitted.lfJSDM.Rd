@@ -24,8 +24,8 @@
 \value{
   A list comprised of: 
 
-  \item{z.samples}{A four-dimensional numeric array of fitted values for use in Goodness of Fit assessments. Array dimensions correspond to MCMC samples, species, sites, and replicates.}
-  \item{psi.samples}{A three-dimensional numeric array of probability values. Array dimensions correspond to MCMC samples, sites, and replicates.}
+  \item{z.samples}{A three-dimensional numeric array of fitted values for use in Goodness of Fit assessments. Array dimensions correspond to MCMC samples, species, and sites.}
+  \item{psi.samples}{A three-dimensional numeric array of probability values. Array dimensions correspond to MCMC samples, species, and sites.}
 }
 
 \keyword{model}

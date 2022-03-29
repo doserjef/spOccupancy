@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{sfMsPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-                            n.report = 100, ignore.RE = FALSE, type = 'occupancy', ...)
+        n.report = 100, ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
@@ -33,14 +33,18 @@
   \item{n.report}{the interval to report sampling progress.}
 
   \item{ignore.RE}{a logical value indicating whether to include unstructured random 
-    effects for prediction. If FALSE, unstructured random effects will be ignored and 
-    prediction will only use the fixed effects and the spatial random effects. If TRUE, 
+    effects for prediction. If TRUE, unstructured random effects will be ignored and 
+    prediction will only use the fixed effects and the spatial random effects. If FALSE, 
     random effects will be included in the prediction for both observed and unobserved 
     levels of the unstructured random effects.}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
 
   \item{...}{currently no additional arguments}
+}
+
+\note{
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects.
 }
 
 \author{
@@ -105,7 +109,7 @@ phi <- runif(n.factors, 3/1, 3/.4)
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential', 
+                phi = phi, sigma.sq = sigma.sq, sp = TRUE, cov.model = 'exponential', 
                 factor.model = TRUE, n.factors = n.factors)
 
 # Number of batches
@@ -132,56 +136,55 @@ psi.0 <- dat$psi[, pred.indx]
 occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3]
-		 )
+                 det.cov.2 = X.p[, , 3])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
-		  coords = coords)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
+                  coords = coords)
 
 # Priors 
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-		   phi.unif = list(a = 3/1, b = 3/.1), 
-		   sigma.sq.ig = list(a = 2, b = 2)) 
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   phi.unif = list(a = 3/1, b = 3/.1), 
+                   sigma.sq.ig = list(a = 2, b = 2)) 
 # Starting values
 lambda.inits <- matrix(0, N, n.factors)
 diag(lambda.inits) <- 1
 lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
 inits.list <- list(alpha.comm = 0, 
-		      beta.comm = 0, 
-		      beta = 0, 
-		      alpha = 0,
-		      tau.sq.beta = 1, 
-		      tau.sq.alpha = 1, 
-		      phi = 3 / .5, 
-		      sigma.sq = 2,
-		      lambda = lambda.inits,
-		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   phi = 3 / .5, 
+                   sigma.sq = 2,
+                   lambda = lambda.inits,
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
 
 out <- sfMsPGOcc(occ.formula = ~ occ.cov, 
-		 det.formula = ~ det.cov.1 + det.cov.2, 
-		 data = data.list,
-		 inits = inits.list, 
-		 n.batch = n.batch, 
-		 batch.length = batch.length, 
-		 accept.rate = 0.43, 
-		 n.factors = 3,
-	         priors = prior.list, 
-		 cov.model = "exponential", 
-		 tuning = tuning.list, 
-	         n.omp.threads = 1, 
-	         verbose = TRUE, 
-		 NNGP = TRUE, 
-		 n.neighbors = 5, 
-		 search.type = 'cb', 
-	         n.report = 10, 
-		 n.burn = 100, 
-		 n.thin = 1)
+                 det.formula = ~ det.cov.1 + det.cov.2, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 n.factors = 3,
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 100, 
+                 n.thin = 1)
 
 summary(out, level = 'both')
 

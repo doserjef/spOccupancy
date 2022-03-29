@@ -405,10 +405,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sigma.sq.b <- priors$sigma.sq.ig[2]
     } else {
       if (verbose) {
-        message("No prior specified for sigma.sq.ig.\nSetting the shape and scale parameters to 2.\n")
+        message("No prior specified for sigma.sq.ig.\nSetting the shape parameter to 2 and scale parameter to 1.\n")
       }
       sigma.sq.a <- 2
-      sigma.sq.b <- 2
+      sigma.sq.b <- 1
     }
     # nu -----------------------------
     if (cov.model == 'matern') {

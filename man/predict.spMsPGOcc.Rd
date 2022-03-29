@@ -33,14 +33,18 @@
   \item{n.report}{the interval to report sampling progress.}
 
   \item{ignore.RE}{a logical value indicating whether to include unstructured random 
-    effects for prediction. If FALSE, unstructured random effects will be ignored and 
-    prediction will only use the fixed effects and the spatial random effects. If TRUE, 
+    effects for prediction. If TRUE, unstructured random effects will be ignored and 
+    prediction will only use the fixed effects and the spatial random effects. If FALSE, 
     random effects will be included in the prediction for both observed and unobserved 
     levels of the unstructured random effects.}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
 
   \item{...}{currently no additional arguments}
+}
+
+\note{
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects.
 }
 
 \author{

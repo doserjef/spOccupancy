@@ -23,7 +23,7 @@ cat(
 )
 ```
 
-spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;ly-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
+spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;ly-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
 
 ## Installation
 
@@ -35,19 +35,23 @@ install.packages("spOccupancy")
 
 ## Functionality
 
-|`spOccupancy` Function  | Description                                                   |
-|---------------- |----------------------------------------------------------------------|
-|`PGOcc`          | Single-species occupancy model                                       |
-|`spPGOcc`        | Single-species spatial occupancy model                               |
-|`intPGOcc`       | Single-species occupancy model with multiple data sources            |
-|`spIntPGOcc`     | Single-species spatial occupancy model with multiple data sources    |
-|`msPGOcc`        | Multi-species occupancy model                                        |
-|`spMsPGOcc`      | Multi-species spatial occupancy model                                |
-|`ppcOcc`         | Posterior predictive check using Bayesian p-values                   | 
-|`waicOcc`        | Compute Widely Applicable Information Criterion (WAIC)               |
-|`simOcc`         | Simulate single-species occupancy data                               |
-|`simMsOcc`       | Simulate multi-species occupancy data                                |
-|`simIntOcc`      | Simulate single-species occupancy data from multiple data sources
+|`spOccupancy` Function  | Description                                                     |
+|---------------- |------------------------------------------------------------------------|
+|`PGOcc()`          | Single-species occupancy model                                       |
+|`spPGOcc()`        | Single-species spatial occupancy model                               |
+|`intPGOcc()`       | Single-species occupancy model with multiple data sources            |
+|`spIntPGOcc()`     | Single-species spatial occupancy model with multiple data sources    |
+|`msPGOcc()`        | Multi-species occupancy model                                        |
+|`spMsPGOcc()`      | Multi-species spatial occupancy model                                |
+|`lfJSDM()`         | Joint species distribution model without imperfect detection         |
+|`sfJSDM()`         | Spatial joint species distribution model without imperfect detection |
+|`lfMsPGOcc()`      | Multi-species occupancy model with species correlations              |
+|`sfMsPGOcc()`      | Multi-species spatial occupancy model with species correlations      |
+|`ppcOcc()`         | Posterior predictive check using Bayesian p-values                   | 
+|`waicOcc()`        | Compute Widely Applicable Information Criterion (WAIC)               |
+|`simOcc()`         | Simulate single-species occupancy data                               |
+|`simMsOcc()`       | Simulate multi-species occupancy data                                |
+|`simIntOcc()`      | Simulate single-species occupancy data from multiple data sources    |
 
 ## Example usage
 
@@ -128,9 +132,11 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The `vignette("modelFitting")` provides a more detailed description and tutorial of all functions in `spOccupancy`. For full statistical details on the MCMC samplers used in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://arxiv.org/abs/2111.12163) that describes the package in more detail (Doser et al. 2021). 
+The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://arxiv.org/abs/2111.12163) that describes the package in more detail (Doser et al. 2021). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")` for full statistical details.
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021a). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. arXiv preprint arxiv:2111.12163.
+Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. arXiv preprint arxiv:2111.12163.
+
+Doser, J. W., Finley, A. O., Banerjee, S. (2022) Joint species distribution models with imperfect detection for high-dimensional spatial data. In prep.
 

@@ -30,7 +30,16 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette provides statistical details on the MCMC algorithms used to fit each occupancy model in `spOccupancy`. We provide detailed descriptions of the joint posterior distributions for each model, how each parameter is updated in the model fitting process, and provide relevant citations to more specific documentation of the approaches where necessary. We also provide information on the composition sampling algorithms used for each model to predict at out-of-sample locations. 
+This vignette provides statistical details on the MCMC algorithms used to fit the core occupancy models in `spOccupancy`. Specifically, this vignette will walk through the MCMC algorithms for the following models:
+
+1. Occupancy model using `PGOcc()`. 
+2. Spatial occupancy model using `spPGOcc()`. 
+3. Multi-species occupancy model using `msPGOcc()`.
+4. Spatial multi-species occupancy model using `spMsPGOcc()`.
+5. Integrated occupancy model using `intPGOcc()`.
+6. Spatial integrated occupancy model using `spIntPGOcc()`. 
+
+We provide detailed descriptions of the joint posterior distributions for each model, how each parameter is updated in the model fitting process, and provide relevant citations to more specific documentation of the approaches where necessary. We also provide information on the composition sampling algorithms used for each model to predict at out-of-sample locations. Details on models in `spOccupancy` that account for species interactions are provided in a separate vignette. 
 
 # Single-species occupancy model (`PGOcc`)
 

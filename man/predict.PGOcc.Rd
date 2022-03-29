@@ -23,6 +23,10 @@
   \item{...}{currently no additional arguments}
 }
 
+\note{
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. 
+}
+
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
   Andrew O. Finley \email{finleya@msu.edu}
@@ -58,7 +62,7 @@ p.occ <- length(beta)
 alpha <- c(0, 1)
 p.det <- length(alpha)
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-	      sp = FALSE)
+              sp = FALSE)
 # Split into fitting and prediction data set
 pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
 y <- dat$y[-pred.indx, ]
@@ -74,32 +78,32 @@ occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov = X.p[, , 2])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs)
 # Priors
 prior.list <- list(beta.normal = list(mean = rep(0, p.occ),
-				      var = rep(2.72, p.occ)),
-		   alpha.normal = list(mean = rep(0, p.det),
-			               var = rep(2.72, p.det)))
+                                      var = rep(2.72, p.occ)),
+                   alpha.normal = list(mean = rep(0, p.det),
+                                       var = rep(2.72, p.det)))
 # Initial values
 inits.list <- list(alpha = rep(0, p.det),
-		      beta = rep(0, p.occ),
-		      z = apply(y, 1, max, na.rm = TRUE))
+                   beta = rep(0, p.occ),
+                   z = apply(y, 1, max, na.rm = TRUE))
 
 n.samples <- 5000
 n.report <- 1000
 
 out <- PGOcc(occ.formula = ~ occ.cov, 
-	     det.formula = ~ det.cov,
-	     data = data.list, 
-	     inits = inits.list,
-	     n.samples = n.samples,
-	     priors = prior.list,
-	     n.omp.threads = 1,
-	     verbose = TRUE,
-	     n.report = n.report, 
-	     n.burn = 4000, 
-	     n.thin = 1)
+             det.formula = ~ det.cov,
+             data = data.list, 
+             inits = inits.list,
+             n.samples = n.samples,
+             priors = prior.list,
+             n.omp.threads = 1,
+             verbose = TRUE,
+             n.report = n.report, 
+             n.burn = 4000, 
+             n.thin = 1)
 
 summary(out)
 

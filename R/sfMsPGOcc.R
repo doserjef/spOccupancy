@@ -496,8 +496,6 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   # phi -----------------------------
   coords.D <- iDist(coords)
-  lower.unif <- 3 / max(coords.D)
-  upper.unif <- 3 / sort(unique(c(coords.D)))[2]
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -1298,7 +1296,9 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       colnames(out$beta.star.samples) <- beta.star.names
       out$re.level.names <- re.level.names
     }
+    loadings.names <- paste(rep(sp.names, times = n.factors), rep(1:n.factors, each = N), sep = '-')
     out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
+    colnames(out$lambda.samples) <- loadings.names
     out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
     if (cov.model != 'matern') {
       theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')

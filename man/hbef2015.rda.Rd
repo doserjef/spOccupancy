@@ -29,10 +29,9 @@ data(hbef2015)
 	(Accessed 2021-09-07)}
 
 \references{
-  Doser, J.W., Leuenberger, W., Sillett, T.S., Hallworth, M.T., Zipkin, E.F. 
-  Integrated community occupancy models:  A framework to assess occurrence 
-  and biodiversity dynamics using multiple data sources.
-  https://arxiv.org/abs/2109.01894
+ Doser, J. W., Leuenberger, W., Sillett, T. S., Hallworth, M. T. & Zipkin, E. F. (2022). 
+ Integrated community occupancy models: A framework to assess occurrence and biodiversity 
+ dynamics using multiple data sources. Methods in Ecology and Evolution, 00, 1– 14. \doi{10.1111/2041-210X.13811}
 }
 
 \format{

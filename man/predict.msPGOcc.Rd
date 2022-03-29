@@ -16,12 +16,16 @@
 
   \item{X.0}{the design matrix of covariates at the prediction locations. This should include a column of 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations should be included as a column in the design matrix. The ordering of the levels should match the ordering used to fit the data in \code{msPGOcc}. Columns should correspond to the order of how covariates were specified in the corresponding formula argument of \code{msPGOcc}. Column names of the random effects must match the name of the random effects, if specified in the corresponding formula argument of \code{msPGOcc}.}
 
-  \item{ignore.RE}{a logical value indicating whether to include unstructured random effects for prediction. If FALSE, random effects will be ignored and prediction will only use the fixed effects. If TRUE, random effects will be included in the prediction for both observed and unobserved levels of the random effect.}
+  \item{ignore.RE}{a logical value indicating whether to include unstructured random effects for prediction. If TRUE, random effects will be ignored and prediction will only use the fixed effects. If FALSE, random effects will be included in the prediction for both observed and unobserved levels of the random effect.}
 
   \item{...}{currently no additional arguments}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
 
+}
+
+\note{
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects.
 }
 
 \author{
@@ -74,7 +78,7 @@ for (i in 1:p.det) {
 }
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		sp = FALSE)
+                sp = FALSE)
 n.samples <- 5000
 # Split into fitting and prediction data set
 pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
@@ -90,36 +94,35 @@ psi.0 <- dat$psi[, pred.indx]
 occ.covs <- X[, 2, drop = FALSE]
 colnames(occ.covs) <- c('occ.cov')
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3]
-		 )
+                 det.cov.2 = X.p[, , 3])
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs)
 
 # Occupancy initial values
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 # Initial values
 inits.list <- list(alpha.comm = 0, 
-		      beta.comm = 0, 
-		      beta = 0, 
-		      alpha = 0,
-		      tau.sq.beta = 1, 
-		      tau.sq.alpha = 1, 
-		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   z = apply(y, c(1, 2), max, na.rm = TRUE))
 
 out <- msPGOcc(occ.formula = ~ occ.cov, 
-	       det.formula = ~ det.cov.1 + det.cov.2, 
-	       data = data.list, 
-	       inits = inits.list, 
-	       n.samples = n.samples, 
-	       priors = prior.list, 
+               det.formula = ~ det.cov.1 + det.cov.2, 
+               data = data.list, 
+               inits = inits.list, 
+               n.samples = n.samples, 
+               priors = prior.list, 
                n.omp.threads = 1, 
-	       verbose = TRUE, 
-	       n.report = 1000, 
-	       n.burn = 4000)
+               verbose = TRUE, 
+               n.report = 1000, 
+               n.burn = 4000)
 
 summary(out, level = 'community')
 

@@ -572,7 +572,9 @@ lfJSDM <- function(formula, data, inits, priors,
     colnames(out$beta.star.samples) <- beta.star.names
     out$re.level.names <- re.level.names
   }
+  loadings.names <- paste(rep(sp.names, times = n.factors), rep(1:n.factors, each = N), sep = '-')
   out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
+  colnames(out$lambda.samples) <- loadings.names
 
   # Return things back in the original order. 
   out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 

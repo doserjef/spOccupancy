@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{lfJSDM}(object, X.0, coords.0, 
-	                    ignore.RE = FALSE, ...)
+        ignore.RE = FALSE, ...)
 }
 
 \arguments{
@@ -20,10 +20,14 @@
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
   in a projected coordinate system.}
 
-  \item{ignore.RE}{a logical value indicating whether to include unstructured random effects for prediction. If FALSE, random effects will be ignored and prediction will only use the fixed effects. If TRUE, random effects will be included in the prediction for both observed and unobserved levels of the random effect.}
+  \item{ignore.RE}{a logical value indicating whether to include unstructured random effects for prediction. If TRUE, random effects will be ignored and prediction will only use the fixed effects. If FALSE, random effects will be included in the prediction for both observed and unobserved levels of the random effect.}
 
   \item{...}{currently no additional arguments}
 
+}
+
+\note{
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects.
 }
 
 \author{
@@ -75,7 +79,7 @@ for (i in 1:p.det) {
 
 n.factors <- 3
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		sp = FALSE, factor.model = TRUE, n.factors = n.factors)
+                sp = FALSE, factor.model = TRUE, n.factors = n.factors)
 n.samples <- 5000
 # Split into fitting and prediction data set
 pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
@@ -93,32 +97,32 @@ coords.0 <- dat$coords[pred.indx, ]
 covs <- X[, 2, drop = FALSE]
 colnames(covs) <- c('occ.cov')
 data.list <- list(y = y, 
-		  covs = covs,
+                  covs = covs,
                   coords = coords)
 
 # Occupancy initial values
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1))
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1))
 # Initial values
 lambda.inits <- matrix(0, N, n.factors)
 diag(lambda.inits) <- 1
 lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
 inits.list <- list(alpha.comm = 0, 
-		      beta.comm = 0, 
-		      beta = 0, 
-		      tau.sq.beta = 1, 
-		      lambda = lambda.inits)
+                   beta.comm = 0, 
+                   beta = 0, 
+                   tau.sq.beta = 1, 
+                   lambda = lambda.inits)
 
 out <- lfJSDM(formula = ~ occ.cov, 
-	      data = data.list, 
-	      inits = inits.list, 
-	      n.samples = n.samples, 
-	      n.factors = 3, 
-	      priors = prior.list, 
+              data = data.list, 
+              inits = inits.list, 
+              n.samples = n.samples, 
+              n.factors = 3, 
+              priors = prior.list, 
               n.omp.threads = 1, 
-	      verbose = TRUE, 
-	      n.report = 1000, 
-	      n.burn = 4000)
+              verbose = TRUE, 
+              n.report = 1000, 
+              n.burn = 4000)
 
 summary(out)
 

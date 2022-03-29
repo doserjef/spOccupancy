@@ -17,7 +17,7 @@
   \item{level}{a quoted keyword for multi-species models that indicates 
     the level to summarize the posterior predictive check. Valid key words
     are: \code{"community"}, \code{"species"}, or \code{"both"}.}
-  \item{digits}{for \code{summary}, number of digits to report.}
+  \item{digits}{number of digits to report.}
   \item{\dots}{currently no additional arguments}
 }
 

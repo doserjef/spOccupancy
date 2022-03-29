@@ -286,7 +286,7 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   psi <- matrix(NA, nrow = N, ncol = J)
   z <- matrix(NA, nrow = N, ncol = J)
   for (i in 1:N) {
-    if (sp) {
+    if (sp | factor.model) {
       if (length(psi.RE) > 0) {
         psi[i, ] <- logit.inv(X %*% as.matrix(beta[i, ]) + w.star[i, ] + beta.star.sites[i, ])
       } else {

@@ -13,10 +13,13 @@ using Póly-Gamma data augmentation. Spatial models are fit using either
 Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for
 large spatial datasets. The package provides functionality for data
 integration of multiple single-species occupancy data sets using a joint
-likelihood framework. Below we provide a very brief introduction to some
-of the package’s functionality, and illustrate just one of the model
-fitting funcitons. For more information, see the resources referenced at
-the bottom of this page.
+likelihood framework. For multi-species models, spOccupancy provides
+functions to account for residual species correlations in a joint
+species distribution model framework while accounting for imperfect
+detection. Below we provide a very brief introduction to some of the
+package’s functionality, and illustrate just one of the model fitting
+funcitons. For more information, see the resources referenced at the
+bottom of this page.
 
 ## Installation
 
@@ -29,19 +32,23 @@ install.packages("spOccupancy")
 
 ## Functionality
 
-| `spOccupancy` Function | Description                                                       |
-| ---------------------- | ----------------------------------------------------------------- |
-| `PGOcc`                | Single-species occupancy model                                    |
-| `spPGOcc`              | Single-species spatial occupancy model                            |
-| `intPGOcc`             | Single-species occupancy model with multiple data sources         |
-| `spIntPGOcc`           | Single-species spatial occupancy model with multiple data sources |
-| `msPGOcc`              | Multi-species occupancy model                                     |
-| `spMsPGOcc`            | Multi-species spatial occupancy model                             |
-| `ppcOcc`               | Posterior predictive check using Bayesian p-values                |
-| `waicOcc`              | Compute Widely Applicable Information Criterion (WAIC)            |
-| `simOcc`               | Simulate single-species occupancy data                            |
-| `simMsOcc`             | Simulate multi-species occupancy data                             |
-| `simIntOcc`            | Simulate single-species occupancy data from multiple data sources |
+| `spOccupancy` Function | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| `PGOcc()`              | Single-species occupancy model                                       |
+| `spPGOcc()`            | Single-species spatial occupancy model                               |
+| `intPGOcc()`           | Single-species occupancy model with multiple data sources            |
+| `spIntPGOcc()`         | Single-species spatial occupancy model with multiple data sources    |
+| `msPGOcc()`            | Multi-species occupancy model                                        |
+| `spMsPGOcc()`          | Multi-species spatial occupancy model                                |
+| `lfJSDM()`             | Joint species distribution model without imperfect detection         |
+| `sfJSDM()`             | Spatial joint species distribution model without imperfect detection |
+| `lfMsPGOcc()`          | Multi-species occupancy model with species correlations              |
+| `sfMsPGOcc()`          | Multi-species spatial occupancy model with species correlations      |
+| `ppcOcc()`             | Posterior predictive check using Bayesian p-values                   |
+| `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)               |
+| `simOcc()`             | Simulate single-species occupancy data                               |
+| `simMsOcc()`           | Simulate multi-species occupancy data                                |
+| `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources    |
 
 ## Example usage
 
@@ -120,25 +127,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.9316
+#> Run Time (min): 1.4212
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%   Rhat      ESS
-#> (Intercept)            4.1679 0.6201  3.0796  4.1129  5.5253 1.0281 247.0541
-#> scale(Elevation)      -0.5374 0.2535 -1.0717 -0.5319 -0.0500 1.0330 558.6439
-#> I(scale(Elevation)^2) -1.2247 0.2262 -1.7324 -1.2051 -0.8373 1.0363 251.1803
+#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
+#> (Intercept)            3.9332 0.5585  2.9850  3.8780  5.2357 1.0589  257
+#> scale(Elevation)      -0.5069 0.2110 -0.9323 -0.5057 -0.1032 1.0189 1119
+#> I(scale(Elevation)^2) -1.1406 0.2057 -1.6026 -1.1218 -0.7826 1.0402  386
 #> 
 #> Detection (logit scale): 
-#>                    Mean     SD    2.5%     50%  97.5%   Rhat      ESS
-#> (Intercept)      0.6628 0.1127  0.4479  0.6615 0.8826 1.0003 5010.936
-#> scale(day)       0.2900 0.0712  0.1511  0.2903 0.4301 1.0016 6000.000
-#> scale(tod)      -0.0312 0.0702 -0.1680 -0.0310 0.1059 1.0011 6000.000
-#> I(scale(day)^2) -0.0750 0.0858 -0.2424 -0.0762 0.0958 0.9999 6000.000
+#>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
+#> (Intercept)      0.6624 0.1146  0.4389  0.6606 0.8859 1.0006 5572
+#> scale(day)       0.2922 0.0706  0.1564  0.2915 0.4327 0.9999 6000
+#> scale(tod)      -0.0326 0.0704 -0.1689 -0.0327 0.1038 1.0034 6000
+#> I(scale(day)^2) -0.0746 0.0863 -0.2430 -0.0769 0.0968 1.0007 6000
 #> 
 #> Spatial Covariance: 
-#>            Mean     SD   2.5%    50%  97.5%   Rhat     ESS
-#> sigma.sq 1.7061 1.2382 0.3851 1.3643 5.0950 1.0312 96.9992
-#> phi      0.0064 0.0071 0.0006 0.0032 0.0268 1.1779 43.3338
+#>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
+#> sigma.sq 0.9695 0.8124 0.2045 0.7195 3.2131 1.1136 114
+#> phi      0.0067 0.0073 0.0006 0.0036 0.0263 1.4115  59
 ```
 
 ### Posterior predictive check
@@ -164,7 +171,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4026667 
+#> Bayesian p-value:  0.4913 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -177,7 +184,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -676.57521   25.20569 1403.56181
+#> -683.42274   19.50487 1405.85522
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -190,7 +197,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1496.396
+#> [1] 1496.671
 ```
 
 ### Prediction
@@ -212,14 +219,21 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 ## Learn more
 
 The `vignette("modelFitting")` provides a more detailed description and
-tutorial of all functions in `spOccupancy`. For full statistical details
-on the MCMC samplers used in `spOccupancy`, see
+tutorial of the core functions in `spOccupancy`. For full statistical
+details on the MCMC samplers for core functions in `spOccupancy`, see
 `vignette("mcmcSamplers")`. In addition, see [our recent
 paper](https://arxiv.org/abs/2111.12163) that describes the package in
-more detail (Doser et al. 2021).
+more detail (Doser et al. 2021). For a detailed description and tutorial
+of joint species distribution models in `spOccupancy` that account for
+residual species correlations, see `vignette("factorModels")`, as well
+as `vignette("mcmcFactorModels")` for full statistical details.
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021a).
+Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021).
 spOccupancy: An R package for single-species, multi-species, and
 integrated spatial occupancy models. arXiv preprint arxiv:2111.12163.
+
+Doser, J. W., Finley, A. O., Banerjee, S. (2022) Joint species
+distribution models with imperfect detection for high-dimensional
+spatial data. In prep.

@@ -66,7 +66,7 @@ p.det <- sum(p.det.long)
 
 # Simulate occupancy data. 
 dat <- simIntOcc(n.data = n.data, J.x = J.x, J.y = J.y, J.obs = J.obs, 
-		 n.rep = n.rep, beta = beta, alpha = alpha, sp = FALSE)
+                 n.rep = n.rep, beta = beta, alpha = alpha, sp = FALSE)
 
 y <- dat$y
 X <- dat$X.obs
@@ -83,34 +83,34 @@ det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2])
 det.covs[[3]] <- list(det.cov.3.1 = X.p[[3]][, , 2]) 
 det.covs[[4]] <- list(det.cov.4.1 = X.p[[4]][, , 2]) 
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
-		  sites = sites)
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
+                  sites = sites)
 
 J <- length(dat$z.obs)
 # Initial values
 inits.list <- list(alpha = list(0, 0, 0, 0), 
-		      beta = 0, 
-		      z = rep(1, J))
+                   beta = 0, 
+                   z = rep(1, J))
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = list(0, 0, 0, 0), 
-			               var = list(2.72, 2.72, 2.72, 2.72)))
+                   alpha.normal = list(mean = list(0, 0, 0, 0), 
+                                       var = list(2.72, 2.72, 2.72, 2.72)))
 n.samples <- 5000
 out <- intPGOcc(occ.formula = ~ occ.cov, 
                 det.formula = list(f.1 = ~ det.cov.1.1, 
-		                   f.2 = ~ det.cov.2.1, 
-		                   f.3 = ~ det.cov.3.1, 
-		                   f.4 = ~ det.cov.4.1), 
-		data = data.list,
-		inits = inits.list,
-		n.samples = n.samples, 
-		priors = prior.list, 
-		n.omp.threads = 1, 
-		verbose = TRUE, 
-		n.report = 1000, 
-		n.burn = 4000, 
-		n.thin = 1)
+                                   f.2 = ~ det.cov.2.1, 
+                                   f.3 = ~ det.cov.3.1, 
+                                   f.4 = ~ det.cov.4.1), 
+                data = data.list,
+                inits = inits.list,
+                n.samples = n.samples, 
+                priors = prior.list, 
+                n.omp.threads = 1, 
+                verbose = TRUE, 
+                n.report = 1000, 
+                n.burn = 4000, 
+                n.thin = 1)
 
 summary(out)
 

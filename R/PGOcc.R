@@ -396,10 +396,10 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
     }   else {
         if (verbose) {	    
-          message("No prior specified for sigma.sq.psi.ig.\nSetting prior shape to 2 and prior scale to 1\n")
+          message("No prior specified for sigma.sq.psi.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
         }
-        sigma.sq.psi.a <- rep(2, p.occ.re)
-        sigma.sq.psi.b <- rep(1, p.occ.re)
+        sigma.sq.psi.a <- rep(0.1, p.occ.re)
+        sigma.sq.psi.b <- rep(0.1, p.occ.re)
       }
     } else {
       sigma.sq.psi.a <- 0
