@@ -1,6 +1,6 @@
 ---
 title: "Joint species distribution models with imperfect detection in `spOccupancy`"
-author: "Jeffrey W. Doser, Andrew O. Finley, Sudipto Banerjee"
+author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   rmarkdown::html_vignette:

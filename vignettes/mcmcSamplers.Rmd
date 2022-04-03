@@ -155,7 +155,7 @@ Prediction for a nonspatial single-species occupancy model is a simple compositi
 We extend the previous single-species occupancy model to incorporate a spatial Gaussian process that accounts for unexplained spatial variation in species occurrence across a region of interest. Let $\bm{s}_j$ denote the geographical coordinates of site $j$ for $j = 1, \dots, J$. The species-specific occurrence probability at site $j$ with coordinates $\bm{s}_j$, $\psi(\bm{s}_j)$, now takes the form 
 
 \begin{equation}
-\text{logit}(\psi(\bm{s}_j)) = \bm{x}(\bm{s}_j)^{\top}\bm{\beta} + w(\bm{s}_j),
+\text{logit}(\psi(\bm{s}_j)) = \bm{x}(\bm{s}_j)^{\top}\bm{\beta} + \text{w}(\bm{s}_j),
 \end{equation}
 
 where w($\bm{s}_j$) is a realization from a zero-mean spatial Gaussian Process, i.e., 

@@ -399,7 +399,7 @@ summary.ppcOcc <- function(object, level = 'both',
     n.data <- length(object$fit.y.rep)
     for (q in 1:n.data) {
       cat("Data Source", q, "\n\n")	    
-      cat("Bayesian p-value:", round(mean(object$fit.y.rep[[q]] > object$fit.y[[q]])), "\n")
+      cat("Bayesian p-value:", round(mean(object$fit.y.rep[[q]] > object$fit.y[[q]]), digits), "\n")
       cat("Fit statistic:", object$fit.stat, "\n\n")
     }
   }
@@ -1855,18 +1855,37 @@ fitted.intPGOcc <- function(object, ...) {
   n.rep <- sapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
   J.long <- sapply(y, nrow)
   det.prob <- list()
+  y.rep.samples <- list()
+  n.post <- object$n.post * object$n.chains
+  n.rep <- lapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
+  # Max number of repeat visits for each data set
+  K.long.max <- sapply(n.rep, max)
+  z.long.indx.r <- list()
+  for (i in 1:n.data) {
+    z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])
+    z.long.indx.r[[i]] <- z.long.indx.r[[i]][!is.na(c(y[[i]]))]
+  }
 
   for (q in 1:n.data) {
-    y.rep.samples <- object$y.rep.samples[[q]]
-    z.samples <- object$z.samples[, sites[[q]], drop = FALSE]
+    z.samples <- object$z.samples[, z.long.indx.r[[q]], drop = FALSE]
     alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
     alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
     # Get detection probability
-    det.prob[[q]] <- logit.inv(X.p[[q]] %*% t(alpha.samples))
-    det.prob[[q]] <- array(det.prob[[q]], dim(y.rep.samples))
+    det.prob.samples <- t(logit.inv(X.p[[q]] %*% t(alpha.samples)))
+    y.rep <- t(apply(det.prob.samples * z.samples, 2,
+	       function(a) rbinom(n.post, 1, a)))
+    tmp <- array(NA, dim = c(J.long[[q]] * K.long.max[q], n.post))
+    names.long <- which(!is.na(c(y[[q]])))
+    tmp[names.long, ] <- y.rep
+    y.rep.samples[[q]] <- array(tmp, dim = c(J.long[[q]], K.long.max[q], n.post))
+    y.rep.samples[[q]] <- aperm(y.rep.samples[[q]], c(3, 1, 2))
+    tmp <- array(NA, dim = c(J.long[[q]] * K.long.max[q], n.post))
+    tmp[names.long, ] <- t(det.prob.samples)
+    det.prob[[q]] <- array(tmp, dim = c(J.long[[q]], K.long.max[q], n.post))
+    det.prob[[q]] <- aperm(det.prob[[q]], c(3, 1, 2))
   }
   out <- list()
-  out$y.rep.samples <- object$y.rep.samples
+  out$y.rep.samples <- y.rep.samples
   out$p.samples <- det.prob
   return(out)
 }

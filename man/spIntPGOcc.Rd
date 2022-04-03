@@ -236,9 +236,6 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   \item{psi.samples}{a \code{coda} object of posterior samples
     for the latent occurrence probability values}
 
-  \item{y.rep.samples}{a list of three-dimensional arrays of fitted values for 
-    each data source for use in Goodness of Fit assessments.}
-
   \item{theta.samples}{a \code{coda} object of posterior samples
     for covariance parameters.}
 

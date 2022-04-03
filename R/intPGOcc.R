@@ -91,6 +91,9 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
     }
 
+    # Check if all detection covariates are at site level for a given 
+    # data set.
+    binom <- rep(FALSE, n.data)
     # Make all covariates a data frame. Unlist is necessary for when factors
     # are supplied. 
     for (i in 1:n.data) {
@@ -98,7 +101,13 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       data$det.covs[[i]] <- data.frame(lapply(data$det.covs[[i]], function(a) unlist(c(a))))
       # Replicate det.covs if only covariates are at the site level. 
       if (nrow(data$det.covs[[i]]) == nrow(y[[i]])) {
-        data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep, times = dim(y[[i]])[2]))
+        binom[q] <- TRUE
+        # Check if there are missing site-level covariates 
+        if (sum(is.na(data$det.covs[[q]])) != 0) {
+          stop("error: missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
+        }
+        data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep,
+						times = dim(y[[i]])[2]))
       }
     }
     data$occ.covs <- as.data.frame(data$occ.covs)
@@ -117,21 +126,23 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     # det.covs ------------------------
     for (q in 1:n.data) {
-      for (i in 1:ncol(data$det.covs[[q]])) {
-        if (sum(is.na(data$det.covs[[q]][, i])) > sum(is.na(y[[q]]))) {
-          stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
-        }
-      }
-      # Misalignment between y and det.covs
-      y.missing <- which(is.na(y[[q]]))
-      det.covs.missing <- lapply(data$det.covs[[q]], function(a) which(is.na(a)))
-      for (i in 1:length(det.covs.missing)) {
-        tmp.indx <- !(y.missing %in% det.covs.missing[[i]])
-        if (sum(tmp.indx) > 0) {
-          if (i == 1 & verbose) {
-            message("There are missing values in data$y with corresponding non-missing values in data$det.covs.\nRemoving these site/replicate combinations for fitting the model.")
+      if (!binom[q]) {
+        for (i in 1:ncol(data$det.covs[[q]])) {
+          if (sum(is.na(data$det.covs[[q]][, i])) > sum(is.na(y[[q]]))) {
+            stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
           }
-          data$det.covs[[q]][y.missing, i] <- NA
+        }
+        # Misalignment between y and det.covs
+        y.missing <- which(is.na(y[[q]]))
+        det.covs.missing <- lapply(data$det.covs[[q]], function(a) which(is.na(a)))
+        for (i in 1:length(det.covs.missing)) {
+          tmp.indx <- !(y.missing %in% det.covs.missing[[i]])
+          if (sum(tmp.indx) > 0) {
+            if (i == 1 & verbose) {
+              message("There are missing values in data$y with corresponding non-missing values in data$det.covs.\nRemoving these site/replicate combinations for fitting the model.")
+            }
+            data$det.covs[[q]][y.missing, i] <- NA
+          }
         }
       }
     }
@@ -216,7 +227,6 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     K <- unlist(n.rep)
 
     # Get indics to map z to y --------------------------------------------
-    X.p.orig <- X.p
     y.big <- y
     names.long <- list()
     # Remove missing observations when the covariate data are available but
@@ -531,25 +541,12 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     colnames(out$alpha.samples) <- x.p.names
     out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
     out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
-    # y.rep.samples is returned as a list, where each element 
-    out$y.rep.samples <- do.call(rbind, lapply(out.tmp, function(a) a$y.rep.samples))
-    # corresponds to a different data set. 
-    tmp <- list()
-    indx <- 1
-    for (q in 1:n.data) {
-      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples * n.chains))
-      tmp[[q]][names.long[[q]], ] <- out$y.rep.samples[indx:(indx + n.obs.long[q] - 1), ] 
-      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples * n.chains))
-      tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
-      indx <- indx + n.obs.long[q]
-    }
-    out$y.rep.samples <- tmp
     # Calculate effective sample sizes
     out$ESS <- list()
     out$ESS$beta <- effectiveSize(out$beta.samples)
     out$ESS$alpha <- effectiveSize(out$alpha.samples)
     out$X <- X
-    out$X.p <- X.p.orig
+    out$X.p <- X.p
     out$y <- y.big
     out$n.samples <- n.samples
     out$call <- cl

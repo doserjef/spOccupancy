@@ -1023,6 +1023,16 @@ n.thin <- 25
 We can now run the integrated occupancy model. Below we set the number of threads used to 1 and print out sampler progress after every 2000th iteration. 
 
 ```{r}
+# TODO: need to figure this out. 
+occ.formula <- occ.formula.int
+det.formula <- det.formula.int
+data <- data.int
+inits <- inits.list
+priors <- prior.list
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 2000
+n.chains <- 3
 # Approx. run time: < 30 sec
 out.int <- intPGOcc(occ.formula = occ.formula.int,
                     det.formula = det.formula.int, 

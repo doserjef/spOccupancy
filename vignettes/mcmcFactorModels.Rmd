@@ -1,6 +1,6 @@
 ---
 title: "MCMC samplers for joint species distribution models in `spOccupancy`"
-author: "Jeffrey W. Doser, Andrew O. Finley, Sudipto Banerjee"
+author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   bookdown::pdf_document2:

@@ -167,9 +167,6 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
   \item{ESS}{a list of effective sample sizes for some of the model parameters.}
 
-  \item{y.rep.samples}{a list of three-dimensional arrays of fitted values for 
-    each data source for use in Goodness of Fit assessments.}
-
   \item{run.time}{execution time reported using \code{proc.time()}.}
 
   \item{k.fold.deviance}{scoring rule (deviance) from k-fold cross-validation. A 

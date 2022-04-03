@@ -216,19 +216,21 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     p.det.long <- sapply(X.p, function(a) dim(a)[2])
     n.rep <- sapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
     J.long <- sapply(y, nrow)
+    fitted.out <- fitted.intPGOcc(object)
+    y.rep.all <- fitted.out$y.rep.samples
+    det.prob.all <- fitted.out$p.samples
     fit.y.list <- list()
     fit.y.rep.list <- list()
     fit.y.group.quants.list <- list()
     fit.y.rep.group.quants.list <- list()
 
     for (q in 1:n.data) {
-      y.rep.samples <- object$y.rep.samples[[q]]
+      y.rep.samples <- y.rep.all[[q]] 
       z.samples <- object$z.samples[, sites[[q]], drop = FALSE]
       alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
       alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
       # Get detection probability
-      det.prob <- logit.inv(X.p[[q]] %*% t(alpha.samples))
-      det.prob <- array(det.prob, dim(y.rep.samples))
+      det.prob <- det.prob.all[[q]]
       n.samples <- object$n.post * object$n.chains
       fit.y <- rep(NA, n.samples)
       fit.y.rep <- rep(NA, n.samples)

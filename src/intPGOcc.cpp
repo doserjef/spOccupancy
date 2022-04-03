@@ -143,8 +143,6 @@ extern "C" {
     PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
-    SEXP yRepSamples_r; 
-    PROTECT(yRepSamples_r = allocMatrix(INTSXP, nObs, nPost)); nProtect++; 
     
     /**********************************************************************
      * Other initial starting stuff
@@ -172,7 +170,6 @@ extern "C" {
     double *piProd = (double *) R_alloc(J, sizeof(double)); 
     ones(piProd, J); 
     double *ySum = (double *) R_alloc(J, sizeof(double)); zeros(ySum, J); 
-    int *yRep = (int *) R_alloc(nObs, sizeof(int)); 
 
     // For normal priors
     // Occupancy regression coefficient priors. 
@@ -390,11 +387,6 @@ extern "C" {
           F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
           F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[sPost*J], &inc); 
           F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[sPost*J], &inc); 
-	  // Replicate data set for GoF
-          for (i = 0; i < nObs; i++) {
-            yRep[i] = rbinom(one, detProb[i] * z[zLongIndx[i]]);
-            INTEGER(yRepSamples_r)[sPost * nObs + i] = yRep[i]; 
-          } // i
           sPost++; 
 	  thinIndx = 0; 
 	}
@@ -430,7 +422,7 @@ extern "C" {
 
     //make return object (which is a list)
     SEXP result_r, resultName_r;
-    int nResultListObjs = 5;
+    int nResultListObjs = 4;
 
     PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
     PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -440,13 +432,11 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 1, alphaSamples_r);
     SET_VECTOR_ELT(result_r, 2, zSamples_r); 
     SET_VECTOR_ELT(result_r, 3, psiSamples_r);
-    SET_VECTOR_ELT(result_r, 4, yRepSamples_r);
     // mkChar turns a C string into a CHARSXP
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
     SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.samples")); 
     SET_VECTOR_ELT(resultName_r, 2, mkChar("z.samples")); 
     SET_VECTOR_ELT(resultName_r, 3, mkChar("psi.samples"));
-    SET_VECTOR_ELT(resultName_r, 4, mkChar("y.rep.samples")); 
    
     // Set the names of the output list.  
     namesgets(result_r, resultName_r);
@@ -457,4 +447,5 @@ extern "C" {
     return(result_r);
   }
 }
+
 
