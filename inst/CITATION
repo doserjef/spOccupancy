@@ -1,13 +1,13 @@
-if (!exists("meta") || is.null(meta)) meta <- packageDescription("rFIA")
+if (!exists("meta") || is.null(meta)) meta <- packageDescription("spOccupancy")
 
-citHeader("To cite package", sQuote(meta$Package), "in publications use:")
+citHeader("To cite package", sQuote(meta$Package), "in publications, please cite the Doser et al. (2021) paper. If using functions lfJSDM, sfJSDM, lfMsPGOcc, or sfMsPGOcc, please also cite the Doser, Finley, Banerjee (2022) paper that introduces this functionality:")
 
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
 vers <- paste("R package version", meta$Version)
 
 citEntry(entry = "Article",
   title        = "{spOccupancy}: An R package for single species, multispecies, and integrated spatial occupancy models",
-  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O Finley"), as.person("Marc Kéry"), as.person("Elise F. Zipkin")),
+  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Marc Kéry"), as.person("Elise F. Zipkin")),
   journal      = "arXiv preprint arXiv:2111.12163",
   year         = "2021",
   volume       = "",
@@ -19,4 +19,22 @@ citEntry(entry = "Article",
   paste("Doser, J. W., Finley A. O., Kéry, M., & Zipkin E. F. (2021).",
         "spOccupancy: An R package for single species, multispecies, and integrated spatial occupancy models",
         "arXiv preprint arXiv:2111.12163")
+)
+
+citHeader("")
+
+citEntry(entry = "Article",
+  title        = "Joint species distribution models with imperfect detection for high-dimensional spatial data",
+  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Sudipto Banerjee")),
+  journal      = "arXiv preprint arXiv:2204.02707",
+  year         = "2022",
+  volume       = "",
+  number       = "",
+  pages        = "",
+  url          = "https://arxiv.org/abs/2204.02707",
+
+  textVersion  =
+  paste("Doser, J. W., Finley A. O., & Banerjee, S. (2022).",
+        "Joint species distribution models with imperfect detection for high-dimensional spatial data",
+        "arXiv preprint arXiv:2204.02707")
 )

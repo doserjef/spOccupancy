@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include "util.h"
 #include "rpg.h"
@@ -12,6 +13,9 @@
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
 //Description: update B and F.
 void updateBF1Int(double *B, double *F, double *c, double *C, double *coords, int *nnIndx, int *nnIndxLU, int n, int m, double sigmaSq, double phi, double nu, int covModel, double *bk, double nuUnifb){
@@ -45,9 +49,9 @@ void updateBF1Int(double *B, double *F, double *c, double *C, double *coords, in
 	    C[mm*threadID+l*nnIndxLU[n+i]+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]); 
 	  }
 	}
-	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info); if(info != 0){error("c++ error: dpotrf failed\n");}
-	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info); if(info != 0){error("c++ error: dpotri failed\n");}
-	F77_NAME(dsymv)(&lower, &nnIndxLU[n+i], &one, &C[mm*threadID], &nnIndxLU[n+i], &c[m*threadID], &inc, &zero, &B[nnIndxLU[i]], &inc);
+	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}
+	F77_NAME(dsymv)(&lower, &nnIndxLU[n+i], &one, &C[mm*threadID], &nnIndxLU[n+i], &c[m*threadID], &inc, &zero, &B[nnIndxLU[i]], &inc FCONE);
 	F[i] = sigmaSq - F77_NAME(ddot)(&nnIndxLU[n+i], &B[nnIndxLU[i]], &inc, &c[m*threadID], &inc);
       }else{
 	B[i] = 0;
@@ -257,14 +261,14 @@ extern "C" {
     // For normal priors
     // Occupancy regression coefficient priors. 
     // Compute cholesky
-    F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
+    F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
     // Compute inverse
-    F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info); 
+    F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, 
-        	    SigmaBetaInvMuBeta, &inc);
+        	    SigmaBetaInvMuBeta, &inc FCONE);
     // Detection regression coefficient priors. 
     // Have "separate" multivariate normal priors for the different sets of coefficients
     // that vary across the data sets. 
@@ -290,12 +294,12 @@ extern "C" {
         SigmaAlphaInv[alphaSigmaIndx[q] + i * pDetLong[q] + i] = sigmaAlpha; 
 	// Rprintf("Index: %i\n", alphaSigmaIndx[q] + i * pDetLong[q] + i); 
       } // i
-      F77_NAME(dpotrf)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info); 
+      F77_NAME(dpotrf)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
       if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
-      F77_NAME(dpotri)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info); 
+      F77_NAME(dpotri)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
       if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
       F77_NAME(dsymv)(lower, &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, 
-                     &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc);
+                     &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc FCONE);
     } // q
 
     /**********************************************************************
@@ -380,7 +384,7 @@ extern "C" {
          * Compute b.beta
          *******************************/
         // X * tmp_J1 + 0 * tmp_p. Output is stored in tmp_p
-        F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc); 	 
+        F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
         for (j = 0; j < pOcc; j++) {
           tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
         } // j 
@@ -395,17 +399,18 @@ extern "C" {
         }
         // This finishes off A.beta
         // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
-        F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
+        F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
         for (j = 0; j < ppOcc; j++) {
           tmp_ppOcc[j] += SigmaBetaInv[j]; 
         } // j
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf here failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotri here failed\n");}
         // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2 
-        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); if(info != 0){error("c++ error: dpotrf here failed\n");}
+        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
+        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+	if(info != 0){error("c++ error: dpotrf here failed\n");}
         // Args: destination, mu, cholesky of the covariance matrix, dimension
         mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
 
@@ -429,7 +434,7 @@ extern "C" {
             kappaDet[stNObs + i] = (y[stNObs + i] - 1.0/2.0) * z[zLongIndx[stNObs + i]];
           } // i
           // Xp * kappaDet + 0 * tmp_pDet. Output is stored in tmp_pDet
-          F77_NAME(dgemv)(ytran, &nObsLong[q], &pDetLong[q], &one, &Xp[stNObs], &nObs, &kappaDet[stNObs], &inc, &zero, &tmp_pDet[stAlpha], &inc); 	  
+          F77_NAME(dgemv)(ytran, &nObsLong[q], &pDetLong[q], &one, &Xp[stNObs], &nObs, &kappaDet[stNObs], &inc, &zero, &tmp_pDet[stAlpha], &inc FCONE); 	  
           for (j = 0; j < pDetLong[q]; j++) {
             tmp_pDet[stAlpha + j] += SigmaAlphaInvMuAlpha[stAlpha + j]; 
             // Rprintf("tmp_pDet: %f\n", tmp_pDet[stAlpha + j]); 
@@ -449,7 +454,8 @@ extern "C" {
 
           // This finishes off A.alpha
           // 1 * Xp * tmp_nObspDet + 0 * tmp_ppDet = tmp_ppDet
-          F77_NAME(dgemm)(ytran, ntran, &pDetLong[q], &pDetLong[q], &nObsLong[q], &one, &Xp[stNObs], &nObs, &tmp_nObspDet[stNObs], &nObs, &zero, &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q]);
+          F77_NAME(dgemm)(ytran, ntran, &pDetLong[q], &pDetLong[q], &nObsLong[q], &one, &Xp[stNObs], &nObs, 
+			  &tmp_nObspDet[stNObs], &nObs, &zero, &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q] FCONE FCONE);
 
           for (j = 0; j < pDetLong[q] * pDetLong[q]; j++) {
             tmp_ppDet[alphaSigmaIndx[q] + j] += SigmaAlphaInv[alphaSigmaIndx[q] + j]; 
@@ -458,17 +464,17 @@ extern "C" {
 
           // This gives the Cholesky of A.alpha
           // Computes cholesky of tmp_ppDet. Output stored in tmp_ppOcc
-          F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info); 
+          F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
           if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
           // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
-          F77_NAME(dpotri)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info); 
+          F77_NAME(dpotri)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
           if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
           // A.alpha.inv %*% b.alpha
           // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
           // (which is currently nothing) = tmp_pDet2
-          F77_NAME(dsymv)(lower, &pDetLong[q], &one, &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &tmp_pDet[stAlpha], &inc, &zero, &tmp_pDet2[stAlpha], &inc);
+          F77_NAME(dsymv)(lower, &pDetLong[q], &one, &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &tmp_pDet[stAlpha], &inc, &zero, &tmp_pDet2[stAlpha], &inc FCONE);
           // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
-          F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info); 
+          F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
           if(info != 0){error("c++ error: dpotrf here failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(&alpha[stAlpha], &tmp_pDet2[stAlpha], &tmp_ppDet[alphaSigmaIndx[q]], pDetLong[q]);

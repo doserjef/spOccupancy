@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include "util.h"
 
@@ -11,6 +12,9 @@
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
 extern "C" {
 
@@ -148,22 +152,22 @@ extern "C" {
         // Get covariance matrices
         spCov(obsD, JJ, theta, corName, S_obs); 
         spCov(obsPredD, qJ, theta, corName, S_obsPred); 
-        F77_NAME(dpotrf)(lower, &J, S_obs, &J, &info); 
+        F77_NAME(dpotrf)(lower, &J, S_obs, &J, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf failed\n");}
-        F77_NAME(dpotri)(lower, &J, S_obs, &J, &info); 
+        F77_NAME(dpotri)(lower, &J, S_obs, &J, &info FCONE); 
         if(info != 0){error("c++ error: dpotri failed\n");}	 
 
-        F77_NAME(dgemv)(ntran, &q, &pOcc, &one, X0, &q, beta, &inc, &zero, tmp_q, &inc);
+        F77_NAME(dgemv)(ntran, &q, &pOcc, &one, X0, &q, beta, &inc, &zero, tmp_q, &inc FCONE);
    
         // Predicting each element one at a time, instead of doing joint prediction.  
         for(j = 0; j < q; j++){
 
           //get Mu
-          F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J);
-          F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*JN + i], &N, &zero, tmp_one, &inc);
+          F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J FCONE FCONE);
+          F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*JN + i], &N, &zero, tmp_one, &inc FCONE);
           
           //get Sigma
-          F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc);
+          F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc FCONE FCONE);
           
           tmp_one2[0] = sigmaSq - tmp_one2[0];
 

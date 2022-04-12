@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include "util.h"
 
@@ -11,6 +12,9 @@
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
 extern "C" {
 
@@ -185,12 +189,12 @@ extern "C" {
 	    }
 	  }
 
-	  F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info); 
+	  F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotrf failed\n");}
-	  F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info); 
+	  F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotri failed\n");}
 
-	  F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc);
+	  F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
 
 	  d = 0;
 	  for(k = 0; k < m; k++){
@@ -234,7 +238,7 @@ extern "C" {
     }
     for (j = 0; j < JStr; j++) {
       for (s = 0; s < nSamples; s++) {
-          F77_NAME(dgemv)(ntran, &N, &q, &one, &lambda[s * Nq], &N, &w0[s * JStrq + j*q], &inc, &zero, &w0Star[s * JStrN + j * N], &inc);
+          F77_NAME(dgemv)(ntran, &N, &q, &one, &lambda[s * Nq], &N, &w0[s * JStrq + j*q], &inc, &zero, &w0Star[s * JStrN + j * N], &inc FCONE);
 	  for (i = 0; i < N; i++) {
 	    psi0[s * JStrN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &JStr, &beta[s*pOccN + i], &N) + w0Star[s * JStrN + j * N + i] + betaStarSite[s*JStrN + j * N + i], zero, one);
 	    z0[s * JStrN + j * N + i] = rbinom(one, psi0[s * JStrN + j * N + i]);

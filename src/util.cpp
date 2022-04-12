@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include <limits>
 #include "util.h"
@@ -11,6 +12,9 @@
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
 #include <R_ext/Utils.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
   void zeros(double *a, int n){
     for(int i = 0; i < n; i++)
@@ -32,7 +36,7 @@
       des[i] = rnorm(0, 1);
     }
    
-    F77_NAME(dtrmv)("L", "N", "N", &dim, cholCov, &dim, des, &inc);
+    F77_NAME(dtrmv)("L", "N", "N", &dim, cholCov, &dim, des, &inc FCONE FCONE FCONE);
     F77_NAME(daxpy)(&dim, &one, mu, &inc, des, &inc);
   }
   

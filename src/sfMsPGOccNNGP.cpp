@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include "util.h"
 #include "rpg.h"
@@ -12,6 +13,9 @@
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
 void updateBF1SF(double *B, double *F, double *c, double *C, double *coords, int *nnIndx, int *nnIndxLU, int n, int m, double sigmaSq, double phi, double nu, int covModel, double *bk, double nuUnifb){
     
@@ -44,9 +48,9 @@ void updateBF1SF(double *B, double *F, double *c, double *C, double *coords, int
 	    C[mm*threadID+l*nnIndxLU[n+i]+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]); 
 	  }
 	}
-	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info); if(info != 0){error("c++ error: dpotrf failed\n");}
-	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info); if(info != 0){error("c++ error: dpotri failed\n");}
-	F77_NAME(dsymv)(&lower, &nnIndxLU[n+i], &one, &C[mm*threadID], &nnIndxLU[n+i], &c[m*threadID], &inc, &zero, &B[nnIndxLU[i]], &inc);
+	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}
+	F77_NAME(dsymv)(&lower, &nnIndxLU[n+i], &one, &C[mm*threadID], &nnIndxLU[n+i], &c[m*threadID], &inc, &zero, &B[nnIndxLU[i]], &inc FCONE);
 	F[i] = sigmaSq - F77_NAME(ddot)(&nnIndxLU[n+i], &B[nnIndxLU[i]], &inc, &c[m*threadID], &inc);
       }else{
 	B[i] = 0;
@@ -366,38 +370,38 @@ extern "C" {
 
     // For normal community-level priors
     // Occurrence coefficients
-    F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 
+    F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf SigmaBetaCommInv failed\n");}
-    F77_NAME(dpotri)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info); 
+    F77_NAME(dpotri)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotri SigmaBetaCommInv failed\n");}
     double *SigmaBetaCommInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, 
-        	    SigmaBetaCommInvMuBeta, &inc);
+        	    SigmaBetaCommInvMuBeta, &inc FCONE);
     // Detection regression coefficient priors. 
-    F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
+    F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
-    F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info); 
+    F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info FCONE); 
     if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
     double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, 
-                   SigmaAlphaCommInvMuAlpha, &inc);
+                   SigmaAlphaCommInvMuAlpha, &inc FCONE);
     // Put community level occurrence variances in a pOcc x pOcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
       TauBetaInv[i * pOcc + i] = tauSqBeta[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
+    F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
+    F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
     // Put community level detection variances in a pDet x pDet matrix. 
     double *TauAlphaInv = (double *) R_alloc(ppDet, sizeof(double)); zeros(TauAlphaInv, ppDet); 
     for (i = 0; i < pDet; i++) {
       TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
+    F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info); 
+    F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
     if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
     /**********************************************************************
@@ -468,7 +472,7 @@ extern "C" {
     double *wStar = (double *) R_alloc(JN, sizeof(double)); zeros(wStar, JN);
     // Multiply Lambda %*% w[j] to get wStar. 
     for (j = 0; j < J; j++) {
-      F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc);
+      F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
     }
     // For NNGP
     double b, e, aij, aa; 
@@ -532,7 +536,7 @@ extern "C" {
          *******************************/
         zeros(tmp_pOcc, pOcc); 
         for (i = 0; i < N; i++) {
-          F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc); 
+          F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc FCONE); 
         } // i
         for (h = 0; h < pOcc; h++) {
           tmp_pOcc[h] += SigmaBetaCommInvMuBeta[h];  
@@ -544,15 +548,15 @@ extern "C" {
         for (h = 0; h < ppOcc; h++) {
           tmp_ppOcc[h] = SigmaBetaCommInv[h] + N * TauBetaInv[h]; 
         }
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotri ABetaComm failed\n");}
         // A.beta.inv %*% b.beta
         // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2  = tmp_pOcc2
-        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
+        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
         // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
         // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
         mvrnorm(betaComm, tmp_pOcc2, tmp_ppOcc, pOcc);
@@ -564,7 +568,7 @@ extern "C" {
          *******************************/
          zeros(tmp_pDet, pDet); 
          for (i = 0; i < N; i++) {
-           F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc); 
+           F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc FCONE); 
          } // i
          for (h = 0; h < pDet; h++) {
            tmp_pDet[h] += SigmaAlphaCommInvMuAlpha[h];  
@@ -575,15 +579,15 @@ extern "C" {
         for (h = 0; h < ppDet; h++) {
           tmp_ppDet[h] = SigmaAlphaCommInv[h] + N * TauAlphaInv[h]; 
         }
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+        F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotri AAlphaComm failed\n");}
         // A.alpha.inv %*% b.alpha
         // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2  = tmp_pDet2
-        F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
+        F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
         // Computes cholesky of tmp_pp again stored back in tmp_ppDet. This chol(A.alpha.inv)
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
         // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
         mvrnorm(alphaComm, tmp_pDet2, tmp_ppDet, pDet);
@@ -603,9 +607,9 @@ extern "C" {
         for (h = 0; h < pOcc; h++) {
           TauBetaInv[h * pOcc + h] = tauSqBeta[h]; 
         } // i
-        F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
+        F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info); 
+        F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
         /********************************************************************
          Update Community Detection Variance Parameter
@@ -621,9 +625,9 @@ extern "C" {
         for (h = 0; h < pDet; h++) {
           TauAlphaInv[h * pDet + h] = tauSqAlpha[h]; 
         } // i
-        F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info); 
+        F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info); 
+        F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
         /********************************************************************
@@ -691,9 +695,9 @@ extern "C" {
            * Compute b.beta
            *******************************/
           // t(X) * tmp_J1 + 0 * tmp_pOcc = tmp_pOcc. 
-          F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc); 	 
+          F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
           // TauBetaInv %*% betaComm + tmp_pOcc = tmp_pOcc
-          F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, betaComm, &inc, &one, tmp_pOcc, &inc); 
+          F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, betaComm, &inc, &one, tmp_pOcc, &inc FCONE); 
 
           /********************************
            * Compute A.beta
@@ -706,17 +710,17 @@ extern "C" {
           }
           // This finishes off A.beta
           // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
-          F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc);
+          F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
           for (h = 0; h < ppOcc; h++) {
             tmp_ppOcc[h] += TauBetaInv[h]; 
           } // j
-          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf ABeta failed\n");}
-          F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+          F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
           if(info != 0){error("c++ error: dpotri ABeta failed\n");}
           // A.beta.inv %*% b.beta
-          F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc);
-          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info); 
+          F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotrf A.beta 2 failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(tmp_beta, tmp_pOcc2, tmp_ppOcc, pOcc);
@@ -747,8 +751,8 @@ extern "C" {
             } // r
           }
           
-          F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, tmp_nObs, &inc, &zero, tmp_pDet, &inc); 	  
-          F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, TauAlphaInv, &pDet, alphaComm, &inc, &one, tmp_pDet, &inc); 
+          F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, tmp_nObs, &inc, &zero, tmp_pDet, &inc FCONE); 	  
+          F77_NAME(dgemv)(ntran, &pDet, &pDet, &one, TauAlphaInv, &pDet, alphaComm, &inc, &one, tmp_pDet, &inc FCONE); 
           /********************************
            * Compute A.alpha
            * *****************************/
@@ -760,21 +764,21 @@ extern "C" {
 
           // This finishes off A.alpha
           // 1 * Xp * tmp_nObspDet + 0 * tmp_ppDet = tmp_ppDet
-          F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet);
+          F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet FCONE FCONE);
 
           for (h = 0; h < ppDet; h++) {
             tmp_ppDet[h] += TauAlphaInv[h]; 
           } // h
-          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
-          F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+          F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
           if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
           // A.alpha.inv %*% b.alpha
           // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
           // (which is currently nothing) = tmp_pDet2
-          F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc);
+          F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
           // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
-          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info); 
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf A.alpha 2 failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(tmp_alpha, tmp_pDet2, tmp_ppDet, pDet);
@@ -869,7 +873,7 @@ extern "C" {
               tmp_Nq[ll * N + i] = lambda[ll * N + i] * omegaOcc[ii * N + i];
             } // ll
           } // i
-	  F77_NAME(dgemm)(ytran, ntran, &q, &q, &N, &one, tmp_Nq, &N, lambda, &N, &zero, tmp_qq, &q);
+	  F77_NAME(dgemm)(ytran, ntran, &q, &q, &N, &one, tmp_Nq, &N, lambda, &N, &zero, tmp_qq, &q FCONE FCONE);
 
 	  for (ll = 0; ll < q; ll++) {
 
@@ -908,9 +912,9 @@ extern "C" {
 	  for (k = 0; k < q; k++) {
             var[k * q + k] += ff[k] + v[k]; 
           } // k
-	  F77_NAME(dpotrf)(lower, &q, var, &q, &info);
+	  F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE);
           if(info != 0){error("c++ error: dpotrf var failed\n");}
-	  F77_NAME(dpotri)(lower, &q, var, &q, &info);
+	  F77_NAME(dpotri)(lower, &q, var, &q, &info FCONE);
           if(info != 0){error("c++ error: dpotri var failed\n");}
 
 	  // mu
@@ -918,15 +922,15 @@ extern "C" {
             tmp_N[k] = (zStar[ii * N + k] - F77_NAME(ddot)(&pOcc, &X[ii], &J, &beta[k], &N) - betaStarSites[k * J + ii]) * omegaOcc[ii * N + k];
           } // k
 
-	  F77_NAME(dgemv)(ytran, &N, &q, &one, lambda, &N, tmp_N, &inc, &zero, mu, &inc);
+	  F77_NAME(dgemv)(ytran, &N, &q, &one, lambda, &N, tmp_N, &inc, &zero, mu, &inc FCONE);
 
 	  for (k = 0; k < q; k++) {
             mu[k] += gg[k] + a[k];
 	  } // k
 
-	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc);
+	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc FCONE);
 
-	  F77_NAME(dpotrf)(lower, &q, var, &q, &info); 
+	  F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
 
 	  mvrnorm(&w[ii * q], tmp_N, var, q);
@@ -998,14 +1002,14 @@ extern "C" {
             tmp_qq2[j * currDim + j] += 1.0;  
           } // j
 
-          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info); 
+          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotrf for spatial factors failed\n");}
-          F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info); 
+          F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotri for spatial factors failed\n");}
 
-          F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc);
+          F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc FCONE);
 
-          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info); 
+          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
 	  if(info != 0){error("c++ error: dpotrf for spatial factors 2 failed\n");}
           
           mvrnorm(tmp_q, tmp_q2, tmp_qq2, currDim);
@@ -1014,7 +1018,7 @@ extern "C" {
 
         // Multiply Lambda %*% w[j] to get wStar. 
         for (j = 0; j < J; j++) {
-          F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc);
+          F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
         } // j
 
         /********************************************************************

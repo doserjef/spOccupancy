@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <string>
 #include "util.h"
 
@@ -11,6 +12,9 @@
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
 
 extern "C" {
 
@@ -159,12 +163,12 @@ extern "C" {
 	  }
 	}
 
-	F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info); 
+	F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
 	if(info != 0){error("c++ error: dpotrf failed\n");}
-	F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info); 
+	F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
 	if(info != 0){error("c++ error: dpotri failed\n");}
 
-	F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc);
+	F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
 
 	d = 0;
 	for(k = 0; k < m; k++){

@@ -1,3 +1,4 @@
+#define USE_FC_LEN_T
 #include <iomanip>
 #include <string>
 #include <limits>
@@ -14,8 +15,9 @@
 #include <Rinternals.h>
 #include <R_ext/BLAS.h>
 #include <R_ext/Utils.h>
-
-
+#ifndef FCONE
+# define FCONE
+#endif
 
 ///////////////////////////////////////////////////////////////////
 //u index 
