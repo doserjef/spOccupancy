@@ -864,7 +864,7 @@ extern "C" {
       for (ll = 0; ll < q; ll++) {
         for (k = 0; k < nTheta; k++) {
           REAL(acceptSamples_r)[s * nThetaq + k * q + ll] = accept[k * q + ll]/batchLength; 
-          REAL(tuningSamples_r)[s * nThetaq + k * q + ll] = tuning[k * q + i]; 
+          REAL(tuningSamples_r)[s * nThetaq + k * q + ll] = tuning[k * q + ll]; 
           if (accept[k * q + ll] / batchLength > acceptRate) {
             tuning[k * q + ll] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
           } else{

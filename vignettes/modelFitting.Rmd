@@ -43,12 +43,12 @@ library(spOccupancy)
 library(coda)
 library(stars)
 library(ggplot2)
-set.seed(101)
+set.seed(102)
 ```
 
 ## Example data set: Foliage-gleaning birds at Hubbard Brook
 
-As an example data set throughout this vignette, we will use data from twelve foliage-gleaning bird species collected from point count surveys at Hubbard Brook Experimental Forest (HBEF) in New Hampshire, USA. Specific details on the data set, which is just a small subset from a long-term survey, are available on the [Hubbard Brook website](https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) and @doser2021ICOM. The data are provided as part of the `spOccupancy` package and are loaded with `data(hbef2015)`. Point count surveys were conducted at 373 sites over three replicates, each of 10 minutes in length and with a detection radius of 100m. In the data set provided here, we converted these data to detection-nondetection data. Some sites were not visited for all three replicates. Additional information on the data set (including individual species in the data set) can be viewed in the man page using `help(hbef2015)`. 
+As an example data set throughout this vignette, we will use data from twelve foliage-gleaning bird species collected from point count surveys at Hubbard Brook Experimental Forest (HBEF) in New Hampshire, USA. Specific details on the data set, which is just a small subset from a long-term survey, are available on the [Hubbard Brook website](https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) and @doser2022integrated. The data are provided as part of the `spOccupancy` package and are loaded with `data(hbef2015)`. Point count surveys were conducted at 373 sites over three replicates, each of 10 minutes in length and with a detection radius of 100m. In the data set provided here, we converted these data to detection-nondetection data. Some sites were not visited for all three replicates. Additional information on the data set (including individual species in the data set) can be viewed in the man page using `help(hbef2015)`. 
 
 ```{r}
 data(hbef2015) # Load the data set.
@@ -170,7 +170,7 @@ out <- PGOcc(occ.formula = oven.occ.formula,
 names(out) # Look at the contents of the resulting object.
 ```
 
-`PGOcc()` returns a list of class `PGOcc` with a suite of different objects, many of them being `coda::mcmc` objects of posterior samples. Note the "Preparing the data" printed section doesn't have any information shown in it. `spOccupancy` model fitting functions will present messages when preparing the data for the model in this section, or will print out the default priors or initial values used when they are not specified in the function call. Here we specified everything explicitly so no information was reported. 
+`PGOcc()` returns a list of class `PGOcc` with a suite of different objects, many of them being `coda::mcmc` objects of posterior samples. Note the "Preparing to run the model" printed section doesn't have any information shown in it. `spOccupancy` model fitting functions will present messages when preparing the data for the model in this section, or will print out the default priors or initial values used when they are not specified in the function call. Here we specified everything explicitly so no information was reported. 
 
 For a concise yet informative summary of the regression parameters and convergence of the MCMC chains, we can use `summary()` on the resulting `PGOcc()` object. 
 
@@ -178,7 +178,7 @@ For a concise yet informative summary of the regression parameters and convergen
 summary(out)
 ```
 
-Note that all coefficients are printed on the logit scale. We see OVEN is fairly widespread (at the scale of the survey) in the forest given the large intercept value, which translates to a value of 0.89 on the probability scale (run `plogis(2.12)`). In addition, the negative linear and quadratic terms for `Elevation` suggest occurrence probability peaks at mid-elevations. On average, detection probability is about 0.69.
+Note that all coefficients are printed on the logit scale. We see OVEN is fairly widespread (at the scale of the survey) in the forest given the large intercept value, which translates to a value of 0.89 on the probability scale (run `plogis(2.13)`). In addition, the negative linear and quadratic terms for `Elevation` suggest occurrence probability peaks at mid-elevations. On average, detection probability is about 0.69.
 
 In principle, before we even look at the parameter summaries, we ought to ensure that the MCMC chains have reached convergence. The `summary` function also returns the Gelman-Rubin diagnostic [@brooks1998] and the effective samples size (ESS) of the posterior samples, which we can use to assess convergence. Here we see all Rhat values are less than 1.1 and the ESS values indicate adequate mixing of the MCMC chains. Additionally, the posterior samples in the `PGOcc` object are `coda::mcmc` objects, which we can quickly assess for convergence visually using trace plots. 
 
@@ -349,7 +349,7 @@ out.pred <- predict(out, X.0)
 
 For `PGOcc` objects, the `predict` function takes two arguments: (1) the `PGOcc` fitted model object; and (2) a matrix or data frame consisting of the design matrix for the prediction locations (which must include and intercept if our model contained one). The resulting object consists of posterior predictive samples for the latent occurrence probabilities (`psi.0.samples`) and latent occurrence values (`z.0.samples`). The beauty of the Bayesian paradigm, and the MCMC computing machinery, is that these predictions all have fully propagated uncertainty. We can use these values to create plots of the predicted mean occurrence values, as well as of their standard deviation as a measure of the uncertainty in these predictions akin to a standard error associated with maximum likelihood estimates. We could also produce a map for the Bayesian credible interval length as an alternative measure of prediction uncertainty or two maps, one showing the lower and the other the upper limit of, say, a 95% credible interval.
 
-```{r, warning = FALSE, message = FALSE, fig.width = 7, fig.align = 'center', units = 'in'}
+```{r, warning = FALSE, message = FALSE, fig.height = 4, fig.width = 7, fig.align = 'center', units = 'in'}
 plot.dat <- data.frame(x = hbefElev$Easting, 
                        y = hbefElev$Northing, 
                        mean.psi = apply(out.pred$psi.0.samples, 2, mean), 
@@ -413,7 +413,7 @@ spPGOcc(occ.formula, det.formula, data, inits, n.batch,
         k.fold.seed = 100, ...)
 ```
 
-We will walk through each of the arguments to `spPGOcc()` in the context of our Ovenbird example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`), take the same form as we saw in `PGOcc`, with the exception that random intercepts can now only be specified for detection (i.e., in `det.formula`). Notice the `coords` matrix in the `ovenHBEF` list of data. We did not use this for `PGOcc()` but specifying the spatial coordinates in `data` is required for all spatially explicit models in `spOccupancy`. 
+We will walk through each of the arguments to `spPGOcc()` in the context of our Ovenbird example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`), take the same form as we saw in `PGOcc`, with random intercepts allowed in both the occurrence and detection models. Notice the `coords` matrix in the `ovenHBEF` list of data. We did not use this for `PGOcc()` but specifying the spatial coordinates in `data` is required for all spatially explicit models in `spOccupancy`. 
 
 ```{r}
 oven.occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
@@ -439,7 +439,7 @@ oven.inits <- list(alpha = 0,
                    w = rep(0, nrow(ovenHBEF$y)))
 ```
 
-The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the specific type of MCMC sampler we use when we fit the model. The spatial range parameter (and the spatial smoothness parameter if `cov.model = 'matern'`) are the two hardest parameters to estimate in spatially-explicit models in `spOccupancy`. In other words, you will often see slow mixing and convergence of the MCMC chains for these parameters. To try to speed up this slow mixing and convergence of these parameters, we use an algorithm called an adaptive Metropolis-Hastings algorithm for all spatially-explicit models in `spOccupancy`(see @roberts2009examples for more details on this algorithm). In this approach, we break up the total number of MCMC samples into a set of "batches", where each batch has a specific number of MCMC samples. When we fit a spatially-explicit model in `spOccupancy`, instead of specifying the total number of MCMC samples in the `n.samples` argument like we did in `PGOcc()`, we must specify the total number of batches (`n.batch`) as well as the number of MCMC samples each batch contains. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence of all model parameters is reached. We recommend setting `batch.length = 25` unless you have a specific reason to change it. Here we set `n.batch = 400` for a total of 10,000 MCMC samples in each of 3 chains. We additionally specify a burn-in period of length 2000 and a thinning rate of 20. 
+The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the specific type of MCMC sampler we use when we fit the model. The spatial range parameter (and the spatial smoothness parameter if `cov.model = 'matern'`) are the two hardest parameters to estimate in spatially-explicit models in `spOccupancy`. In other words, you will often see slow mixing and convergence of the MCMC chains for these parameters. To try to speed up this slow mixing and convergence of these parameters, we use an algorithm called an adaptive Metropolis-Hastings algorithm for all spatially-explicit models in `spOccupancy` (see @roberts2009examples for more details on this algorithm). In this approach, we break up the total number of MCMC samples into a set of "batches", where each batch has a specific number of MCMC samples. When we fit a spatially-explicit model in `spOccupancy`, instead of specifying the total number of MCMC samples in the `n.samples` argument like we did in `PGOcc()`, we must specify the total number of batches (`n.batch`) as well as the number of MCMC samples each batch contains. Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence of all model parameters is reached. We recommend setting `batch.length = 25` unless you have a specific reason to change it. Here we set `n.batch = 400` for a total of 10,000 MCMC samples in each of 3 chains. We additionally specify a burn-in period of length 2000 and a thinning rate of 20. 
 
 ```{r}
 batch.length <- 25
@@ -459,7 +459,7 @@ oven.tuning <- list(phi = 1)
 
 Priors are again specified in a list in the argument `priors`. We follow standard recommendations for prior distributions from the spatial statistics literature [@banerjee2003]. We assume an inverse gamma prior for the spatial variance parameter `sigma.sq` (the tag of which is `sigma.sq.ig`), and uniform priors for the spatial decay parameter `phi` and smoothness parameter `nu` (if using the Matern correlation function), with the associated tags `phi.unif` and `nu.unif`. The hyperparameters of the inverse Gamma are passed as a vector of length two, with the first and second elements corresponding to the shape and scale, respectively. The lower and upper bounds of the uniform distribution are passed as a two-element vector for the uniform priors. 
 
-Note that the priors for the spatial parameters in a spatially-explicit model must be at least weakly informative for the model to converge [@banerjee2003]. For the inverse-Gamma prior on the spatial variance, we typically set the shape parameter to 2 and the scale parameter equal to our best guess of the spatial variance. The default prior hyperparameter values for the spatial variance $\sigma^2$ are a shape parameter of 2 and a scale parameter of 1. This weakly informative prior suggests a prior mean of 1 for the spatial variance, which is a moderately small amount of spatial variation. Based on our previous work with these data, we expected the residual spatial variation to be relatively small, and so we use this default value and set the scale parameter below to 1. For the spatial decay parameter, our default approach is to set the lower and upper bounds of the uniform prior based on the minimum and maximum distances between sites in the data. More specifically, by default we set the lower bound to `3 / max` and the upper bound to `3 / min`, where `min` and `max` are the minimum and maximum distances between sites in the data set, respectively. This equates to a vague prior that states the spatial autocorrelation in the data could only exist between sites that are very close together, or could span across the entire observed study area. If additional information is known on the extent of the spatial autocorrelation in the data, you may place more restrictive bounds on the uniform prior, which would reduce the amount of time needed for adequate mixing and convergence of the MCMC chains. Here we use this default approach, but will explicit set the values for transparency. 
+Note that the priors for the spatial parameters in a spatially-explicit model must be at least weakly informative for the model to converge [@banerjee2003]. For the inverse-Gamma prior on the spatial variance, we typically set the shape parameter to 2 and the scale parameter equal to our best guess of the spatial variance. The default prior hyperparameter values for the spatial variance $\sigma^2$ are a shape parameter of 2 and a scale parameter of 1. This weakly informative prior suggests a prior mean of 1 for the spatial variance, which is a moderately small amount of spatial variation. Based on our previous work with these data, we expected the residual spatial variation to be relatively small, and so we use this default value and set the scale parameter below to 1. For the spatial decay parameter, our default approach is to set the lower and upper bounds of the uniform prior based on the minimum and maximum distances between sites in the data. More specifically, by default we set the lower bound to `3 / max` and the upper bound to `3 / min`, where `min` and `max` are the minimum and maximum distances between sites in the data set, respectively. This equates to a vague prior that states the spatial autocorrelation in the data could only exist between sites that are very close together, or could span across the entire observed study area. If additional information is known on the extent of the spatial autocorrelation in the data, you may place more restrictive bounds on the uniform prior, which would reduce the amount of time needed for adequate mixing and convergence of the MCMC chains. Here we use this default approach, but will explicitly set the values for transparency. 
 
 ```{r}
 min.dist <- min(dist.hbef)
@@ -478,12 +478,12 @@ verbose <- TRUE
 n.report <- 100 # Report progress at every 100th batch.
 ```
 
-The parameters `NNGP`, `n.neighbors`, and `search.type` relate to whether or not you want to fit the model with a Gaussian Process or with NNGP, which is a much more computationally efficient approximation. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial improvements in run time. Even for more modest-sized data sets, like the HBEF data set, using an NNGP will be quite a bit faster (especially for multi-species models as shown in subsequent sections). Unless your data set is particularly small (e.g., 100 points) and you are concerned about the NNGP approximation, we recommend setting `NNGP = TRUE`, which is the default. The argument `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as few as five neighbors, which could substantially decrease run time for the model. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`, which we have found in exploratory analysis to closely approximate a full Gaussian Process.
+The parameters `NNGP`, `n.neighbors`, and `search.type` relate to whether or not you want to fit the model with a Gaussian Process or with NNGP, which is a much more computationally efficient approximation. The argument `NNGP` is a logical value indicating whether to fit the model with an NNGP (`TRUE`) or a regular Gaussian Process (`FALSE`). For data sets that have more than 1000 locations, using an NNGP will have substantial improvements in run time. Even for more modest-sized data sets, like the HBEF data set, using an NNGP will be quite a bit faster (especially for multi-species models as shown in subsequent sections). Unless your data set is particularly small (e.g., 100 points) and you are concerned about the NNGP approximation, we recommend setting `NNGP = TRUE`, which is the default. The arguments `n.neighbors` and `search.type` specify the number of neighbors used in the NNGP and the nearest neighbor search algorithm, respectively, to use for the NNGP model. Generally, the default values of these arguments will be adequate. @datta2016hierarchical showed that setting `n.neighbors = 15` is usually sufficient, although for certain data sets a good approximation can be achieved with as few as five neighbors, which could substantially decrease run time for the model. We generally recommend leaving `search.type = "cb"`, as this results in a fast code book nearest neighbor search algorithm. However, details on when you may want to change this are described in @finley2020spnngp. We will run an NNGP model using the default value for `search.type` and setting `n.neighbors = 5`, which we have found in exploratory analysis to closely approximate a full Gaussian Process.
 
 We now fit the model (without k-fold cross-validation) and summarize the results using `summary()`. 
 
 ```{r}
-# Approx. run time: 68 seconds
+# Approx. run time: < 1 minute
 out.sp <- spPGOcc(occ.formula = oven.occ.formula, 
                   det.formula = oven.det.formula, 
                   data = ovenHBEF, 
@@ -504,7 +504,7 @@ names(out.sp)
 summary(out.sp)
 ```
 
-All Rhat values are less than 1.1, indicating we have reached adequate convergence. The effective sample sizes of the spatial covariance parameters are somewhat low, which indicates limited mixing of these parameters. This is common when fitting spatial models. We note that there is substantial MC error in the spatial covariance parameters, and so your estimates may be slightly different from what we have shown here. We see `spPGOcc()` returns a list of class `spPGOcc` and consists of posterior samples for all parameters. Note that posterior samples for spatial parameters are stored in the list element `theta.samples`.  
+Most Rhat values are less than 1.1, although for a full analysis we should run the model longer to ensure the spatial variance parameter (`sigma.sq`) has converged. The effective sample sizes of the spatial covariance parameters are somewhat low, which indicates limited mixing of these parameters. This is common when fitting spatial models. We note that there is substantial MC error in the spatial covariance parameters, and so your estimates may be slightly different from what we have shown here. We see `spPGOcc()` returns a list of class `spPGOcc` and consists of posterior samples for all parameters. Note that posterior samples for spatial parameters are stored in the list element `theta.samples`.  
 
 
 ## Posterior predictive checks
@@ -536,7 +536,7 @@ k-fold cross-validation is accomplished by specifying the `k.fold` argument in `
 
 Finally, we can perform out of sample prediction using the `predict` function just as before. Prediction for spatial models is more computationally intensive than for non-spatial models, and so the `predict` function for `spPGOcc` class objects also has options for parallelization (`n.omp.threads`) and reporting sampler progress (`verbose` and `n.report`). Note that for `spPGOcc()`, you also need to supply the coordinates of the out of sample prediction locations in addition to the covariate values.
 
-```{r, warning = FALSE, message = FALSE, fig.width = 7, fig.align = 'center', units = 'in'}
+```{r, warning = FALSE, message = FALSE, fig.height = 4, fig.width = 7, fig.align = 'center', units = 'in'}
 # Do prediction. 
 coords.0 <- as.matrix(hbefElev[, c('Easting', 'Northing')])
 # Approx. run time: 6 min
@@ -657,7 +657,7 @@ ms.priors <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 All that's now left to do is specify the number of threads to use (`n.omp.threads`), the number of MCMC samples (`n.samples`), the amount of samples to discard as burn-in (`n.burn`), the thinning rate (`n.thin`), and arguments to control the display of sampler progress (`verbose`, `n.report`). 
 
 ```{r}
-# Approx. run time:  8 min
+# Approx. run time:  6 min
 out.ms <- msPGOcc(occ.formula = occ.ms.formula, 
                   det.formula = det.ms.formula, 
                   data = hbef2015, 
@@ -692,7 +692,7 @@ ppc.ms.out <- ppcOcc(out.ms, 'chi-squared', group = 1)
 summary(ppc.ms.out)
 ```
 
-The Bayesian p-value for the overall community suggests an adequate model fit, but looking closer at each individual species reveals the model may not be fitting well for every species. We should explore this further in a complete analysis. 
+The Bayesian p-value for the overall community suggests an adequate model fit, but we see clear variation in the values for each individual species. We should explore this further in a complete analysis. 
 
 ## Model selection using WAIC and k-fold cross-validation
 
@@ -809,7 +809,7 @@ n.report <- 100
 Spatially explicit multi-species occupancy models are currently the most computationally intensive models fit by `spOccupancy`. Even for modest sized data sets, we encourage the use of NNGPs instead of full GPs when fitting spatially-explicit models to ease the computational burden of fitting these models. We fit the model with an NNGP below using 5 neighbors and summarize it using the `summary()` function, where we specify that we want to summarize both species and community-level parameters. 
 
 ```{r}
-# Approx. run time: 15 min
+# Approx. run time: 10 min
 out.sp.ms <- spMsPGOcc(occ.formula = occ.ms.sp.formula, 
                        det.formula = det.ms.sp.formula, 
                        data = hbef2015, 
@@ -848,7 +848,6 @@ summary(ppc.sp.ms.out, level = 'both')
 Below we compute the WAIC using `waicOcc()` and compare it to the WAIC for the non-spatial multi-species occupancy model. 
 
 ```{r}
-# Approx run time: < 1 min
 waicOcc(out.sp.ms)
 waicOcc(out.ms)
 ```
@@ -902,7 +901,7 @@ We assume multivariate normal priors for the occurrence ($\bm{\beta}$) and data-
 
 ## Example data sources: Ovenbird occurrence in the White Mountain National Forest
 
-To illustrate an integrated occupancy model, we will use two data sets that come from the White Mountain National Forest (WMNF) in New Hampshire and Maine, USA. Our goal is to model the occurrence of OVEN in the WMNF in 2015. Our first data source is the HBEF data set we have used to illustrate all single data source models. Our second data source comes from the National Ecological Observatory Network (NEON) at Bartlett Experimental Forest [@barnett2019terrestrial; @neonData]. The Bartlett Forest and HBEF both lie within the larger WMNF. Suppose we are interested in OVEN occurrence across the entire WMNF. By leveraging both data sources in a single integrated model, we will expand the range of covariates across which we can make reliable predictions, and may obtain results that are more indicative across the entire region of interest and not just a single data source location [@doser2021ICOM]. In this particular case, there is no overlap between the two data sources (i.e., Bartlett Forest and HBEF do not overlap spatially). However, the integrated occupancy models fit by `spOccupancy` can integrate data sources with no overlap, partial overlap, or complete overlap. 
+To illustrate an integrated occupancy model, we will use two data sets that come from the White Mountain National Forest (WMNF) in New Hampshire and Maine, USA. Our goal is to model the occurrence of OVEN in the WMNF in 2015. Our first data source is the HBEF data set we have used to illustrate all single data source models. Our second data source comes from the National Ecological Observatory Network (NEON) at Bartlett Experimental Forest [@barnett2019terrestrial; @neonData]. The Bartlett Forest and HBEF both lie within the larger WMNF. Suppose we are interested in OVEN occurrence across the entire WMNF. By leveraging both data sources in a single integrated model, we will expand the range of covariates across which we can make reliable predictions, and may obtain results that are more indicative across the entire region of interest and not just a single data source location [@doser2022integrated]. In this particular case, there is no overlap between the two data sources (i.e., Bartlett Forest and HBEF do not overlap spatially). However, the integrated occupancy models fit by `spOccupancy` can integrate data sources with no overlap, partial overlap, or complete overlap. 
 
 The NEON data are provided along with `spOccupancy` in the `neon2015` list. We load the NEON data along with the HBEF data below
 
@@ -912,7 +911,7 @@ data(neon2015)
 str(neon2015) # Look at what's in the new data set.
 ```
 
-Details on the NEON data set are provided in the package documentation as well as in @doser2021ICOM. The NEON data are collected at 80 point count sites in Bartlett Forest using a removal protocol with three time periods, resulting in replicated detection-nondetection data that can be used in an occupancy modeling framework (after reducing counts to binary detection indicators). The `neon2015` list, like the `hbef2015` object, contains the detection-nondetection data for 12 foliage-gleaning bird species (`y`), occurrence covariates stored in `occ.covs`, detection covariates stored in `det.covs`, and the coordinates of the 80 point count locations stored in `coords`. Below we subset the detection-nondetection data in both data sources to solely work with OVEN. 
+Details on the NEON data set are provided in the package documentation as well as in @doser2022integrated. The NEON data are collected at 80 point count sites in Bartlett Forest using a removal protocol with three time periods, resulting in replicated detection-nondetection data that can be used in an occupancy modeling framework (after reducing counts to binary detection indicators). The `neon2015` list, like the `hbef2015` object, contains the detection-nondetection data for 12 foliage-gleaning bird species (`y`), occurrence covariates stored in `occ.covs`, detection covariates stored in `det.covs`, and the coordinates of the 80 point count locations stored in `coords`. Below we subset the detection-nondetection data in both data sources to solely work with OVEN. 
 
 ```{r}
 sp.names <- dimnames(hbef2015$y)[[1]]
@@ -1023,17 +1022,7 @@ n.thin <- 25
 We can now run the integrated occupancy model. Below we set the number of threads used to 1 and print out sampler progress after every 2000th iteration. 
 
 ```{r}
-# TODO: need to figure this out. 
-occ.formula <- occ.formula.int
-det.formula <- det.formula.int
-data <- data.int
-inits <- inits.list
-priors <- prior.list
-n.omp.threads <- 1
-verbose <- TRUE
-n.report <- 2000
-n.chains <- 3
-# Approx. run time: < 30 sec
+# Approx. run time: < 15 sec
 out.int <- intPGOcc(occ.formula = occ.formula.int,
                     det.formula = det.formula.int, 
                     data = data.int,
@@ -1142,7 +1131,7 @@ out.k.fold$k.fold.deviance
 out.int.k.fold.hbef$k.fold.deviance
 ```
 
-Here we see that integration of the two data sources does not improve predictive performance at HBEF alone. We should also do the same approach with the NEON data. We close this section by emphasizing that there are potentially numerous other benefits to data integration than just predictive performance that must be carefully considered when trying to determine if data integration is necessary or not. See @simmonds2020more, the discussion in @doser2021ICOM, and Chapter 10 in AHM2 for more on this topic. 
+Here we see that integration of the two data sources does not improve predictive performance at HBEF alone. We should also do the same approach with the NEON data. We close this section by emphasizing that there are potentially numerous other benefits to data integration than just predictive performance that must be carefully considered when trying to determine if data integration is necessary or not. See @simmonds2020more, the discussion in @doser2022integrated, and Chapter 10 in AHM2 for more on this topic. 
 
 ## Prediction
 
@@ -1155,7 +1144,7 @@ X.0 <- cbind(1, elev.pred, elev.pred^2)
 out.int.pred <- predict(out.int, X.0)
 ```
 
-```{r, warning = FALSE, message = FALSE, fig.width = 7, fig.align = 'center', units = 'in'}
+```{r, warning = FALSE, message = FALSE, fig.height = 4, fig.width = 7, fig.align = 'center', units = 'in'}
 # Producing an SDM for HBEF alone (posterior mean)
 plot.dat <- data.frame(x = hbefElev$Easting, 
                        y = hbefElev$Northing, 
@@ -1239,7 +1228,7 @@ n.batch <- 800
 n.burn <- 10000
 n.thin <- 40
 tuning <- list(phi = .2)
-# Approx. run time: 3 min
+# Approx. run time: 2 min
 out.sp.int <- spIntPGOcc(occ.formula = occ.formula.int, 
                          det.formula = det.formula.int, 
                          data = data.int, 

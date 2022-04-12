@@ -232,8 +232,8 @@ as `vignette("mcmcFactorModels")` for full statistical details.
 
 Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021).
 spOccupancy: An R package for single-species, multi-species, and
-integrated spatial occupancy models. arXiv preprint arxiv:2111.12163.
+integrated spatial occupancy models. [arXiv preprint arxiv:2111.12163](https://arxiv.org/abs/2111.12163).
 
-Doser, J. W., Finley, A. O., Banerjee, S. (2022) Joint species
+Doser, J. W., Finley, A. O., and Banerjee, S. (2022) Joint species
 distribution models with imperfect detection for high-dimensional
-spatial data. In prep.
+spatial data. [arXiv preprint arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
