@@ -518,7 +518,6 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       }
       # Create the random effects corresponding to each 
       # new location
-      # ORDER: ordered by site, then species within site.
       beta.star.sites.0.samples <- matrix(0, n.post,  nrow(X.re))
       for (t in 1:p.occ.re) {
         for (j in 1:nrow(X.re)) {
@@ -556,7 +555,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(obs.D) <- "double"
       storage.mode(J) <- "integer"
       storage.mode(p.occ) <- "integer"
-      storage.mode(X.0.new) <- "double"
+      storage.mode(X.fix) <- "double"
       storage.mode(q) <- "integer"
       storage.mode(beta.samples) <- "double"
       storage.mode(theta.samples) <- "double"
@@ -569,7 +568,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.report) <- "integer"
       storage.mode(n.omp.threads) <- "integer"
 
-      out <- .Call("spPGOccPredict", J, p.occ, X.0.new, q, obs.D, 
+      out <- .Call("spPGOccPredict", J, p.occ, X.fix, q, obs.D, 
           	 obs.pred.D, beta.samples, theta.samples, 
           	 w.samples, beta.star.sites.0.samples, 
           	 n.post, cov.model.indx, n.omp.threads, 
@@ -583,7 +582,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(J) <- "integer"
       storage.mode(p.occ) <- "integer"
       storage.mode(n.neighbors) <- "integer"
-      storage.mode(X.0.new) <- "double"
+      storage.mode(X.fix) <- "double"
       storage.mode(coords.0.new) <- "double"
       storage.mode(q) <- "integer"
       storage.mode(beta.samples) <- "double"
@@ -600,7 +599,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       ptm <- proc.time()
 
       out <- .Call("spPGOccNNGPPredict", coords, J, p.occ, n.neighbors, 
-                   X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
+                   X.fix, coords.0.new, q, nn.indx.0, beta.samples, 
                    theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
                    cov.model.indx, n.omp.threads, verbose, n.report)
     }
@@ -927,6 +926,9 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE,
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
       indx <- which(colnames(X.0) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
+      }
       X.re <- as.matrix(X.0[, indx, drop = FALSE])
       X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
@@ -1531,6 +1533,9 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
       indx <- which(colnames(X.0.new) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
+      }
       # Random effect columns in predicted values
       X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
       # Fixed effects in predicted values
@@ -1600,7 +1605,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(J) <- "integer"
       storage.mode(N) <- "integer"
       storage.mode(p.occ) <- "integer"
-      storage.mode(X.0.new) <- "double"
+      storage.mode(X.fix) <- "double"
       storage.mode(q) <- "integer"
       storage.mode(beta.samples) <- "double"
       storage.mode(theta.samples) <- "double"
@@ -1614,7 +1619,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.omp.threads) <- "integer"
       
 
-      out <- .Call("spMsPGOccPredict", J, N, p.occ, X.0.new, q, obs.D, 
+      out <- .Call("spMsPGOccPredict", J, N, p.occ, X.fix, q, obs.D, 
           	 obs.pred.D, beta.samples, theta.samples, 
           	 w.samples, beta.star.sites.0.samples, 
           	 n.post, cov.model.indx, n.omp.threads, 
@@ -1647,7 +1652,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       ptm <- proc.time()
 
       out <- .Call("spMsPGOccNNGPPredict", coords, J, N, p.occ, n.neighbors, 
-                   X.0.new, coords.0.new, q, nn.indx.0, beta.samples, 
+                   X.fix, coords.0.new, q, nn.indx.0, beta.samples, 
                    theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
                    cov.model.indx, n.omp.threads, verbose, n.report)
 
@@ -2247,6 +2252,9 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
       indx <- which(colnames(X.0.new) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
+      }
       X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
       X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
@@ -2663,6 +2671,9 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
       indx <- which(colnames(X.0.new) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
+      }
       X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
       X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
@@ -2747,9 +2758,9 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.report) <- "integer"
 
       out <- .Call("sfMsPGOccNNGPPredict", coords, J, N, q, p.occ, n.neighbors,
-                   X.0.new, coords.0.new, J.str, nn.indx.0, beta.samples,
+                   X.fix, coords.0.new, J.str, nn.indx.0, beta.samples,
                    theta.samples, lambda.samples, w.samples, 
-          	 beta.star.sites.0.samples, n.post,
+          	   beta.star.sites.0.samples, n.post,
                    cov.model.indx, n.omp.threads, verbose, n.report)
 
     }

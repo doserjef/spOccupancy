@@ -81,7 +81,7 @@ waicOcc <- function(object, ...) {
 
 
       for (j in 1:J) {
-        long.indx <- which(z.long.indx == j)
+        long.indx <- which(z.long.indx == curr.sites[j])
         L <- apply(det.prob.samples[, long.indx, drop = FALSE], 1, prod)  * 
                 psi.samples[, curr.sites[j]] + y.ind[[q]][j] * (1 - psi.samples[, curr.sites[j]])
         elpd[q] <- elpd[q] + log(mean(L))

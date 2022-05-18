@@ -65,7 +65,8 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, and \code{nu.unif}. Occurrence (\code{beta}) and detection 
+    \code{sigma.sq.ig}, \code{sigma.sq.unif}, and \code{nu.unif}. 
+    Occurrence (\code{beta}) and detection 
     (\code{alpha}) regression coefficients are assumed to follow a normal 
     distribution. For \code{beta} hyperparameters of the normal distribution 
     are passed as a list of length two with the first and second elements 
@@ -78,7 +79,10 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
     detection parameters in a given data source. If not specified, prior means 
     are set to 0 and prior variances set to 2.73 for normal priors. The 
     spatial variance parameter, \code{sigma.sq}, is assumed to follow an 
-    inverse-Gamma distribution, whereas the spatial decay \code{phi} and 
+    inverse-Gamma distribution or a uniform distribution (default is 
+    inverse-Gamma). \code{sigma.sq} can also be fixed at its 
+    initial value by setting the prior value to 
+    \code{"fixed"}. The spatial decay \code{phi} and 
     smoothness \code{nu} parameters are assumed to follow Uniform 
     distributions. The hyperparameters of the inverse-Gamma are passed as 
     a vector of length two, with the first and second elements corresponding

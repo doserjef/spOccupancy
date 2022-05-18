@@ -132,11 +132,11 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://arxiv.org/abs/2111.12163) that describes the package in more detail (Doser et al. 2021). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")` for full statistical details.
+The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022a). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")` for full statistical details.
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. [arXiv preprint arxiv:2111.12163](https://arxiv.org/abs/2111.12163).
+Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2022a). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.13897.
 
-Doser, J. W., Finley, A. O., and Banerjee, S. (2022) Joint species distribution models with imperfect detection for high-dimensional spatial data. [arXiv preprint arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
+Doser, J. W., Finley, A. O., and Banerjee, S. (2022b) Joint species distribution models with imperfect detection for high-dimensional spatial data. [arXiv preprint arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
 

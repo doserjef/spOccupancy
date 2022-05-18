@@ -77,7 +77,8 @@ extern "C" {
 		   SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	           SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	           SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r){
+	           SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r, SEXP fixedParams_r, 
+		   SEXP sigmaSqIG_r){
    
     /**********************************************************************
      * Initial constants
@@ -160,6 +161,8 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int *fixedParams = INTEGER(fixedParams_r);
+    int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
 
@@ -366,7 +369,7 @@ extern "C" {
     double *theta = (double *) R_alloc(nTheta, sizeof(double));
     double logPostCurrent = 0.0, logPostCand = 0.0;
     double logDet;  
-    double phiCand = 0.0, nuCand = 0.0;  
+    double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0;  
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP tuningSamples_r; 
@@ -440,36 +443,38 @@ extern "C" {
           kappaOcc[j] = z[j] - 1.0 / 2.0; 
           tmp_J1[j] = kappaOcc[j] - omegaOcc[j] * (w[j] + betaStarSites[j]); 
         } // j
-        /********************************
-         * Compute b.beta
-         *******************************/
-        F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
-        for (j = 0; j < pOcc; j++) {
-          tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
-        } // j 
+        if (!fixedParams[0]) {
+          /********************************
+           * Compute b.beta
+           *******************************/
+          F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
+          for (j = 0; j < pOcc; j++) {
+            tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
+          } // j 
 
-        /********************************
-         * Compute A.beta
-         * *****************************/
-        for(j = 0; j < J; j++){
-          for(i = 0; i < pOcc; i++){
-            tmp_JpOcc[i*J+j] = X[i*J+j]*omegaOcc[j];
+          /********************************
+           * Compute A.beta
+           * *****************************/
+          for(j = 0; j < J; j++){
+            for(i = 0; i < pOcc; i++){
+              tmp_JpOcc[i*J+j] = X[i*J+j]*omegaOcc[j];
+            }
           }
-        }
 
-        F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
-        for (j = 0; j < ppOcc; j++) {
-          tmp_ppOcc[j] += SigmaBetaInv[j]; 
-        } // j
+          F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
+          for (j = 0; j < ppOcc; j++) {
+            tmp_ppOcc[j] += SigmaBetaInv[j]; 
+          } // j
 
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf here failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri here failed\n");}
-        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-	if(info != 0){error("c++ error: dpotrf here failed\n");}
-        mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf here failed\n");}
+          F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri here failed\n");}
+          F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+	  if(info != 0){error("c++ error: dpotrf here failed\n");}
+          mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
+	}
         
         /********************************************************************
          *Update Detection Regression Coefficients
@@ -492,53 +497,59 @@ extern "C" {
             tmp_nObs[i] *= z[zLongIndx[i]]; 
           } // i
         }
+	if (!fixedParams[1]) {
         
-        F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, tmp_nObs, &inc, &zero, tmp_pDet, &inc FCONE); 	  
-        for (j = 0; j < pDet; j++) {
-          tmp_pDet[j] += SigmaAlphaInvMuAlpha[j]; 
-        } // j
+          F77_NAME(dgemv)(ytran, &nObs, &pDet, &one, Xp, &nObs, tmp_nObs, &inc, &zero, tmp_pDet, &inc FCONE); 	  
+          for (j = 0; j < pDet; j++) {
+            tmp_pDet[j] += SigmaAlphaInvMuAlpha[j]; 
+          } // j
 
-        /********************************
-         * Compute A.alpha
-         * *****************************/
-        for (j = 0; j < nObs; j++) {
-          for (i = 0; i < pDet; i++) {
-            tmp_nObspDet[i*nObs + j] = Xp[i * nObs + j] * omegaDet[j] * z[zLongIndx[j]];
-          } // i
-        } // j
+          /********************************
+           * Compute A.alpha
+           * *****************************/
+          for (j = 0; j < nObs; j++) {
+            for (i = 0; i < pDet; i++) {
+              tmp_nObspDet[i*nObs + j] = Xp[i * nObs + j] * omegaDet[j] * z[zLongIndx[j]];
+            } // i
+          } // j
 
-        F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet FCONE FCONE);
+          F77_NAME(dgemm)(ytran, ntran, &pDet, &pDet, &nObs, &one, Xp, &nObs, tmp_nObspDet, &nObs, &zero, tmp_ppDet, &pDet FCONE FCONE);
 
-        for (j = 0; j < ppDet; j++) {
-          tmp_ppDet[j] += SigmaAlphaInv[j]; 
-        } // j
+          for (j = 0; j < ppDet; j++) {
+            tmp_ppDet[j] += SigmaAlphaInv[j]; 
+          } // j
 
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
-        F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf here failed\n");}
-        mvrnorm(alpha, tmp_pDet2, tmp_ppDet, pDet);
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
+          F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
+          F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf here failed\n");}
+          mvrnorm(alpha, tmp_pDet2, tmp_ppDet, pDet);
+	}
 
         /********************************************************************
          *Update Occupancy random effects variance
          *******************************************************************/
-        for (l = 0; l < pOccRE; l++) {
-          tmp_0 = F77_NAME(ddot)(&nOccRELong[l], &betaStar[betaStarStart[l]], &inc, &betaStar[betaStarStart[l]], &inc); 
-          tmp_0 *= 0.5; 
-          sigmaSqPsi[l] = rigamma(sigmaSqPsiA[l] + nOccRELong[l] / 2.0, sigmaSqPsiB[l] + tmp_0); 
-        }
+	if (!fixedParams[4]) {
+          for (l = 0; l < pOccRE; l++) {
+            tmp_0 = F77_NAME(ddot)(&nOccRELong[l], &betaStar[betaStarStart[l]], &inc, &betaStar[betaStarStart[l]], &inc); 
+            tmp_0 *= 0.5; 
+            sigmaSqPsi[l] = rigamma(sigmaSqPsiA[l] + nOccRELong[l] / 2.0, sigmaSqPsiB[l] + tmp_0); 
+          }
+	}
 
         /********************************************************************
          *Update Detection random effects variance
          *******************************************************************/
-        for (l = 0; l < pDetRE; l++) {
-          tmp_0 = F77_NAME(ddot)(&nDetRELong[l], &alphaStar[alphaStarStart[l]], &inc, &alphaStar[alphaStarStart[l]], &inc); 
-          tmp_0 *= 0.5; 
-          sigmaSqP[l] = rigamma(sigmaSqPA[l] + nDetRELong[l] / 2.0, sigmaSqPB[l] + tmp_0); 
-        }
+	if (!fixedParams[5]) {
+          for (l = 0; l < pDetRE; l++) {
+            tmp_0 = F77_NAME(ddot)(&nDetRELong[l], &alphaStar[alphaStarStart[l]], &inc, &alphaStar[alphaStarStart[l]], &inc); 
+            tmp_0 *= 0.5; 
+            sigmaSqP[l] = rigamma(sigmaSqPA[l] + nDetRELong[l] / 2.0, sigmaSqPB[l] + tmp_0); 
+          }
+	}
 
         /********************************************************************
          *Update Occupancy random effects
@@ -651,103 +662,130 @@ extern "C" {
         /********************************************************************
          *Update sigmaSq
          *******************************************************************/
+	if (!fixedParams[3]) {
+          if (sigmaSqIG) {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
 #endif
-         for (j = 0; j < J; j++){
-           if(nnIndxLU[J+j] > 0){
-             e = 0;
-             for(i = 0; i < nnIndxLU[J+j]; i++){
-               e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
-             }
-             b = w[j] - e;
-           }else{
-             b = w[j];
-           }	
-           a += b*b/F[j];
-         }
+            for (j = 0; j < J; j++){
+              if(nnIndxLU[J+j] > 0){
+                e = 0;
+                for(i = 0; i < nnIndxLU[J+j]; i++){
+                  e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
+                }
+                b = w[j] - e;
+              }else{
+                b = w[j];
+              }	
+              a += b*b/F[j];
+            }
 
-	 theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+	    theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+	  }
+	}
 
         /********************************************************************
          *Update phi (and nu if matern)
          *******************************************************************/
         // Current
-        if (corName == "matern"){ nu = theta[nuIndx]; }
-        updateBF1RE(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], theta[phiIndx], nu, covModel, bk, nuB);
+	if (!fixedParams[2] || !fixedParams[3]) {
+          if (corName == "matern"){ nu = theta[nuIndx]; }
+          updateBF1RE(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], 
+		      theta[phiIndx], nu, covModel, bk, nuB);
+	}
         
         a = 0;
         logDet = 0;
 
+        if (!fixedParams[2]) {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
 #endif
-        for (j = 0; j < J; j++){
-          if (nnIndxLU[J+j] > 0){
-            e = 0;
-            for (i = 0; i < nnIndxLU[J+j]; i++){
-              e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
-            }
-            b = w[j] - e;
-          } else{
-            b = w[j];
-          }	
-          a += b*b/F[j];
-          logDet += log(F[j]);
-        }
-      
-        logPostCurrent = -0.5*logDet - 0.5*a;
-        logPostCurrent += log(theta[phiIndx] - phiA) + log(phiB - theta[phiIndx]); 
-        if(corName == "matern"){
-        	logPostCurrent += log(theta[nuIndx] - nuA) + log(nuB - theta[nuIndx]); 
-        }
-        
-        // Candidate
-        phiCand = logitInv(rnorm(logit(theta[phiIndx], phiA, phiB), exp(tuning[phiIndx])), phiA, phiB);
-        if (corName == "matern"){
-      	  nuCand = logitInv(rnorm(logit(theta[nuIndx], nuA, nuB), exp(tuning[nuIndx])), nuA, nuB);
-        }
-      
-        updateBF1RE(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
-      
-        a = 0;
-        logDet = 0;
-      
-#ifdef _OPENMP
-#pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
-#endif
-        for (j = 0; j < J; j++){
-          if (nnIndxLU[J+j] > 0){
-            e = 0;
-            for (i = 0; i < nnIndxLU[J+j]; i++){
-              e += BCand[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
-            }
-            b = w[j] - e;
-          } else{
-            b = w[j];
+          for (j = 0; j < J; j++){
+            if (nnIndxLU[J+j] > 0){
+              e = 0;
+              for (i = 0; i < nnIndxLU[J+j]; i++){
+                e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
+              }
+              b = w[j] - e;
+            } else{
+              b = w[j];
             }	
-            a += b*b/FCand[j];
-            logDet += log(FCand[j]);
-        }
-        
-        logPostCand = -0.5*logDet - 0.5*a;      
-        logPostCand += log(phiCand - phiA) + log(phiB - phiCand); 
-        if (corName == "matern"){
-          logPostCand += log(nuCand - nuA) + log(nuB - nuCand); 
-        }
-
-        if (runif(0.0,1.0) <= exp(logPostCand - logPostCurrent)) {
-
-          std::swap(BCand, B);
-          std::swap(FCand, F);
-          
-          theta[phiIndx] = phiCand;
-          accept[phiIndx]++;
-          if(corName == "matern"){
-            theta[nuIndx] = nuCand; 
-            accept[nuIndx]++; 
+            a += b*b/F[j];
+            logDet += log(F[j]);
           }
-        }
+      
+          logPostCurrent = -0.5*logDet - 0.5*a;
+          logPostCurrent += log(theta[phiIndx] - phiA) + log(phiB - theta[phiIndx]); 
+          if(corName == "matern"){
+          	logPostCurrent += log(theta[nuIndx] - nuA) + log(nuB - theta[nuIndx]); 
+          }
+	  if (sigmaSqIG == 0) {
+            logPostCurrent += log(theta[sigmaSqIndx] - sigmaSqA) + log(sigmaSqB - theta[sigmaSqIndx]);
+	  }
+          
+          // Candidate
+          phiCand = logitInv(rnorm(logit(theta[phiIndx], phiA, phiB), exp(tuning[phiIndx])), phiA, phiB);
+          if (corName == "matern"){
+      	    nuCand = logitInv(rnorm(logit(theta[nuIndx], nuA, nuB), exp(tuning[nuIndx])), nuA, nuB);
+          }
+	  if (sigmaSqIG == 0) {
+	    sigmaSqCand = logitInv(rnorm(logit(theta[sigmaSqIndx], sigmaSqA, sigmaSqB), 
+	  			 exp(tuning[sigmaSqIndx])), sigmaSqA, sigmaSqB); 
+	  }
+     
+	  if (sigmaSqIG) { 
+          updateBF1RE(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
+	  } else {
+            updateBF1RE(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, bk, nuB);
+	  }
+      
+          a = 0;
+          logDet = 0;
+      
+#ifdef _OPENMP
+#pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
+#endif
+          for (j = 0; j < J; j++){
+            if (nnIndxLU[J+j] > 0){
+              e = 0;
+              for (i = 0; i < nnIndxLU[J+j]; i++){
+                e += BCand[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
+              }
+              b = w[j] - e;
+            } else{
+              b = w[j];
+              }	
+              a += b*b/FCand[j];
+              logDet += log(FCand[j]);
+          }
+          
+          logPostCand = -0.5*logDet - 0.5*a;      
+          logPostCand += log(phiCand - phiA) + log(phiB - phiCand); 
+          if (corName == "matern"){
+            logPostCand += log(nuCand - nuA) + log(nuB - nuCand); 
+          }
+	  if (sigmaSqIG == 0) {
+            logPostCand += log(sigmaSqCand - sigmaSqA) + log(sigmaSqB - sigmaSqCand);
+	  }
+
+          if (runif(0.0,1.0) <= exp(logPostCand - logPostCurrent)) {
+
+            std::swap(BCand, B);
+            std::swap(FCand, F);
+            
+            theta[phiIndx] = phiCand;
+            accept[phiIndx]++;
+            if(corName == "matern"){
+              theta[nuIndx] = nuCand; 
+              accept[nuIndx]++; 
+            }
+	    if (sigmaSqIG == 0) {
+              theta[sigmaSqIndx] = sigmaSqCand;
+	      accept[sigmaSqIndx]++;
+	    }
+          }
+	}
 
         /********************************************************************
          *Update Latent Occupancy
@@ -845,8 +883,14 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tAcceptance\tTuning\n");	  
-	  Rprintf("\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  Rprintf("\tParameter\tAcceptance\tTuning\n");	  
+	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  if (corName == "matern") {
+	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
+	  }
+	  if (sigmaSqIG == 0) {
+	    Rprintf("\tsigmaSq\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + sigmaSqIndx], exp(tuning[sigmaSqIndx]));
+	  }
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();

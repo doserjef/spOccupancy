@@ -1,3 +1,11 @@
+# spOccupancy 0.3.2
+
++ Fixed a bug in `waicOcc()` for integrated models (`intPGOcc()` and `spIntPGOcc()`) that sometimes resulted in incorrect estimates of WAIC for data sets other than the first data set. We strongly encourage users who have used `waicOcc()` with an integrated model to rerun their analyses using v0.3.2. 
++ Fixed a bug introduced in v0.3.0 that sometimes resulted in incorrect predictions from a spatially-explicit model with non-spatial random effects in the occurrence portion of the model. We strongly encourage users who have used `predict()` on a spatially-explicit model with non-spatial random effects in the occurrence portion of the model to rerun their analyses using v0.3.2.
++ Users can now specify a uniform prior on the spatial variance parameter instead of an inverse-Gamma prior. We also allow users to fix the value of the spatial variance parameter at the initial value. See the reference pages of spatially-explicit functions for more details. 
++ Slight changes in the information printed when fitting spatially-explicit models. 
++ Removed dependency on spBayes to pass CRAN checks. 
+
 # spOccupancy 0.3.1
 
 + Fixed two small problems with `intPGOcc()` and `spIntPGOcc()` that were accidentally introduced in v0.3.0. See [this Github issue](https://github.com/doserjef/spOccupancy/issues/8) for more details.

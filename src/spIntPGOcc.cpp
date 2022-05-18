@@ -29,7 +29,8 @@ extern "C" {
 		  SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
 		  SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r){
+		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r, 
+		  SEXP fixedSigmaSq_r, SEXP sigmaSqIG_r){
    
     /**********************************************************************
      * Initial constants
@@ -99,6 +100,8 @@ extern "C" {
     int stNObs = 0; 
     int stAlpha = 0; 
     int thinIndx = 0; 
+    int fixedSigmaSq = INTEGER(fixedSigmaSq_r)[0];
+    int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int sPost = 0; 
 
 #ifdef _OPENMP
@@ -264,7 +267,7 @@ extern "C" {
     double *accept = (double *) R_alloc(nTheta, sizeof(double)); zeros(accept, nTheta); 
     double *theta = (double *) R_alloc(nTheta, sizeof(double));
     double logMHRatio, logPostCurr = 0.0, logPostCand = 0.0, detCand = 0.0, detCurr = 0.0;
-    double phiCand = 0.0, nuCand = 0.0;  
+    double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0;
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP tuningSamples_r; 
@@ -274,6 +277,7 @@ extern "C" {
     // Initiate spatial values
     theta[sigmaSqIndx] = REAL(sigmaSqStarting_r)[0]; 
     double phi = REAL(phiStarting_r)[0]; 
+    double sigmaSq = theta[sigmaSqIndx]; 
     theta[phiIndx] = phi; 
     if (corName == "matern") {
       theta[nuIndx] = nu; 
@@ -284,7 +288,9 @@ extern "C" {
     double *tmp_JD2 = (double *) R_alloc(J, sizeof(double));
     double *R = (double *) R_alloc(JJ, sizeof(double)); 
     // Get spatial correlation matrix
-    spCorLT(coordsD, J, theta, corName, R); 
+    if (sigmaSqIG) {
+      spCorLT(coordsD, J, theta, corName, R); 
+    }
     logPostCurr = R_NegInf; 
     // Get spatial covariance matrix 
     spCovLT(coordsD, J, theta, corName, C); 
@@ -435,23 +441,27 @@ extern "C" {
 	/********************************************************************
          *Update sigmaSq
          *******************************************************************/
-	// Get inverse correlation matrix in reverse from inverse covariance matrix
-	// Remember: C currently contains the inverse of covariance matrix. 
-	fillUTri(C, J); 
-	for (j = 0; j < JJ; j++) {
-          R[j] = theta[sigmaSqIndx] * C[j]; 
-	} // j
-	// Compute t(w) %*% R^-1 %*% w / 
-	// t(w) %*% R^-1
-	// Probably a better way to do this operation. 
-	for (j = 0; j < J; j++) {
-          wTRInv[j] = F77_NAME(ddot)(&J, &R[j], &J, w, &inc);  
-        } // j
-	bSigmaSqPost = F77_NAME(ddot)(&J, wTRInv, &inc, w, &inc); 
-	bSigmaSqPost /= 2.0; 
-	bSigmaSqPost += sigmaSqB; 
-	// Rprintf("bSigmaSqPost: %f\n", bSigmaSqPost); 
-	theta[sigmaSqIndx] = rigamma(aSigmaSqPost, bSigmaSqPost); 
+	if (!fixedSigmaSq) {
+          if (sigmaSqIG) {
+	    // Get inverse correlation matrix in reverse from inverse covariance matrix
+	    // Remember: C currently contains the inverse of covariance matrix. 
+	    fillUTri(C, J); 
+	    for (j = 0; j < JJ; j++) {
+              R[j] = theta[sigmaSqIndx] * C[j]; 
+	    } // j
+	    // Compute t(w) %*% R^-1 %*% w / 
+	    // t(w) %*% R^-1
+	    // Probably a better way to do this operation. 
+	    for (j = 0; j < J; j++) {
+              wTRInv[j] = F77_NAME(ddot)(&J, &R[j], &J, w, &inc);  
+            } // j
+	    bSigmaSqPost = F77_NAME(ddot)(&J, wTRInv, &inc, w, &inc); 
+	    bSigmaSqPost /= 2.0; 
+	    bSigmaSqPost += sigmaSqB; 
+	    // Rprintf("bSigmaSqPost: %f\n", bSigmaSqPost); 
+	    theta[sigmaSqIndx] = rigamma(aSigmaSqPost, bSigmaSqPost); 
+	  }
+	}
 
         /********************************************************************
          *Update phi (and nu if matern)
@@ -464,6 +474,12 @@ extern "C" {
 	phi = theta[phiIndx]; 
 	phiCand = logitInv(rnorm(logit(phi, phiA, phiB), exp(tuning[phiIndx])), phiA, phiB); 
 	theta[phiIndx] = phiCand; 
+	if (sigmaSqIG == 0) {
+	  sigmaSq = theta[sigmaSqIndx]; 
+	  sigmaSqCand = logitInv(rnorm(logit(sigmaSq, sigmaSqA, sigmaSqB), 
+				 exp(tuning[sigmaSqIndx])), sigmaSqA, sigmaSqB); 
+	  theta[sigmaSqIndx] = sigmaSqCand; 
+	}
 
 	// Construct covariance matrix (stored in C). 
 	spCovLT(coordsD, J, theta, corName, CCand); 
@@ -490,6 +506,9 @@ extern "C" {
         if (corName == "matern"){
           logPostCand += log(nuCand - nuA) + log(nuB - nuCand); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCand += log(sigmaSqCand - sigmaSqA) + log(sigmaSqB - sigmaSqCand);
+	}
 
         /********************************
          * Current
@@ -498,6 +517,9 @@ extern "C" {
 	  theta[nuIndx] = nu; 
 	}
 	theta[phiIndx] = phi; 
+	if (sigmaSqIG == 0) {
+          theta[sigmaSqIndx] = sigmaSq;
+	}
 	// Construct covariance matrix (stored in C). 
 	spCovLT(coordsD, J, theta, corName, C); 
         detCurr = 0.0;
@@ -516,6 +538,9 @@ extern "C" {
         if (corName == "matern"){
           logPostCurr += log(nu - nuA) + log(nuB - nu); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCurr += log(sigmaSq - sigmaSqA) + log(sigmaSqB - sigmaSq);
+	}
 
 	// MH Accept/Reject
 	logMHRatio = logPostCand - logPostCurr; 
@@ -526,6 +551,10 @@ extern "C" {
             theta[nuIndx] = nuCand; 
             accept[nuIndx]++; 
           }
+	  if (sigmaSqIG == 0) {
+            theta[sigmaSqIndx] = sigmaSqCand;
+	    accept[sigmaSqIndx]++;
+	  }
 	  F77_NAME(dcopy)(&JJ, CCand, &inc, C, &inc); 
         }
 
@@ -631,8 +660,14 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tAcceptance\tTuning\n");	  
-	  Rprintf("\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  Rprintf("\tParameter\tAcceptance\tTuning\n");	  
+	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  if (corName == "matern") {
+	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
+	  }
+	  if (sigmaSqIG == 0) {
+	    Rprintf("\tsigmaSq\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + sigmaSqIndx], exp(tuning[sigmaSqIndx]));
+	  }
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();

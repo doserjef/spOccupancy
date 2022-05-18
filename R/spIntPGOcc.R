@@ -407,16 +407,44 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
 
     # sigma.sq -----------------------------
-    if ("sigma.sq.ig" %in% names(priors)) {
-      if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-        stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+    fixed.sigma.sq <- FALSE
+    # Check if both an ig and uniform prior are specified
+    if (("sigma.sq.ig" %in% names(priors)) & ("sigma.sq.unif" %in% names(priors))) {
+      stop("error: cannot specify both an IG and a uniform prior for sigma.sq")
+    }
+    if ("sigma.sq.ig" %in% names(priors)) { # inverse-gamma prior.
+      sigma.sq.ig <- TRUE
+      if (priors$sigma.sq.ig[1] == 'fixed') {
+        fixed.sigma.sq <- TRUE
+        sigma.sq.a <- 1
+        sigma.sq.b <- 1
+      } else {
+        if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+          stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+        }
+        sigma.sq.a <- priors$sigma.sq.ig[1]
+        sigma.sq.b <- priors$sigma.sq.ig[2]
       }
-      sigma.sq.a <- priors$sigma.sq.ig[1]
-      sigma.sq.b <- priors$sigma.sq.ig[2]
+    } else if ("sigma.sq.unif" %in% names(priors)) { # uniform prior
+      if (priors$sigma.sq.unif[1] == 'fixed') {
+        sigma.sq.ig <- TRUE # This just makes the C++ side a bit easier. 
+        fixed.sigma.sq <- TRUE 
+        sigma.sq.a <- 1
+        sigma.sq.b <- 1
+      } else {
+        sigma.sq.ig <- FALSE
+        if (!is.vector(priors$sigma.sq.unif) | !is.atomic(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
+          stop("error: sigma.sq.unif must be a vector of length 2 with elements corresponding to sigma.sq's lower and upper bounds")
+        }
+        sigma.sq.a <- priors$sigma.sq.unif[1]
+        sigma.sq.b <- priors$sigma.sq.unif[2]
+      }
+       
     } else {
       if (verbose) {
-        message("No prior specified for sigma.sq.ig.\nSetting the shape parameter to 2 and scale parameter to 1.\n")
+        message("No prior specified for sigma.sq.\nUsing an inverse-Gamma prior with the shape parameter set to 2 and scale parameter to 1.\n")
       }
+      sigma.sq.ig <- TRUE
       sigma.sq.a <- 2
       sigma.sq.b <- 1
     }
@@ -536,7 +564,11 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         stop("error: initial values for sigma.sq must be of length 1")
       }
     } else {
-      sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+      if (sigma.sq.ig) {
+        sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+      } else {
+        sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+      }
       if (verbose) {
         message("sigma.sq is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
       }
@@ -607,6 +639,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (cov.model == 'matern') {
         nu.tuning <- 1
       }
+      if (!sigma.sq.ig) {
+        sigma.sq.tuning <- 1
+      }
     } else {
       names(tuning) <- tolower(names(tuning))
       # phi ---------------------------
@@ -625,6 +660,16 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         nu.tuning <- tuning$nu
         if (length(nu.tuning) != 1) {
           stop("error: nu tuning must be a single value")
+        } 
+      }
+      if (!sigma.sq.ig) {
+        # sigma.sq --------------------------
+        if(!"sigma.sq" %in% names(tuning)) {
+          stop("error: sigma.sq must be specified in tuning value list")
+        }
+        sigma.sq.tuning <- tuning$sigma.sq
+        if (length(sigma.sq.tuning) != 1) {
+          stop("error: sigma.sq tuning must be a single value")
         } 
       }
     }
@@ -667,6 +712,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(phi.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    storage.mode(sigma.sq.ig) <- "integer"
     storage.mode(nu.a) <- "double"
     storage.mode(nu.b) <- "double"
     storage.mode(tuning.c) <- "double"
@@ -681,6 +727,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(n.thin) <- "integer"
     storage.mode(curr.chain) <- "integer"
     storage.mode(n.chains) <- "integer"
+    storage.mode(fixed.sigma.sq) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
 				 to = n.samples, 
 				 by = as.integer(n.thin)))
@@ -692,7 +739,13 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if ((i > 1) & (!fix.inits)) {
         beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
         alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-        sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	if (!fixed.sigma.sq) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+	  }
+	}
         phi.inits <- runif(1, phi.a, phi.b)
 	if (cov.model == 'matern') {
           nu.inits <- runif(1, nu.a, nu.b)
@@ -709,7 +762,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		            nu.a, nu.b, tuning.c, cov.model.indx, 
 		            n.batch, batch.length, accept.rate,  
 		            n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples, 
-			    curr.chain, n.chains)
+			    curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
       curr.chain <- curr.chain + 1
     }
     # Calculate R-Hat ---------------
@@ -722,9 +775,15 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$theta.samples)))), 
-			            autoburnin = FALSE)$psrf[, 2]
+      if (fixed.sigma.sq) {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples)))), 
+        			      autoburnin = FALSE)$psrf[, 2]
+      } else {
+        out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2])
+      }
 
     } else {
       out$rhat$beta <- rep(NA, p.occ)
@@ -933,7 +992,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		         nu.a, nu.b, tuning.c, cov.model.indx, 
 		         n.batch, batch.length, accept.rate,  
 		         n.omp.threads.fit, verbose.fit, n.report, n.burn, n.thin, n.post.samples, 
-			 curr.chain, n.chains)
+			 curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
 
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
@@ -1052,6 +1111,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    storage.mode(sigma.sq.ig) <- "integer"
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1071,6 +1131,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(n.thin) <- "integer"
     storage.mode(curr.chain) <- "integer"
     storage.mode(n.chains) <- "integer"
+    storage.mode(fixed.sigma.sq) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
 				 to = n.samples, 
 				 by = as.integer(n.thin)))
@@ -1082,7 +1143,13 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if ((i > 1) & (!fix.inits)) {
         beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
         alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-        sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	if (!fixed.sigma.sq) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+	  }
+	}
         phi.inits <- runif(1, phi.a, phi.b)
 	if (cov.model == 'matern') {
           nu.inits <- runif(1, nu.a, nu.b)
@@ -1100,7 +1167,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		            nu.a, nu.b, tuning.c, cov.model.indx,
 		            n.batch, batch.length, accept.rate,  
 		            n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples, 
-			    curr.chain, n.chains)
+			    curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
       curr.chain <- curr.chain + 1
     }
     # Calculate R-Hat ---------------
@@ -1113,9 +1180,15 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$theta.samples)))), 
-			            autoburnin = FALSE)$psrf[, 2]
+      if (fixed.sigma.sq) {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples)))), 
+        			      autoburnin = FALSE)$psrf[, 2]
+      } else {
+        out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2])
+      }
 
     } else {
       out$rhat$beta <- rep(NA, p.occ)
@@ -1355,7 +1428,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		         nu.a, nu.b, tuning.c, cov.model.indx,
 		         n.batch, batch.length, accept.rate,  
 		         n.omp.threads.fit, verbose.fit, n.report, n.burn, n.thin, n.post.samples, 
-			 curr.chain, n.chains)
+			 curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
 
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names

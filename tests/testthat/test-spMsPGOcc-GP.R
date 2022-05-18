@@ -5989,3 +5989,67 @@ test_that("posterior predictive checks work for msPGOcc", {
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
 })
 
+# Model with fixed sigma.sq -----------------------------------------------
+test_that("spMsPGOcc works with fixed sigma.sq", {
+  out <- spMsPGOcc(occ.formula = occ.formula, 
+                   det.formula = det.formula, 
+                   data = data.list,
+                   inits = inits.list, 
+                   n.batch = n.batch, 
+                   batch.length = batch.length, 
+                   accept.rate = 0.43, 
+                   priors = list(sigma.sq.ig = "fixed"), 
+                   cov.model = "exponential", 
+                   tuning = list(phi = 0.3, nu = 0.2), 
+                   n.omp.threads = 1, 
+                   verbose = FALSE, 
+                   NNGP = FALSE, 
+                   n.neighbors = 5, 
+                   search.type = 'cb', 
+                   n.report = 10, 
+                   n.burn = 100, 
+                   n.thin = 1, 
+		   n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+  expect_equal(length(unique(out$theta.samples[, 1])), 1)
+})
+
+# Uniform sigma sq --------------------------------------------------------
+test_that("spMsPGOcc works with uniform prior on sigma.sq", {
+  prior.list <- list(sigma.sq.unif = list(a = 0, b = 5),
+                     nu.unif = list(a = 0.1, b = 4))
+  tuning.list <- list(phi = 0.5, nu = 0.6, sigma.sq = 0.7)
+  out <- spMsPGOcc(occ.formula = occ.formula,
+	         det.formula = det.formula,
+	         data = data.list,
+	         n.batch = 40,
+	         batch.length = batch.length,
+	         cov.model = "exponential",
+		 priors = prior.list,
+	         tuning = tuning.list,
+	         NNGP = FALSE,
+		 verbose = FALSE,
+	         n.neighbors = 5,
+	         search.type = 'cb',
+	         n.report = 10,
+	         n.burn = 100,
+	         n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+  out <- spMsPGOcc(occ.formula = occ.formula,
+	         det.formula = det.formula,
+	         data = data.list,
+	         n.batch = 40,
+	         batch.length = batch.length,
+	         cov.model = "matern",
+		 priors = prior.list,
+	         tuning = tuning.list,
+	         NNGP = FALSE,
+		 verbose = FALSE,
+	         n.neighbors = 5,
+	         search.type = 'cb',
+	         n.report = 10,
+	         n.burn = 100,
+	         n.chains = 1)
+  expect_s3_class(out, "spMsPGOcc")
+})
+

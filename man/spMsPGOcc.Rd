@@ -62,7 +62,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{phi.unif}, \code{sigma.sq.ig}, 
-  \code{nu.unif}, \code{sigma.sq.psi}, \code{sigma.sq.p}. 
+  \code{sigma.sq.unif}, \code{nu.unif}, \code{sigma.sq.psi}, \code{sigma.sq.p}. 
   Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
@@ -80,8 +80,10 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   coefficients to be estimated or a single value if priors are the same for all 
   parameters. If not specified, prior shape and scale 
   parameters are set to 0.1. The species-specific spatial variance parameter, 
-  \code{sigma.sq}, is assumed to follow an inverse-Gamma distribution, whereas
-  the spatial decay \code{phi} and smoothness \code{nu} parameters are assumed
+  \code{sigma.sq}, is assumed to follow an inverse-Gamma distribution or a uniform
+  distribution (default is inverse-Gamma). \code{sigma.sq} of all species
+  can also be fixed at its initial value by setting the prior value to \code{"fixed"}.
+  The spatial decay \code{phi} and smoothness \code{nu} parameters are assumed
   to follow Uniform distributions. The hyperparameters of the inverse-Gamma are
   passed as a list of length two, with the list elements being vectors of length 
   N corresponding to the species-specific shape and scale parameters, respectively, 

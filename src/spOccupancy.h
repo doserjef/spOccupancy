@@ -31,7 +31,8 @@ extern "C" {
 	       SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	       SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	       SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	       SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r);
+	       SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r, SEXP fixedSigmaSq_r, 
+	       SEXP sigmaSqIG_r);
 
   SEXP spPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, SEXP XpRE_r,
 	           SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
@@ -49,7 +50,8 @@ extern "C" {
 		   SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 	           SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	           SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r);
+	           SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r, SEXP fixedParams_r, 
+		   SEXP sigmaSqIG_r);
 
   SEXP spPGOccPredict(SEXP J_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
@@ -103,7 +105,7 @@ extern "C" {
 		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		 SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		 SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		 SEXP samplesInfo_r, SEXP chainInfo_r);
+		 SEXP samplesInfo_r, SEXP chainInfo_r, SEXP fixedSigmaSq_r);
  
   SEXP spMsPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, 
 		     SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, SEXP K_r, 
@@ -126,7 +128,7 @@ extern "C" {
 		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		     SEXP samplesInfo_r, SEXP chainInfo_r);
+		     SEXP samplesInfo_r, SEXP chainInfo_r, SEXP fixedSigmaSq_r);
 
   SEXP spMsPGOccPredict(SEXP J_r, SEXP N_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
 		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
@@ -163,7 +165,8 @@ extern "C" {
 		  SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, 
 		  SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
+		  SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r, 
+		  SEXP fixedSigmaSq_r, SEXP sigmaSqIG_r);
 
   SEXP spIntPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, 
 		      SEXP pOcc_r, SEXP pDet_r, SEXP pDetLong_r, 
@@ -178,7 +181,8 @@ extern "C" {
 		      SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, SEXP covModel_r, 
 		      SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r);
+      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r, 
+		      SEXP fixedSigmaSq_r, SEXP sigmaSqIG_r);
 
   SEXP lfMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
 		 SEXP consts_r, SEXP K_r,

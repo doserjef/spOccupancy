@@ -40,25 +40,25 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
 
 ```{r}
 library(spOccupancy)
-set.seed(100)
+set.seed(1000)
 J.x <- 20
 J.y <- 20
 # Total number of sites
 (J <- J.x * J.y)
 # Number of replicates at each site
-n.rep <- sample(1:4, J, replace = TRUE)
+n.rep <- sample(2:4, J, replace = TRUE)
 # Intercept and covariate effect on occurrence
-beta <- c(0, 0.7)
+beta <- c(-0.5, -0.2)
 # Intercept and covariate effect on detection
-alpha <- c(-0.5, 0.2)
+alpha <- c(0.9, -0.3)
 # Single random intercept on occurrence
-psi.RE <- list(levels = 10, sigma.sq.psi = 2.5)
+psi.RE <- list(levels = 20, sigma.sq.psi = 0.75)
 # Single random intercept on detection 
-p.RE <- list(levels = 25, sigma.sq.p = 1.5)
+p.RE <- list(levels = 25, sigma.sq.p = 1.1)
 # Spatial range
-phi <- 3 / .7
+phi <- 3 / .3
 # Spatial variance
-sigma.sq <- 2
+sigma.sq <- 1
 # Simulate the data
 dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, 
               alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, 
@@ -66,7 +66,7 @@ dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta,
               cov.model = 'spherical')
 ```
 
-For the occurrence random effect, we assumed there were 10 levels and a variance of 2.5. For example, we could suppose these levels corresponded to different administrative units across the 225 sites we simulated, and we want to account for potential correlation between sites within each of the units. For the detection random effect, we assumed there were 25 levels and a variance of 1.5. For example, we could suppose there were 25 different observers that collected the data, and we wanted to account for variation in observer skill (and thus detection probability) across the different observers.
+For the occurrence random effect, we assumed there were 20 levels and a variance of 0.75. For example, we could suppose these levels corresponded to different administrative units across the 225 sites we simulated, and we want to account for potential correlation between sites within each of the units. For the detection random effect, we assumed there were 25 levels and a variance of 1.1. For example, we could suppose there were 25 different observers that collected the data, and we wanted to account for variation in observer skill (and thus detection probability) across the different observers.
 
 Next, let's explore the simulated data a bit before we move on (plotting code adapted from @hooten2019bringing). 
 
@@ -110,9 +110,9 @@ det.covs <- list(det.cov.1 = X.p[, , 2],
                  det.factor.1 = X.p.re[, , 1])
 # Package into a list for spOccupancy
 data.list <- list(y = y, 
-		  occ.covs = occ.covs, 
-		  det.covs = det.covs, 
-		  coords = coords)
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs, 
+                  coords = coords)
 # Take a look at the data structure.
 str(data.list)
 # Take a look at the occurrence covariates
@@ -123,24 +123,26 @@ One important thing to note about including random effects in `spOccupancy` is t
 
 # Fit the model using `spPGOcc()`
 
-We now fit the model using `spPGOcc()`. Random effects are included in the model formulas using standard `lme4` notation. Below we run a spatially-explicit occupancy model for 400 batches each of length 25 (10000 total MCMC iterations) using a spherical correlation function. We use the default intial values, priors, and tuning values that `spOccupancy` provides. We use a Nearest Neighbor Gaussian Process with 5 neighbors and the spherical spatial correlation function. 
+We now fit the model using `spPGOcc()`. Random effects are included in the model formulas using standard `lme4` notation. Below we run a spatially-explicit occupancy model for 400 batches each of length 25 (10000 total MCMC iterations). We use the default tuning and prior values that `spOccupancy` provides. We use a Nearest Neighbor Gaussian Process with 10 neighbors and the spherical spatial correlation function. 
 
 ```{r}
-n.batch <- 400
-batch.length <- 25
+inits <- list(alpha = 0, beta = 0, sigma.sq.psi = 0.5, 
+	      sigma.sq.p = 0.5, z = apply(dat$y, 1, max, na.rm = TRUE), 
+	      sigma.sq = 1, phi = 3 / 0.5)
 out.full <- spPGOcc(occ.formula = ~ occ.cov.1 + (1 | occ.factor.1), 
                     det.formula = ~ det.cov.1 + (1 | det.factor.1), 
                     data = data.list, 
-                    n.batch = n.batch, 
-                    batch.length = batch.length, 
+                    n.batch = 400, 
+                    batch.length = 25, 
+                    inits = inits, 
                     accept.rate = 0.43, 
                     cov.model = "spherical", 
                     NNGP = TRUE, 
-                    n.neighbors = 5,
+                    n.neighbors = 10,
                     n.report = 100, 
-                    n.burn = 2000, 
-                    n.thin = 4, 
-                    n.chains = 2) 
+                    n.burn = 5000, 
+                    n.thin = 5, 
+                    n.chains = 1) 
 summary(out.full)
 ```
 
@@ -150,16 +152,17 @@ The summary of the model output shows our model recovers the values we used to s
 out.no.re <- spPGOcc(occ.formula = ~ occ.cov.1, 
                      det.formula = ~ det.cov.1, 
                      data = data.list, 
-                     n.batch = n.batch, 
-                     batch.length = batch.length, 
+                     n.batch = 400, 
+                     batch.length = 25, 
+                     inits = inits,
                      accept.rate = 0.43, 
                      cov.model = "spherical", 
                      NNGP = TRUE, 
-                     n.neighbors = 5,
+                     n.neighbors = 10,
                      n.report = 100, 
-                     n.burn = 2000, 
-                     n.thin = 2, 
-                     n.chains = 2) 
+                     n.burn = 5000, 
+                     n.thin = 5, 
+                     n.chains = 1) 
 waicOcc(out.full)
 waicOcc(out.no.re)
 ```
@@ -178,7 +181,7 @@ plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Predicted Occ
 points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi.means-min(psi.means))/diff(range(psi.means))))
 ```
 
-Just like with models with only fixed effects, we can predict new values of occurrence or detection probability given a set of covariate values and spatial coordinates using the `predict()` function. However, prediction becomes a bit more complicated when we have non-structured random effects in the model, as we could imagine predicting at observed levels of the random effect, or predicting at new levels of the random effect. `spOccupancy` allows for prediction at both observed levels and new levels of random effects, and also allows for prediction to take into account the random effects, or simply ignore the random effects when making predictions and just generate predictions using the fixed effects. All `predict()` functions for `spOccupancy` objects contain the argument `ignore.RE`, which is a logical value that takes value `TRUE` or `FALSE`. When `ignore.RE = FALSE` (the default), both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction, which will likely result in a more accurate estimate of occurrence/detection probability for that site. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. Alternatively, if `ignore.RE = TRUE`, the random effects will not be used for prediction and predictions will simply be generated using the fixed effects in the model. 
+We see the model does a fairly decent job of identifying the spatial structure in occurrence across the simulated region, with our mean predicted occurrence being more smooth than the single simulated occurrence data set, as we would expect. Just like with models with only fixed effects, we can predict new values of occurrence or detection probability given a set of covariate values and spatial coordinates using the `predict()` function. However, prediction becomes a bit more complicated when we have non-structured random effects in the model, as we could imagine predicting at observed levels of the random effect, or predicting at new levels of the random effect. `spOccupancy` allows for prediction at both observed levels and new levels of random effects, and also allows for prediction to take into account the random effects, or simply ignore the random effects when making predictions and just generate predictions using the fixed effects. All `predict()` functions for `spOccupancy` objects contain the argument `ignore.RE`, which is a logical value that takes value `TRUE` or `FALSE`. When `ignore.RE = FALSE` (the default), both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction, which will likely result in a more accurate estimate of occurrence/detection probability for that site. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. Alternatively, if `ignore.RE = TRUE`, the random effects will not be used for prediction and predictions will simply be generated using the fixed effects in the model. 
 
 Suppose we wish to predict occurrence at a new site, which has spatial coordinates `(0.32, 0.55)`, a value of `0.34` for our occurrence covariate (`occ.cov.1`) and a random effect level of 5 (which is a level that is sampled in our original data set). Below we predict occurrence at this new site, using the random effect in the prediction by setting `ignore.RE = FALSE` (which we could just not specify since it is the default). Note that when predicting using random effects, the column name of the random effect must match the name of the random effect used when fitting the model. 
 
@@ -187,7 +190,7 @@ Suppose we wish to predict occurrence at a new site, which has spatial coordinat
 X.0 <- cbind(1, 0.34, 5)
 # Make sure column names of random effects align with how we fit the model. 
 colnames(X.0) <- c('intercept', 'occ.cov.1', 'occ.factor.1')
-# Coordinates of new cite
+# Coordinates of new site
 coords.0 <- cbind(0.32, 0.55)
 # Predict at new site
 pred.out <- predict(out.full, X.0, coords.0, ignore.RE = FALSE, verbose = FALSE)
@@ -206,7 +209,7 @@ pred.no.re <- predict(out.full, X.0, coords.0, ignore.RE = TRUE, verbose = FALSE
 summary(pred.no.re$psi.0.samples)
 ```
 
-Notice that here we see a large discrepancy between the predicted occurrence probability when we use the random effect and when we don't use the random effect. Predicting with random effects will allow you to fully propagate uncertainty in our predictions, but may not be desired if predicting at new locations where the level of the random effect is unknown or not sampled in the data. 
+Here we see a relatively small discrepancy between the predicted occurrence probability when we use the random effect and when we don't use the random effect. Predicting with random effects will allow you to fully propagate uncertainty in our predictions, but may not be desired if predicting at new locations where the level of the random effect is unknown or not sampled in the data. 
 
 # References {-}
 

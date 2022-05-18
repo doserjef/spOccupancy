@@ -82,7 +82,7 @@ extern "C" {
 		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		     SEXP samplesInfo_r, SEXP chainInfo_r){
+		     SEXP samplesInfo_r, SEXP chainInfo_r, SEXP sigmaSqInfo_r){
    
     /**********************************************************************
      * Initial constants
@@ -170,6 +170,8 @@ extern "C" {
     int nReport = INTEGER(nReport_r)[0];
     int status = 0; 
     int thinIndx = 0; 
+    int fixedSigmaSq = INTEGER(sigmaSqInfo_r)[0];
+    int sigmaSqIG = INTEGER(sigmaSqInfo_r)[1];
     int sPost = 0; 
 
 #ifdef _OPENMP
@@ -476,7 +478,7 @@ extern "C" {
     double logPostCurr = 0.0, logPostCand = 0.0; 
     logPostCurr = R_NegInf; 
     double *accept = (double *) R_alloc(nThetaN, sizeof(double)); zeros(accept, nThetaN); 
-    double phiCand = 0.0, nuCand = 0.0; 
+    double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0; 
     double logDet; 
     // MCMC info if desired
     SEXP acceptSamples_r; 
@@ -861,24 +863,28 @@ extern "C" {
           /********************************************************************
            *Update sigmaSq
            *******************************************************************/
+          if (!fixedSigmaSq) {
+            if (sigmaSqIG) {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:a, logDet)
 #endif
 
-          for (j = 0; j < J; j++){
-            if(nnIndxLU[J+j] > 0){
-              e = 0;
-              for(ii = 0; ii < nnIndxLU[J+j]; ii++){
-                e += B[i * nIndx + nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii] * N + i];
+              for (j = 0; j < J; j++){
+                if(nnIndxLU[J+j] > 0){
+                  e = 0;
+                  for(ii = 0; ii < nnIndxLU[J+j]; ii++){
+                    e += B[i * nIndx + nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii] * N + i];
+                  }
+                  b = w[j * N + i] - e;
+                }else{
+                  b = w[j * N + i];
+                }	
+                a += b*b/F[i * J + j];
               }
-              b = w[j * N + i] - e;
-            }else{
-              b = w[j * N + i];
-            }	
-            a += b*b/F[i * J + j];
-          }
 
-	  theta[sigmaSqIndx * N + i] = rigamma(sigmaSqA[i] + J / 2.0, sigmaSqB[i] + 0.5 * a * theta[sigmaSqIndx * N + i]); 
+	      theta[sigmaSqIndx * N + i] = rigamma(sigmaSqA[i] + J / 2.0, sigmaSqB[i] + 0.5 * a * theta[sigmaSqIndx * N + i]); 
+	    }
+	  }
 
           /********************************************************************
            *Update phi (and nu if matern)
@@ -913,14 +919,26 @@ extern "C" {
           if(corName == "matern"){
        	    logPostCurr += log(theta[nuIndx * N + i] - nuA[i]) + log(nuB[i] - theta[nuIndx * N + i]); 
           }
+	  if (sigmaSqIG == 0) {
+            logPostCurr += log(theta[sigmaSqIndx * N + i] - sigmaSqA[i]) + 
+		           log(sigmaSqB[i] - theta[sigmaSqIndx * N + i]);
+	  }
           
           // Candidate
           phiCand = logitInv(rnorm(logit(theta[phiIndx * N + i], phiA[i], phiB[i]), exp(tuning[phiIndx * N + i])), phiA[i], phiB[i]);
           if (corName == "matern"){
       	    nuCand = logitInv(rnorm(logit(theta[nuIndx * N + i], nuA[i], nuB[i]), exp(tuning[nuIndx * N + i])), nuA[i], nuB[i]);
           }
-      
-          updateBF1MsRE(BCand, FCand, &c[i * m*nThreads], &C[i * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx * N + i], phiCand, nuCand, covModel, &bk[i * sizeBK], nuB[i]);
+	  if (sigmaSqIG == 0) {
+	    sigmaSqCand = logitInv(rnorm(logit(theta[sigmaSqIndx * N + i], sigmaSqA[i], sigmaSqB[i]), 
+	  			 exp(tuning[sigmaSqIndx * N + i])), sigmaSqA[i], sigmaSqB[i]); 
+	  }
+     
+	  if (sigmaSqIG) { 
+            updateBF1MsRE(BCand, FCand, &c[i * m*nThreads], &C[i * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx * N + i], phiCand, nuCand, covModel, &bk[i * sizeBK], nuB[i]);
+	  } else {
+            updateBF1MsRE(BCand, FCand, &c[i * m*nThreads], &C[i * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, &bk[i * sizeBK], nuB[i]);
+	  }
       
           a = 0;
           logDet = 0;
@@ -947,6 +965,9 @@ extern "C" {
           if (corName == "matern"){
             logPostCand += log(nuCand - nuA[i]) + log(nuB[i] - nuCand); 
           }
+	  if (sigmaSqIG == 0) {
+            logPostCand += log(sigmaSqCand - sigmaSqA[i]) + log(sigmaSqB[i] - sigmaSqCand);
+	  }
 
           if (runif(0.0,1.0) <= exp(logPostCand - logPostCurr)) {
 
@@ -960,6 +981,10 @@ extern "C" {
 	      theta[nuIndx * N + i] = nu[i]; 
               accept[nuIndx * N + i]++; 
             }
+	    if (sigmaSqIG == 0) {
+              theta[sigmaSqIndx * N + i] = sigmaSqCand;
+	      accept[sigmaSqIndx * N + i]++;
+	    }
           }
 
           /********************************************************************
@@ -1066,9 +1091,15 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tSpecies\t\tAcceptance\tTuning\n");	  
+	  Rprintf("\tSpecies\t\tParameter\tAcceptance\tTuning\n");	  
 	  for (i = 0; i < N; i++) {
-	    Rprintf("\t%i\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
+	    Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
+	    if (corName == "matern") {
+	      Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[nuIndx * N + i]));
+	    }
+	    if (sigmaSqIG == 0) {
+	      Rprintf("\t%i\t\tsigmaSq\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + sigmaSqIndx * N + i], exp(tuning[sigmaSqIndx * N + i]));
+	    }
 	  } // i
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32

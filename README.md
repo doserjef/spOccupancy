@@ -127,25 +127,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4212
+#> Run Time (min): 1.7759
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            3.9332 0.5585  2.9850  3.8780  5.2357 1.0589  257
-#> scale(Elevation)      -0.5069 0.2110 -0.9323 -0.5057 -0.1032 1.0189 1119
-#> I(scale(Elevation)^2) -1.1406 0.2057 -1.6026 -1.1218 -0.7826 1.0402  386
+#>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
+#> (Intercept)            3.9961 0.6429  2.9488  3.9148  5.4701 1.0213 211
+#> scale(Elevation)      -0.5385 0.2245 -1.0126 -0.5305 -0.1167 1.0097 609
+#> I(scale(Elevation)^2) -1.1609 0.2204 -1.6638 -1.1402 -0.7897 1.0045 378
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6624 0.1146  0.4389  0.6606 0.8859 1.0006 5572
-#> scale(day)       0.2922 0.0706  0.1564  0.2915 0.4327 0.9999 6000
-#> scale(tod)      -0.0326 0.0704 -0.1689 -0.0327 0.1038 1.0034 6000
-#> I(scale(day)^2) -0.0746 0.0863 -0.2430 -0.0769 0.0968 1.0007 6000
+#> (Intercept)      0.6634 0.1134  0.4421  0.6618 0.8832 1.0024 6000
+#> scale(day)       0.2902 0.0705  0.1512  0.2900 0.4309 1.0012 6000
+#> scale(tod)      -0.0310 0.0695 -0.1664 -0.0302 0.1052 1.0001 6000
+#> I(scale(day)^2) -0.0758 0.0853 -0.2456 -0.0757 0.0912 1.0022 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 0.9695 0.8124 0.2045 0.7195 3.2131 1.1136 114
-#> phi      0.0067 0.0073 0.0006 0.0036 0.0263 1.4115  59
+#> sigma.sq 1.2048 1.1248 0.1910 0.8569 4.4716 1.0303  94
+#> phi      0.0078 0.0077 0.0007 0.0040 0.0276 1.4288  53
 ```
 
 ### Posterior predictive check
@@ -171,7 +171,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4913 
+#> Bayesian p-value:  0.4933 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -184,7 +184,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -683.42274   19.50487 1405.85522
+#> -681.13555   21.67541 1405.62192
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -197,7 +197,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1496.671
+#> [1] 1496.475
 ```
 
 ### Prediction
@@ -222,18 +222,21 @@ The `vignette("modelFitting")` provides a more detailed description and
 tutorial of the core functions in `spOccupancy`. For full statistical
 details on the MCMC samplers for core functions in `spOccupancy`, see
 `vignette("mcmcSamplers")`. In addition, see [our recent
-paper](https://arxiv.org/abs/2111.12163) that describes the package in
-more detail (Doser et al. 2021). For a detailed description and tutorial
-of joint species distribution models in `spOccupancy` that account for
-residual species correlations, see `vignette("factorModels")`, as well
-as `vignette("mcmcFactorModels")` for full statistical details.
+paper](https://doi.org/10.1111/2041-210X.13897) that describes the
+package in more detail (Doser et al. 2022a). For a detailed description
+and tutorial of joint species distribution models in `spOccupancy` that
+account for residual species correlations, see
+`vignette("factorModels")`, as well as `vignette("mcmcFactorModels")`
+for full statistical details.
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2021).
+Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2022a).
 spOccupancy: An R package for single-species, multi-species, and
-integrated spatial occupancy models. [arXiv preprint arxiv:2111.12163](https://arxiv.org/abs/2111.12163).
+integrated spatial occupancy models. Methods in Ecology and Evolution.
+<https://doi.org/10.1111/2041-210X.13897>.
 
-Doser, J. W., Finley, A. O., and Banerjee, S. (2022) Joint species
+Doser, J. W., Finley, A. O., and Banerjee, S. (2022b) Joint species
 distribution models with imperfect detection for high-dimensional
-spatial data. [arXiv preprint arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
+spatial data. [arXiv preprint
+arXiv:2204.02707](https://arxiv.org/abs/2204.02707).

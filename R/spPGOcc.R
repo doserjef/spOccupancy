@@ -316,38 +316,51 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     priors <- list()
   }
   names(priors) <- tolower(names(priors))
+  # Logical vector indicating what parameters are estimated and what 
+  # parameters are fixed. 6 is the total number of parameter types that 
+  # can be estimated here. Note that phi and nu are both fixed if phi.unif = 'fixed' 
+  all.params <- c('beta', 'alpha', 'phi', 'sigma.sq', 
+		  'sigma.sq.psi', 'sigma.sq.p')
+  n.params <- length(all.params)
+  fixed.params <- rep(FALSE, n.params)
   # beta -----------------------
   if ("beta.normal" %in% names(priors)) {
-    if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
-      stop("error: beta.normal must be a list of length 2")
-    }
-    mu.beta <- priors$beta.normal[[1]]
-    sigma.beta <- priors$beta.normal[[2]]
-    if (length(mu.beta) != p.occ & length(mu.beta) != 1) {
-      if (p.occ == 1) {
-        stop(paste("error: beta.normal[[1]] must be a vector of length ",
-        	     p.occ, " with elements corresponding to betas' mean", sep = ""))
-      } else {
-        stop(paste("error: beta.normal[[1]] must be a vector of length ",
-        	     p.occ, " or 1 with elements corresponding to betas' mean", sep = ""))
+    if (priors$beta.normal[1] == 'fixed') {
+      fixed.params[which(all.params == 'beta')] <- TRUE 
+      mu.beta <- rep(0, p.occ)
+      Sigma.beta <- diag(p.occ)
+    } else {
+      if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
+        stop("error: beta.normal must be a list of length 2")
       }
-    }
-    if (length(sigma.beta) != p.occ & length(sigma.beta) != 1) {
-      if (p.occ == 1) {
-        stop(paste("error: beta.normal[[2]] must be a vector of length ",
-      	   p.occ, " with elements corresponding to betas' variance", sep = ""))
-      } else {
-        stop(paste("error: beta.normal[[2]] must be a vector of length ",
-      	   p.occ, " or 1 with elements corresponding to betas' variance", sep = ""))
+      mu.beta <- priors$beta.normal[[1]]
+      sigma.beta <- priors$beta.normal[[2]]
+      if (length(mu.beta) != p.occ & length(mu.beta) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: beta.normal[[1]] must be a vector of length ",
+          	     p.occ, " with elements corresponding to betas' mean", sep = ""))
+        } else {
+          stop(paste("error: beta.normal[[1]] must be a vector of length ",
+          	     p.occ, " or 1 with elements corresponding to betas' mean", sep = ""))
+        }
       }
+      if (length(sigma.beta) != p.occ & length(sigma.beta) != 1) {
+        if (p.occ == 1) {
+          stop(paste("error: beta.normal[[2]] must be a vector of length ",
+        	   p.occ, " with elements corresponding to betas' variance", sep = ""))
+        } else {
+          stop(paste("error: beta.normal[[2]] must be a vector of length ",
+        	   p.occ, " or 1 with elements corresponding to betas' variance", sep = ""))
+        }
+      }
+      if (length(sigma.beta) != p.occ) {
+        sigma.beta <- rep(sigma.beta, p.occ)
+      }
+      if (length(mu.beta) != p.occ) {
+        mu.beta <- rep(mu.beta, p.occ)
+      }
+      Sigma.beta <- sigma.beta * diag(p.occ)
     }
-    if (length(sigma.beta) != p.occ) {
-      sigma.beta <- rep(sigma.beta, p.occ)
-    }
-    if (length(mu.beta) != p.occ) {
-      mu.beta <- rep(mu.beta, p.occ)
-    }
-    Sigma.beta <- sigma.beta * diag(p.occ)
   } else {
     if (verbose) {
       message("No prior specified for beta.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
@@ -358,36 +371,42 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   # alpha -----------------------
   if ("alpha.normal" %in% names(priors)) {
-    if (!is.list(priors$alpha.normal) | length(priors$alpha.normal) != 2) {
-      stop("error: alpha.normal must be a list of length 2")
-    }
-    mu.alpha <- priors$alpha.normal[[1]]
-    sigma.alpha <- priors$alpha.normal[[2]]
-    if (length(mu.alpha) != p.det & length(mu.alpha) != 1) {
-      if (p.det == 1) {
-        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
-        	     p.det, " with elements corresponding to alphas' mean", sep = ""))
-      } else {
-        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
-        	     p.det, " or 1 with elements corresponding to alphas' mean", sep = ""))
+    if (priors$alpha.normal[1] == 'fixed') {
+      fixed.params[which(all.params == 'alpha')] <- TRUE 
+      mu.alpha <- rep(0, p.det)
+      Sigma.alpha <- diag(p.det)
+    } else {
+      if (!is.list(priors$alpha.normal) | length(priors$alpha.normal) != 2) {
+        stop("error: alpha.normal must be a list of length 2")
       }
-    }
-    if (length(sigma.alpha) != p.det & length(sigma.alpha) != 1) {
-      if (p.det == 1) {
-        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
-      	   p.det, " with elements corresponding to alphas' variance", sep = ""))
-      } else {
-        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
-      	   p.det, " or 1 with elements corresponding to alphas' variance", sep = ""))
+      mu.alpha <- priors$alpha.normal[[1]]
+      sigma.alpha <- priors$alpha.normal[[2]]
+      if (length(mu.alpha) != p.det & length(mu.alpha) != 1) {
+        if (p.det == 1) {
+          stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+          	     p.det, " with elements corresponding to alphas' mean", sep = ""))
+        } else {
+          stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+          	     p.det, " or 1 with elements corresponding to alphas' mean", sep = ""))
+        }
       }
+      if (length(sigma.alpha) != p.det & length(sigma.alpha) != 1) {
+        if (p.det == 1) {
+          stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+        	   p.det, " with elements corresponding to alphas' variance", sep = ""))
+        } else {
+          stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+        	   p.det, " or 1 with elements corresponding to alphas' variance", sep = ""))
+        }
+      }
+      if (length(sigma.alpha) != p.det) {
+        sigma.alpha <- rep(sigma.alpha, p.det)
+      }
+      if (length(mu.alpha) != p.det) {
+        mu.alpha <- rep(mu.alpha, p.det)
+      }
+      Sigma.alpha <- sigma.alpha * diag(p.det)
     }
-    if (length(sigma.alpha) != p.det) {
-      sigma.alpha <- rep(sigma.alpha, p.det)
-    }
-    if (length(mu.alpha) != p.det) {
-      mu.alpha <- rep(mu.alpha, p.det)
-    }
-    Sigma.alpha <- sigma.alpha * diag(p.det)
   } else {
     if (verbose) {
       message("No prior specified for alpha.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
@@ -401,11 +420,20 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Get distance matrix which is used if priors are not specified
   coords.D <- iDist(coords)
   if ("phi.unif" %in% names(priors)) {
-    if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
-      stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
+    if (priors$phi.unif[1] == 'fixed') {
+      fixed.params[which(all.params == 'phi')] <- TRUE 
+      phi.a <- 1
+      phi.b <- 1
+      if ((cov.model == 'matern') & (priors$nu.unif[1] != 'fixed')) {
+        message("phi is specified as fixed in priors$phi.unif but nu is not, which is not allowed. Continuing to fit the model with both phi and nu fixed.")
+      }
+    } else {
+      if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
+        stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
+      }
+      phi.a <- priors$phi.unif[1]
+      phi.b <- priors$phi.unif[2]
     }
-    phi.a <- priors$phi.unif[1]
-    phi.b <- priors$phi.unif[2]
   } else {
     if (verbose) {
       message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
@@ -414,16 +442,43 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     phi.b <- 3 / sort(unique(c(coords.D)))[2]
   }
   # sigma.sq -----------------------------
-  if ("sigma.sq.ig" %in% names(priors)) {
-    if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-      stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+  # Check if both an ig and uniform prior are specified
+  if (("sigma.sq.ig" %in% names(priors)) & ("sigma.sq.unif" %in% names(priors))) {
+    stop("error: cannot specify both an IG and a uniform prior for sigma.sq")
+  }
+  if ("sigma.sq.ig" %in% names(priors)) { # inverse-gamma prior.
+    sigma.sq.ig <- TRUE
+    if (priors$sigma.sq.ig[1] == 'fixed') {
+      fixed.params[which(all.params == 'sigma.sq')] <- TRUE 
+      sigma.sq.a <- 1
+      sigma.sq.b <- 1
+    } else {
+      if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+        stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+      }
+      sigma.sq.a <- priors$sigma.sq.ig[1]
+      sigma.sq.b <- priors$sigma.sq.ig[2]
     }
-    sigma.sq.a <- priors$sigma.sq.ig[1]
-    sigma.sq.b <- priors$sigma.sq.ig[2]
+  } else if ("sigma.sq.unif" %in% names(priors)) { # uniform prior
+    if (priors$sigma.sq.unif[1] == 'fixed') {
+      sigma.sq.ig <- TRUE # This just makes the C++ side a bit easier. 
+      fixed.params[which(all.params == 'sigma.sq')] <- TRUE 
+      sigma.sq.a <- 1
+      sigma.sq.b <- 1
+    } else {
+      sigma.sq.ig <- FALSE
+      if (!is.vector(priors$sigma.sq.unif) | !is.atomic(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
+        stop("error: sigma.sq.unif must be a vector of length 2 with elements corresponding to sigma.sq's lower and upper bounds")
+      }
+      sigma.sq.a <- priors$sigma.sq.unif[1]
+      sigma.sq.b <- priors$sigma.sq.unif[2]
+    }
+     
   } else {
     if (verbose) {
-      message("No prior specified for sigma.sq.ig.\nSetting the shape parameter to 2 and scale parameter to 1.\n")
+      message("No prior specified for sigma.sq.\nUsing an inverse-Gamma prior with the shape parameter set to 2 and scale parameter to 1.\n")
     }
+    sigma.sq.ig <- TRUE
     sigma.sq.a <- 2
     sigma.sq.b <- 1
   }
@@ -432,11 +487,20 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (!"nu.unif" %in% names(priors)) {
       stop("error: nu.unif must be specified in priors value list")
     }
-    if (!is.vector(priors$nu.unif) | !is.atomic(priors$nu.unif) | length(priors$nu.unif) != 2) {
-      stop("error: nu.unif must be a vector of length 2 with elements corresponding to nu's lower and upper bounds")
+    if (priors$nu.unif[1] == 'fixed') {
+      fixed.params[which(all.params == 'phi')] <- TRUE 
+      nu.a <- 1
+      nu.b <- 1
+      if ((cov.model == 'matern') & (priors$phi.unif[1] != 'fixed')) {
+        message("nu is specified as fixed in priors$nu.unif but phi is not, which is not allowed. Continuing to fit the model with both phi and nu fixed.")
+      }
+    } else {
+      if (!is.vector(priors$nu.unif) | !is.atomic(priors$nu.unif) | length(priors$nu.unif) != 2) {
+        stop("error: nu.unif must be a vector of length 2 with elements corresponding to nu's lower and upper bounds")
+      }
+      nu.a <- priors$nu.unif[1]
+      nu.b <- priors$nu.unif[2]
     }
-    nu.a <- priors$nu.unif[1]
-    nu.b <- priors$nu.unif[2]
   } else {
     nu.a <- 0
     nu.b <- 0
@@ -445,34 +509,40 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # sigma.sq.psi --------------------
   if (p.occ.re > 0) {
     if ("sigma.sq.psi.ig" %in% names(priors)) {
-      if (!is.list(priors$sigma.sq.psi.ig) | length(priors$sigma.sq.psi.ig) != 2) {
-        stop("error: sigma.sq.psi.ig must be a list of length 2")
-      }
-      sigma.sq.psi.a <- priors$sigma.sq.psi.ig[[1]]
-      sigma.sq.psi.b <- priors$sigma.sq.psi.ig[[2]]
-      if (length(sigma.sq.psi.a) != p.occ.re & length(sigma.sq.psi.a) != 1) {
-        if (p.occ.re == 1) {
-        stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
-        	   p.occ.re, " with elements corresponding to sigma.sq.psis' shape", sep = ""))
-        } else {
-        stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
-        	   p.occ.re, " or 1 with elements corresponding to sigma.sq.psis' shape", sep = ""))
+      if (priors$sigma.sq.psi.ig[1] == 'fixed') {
+        fixed.params[which(all.params == 'sigma.sq.psi')] <- TRUE
+        sigma.sq.psi.a <- rep(1, p.occ.re)
+	sigma.sq.psi.b <- rep(1, p.occ.re)
+      } else {
+        if (!is.list(priors$sigma.sq.psi.ig) | length(priors$sigma.sq.psi.ig) != 2) {
+          stop("error: sigma.sq.psi.ig must be a list of length 2")
         }
-      }
-      if (length(sigma.sq.psi.b) != p.occ.re & length(sigma.sq.psi.b) != 1) {
-        if (p.occ.re == 1) {
-          stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
-        	   p.occ.re, " with elements corresponding to sigma.sq.psis' scale", sep = ""))
-        } else {
-          stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
-        	   p.occ.re, " or 1with elements corresponding to sigma.sq.psis' scale", sep = ""))
+        sigma.sq.psi.a <- priors$sigma.sq.psi.ig[[1]]
+        sigma.sq.psi.b <- priors$sigma.sq.psi.ig[[2]]
+        if (length(sigma.sq.psi.a) != p.occ.re & length(sigma.sq.psi.a) != 1) {
+          if (p.occ.re == 1) {
+          stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
+          	   p.occ.re, " with elements corresponding to sigma.sq.psis' shape", sep = ""))
+          } else {
+          stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
+          	   p.occ.re, " or 1 with elements corresponding to sigma.sq.psis' shape", sep = ""))
+          }
         }
-      }
-      if (length(sigma.sq.psi.a) != p.occ.re) {
-        sigma.sq.psi.a <- rep(sigma.sq.psi.a, p.occ.re)
-      }
-      if (length(sigma.sq.psi.b) != p.occ.re) {
-        sigma.sq.psi.b <- rep(sigma.sq.psi.b, p.occ.re)
+        if (length(sigma.sq.psi.b) != p.occ.re & length(sigma.sq.psi.b) != 1) {
+          if (p.occ.re == 1) {
+            stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
+          	   p.occ.re, " with elements corresponding to sigma.sq.psis' scale", sep = ""))
+          } else {
+            stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
+          	   p.occ.re, " or 1with elements corresponding to sigma.sq.psis' scale", sep = ""))
+          }
+        }
+        if (length(sigma.sq.psi.a) != p.occ.re) {
+          sigma.sq.psi.a <- rep(sigma.sq.psi.a, p.occ.re)
+        }
+        if (length(sigma.sq.psi.b) != p.occ.re) {
+          sigma.sq.psi.b <- rep(sigma.sq.psi.b, p.occ.re)
+        }
       }
   }   else {
       if (verbose) {	    
@@ -488,34 +558,40 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # sigma.sq.p --------------------
   if (p.det.re > 0) {
     if ("sigma.sq.p.ig" %in% names(priors)) {
-      if (!is.list(priors$sigma.sq.p.ig) | length(priors$sigma.sq.p.ig) != 2) {
-        stop("error: sigma.sq.p.ig must be a list of length 2")
-      }
-      sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
-      sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
-      if (length(sigma.sq.p.a) != p.det.re & length(sigma.sq.p.a) != 1) {
-        if (p.det.re == 1) {
-          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
-        	   p.det.re, " with elements corresponding to sigma.sq.ps' shape", sep = ""))
-        } else {
-          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
-        	   p.det.re, " or 1 with elements corresponding to sigma.sq.ps' shape", sep = ""))
+      if (priors$sigma.sq.p.ig[1] == 'fixed') {
+        fixed.params[which(all.params == 'sigma.sq.p')] <- TRUE
+        sigma.sq.p.a <- rep(1, p.det.re)
+	sigma.sq.p.b <- rep(1, p.det.re)
+      } else {
+        if (!is.list(priors$sigma.sq.p.ig) | length(priors$sigma.sq.p.ig) != 2) {
+          stop("error: sigma.sq.p.ig must be a list of length 2")
         }
-      }
-      if (length(sigma.sq.p.b) != p.det.re & length(sigma.sq.p.b) != 1) {
-        if (p.det.re == 1) {
-          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
-        	     p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
-        } else {
-          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
-        	     p.det.re, " or 1 with elements corresponding to sigma.sq.ps' scale", sep = ""))
+        sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
+        sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
+        if (length(sigma.sq.p.a) != p.det.re & length(sigma.sq.p.a) != 1) {
+          if (p.det.re == 1) {
+            stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+          	   p.det.re, " with elements corresponding to sigma.sq.ps' shape", sep = ""))
+          } else {
+            stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+          	   p.det.re, " or 1 with elements corresponding to sigma.sq.ps' shape", sep = ""))
+          }
         }
-      }
-      if (length(sigma.sq.p.a) != p.det.re) {
-        sigma.sq.p.a <- rep(sigma.sq.p.a, p.det.re)
-      }
-      if (length(sigma.sq.p.b) != p.det.re) {
-        sigma.sq.p.b <- rep(sigma.sq.p.b, p.det.re)
+        if (length(sigma.sq.p.b) != p.det.re & length(sigma.sq.p.b) != 1) {
+          if (p.det.re == 1) {
+            stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+          	     p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
+          } else {
+            stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+          	     p.det.re, " or 1 with elements corresponding to sigma.sq.ps' scale", sep = ""))
+          }
+        }
+        if (length(sigma.sq.p.a) != p.det.re) {
+          sigma.sq.p.a <- rep(sigma.sq.p.a, p.det.re)
+        }
+        if (length(sigma.sq.p.b) != p.det.re) {
+          sigma.sq.p.b <- rep(sigma.sq.p.b, p.det.re)
+        }
       }
   }   else {
       if (verbose) {	    
@@ -623,7 +699,11 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       stop("error: initial values for sigma.sq must be of length 1")
     }
   } else {
-    sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+    if (sigma.sq.ig) {
+      sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+    } else {
+      sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+    }
     if (verbose) {
       message("sigma.sq is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
     }
@@ -743,7 +823,6 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   storage.mode(cov.model.indx) <- "integer"
 
   # Get tuning values ---------------------------------------------------
-  # Not accessed, but necessary to keep things in line. 
   sigma.sq.tuning <- 0
   phi.tuning <- 0
   nu.tuning <- 0
@@ -751,6 +830,9 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     phi.tuning <- 1
     if (cov.model == 'matern') {
       nu.tuning <- 1
+    }
+    if (!sigma.sq.ig) {
+      sigma.sq.tuning <- 1
     }
   } else {
     names(tuning) <- tolower(names(tuning))
@@ -770,6 +852,16 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       nu.tuning <- tuning$nu
       if (length(nu.tuning) != 1) {
         stop("error: nu tuning must be a single value")
+      } 
+    }
+    if (!sigma.sq.ig) {
+      # sigma.sq --------------------------
+      if(!"sigma.sq" %in% names(tuning)) {
+        stop("error: sigma.sq must be specified in tuning value list")
+      }
+      sigma.sq.tuning <- tuning$sigma.sq
+      if (length(sigma.sq.tuning) != 1) {
+        stop("error: sigma.sq tuning must be a single value")
       } 
     }
   }
@@ -807,6 +899,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    storage.mode(sigma.sq.ig) <- "integer"
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -818,6 +911,8 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # chain.info order: current chain, total number of chains
     chain.info <- c(curr.chain, n.chains)
     storage.mode(chain.info) <- "integer"
+    fixed.sigma.sq <- fixed.params[which(all.params == 'sigma.sq')]
+    storage.mode(fixed.sigma.sq) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
 				 to = n.samples, 
 				 by = as.integer(n.thin)))
@@ -849,20 +944,38 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     for (i in 1:n.chains) {
       # Change initial values if i > 1
       if ((i > 1) & (!fix.inits)) {
-        beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-        alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-        sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
-        phi.inits <- runif(1, phi.a, phi.b)
+	if (!fixed.params[which(all.params == 'beta')]) {
+          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+	}	
+        if (!fixed.params[which(all.params == 'alpha')]) {
+          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+	}
+        if (!fixed.params[which(all.params == 'sigma.sq')]) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+	  }
+	}
+        if (!fixed.params[which(all.params == 'phi')]) {
+          phi.inits <- runif(1, phi.a, phi.b)
+	}
         if (cov.model == 'matern') {
-          nu.inits <- runif(1, nu.a, nu.b)
+          if (!fixed.params[which(all.params == 'phi')]) {
+            nu.inits <- runif(1, nu.a, nu.b)
+	  }
         }
 	if (p.det.re > 0) {
-          sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-          alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+          if (!fixed.params[which(all.params == 'sigma.sq.p')]) {
+            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+	  }
 	}
 	if (p.occ.re > 0) {
-          sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-          beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+          if (!fixed.params[which(all.params == 'sigma.sq.psi')]) {
+            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+	  }
 	}
       }
       storage.mode(chain.info) <- "integer"
@@ -880,7 +993,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       	                    tuning.c, cov.model.indx,
                             n.batch, batch.length, 
                             accept.rate, n.omp.threads, verbose, n.report, 
-                            samples.info, chain.info)
+                            samples.info, chain.info, fixed.sigma.sq, sigma.sq.ig)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -888,24 +1001,56 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$rhat <- list()
     if (n.chains > 1) {
       # as.vector removes the "Upper CI" when there is only 1 variable. 
-      out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					         mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      if (!fixed.params[which(all.params == 'beta')]) {
+        out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					         mcmc(t(a$beta.samples)))), 
+        			     autoburnin = FALSE)$psrf[, 2])
+      } else {
+        out$rhat$beta <- rep(NA, p.occ)
+      }
+      if (!fixed.params[which(all.params == 'alpha')]) {
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$theta.samples)))), 
+      } else {
+        out$rhat$alpha <- rep(NA, p.det)
+      }
+      if (!fixed.params[which(all.params == 'sigma.sq')] & 
+	  !fixed.params[which(all.params == 'phi')]) { # none are fixed
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
+      } else if (fixed.params[which(all.params == 'sigma.sq')] & 
+		 !fixed.params[which(all.params == 'phi')]) { # sigma.sq is fixed
+        out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+      			      autoburnin = FALSE)$psrf[, 2])
+      } else if (!fixed.params[which(all.params == 'sigma.sq')] & 
+		 fixed.params[which(all.params == 'phi')]) { # phi/nu is fixed
+        tmp <- ifelse(cov.model == 'matern', NA, c(NA, NA))
+        out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples[1, , drop = FALSE])))), 
+      			      autoburnin = FALSE)$psrf[, 2], tmp)
+      } else { # both are fixed
+        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
+      } 
       if (p.det.re > 0) {
-        out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$sigma.sq.p.samples)))), 
-				     autoburnin = FALSE)$psrf[, 2])
+        if (!fixed.params[which(all.params == 'sigma.sq.p')]) {
+          out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+	  					       mcmc(t(a$sigma.sq.p.samples)))), 
+	  			           autoburnin = FALSE)$psrf[, 2])
+	} else {
+          out$rhat$sigma.sq.p <- rep(NA, p.det.re)
+	}
       }
       if (p.occ.re > 0) {
-        out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$sigma.sq.psi.samples)))), 
-				     autoburnin = FALSE)$psrf[, 2])
+        if (!fixed.params[which(all.params == 'sigma.sq.psi')]) {
+          out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+						         mcmc(t(a$sigma.sq.psi.samples)))), 
+				             autoburnin = FALSE)$psrf[, 2])
+	} else {
+          out$rhat$sigma.sq.psi <- rep(NA, p.occ.re)
+	}
       }
     } else {
       out$rhat$beta <- rep(NA, p.occ)
@@ -1128,7 +1273,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			 sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 			 sigma.sq.p.a, sigma.sq.p.b, tuning.c, cov.model.indx, 
 			 n.batch, batch.length, accept.rate, n.omp.threads.fit, verbose.fit, 
-			 n.report, samples.info, chain.info)
+			 n.report, samples.info, chain.info, fixed.sigma.sq, sigma.sq.ig)
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
         out.fit$theta.samples <- mcmc(t(out.fit$theta.samples))
@@ -1295,6 +1440,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    storage.mode(sigma.sq.ig) <- "integer"
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1311,6 +1457,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(cov.model.indx) <- "integer"
     chain.info <- c(curr.chain, n.chains)
     storage.mode(chain.info) <- "integer"
+    storage.mode(fixed.params) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
 				 to = n.samples, 
 				 by = as.integer(n.thin)))
@@ -1342,20 +1489,38 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     for (i in 1:n.chains) {
       # Change initial values if i > 1
       if ((i > 1) & (!fix.inits)) {
-        beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-        alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-        sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
-        phi.inits <- runif(1, phi.a, phi.b)
+	if (!fixed.params[which(all.params == 'beta')]) {
+          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+	}	
+        if (!fixed.params[which(all.params == 'alpha')]) {
+          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+	}
+        if (!fixed.params[which(all.params == 'sigma.sq')]) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+	  }
+	}
+        if (!fixed.params[which(all.params == 'phi')]) {
+          phi.inits <- runif(1, phi.a, phi.b)
+	}
         if (cov.model == 'matern') {
-          nu.inits <- runif(1, nu.a, nu.b)
+          if (!fixed.params[which(all.params == 'phi')]) {
+            nu.inits <- runif(1, nu.a, nu.b)
+	  }
         }
 	if (p.det.re > 0) {
-          sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-          alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+          if (!fixed.params[which(all.params == 'sigma.sq.p')]) {
+            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+	  }
 	}
 	if (p.occ.re > 0) {
-          sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-          beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+          if (!fixed.params[which(all.params == 'sigma.sq.psi')]) {
+            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+	  }
 	}
       }
       storage.mode(chain.info) <- "integer"
@@ -1374,7 +1539,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       	                    tuning.c, cov.model.indx,
                             n.batch, batch.length, 
                             accept.rate, n.omp.threads, verbose, n.report, 
-                            samples.info, chain.info)
+                            samples.info, chain.info, fixed.params, sigma.sq.ig)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1382,24 +1547,56 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$rhat <- list()
     if (n.chains > 1) {
       # as.vector removes the "Upper CI" when there is only 1 variable. 
-      out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					         mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      if (!fixed.params[which(all.params == 'beta')]) {
+        out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					         mcmc(t(a$beta.samples)))), 
+        			     autoburnin = FALSE)$psrf[, 2])
+      } else {
+        out$rhat$beta <- rep(NA, p.occ)
+      }
+      if (!fixed.params[which(all.params == 'alpha')]) {
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$theta.samples)))), 
+      } else {
+        out$rhat$alpha <- rep(NA, p.det)
+      }
+      if (!fixed.params[which(all.params == 'sigma.sq')] & 
+	  !fixed.params[which(all.params == 'phi')]) { # none are fixed
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
+      } else if (fixed.params[which(all.params == 'sigma.sq')] & 
+		 !fixed.params[which(all.params == 'phi')]) { # sigma.sq is fixed
+        out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+      			      autoburnin = FALSE)$psrf[, 2])
+      } else if (!fixed.params[which(all.params == 'sigma.sq')] & 
+		 fixed.params[which(all.params == 'phi')]) { # phi/nu is fixed
+        tmp <- ifelse(cov.model == 'matern', NA, c(NA, NA))
+        out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					        mcmc(t(a$theta.samples[1, , drop = FALSE])))), 
+      			      autoburnin = FALSE)$psrf[, 2], tmp)
+      } else { # both are fixed
+        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
+      } 
       if (p.det.re > 0) {
-        out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$sigma.sq.p.samples)))), 
-				     autoburnin = FALSE)$psrf[, 2])
+        if (!fixed.params[which(all.params == 'sigma.sq.p')]) {
+          out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+	  					       mcmc(t(a$sigma.sq.p.samples)))), 
+	  			           autoburnin = FALSE)$psrf[, 2])
+	} else {
+          out$rhat$sigma.sq.p <- rep(NA, p.det.re)
+	}
       }
       if (p.occ.re > 0) {
-        out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-						      mcmc(t(a$sigma.sq.psi.samples)))), 
-				     autoburnin = FALSE)$psrf[, 2])
+        if (!fixed.params[which(all.params == 'sigma.sq.psi')]) {
+          out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+						         mcmc(t(a$sigma.sq.psi.samples)))), 
+				             autoburnin = FALSE)$psrf[, 2])
+	} else {
+          out$rhat$sigma.sq.psi <- rep(NA, p.occ.re)
+	}
       }
     } else {
       out$rhat$beta <- rep(NA, p.occ)
@@ -1676,7 +1873,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			 sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 			 sigma.sq.p.a, sigma.sq.p.b, tuning.c, cov.model.indx, 
 			 n.batch, batch.length, accept.rate, n.omp.threads.fit, verbose.fit, 
-			 n.report, samples.info, chain.info)
+			 n.report, samples.info, chain.info, fixed.params, sigma.sq.ig)
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
         out.fit$theta.samples <- mcmc(t(out.fit$theta.samples))

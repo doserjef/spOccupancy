@@ -521,30 +521,72 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
 
   # sigma.sq -----------------------------
-  if ("sigma.sq.ig" %in% names(priors)) {
-    if (!is.list(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-      stop("error: sigma.sq.ig must be a list of length 2")
+  fixed.sigma.sq <- FALSE
+  # Check if both an ig and uniform prior are specified
+  if (("sigma.sq.ig" %in% names(priors)) & ("sigma.sq.unif" %in% names(priors))) {
+    stop("error: cannot specify both an IG and a uniform prior for sigma.sq")
+  }
+  if ("sigma.sq.ig" %in% names(priors)) { # inverse-gamma prior
+    sigma.sq.ig <- TRUE
+    if (priors$sigma.sq.ig[1] == 'fixed') {
+      fixed.sigma.sq <- TRUE
+      sigma.sq.a <- rep(1, N)
+      sigma.sq.b <- rep(1, N)
+    } else {
+      if (!is.list(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+        stop("error: sigma.sq.ig must be a list of length 2")
+      }
+      sigma.sq.a <- priors$sigma.sq.ig[[1]]
+      sigma.sq.b <- priors$sigma.sq.ig[[2]]
+      if (length(sigma.sq.a) != N & length(sigma.sq.a) != 1) {
+        stop(paste("error: sigma.sq.ig[[1]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to sigma.sqs' shape for each species", sep = ""))
+      }
+      if (length(sigma.sq.b) != N & length(sigma.sq.b) != 1) {
+        stop(paste("error: sigma.sq.ig[[2]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to sigma.sqs' scale for each species", sep = ""))
+      }
+      if (length(sigma.sq.a) != N) {
+        sigma.sq.a <- rep(sigma.sq.a, N)
+      }
+      if (length(sigma.sq.b) != N) {
+        sigma.sq.b <- rep(sigma.sq.b, N)
+      }
     }
-    sigma.sq.a <- priors$sigma.sq.ig[[1]]
-    sigma.sq.b <- priors$sigma.sq.ig[[2]]
-    if (length(sigma.sq.a) != N & length(sigma.sq.a) != 1) {
-      stop(paste("error: sigma.sq.ig[[1]] must be a vector of length ", 
-      	   N, " or 1 with elements corresponding to sigma.sqs' shape for each species", sep = ""))
-    }
-    if (length(sigma.sq.b) != N & length(sigma.sq.b) != 1) {
-      stop(paste("error: sigma.sq.ig[[2]] must be a vector of length ", 
-      	   N, " or 1 with elements corresponding to sigma.sqs' scale for each species", sep = ""))
-    }
-    if (length(sigma.sq.a) != N) {
-      sigma.sq.a <- rep(sigma.sq.a, N)
-    }
-    if (length(sigma.sq.b) != N) {
-      sigma.sq.b <- rep(sigma.sq.b, N)
-    }
+  } else if ("sigma.sq.unif" %in% names(priors)) { # uniform prior
+      if (priors$sigma.sq.unif[1] == 'fixed') {
+        sigma.sq.ig <- TRUE # This just makes the C++ side a bit easier. 
+        fixed.sigma.sq <- TRUE 
+        sigma.sq.a <- rep(1, N)
+        sigma.sq.b <- rep(1, N)
+      } else {
+        sigma.sq.ig <- FALSE
+        if (!is.list(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
+          stop("error: sigma.sq.unif must be a list of length 2")
+        }
+        sigma.sq.a <- priors$sigma.sq.unif[[1]]
+        sigma.sq.b <- priors$sigma.sq.unif[[2]]
+        if (length(sigma.sq.a) != N & length(sigma.sq.a) != 1) {
+          stop(paste("error: sigma.sq.unif[[1]] must be a vector of length ", 
+          	   N, " or 1 with elements corresponding to sigma.sqs' shape for each species", sep = ""))
+        }
+        if (length(sigma.sq.b) != N & length(sigma.sq.b) != 1) {
+          stop(paste("error: sigma.sq.unif[[2]] must be a vector of length ", 
+          	   N, " or 1 with elements corresponding to sigma.sqs' scale for each species", sep = ""))
+        }
+        if (length(sigma.sq.a) != N) {
+          sigma.sq.a <- rep(sigma.sq.a, N)
+        }
+        if (length(sigma.sq.b) != N) {
+          sigma.sq.b <- rep(sigma.sq.b, N)
+        }
+      }
   } else {
+
     if (verbose) {
-      message("No prior specified for sigma.sq.ig.\nSetting the shape parameter to 2 and scale parameter to 1.\n")
+      message("No prior specified for sigma.sq.\nUsing an inverse-Gamma prior with the shape parameter to 2 and scale parameter to 1.\n")
     }
+    sigma.sq.ig <- TRUE
     sigma.sq.a <- rep(2, N)
     sigma.sq.b <- rep(1, N)
   }
@@ -601,7 +643,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         	   p.occ.re, " with elements corresponding to sigma.sq.psis' scale", sep = ""))
         } else {
           stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
-        	   p.occ.re, " or 1with elements corresponding to sigma.sq.psis' scale", sep = ""))
+        	   p.occ.re, " or 1 with elements corresponding to sigma.sq.psis' scale", sep = ""))
         }
       }
       if (length(sigma.sq.psi.a) != p.occ.re) {
@@ -853,7 +895,11 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sigma.sq.inits <- rep(sigma.sq.inits, N)
     }
   } else {
-    sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+    if (sigma.sq.ig) {
+      sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+    } else {
+      sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+    }
     if (verbose) {
       message("sigma.sq is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
     }
@@ -981,7 +1027,6 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   cov.model.indx <- which(cov.model == cov.model.names) - 1
 
   # Get tuning values ---------------------------------------------------
-  # Not accessed, but necessary to keep things in line. 
   sigma.sq.tuning <- rep(0, N)
   phi.tuning <- rep(0, N)
   nu.tuning <- rep(0, N)
@@ -989,6 +1034,9 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     phi.tuning <- rep(1, N)
     if (cov.model == 'matern') {
       nu.tuning <- rep(1, N)
+    }
+    if (!sigma.sq.ig) {
+      sigma.sq.tuning <- 1
     }
   } else {
     names(tuning) <- tolower(names(tuning))
@@ -1013,6 +1061,19 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         nu.tuning <- rep(tuning$nu, N)
       } else if (length(nu.tuning) != N) {
         stop(paste("error: nu tuning must be either a single value or a vector of length ",
+        	   N, sep = ""))
+      }
+    }
+    # sigma.sq ---------------------------
+    if (!sigma.sq.ig) {
+      if(!"sigma.sq" %in% names(tuning)) {
+        stop("error: sigma.sq must be specified in tuning value list")
+      }
+      sigma.sq.tuning <- tuning$sigma.sq
+      if (length(sigma.sq.tuning) == 1) {
+        sigma.sq.tuning <- rep(tuning$sigma.sq, N)
+      } else if (length(sigma.sq.tuning) != N) {
+        stop(paste("error: sigma.sq tuning must be either a single value or a vector of length ",
         	   N, sep = ""))
       }
     }
@@ -1058,6 +1119,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    sigma.sq.info <- c(fixed.sigma.sq, sigma.sq.ig)
+    storage.mode(sigma.sq.info) <- "integer"
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1109,7 +1172,13 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
               		     sqrt(tau.sq.beta.inits)), N, p.occ)
         alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
               		      sqrt(tau.sq.alpha.inits)), N, p.det)
-        sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+	if (!fixed.sigma.sq) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(N, sigma.sq., sigma.sq.b)
+	  }
+	}
         phi.inits <- runif(N, phi.a, phi.b)
         if (cov.model == 'matern') {
           nu.inits <- runif(N, nu.a, nu.b)
@@ -1143,7 +1212,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			    sigma.sq.p.a, sigma.sq.p.b, 
       		            tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info)
+        	            samples.info, chain.info, sigma.sq.info)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1169,9 +1238,15 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$theta.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
+      if (!fixed.sigma.sq) {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples)))), 
+        			      autoburnin = FALSE)$psrf[, 2]
+      } else {
+        out$rhat$theta <- c(rep(NA, N), gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples[-(1:N), , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2])
+      }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
 						      mcmc(t(a$sigma.sq.p.samples)))), 
@@ -1460,7 +1535,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			 sigma.sq.p.a, sigma.sq.p.b, 
       		         tuning.c, cov.model.indx, n.batch, 
         	         batch.length, accept.rate, n.omp.threads.fit, verbose.fit, n.report, 
-        	         samples.info, chain.info)
+        	         samples.info, chain.info, sigma.sq.info)
 
         if (is.null(sp.names)) {
           sp.names <- paste('sp', 1:N, sep = '')
@@ -1651,6 +1726,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
+    sigma.sq.info <- c(fixed.sigma.sq, sigma.sq.ig)
+    storage.mode(sigma.sq.info) <- "integer"
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1708,7 +1785,13 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
               		     sqrt(tau.sq.beta.inits)), N, p.occ)
         alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
               		      sqrt(tau.sq.alpha.inits)), N, p.det)
-        sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+	if (!fixed.sigma.sq) {
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+	  }
+	}
         phi.inits <- runif(N, phi.a, phi.b)
         if (cov.model == 'matern') {
           nu.inits <- runif(N, nu.a, nu.b)
@@ -1743,7 +1826,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			    sigma.sq.p.a, sigma.sq.p.b, 
       		            tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info)
+        	            samples.info, chain.info, sigma.sq.info)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1769,9 +1852,15 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$theta.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
+      if (!fixed.sigma.sq) {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples)))), 
+        			      autoburnin = FALSE)$psrf[, 2]
+      } else {
+        out$rhat$theta <- c(rep(NA, N), gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$theta.samples[-(1:N), , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2])
+      }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
 						      mcmc(t(a$sigma.sq.p.samples)))), 
@@ -2114,7 +2203,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			 sigma.sq.p.a, sigma.sq.p.b, 
       		         tuning.c, cov.model.indx, n.batch, 
         	         batch.length, accept.rate, n.omp.threads.fit, verbose.fit, n.report, 
-        	         samples.info, chain.info)
+        	         samples.info, chain.info, sigma.sq.info)
 
         if (is.null(sp.names)) {
           sp.names <- paste('sp', 1:N, sep = '')

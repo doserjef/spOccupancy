@@ -1,7 +1,7 @@
 Package: spOccupancy
 Type: Package
 Title: Single-Species, Multi-Species, and Integrated Spatial Occupancy Models
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut]
 Maintainer: Jeffrey Doser <doserjef@msu.edu>
@@ -13,6 +13,6 @@ RoxygenNote: 7.1.1
 URL: https://www.jeffdoser.com/files/spoccupancy-web, https://github.com/doserjef/spOccupancy
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Imports: 
-    stats, coda, abind, RANN, lme4, foreach, doParallel, spBayes, methods
+    stats, coda, abind, RANN, lme4, foreach, doParallel, methods
 Suggests:
     testthat

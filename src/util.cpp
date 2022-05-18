@@ -433,6 +433,43 @@ void fillUTri(double *v, int m){
   }
 }
 
+double spCor(double D, double *theta, std::string &covModel){
+
+  if(covModel == "exponential"){
+
+    return exp(-1.0*theta[0]*D);
+
+  }else if(covModel == "spherical"){
+
+    if(D > 0 && D <= 1.0/theta[0]){
+      return 1.0 - 1.5*theta[0]*D + 0.5*pow(theta[0]*D,3);
+    }else if(D >= 1.0/theta[0]){
+      return 0.0;
+    }else{
+      return 1.0;
+    }
+
+  }else if(covModel == "gaussian"){
+
+    return exp(-1.0*(pow(theta[0]*D,2)));
+
+  }else if(covModel == "matern"){
+
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*pi/2*(besselI(d*phi,-nu)-besselI(d*phi, nu))/sin(nu*pi), or
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*besselK(x=d*phi, nu=nu)
+
+    if(D*theta[0] > 0.0){
+      return pow(D*theta[0], theta[1])/(pow(2, theta[1]-1)*gammafn(theta[1]))*bessel_k(D*theta[0], theta[1], 1.0);
+    }else{
+      return 1.0;
+    }
+
+  }else{
+    error("c++ error: cov.model is not correctly specified");
+    return 0;
+  }
+}
+
 double spCor(double &D, double &phi, double &nu, int &covModel, double *bk){
 
   //0 exponential
@@ -469,6 +506,14 @@ double spCor(double &D, double &phi, double &nu, int &covModel, double *bk){
 
   }else{
     error("c++ error: cov.model is not correctly specified");
+  }
+}
+
+void clearUT(double *m, int n){
+  for(int i = 1; i < n; i++){
+    for(int j = 0; j < i; j++){
+      m[i*n+j] = 0;
+    }
   }
 }
 

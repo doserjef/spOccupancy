@@ -38,7 +38,7 @@ extern "C" {
 		 SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		 SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		 SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		 SEXP samplesInfo_r, SEXP chainInfo_r){
+		 SEXP samplesInfo_r, SEXP chainInfo_r, SEXP sigmaSqInfo_r){
    
     /**********************************************************************
      * Initial constants
@@ -122,6 +122,8 @@ extern "C" {
     int nReport = INTEGER(nReport_r)[0];
     int status = 0; 
     int thinIndx = 0; 
+    int fixedSigmaSq = INTEGER(sigmaSqInfo_r)[0];
+    int sigmaSqIG = INTEGER(sigmaSqInfo_r)[1];
     int sPost = 0; 
 
 #ifdef _OPENMP
@@ -410,7 +412,9 @@ extern "C" {
     double *tmp_JD = (double *) R_alloc(J, sizeof(double));
     double *tmp_JD2 = (double *) R_alloc(J, sizeof(double));
     // Get spatial correlation matrix for first species
-    spCorLT(coordsD, J, currTheta, corName, R); 
+    if (sigmaSqIG) {
+      spCorLT(coordsD, J, currTheta, corName, R); 
+    }
     // Get spatial covariance matrix 
     spCovLT(coordsD, J, currTheta, corName, C); 
     F77_NAME(dpotrf)(lower, &J, C, &J, &info FCONE); 
@@ -426,7 +430,7 @@ extern "C" {
     double logMHRatio, logPostCurr = 0.0, logPostCand = 0.0, detCand = 0.0, detCurr = 0.0; 
     logPostCurr = R_NegInf; 
     double *accept = (double *) R_alloc(nThetaN, sizeof(double)); zeros(accept, nThetaN); 
-    double phiCand = 0.0, nuCand = 0.0; 
+    double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0; 
     // For sigmaSq Sampler
     double aSigmaSqPost = 0.0; 
     double bSigmaSqPost = 0.0; 
@@ -709,6 +713,8 @@ extern "C" {
 	  for (q = 0; q < nTheta; q++) {
             currTheta[q] = theta[q * N + i];
           }
+	  // Still need to do this, even when sigmaSq is fixed based on how you 
+	  // coded this up. 
 	  // Get inverse correlation matrix
           spCorLT(coordsD, J, currTheta, corName, R); 
 	  fillUTri(R, J); 
@@ -720,23 +726,28 @@ extern "C" {
           if(info != 0){error("c++ error: Cholesky inverse failed in correlation matrix\n");}
 	  fillUTri(R, J); 
 
-	  // t(w) %*% R^-1
-	  // Definitely a better way to do this. 
-	  for (j = 0; j < J; j++) {
-            wTRInv[j] = F77_NAME(ddot)(&J, &R[j], &J, &w[i], &N);  
-          } // j
-	  // wTRInv %*% w
-	  bSigmaSqPost = F77_NAME(ddot)(&J, wTRInv, &inc, &w[i], &N); 
-	  bSigmaSqPost /= 2.0; 
-	  bSigmaSqPost += sigmaSqB[i]; 
-	  aSigmaSqPost = 0.5 * J + sigmaSqA[i]; 
-	  theta[sigmaSqIndx * N + i] = rigamma(aSigmaSqPost, bSigmaSqPost); 
-	  currTheta[sigmaSqIndx] = theta[sigmaSqIndx * N + i]; 
+	  if (!fixedSigmaSq) {
+            if (sigmaSqIG) {
+	      // t(w) %*% R^-1
+	      // Definitely a better way to do this. 
+	      for (j = 0; j < J; j++) {
+                wTRInv[j] = F77_NAME(ddot)(&J, &R[j], &J, &w[i], &N);  
+              } // j
+	      // wTRInv %*% w
+	      bSigmaSqPost = F77_NAME(ddot)(&J, wTRInv, &inc, &w[i], &N); 
+	      bSigmaSqPost /= 2.0; 
+	      bSigmaSqPost += sigmaSqB[i]; 
+	      aSigmaSqPost = 0.5 * J + sigmaSqA[i]; 
+	      theta[sigmaSqIndx * N + i] = rigamma(aSigmaSqPost, bSigmaSqPost); 
+	      currTheta[sigmaSqIndx] = theta[sigmaSqIndx * N + i]; 
+	    }
+	  } 
 	  // Get inverse covariance matrix from correlation matrix
 	  for (j = 0; j < JJ; j++) {
             C[j] = 1.0 / currTheta[sigmaSqIndx] * R[j]; 
 	    tmp_JJ[j] = currTheta[sigmaSqIndx] * tmp_JJ[j]; 
           }
+	  
 
           /********************************************************************
            *Update phi (and nu if matern)
@@ -751,6 +762,12 @@ extern "C" {
 	  if (corName == "matern") {
 	    currTheta[nuIndx] = nuCand; 
           }
+	  if (sigmaSqIG == 0) {
+	    sigmaSq[i] = currTheta[sigmaSqIndx]; 
+	    sigmaSqCand = logitInv(rnorm(logit(sigmaSq[i], sigmaSqA[i], sigmaSqB[i]), 
+	  			 exp(tuning[sigmaSqIndx * N + i])), sigmaSqA[i], sigmaSqB[i]); 
+	    currTheta[sigmaSqIndx] = sigmaSqCand; 
+	  }
 
 	  // Construct proposal covariance matrix (stored in CCand). 
 	  spCovLT(coordsD, J, currTheta, corName, CCand); 
@@ -779,6 +796,9 @@ extern "C" {
           if (corName == "matern"){
             logPostCand += log(nuCand - nuA[i]) + log(nuB[i] - nuCand); 
           }
+	  if (sigmaSqIG == 0) {
+            logPostCand += log(sigmaSqCand - sigmaSqA[i]) + log(sigmaSqB[i] - sigmaSqCand);
+	  }
 
           /********************************
            * Current
@@ -803,6 +823,9 @@ extern "C" {
           if (corName == "matern"){
             logPostCurr += log(nu[i] - nuA[i]) + log(nuB[i] - nu[i]); 
           }
+	  if (sigmaSqIG == 0) {
+            logPostCurr += log(sigmaSq[i] - sigmaSqA[i]) + log(sigmaSqB[i] - sigmaSq[i]);
+	  }
 
 	  // MH Accept/Reject
 	  logMHRatio = logPostCand - logPostCurr; 
@@ -816,6 +839,11 @@ extern "C" {
 	      theta[nuIndx * N + i] = nu[i]; 
               accept[nuIndx * N + i]++; 
             }
+	    if (sigmaSqIG == 0) {
+              theta[sigmaSqIndx * N + i] = sigmaSqCand;
+	      currTheta[sigmaSqIndx] = sigmaSqCand;
+	      accept[sigmaSqIndx * N + i]++;
+	    }
 	    F77_NAME(dcopy)(&JJ, CCand, &inc, C, &inc); 
           }
 
@@ -1024,9 +1052,15 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tSpecies\t\tAcceptance\tTuning\n");	  
+	  Rprintf("\tSpecies\t\tParameter\tAcceptance\tTuning\n");	  
 	  for (i = 0; i < N; i++) {
-	    Rprintf("\t%i\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
+	    Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + phiIndx * N + i], exp(tuning[phiIndx * N + i]));
+	    if (corName == "matern") {
+	      Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + nuIndx * N + i], exp(tuning[nuIndx * N + i]));
+	    }
+	    if (sigmaSqIG == 0) {
+	      Rprintf("\t%i\t\tsigmaSq\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*REAL(acceptSamples_r)[s * nThetaN + sigmaSqIndx * N + i], exp(tuning[sigmaSqIndx * N + i]));
+	    }
 	  } // i
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32

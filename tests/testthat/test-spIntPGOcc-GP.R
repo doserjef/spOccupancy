@@ -1789,3 +1789,62 @@ test_that("posterior predictive checks work for spIntPGOcc", {
   expect_equal(sapply(ppc.out$fit.y.rep, length), rep(n.post.samples, n.data))
 })
 
+# Model with fixed sigma.sq -----------------------------------------------
+test_that("spIntPGOcc works with fixed sigma.sq", {
+  out <- spIntPGOcc(occ.formula = occ.formula,
+	         det.formula = det.formula,
+	         data = data.list,
+	         n.batch = 40,
+	         batch.length = batch.length,
+	         cov.model = "spherical",
+		 priors = list(sigma.sq.ig = "fixed"),
+	         tuning = list(phi = 0.5),
+	         NNGP = FALSE,
+		 verbose = FALSE,
+	         n.neighbors = 5,
+	         search.type = 'cb',
+	         n.report = 10,
+	         n.burn = 500,
+	         n.chains = 1)
+  expect_s3_class(out, "spIntPGOcc")
+  expect_equal(length(unique(out$theta.samples[, 1])), 1)
+})
+
+# Uniform sigma sq --------------------------------------------------------
+test_that("spIntPGOcc works with uniform prior on sigma.sq", {
+  prior.list <- list(sigma.sq.unif = c(0, 5),
+                     nu.unif = c(0.1, 4))
+  tuning.list <- list(phi = 0.5, nu = 0.6, sigma.sq = 0.7)
+  out <- spIntPGOcc(occ.formula = occ.formula,
+	            det.formula = det.formula,
+	            data = data.list,
+	            n.batch = 40,
+	            batch.length = batch.length,
+	            cov.model = "exponential",
+		    priors = prior.list,
+	            tuning = tuning.list,
+	            NNGP = FALSE,
+		    verbose = FALSE,
+	            n.neighbors = 5,
+	            search.type = 'cb',
+	            n.report = 10,
+	            n.burn = 500,
+	            n.chains = 1)
+  expect_s3_class(out, "spIntPGOcc")
+  out <- spIntPGOcc(occ.formula = occ.formula,
+	            det.formula = det.formula,
+	            data = data.list,
+	            n.batch = 40,
+	            batch.length = batch.length,
+	            cov.model = "matern",
+		    priors = prior.list,
+	            tuning = tuning.list,
+	            NNGP = FALSE,
+		    verbose = FALSE,
+	            n.neighbors = 5,
+	            search.type = 'cb',
+	            n.report = 10,
+	            n.burn = 500,
+	            n.chains = 1)
+  expect_s3_class(out, "spIntPGOcc")
+})

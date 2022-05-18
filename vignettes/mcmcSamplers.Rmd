@@ -169,7 +169,9 @@ We define $\bm{\Sigma}(\bm{s}, \bm{s}', \bm{\theta})$ as a $J \times J$ covarian
 
 The detection portion of the occupancy model remains unchanged from the non-spatial occupancy model and follows Equation \@ref(eq:yPGOcc). Formulation of $\pg$ latent variables is also exactly analogous to the nonspatial model (Equation \@ref(eq:polyaGamma)), with all references to $\psi_j$ now including the latent spatial random effects in addition to the site-level covariates. 
 
-Following standard recommendations for point-referenced spatial data [@banerjee2003], we assign an inverse-Gamma prior to the spatial variance parameter and uniform priors to the spatial decay and spatial smoothness parameters. Our full joint posterior distribution takes the following form, where IG stands for the inverse-Gamma distribution: 
+Following standard recommendations for point-referenced spatial data [@banerjee2003], we assign an inverse-Gamma prior to the spatial variance parameter and uniform priors to the spatial decay and spatial smoothness parameters. We also allow users to specify a uniform prior on the spatial variance parameter $\sigma^2$ instead of an inverse-Gamma prior. This can be useful in certain situations when working with binary data, as there is a confounding between the spatial variance parameter $\sigma^2$ and the occurrence intercept $\beta_0$ as a result of the logit transformation and Jensen's Inequality [@bolker2015]. Generally, we have found this confounding to be inconsequential, as the spatial structure of the random effects helps to separate $\sigma^2$ from $\beta_0$. However, there may be certain circumstances when $\sigma^2$ is estimated to be extremely large, and the estimate of $\beta_0$ is a very large magnitude negative number. It can be helpful in these situations to use a uniform distribution on $\sigma^2$ to restrict it to taking more reasonable values. In the following, we present the full joint distribution of all models using an inverse-Gamma prior on $\sigma^2$, as we nearly always use this prior in our own analyses.
+
+Our full joint posterior distribution takes the following form, where IG stands for the inverse-Gamma distribution: 
 
 $$
 \begin{aligned}
@@ -211,7 +213,7 @@ where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries e
 
 The full conditional for the detection regression coefficients is the same as in the non-spatial model shown in Equation \@ref(eq:alphaPostPGOcc). 
 
-The spatial variance parameter, $\sigma^2$, is sampled via a Gibbs update of the form 
+When using an inverse-Gamma prior, the spatial variance parameter, $\sigma^2$, is sampled via a Gibbs update of the form 
 
 \begin{equation}
 \sigma^2 \mid \cdot \sim \text{IG}\Big(\frac{J}{2} + a_{\sigma^2}, \frac{\text{\textbf{w}}^{\top}\bm{R}^{-1}\text{\textbf{w}}}{2} + b_{\sigma^2}\Big),
@@ -220,7 +222,7 @@ The spatial variance parameter, $\sigma^2$, is sampled via a Gibbs update of the
 
 where $\bm{R}$ is a $J \times J$ spatial correlation matrix. 
 
-The full conditional distributions for the spatial range parameter, $\phi$, and spatial smoothness parameter, $\nu$, are not available in closed form, and thus we use random walk Metropolis updates (e.g., @robert2013monte) to update these parameters. We use a random-walk Metroplis step with a multivariate normal proposal distribution (either of dimension 1 or of dimension 2 if Matern covariance function is used). To use the normal distribution as a proposal distribution, we transform the parameters to have a support spanning the entire real line, including a Jacobian adjustment for the Metropolis step. Tuning parameters are adaptively updated using Adaptive MCMC following @roberts2009examples.  
+The full conditional distributions for the spatial range parameter, $\phi$, and spatial smoothness parameter, $\nu$, are not available in closed form, and thus we use random walk Metropolis updates (e.g., @robert2013monte) to update these parameters. We use a random-walk Metroplis step with a multivariate normal proposal distribution (either of dimension 1 or of dimension 2 if Matern covariance function is used). To use the normal distribution as a proposal distribution, we transform the parameters to have a support spanning the entire real line, including a Jacobian adjustment for the Metropolis step. Tuning parameters are adaptively updated using Adaptive MCMC following @roberts2009examples. If using a uniform prior for the spatial variance parameter $\sigma^2$, this parameter is also updated in this step using the same random-walk Metropolis step. 
 
 The $\pg$ data augmentation scheme also enables a Gibbs update for the latent spatial Gaussian process (\textbf{w}($\bm{s}$)), as opposed to a traditional spatial occupancy model that requires a Metropolis update for the latent spatial process. The spatial process is updated according to 
 
@@ -265,7 +267,7 @@ The joint posterior distribution for the NNGP model is exactly the same as that 
 
 ### MCMC sampler {#samplerspPGOccNNGP}
 
-Full conditionals for the $\pg$ latent variables, occurrence regression coefficients, detection regression coefficients, spatial range (and smoothness if applicable) parameter, and the latent occurrence values are sampled in the same manner as done for the full GP spatial occupancy model. The full conditional for the spatial variance parameter $\sigma^2$ similarly takes the form of an inverse-Gamma distribution. The $\pg$ data augmentation scheme induces the following full conditional for the latent spatial process when using an NNGP prior: 
+Full conditionals for the $\pg$ latent variables, occurrence regression coefficients, detection regression coefficients, spatial range (and smoothness if applicable) parameter, and the latent occurrence values are sampled in the same manner as done for the full GP spatial occupancy model. When using an inverse-Gamma prior, the full conditional for the spatial variance parameter $\sigma^2$ similarly takes the form of an inverse-Gamma distribution, or when using a uniform prior, the update is the same as the full GP spatial occupancy model. The $\pg$ data augmentation scheme induces the following full conditional for the latent spatial process when using an NNGP prior: 
 
 \begin{equation}
 \text{\textbf{w}}(\bm{s}) \mid \cdot \sim \text{Normal}(\text{\textbf{B}}[\bm{S}_{\beta}^{-1}(\bm{\tilde{z}} - \bm{X}\bm{\beta})], \text{\textbf{B}})
@@ -505,14 +507,14 @@ The occurrence regression coefficients for species $i$ are subsequently drawn fr
 
 where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent $\pg$ variable values for species $i$. The full conditional for the species-level detection regression coefficients is the same as in the non-spatial model shown in Equation \@ref(eq:alphaMsPGOcc). 
 
-The spatial variance parameter for species $i$, $\sigma^2_i$, is sampled via a Gibbs update of the form 
+When specifying an inverse-Gamma prior, the spatial variance parameter for species $i$, $\sigma^2_i$, is sampled via a Gibbs update of the form 
 
 \begin{equation}
 \sigma^2_i \mid \cdot \sim \text{IG}\Big(\frac{J}{2} + a_{\sigma^2, i}, \frac{\text{\textbf{w}}_i(\bm{s}_j)^{\top}\bm{R}_i^{-1}\text{\textbf{w}}_i(\bm{s}_j)}{2} + b_{\sigma^2, i}\Big),
 (\#eq:sigmaSqPostspMsPGOcc)
 \end{equation}
 
-where $\bm{R}$ is a $J \times J$ spatial correlation matrix. The full conditional distributions for the species-specific spatial range parameters, $\phi_i$, and spatial smoothness parameters, $\nu_i$ are not available in closed form, and so they are updated using random walk Metropolis updates following the same procedure as described for the single-species spatial occupancy models. 
+where $\bm{R}$ is a $J \times J$ spatial correlation matrix. The full conditional distributions for the species-specific spatial range parameters, $\phi_i$, and spatial smoothness parameters, $\nu_i$ are not available in closed form, and so they are updated using random walk Metropolis updates following the same procedure as described for the single-species spatial occupancy models. When a uniform prior is used for the species-specific spatial variance parameters, $\sigma^2_i$, these are also updated using random walk metropolis updates as before. 
 
 The $\pg$ data augmentation scheme induces a Gibbs update for the latent spatial Gaussian process for each species, which is updated according to
 

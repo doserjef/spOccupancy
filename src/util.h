@@ -46,4 +46,6 @@
   double rigamma(double a, double b); 
   void fillUTri(double *v, int m);
   double spCor(double &D, double &phi, double &nu, int &covModel, double *bk); 
+  double spCor(double D, double *theta, std::string &covModel);
+  void clearUT(double *m, int n);
 

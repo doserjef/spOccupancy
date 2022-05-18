@@ -75,7 +75,8 @@ extern "C" {
 		      SEXP nuA_r, SEXP nuB_r, SEXP tuning_r, SEXP covModel_r, 
 		      SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r){
+      	              SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, SEXP currChain_r, SEXP nChain_r, 
+		      SEXP fixedSigmaSq_r, SEXP sigmaSqIG_r){
    
     /**********************************************************************
      * Initial constants
@@ -150,6 +151,8 @@ extern "C" {
     int stNObs = 0; 
     int stAlpha = 0; 
     int thinIndx = 0; 
+    int fixedSigmaSq = INTEGER(fixedSigmaSq_r)[0];
+    int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int sPost = 0; 
 
 #ifdef _OPENMP
@@ -234,7 +237,6 @@ extern "C" {
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
     int jj, kk;
-    int JJ = J * J; 
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_pDet = (double *) R_alloc(pDet, sizeof(double));
@@ -317,7 +319,7 @@ extern "C" {
     double *theta = (double *) R_alloc(nTheta, sizeof(double));
     double logPostCurrent = 0.0, logPostCand = 0.0;
     double logDet;  
-    double phiCand = 0.0, nuCand = 0.0;  
+    double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0;  
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP tuningSamples_r; 
@@ -522,24 +524,27 @@ extern "C" {
         /********************************************************************
          *Update sigmaSq
          *******************************************************************/
+	if (!fixedSigmaSq) {
+          if (sigmaSqIG) {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
 #endif
-         for (j = 0; j < J; j++){
-           if(nnIndxLU[J+j] > 0){
-             e = 0;
-             for(i = 0; i < nnIndxLU[J+j]; i++){
-               e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
-             }
-             b = w[j] - e;
-           }else{
-             b = w[j];
-           }	
-           a += b*b/F[j];
-         }
+            for (j = 0; j < J; j++){
+              if(nnIndxLU[J+j] > 0){
+                e = 0;
+                for(i = 0; i < nnIndxLU[J+j]; i++){
+                  e += B[nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i]];
+                }
+                b = w[j] - e;
+              }else{
+                b = w[j];
+              }	
+              a += b*b/F[j];
+            }
 
-	 theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
-         // sigmaSq = 1.0/rgamma(sigmaSqA+J/2.0, 1.0/(sigmaSqIGb+0.5*a*theta[sigmaSqIndx]));
+	    theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+	  }
+	}
 
         /********************************************************************
          *Update phi (and nu if matern)
@@ -573,14 +578,25 @@ extern "C" {
         if(corName == "matern"){
         	logPostCurrent += log(theta[nuIndx] - nuA) + log(nuB - theta[nuIndx]); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCurrent += log(theta[sigmaSqIndx] - sigmaSqA) + log(sigmaSqB - theta[sigmaSqIndx]);
+	}
         
         // Candidate
         phiCand = logitInv(rnorm(logit(theta[phiIndx], phiA, phiB), exp(tuning[phiIndx])), phiA, phiB);
         if (corName == "matern"){
       	  nuCand = logitInv(rnorm(logit(theta[nuIndx], nuA, nuB), exp(tuning[nuIndx])), nuA, nuB);
         }
-      
+	if (sigmaSqIG == 0) {
+	  sigmaSqCand = logitInv(rnorm(logit(theta[sigmaSqIndx], sigmaSqA, sigmaSqB), 
+				 exp(tuning[sigmaSqIndx])), sigmaSqA, sigmaSqB); 
+	}
+
+	if (sigmaSqIG) { 
         updateBF1Int(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
+	} else {
+          updateBF1Int(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, bk, nuB);
+	}
       
         a = 0;
         logDet = 0;
@@ -607,6 +623,9 @@ extern "C" {
         if (corName == "matern"){
           logPostCand += log(nuCand - nuA) + log(nuB - nuCand); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCand += log(sigmaSqCand - sigmaSqA) + log(sigmaSqB - sigmaSqCand);
+	}
 
         if (runif(0.0,1.0) <= exp(logPostCand - logPostCurrent)) {
 
@@ -619,6 +638,10 @@ extern "C" {
             theta[nuIndx] = nuCand; 
             accept[nuIndx]++; 
           }
+	  if (sigmaSqIG == 0) {
+            theta[sigmaSqIndx] = sigmaSqCand;
+	    accept[sigmaSqIndx]++;
+	  }
         }
 
         /********************************************************************
@@ -687,8 +710,14 @@ extern "C" {
       if (verbose) {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
-	  Rprintf("\tAcceptance\tTuning\n");	  
-	  Rprintf("\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  Rprintf("\tParameter\tAcceptance\tTuning\n");	  
+	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  if (corName == "matern") {
+	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
+	  }
+	  if (sigmaSqIG == 0) {
+	    Rprintf("\tsigmaSq\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + sigmaSqIndx], exp(tuning[sigmaSqIndx]));
+	  }
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
 	  R_FlushConsole();

@@ -5337,3 +5337,63 @@ test_that("posterior predictive checks work for spPGOcc", {
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, max(n.rep)))
 })
 
+# Fixed sigma sq ----------------------------------------------------
+test_that("spPGOcc works with fixed sigma.sq", {
+  prior.list <- list(sigma.sq.ig = 'fixed')
+  out <- spPGOcc(occ.formula = occ.formula, 
+	         det.formula = det.formula, 
+	         data = data.list, 
+	         n.batch = 40, 
+	         batch.length = batch.length, 
+	         cov.model = "exponential", 
+		 priors = prior.list,
+	         tuning = tuning.list, 
+	         NNGP = FALSE,
+		 verbose = FALSE, 
+	         n.neighbors = 5, 
+	         search.type = 'cb', 
+	         n.report = 10, 
+	         n.burn = 500, 
+	         n.chains = 1)
+  expect_s3_class(out, "spPGOcc")
+  expect_equal(length(unique(out$theta.samples[, 1])), 1)
+})
+
+# Uniform sigma sq --------------------------------------------------------
+test_that("spPGOcc works with uniform prior on sigma.sq", {
+  prior.list <- list(sigma.sq.unif = c(0, 5), 
+                     nu.unif = c(0.1, 4))
+  tuning.list <- list(phi = 0.5, nu = 0.6, sigma.sq = 0.7)
+  out <- spPGOcc(occ.formula = occ.formula, 
+	         det.formula = det.formula, 
+	         data = data.list, 
+	         n.batch = 40, 
+	         batch.length = batch.length, 
+	         cov.model = "exponential", 
+		 priors = prior.list,
+	         tuning = tuning.list, 
+	         NNGP = FALSE,
+		 verbose = FALSE, 
+	         n.neighbors = 5, 
+	         search.type = 'cb', 
+	         n.report = 10, 
+	         n.burn = 500, 
+	         n.chains = 1)
+  expect_s3_class(out, "spPGOcc")
+  out <- spPGOcc(occ.formula = occ.formula, 
+	         det.formula = det.formula, 
+	         data = data.list, 
+	         n.batch = 40, 
+	         batch.length = batch.length, 
+	         cov.model = "matern", 
+		 priors = prior.list,
+	         tuning = tuning.list, 
+	         NNGP = FALSE,
+		 verbose = FALSE, 
+	         n.neighbors = 5, 
+	         search.type = 'cb', 
+	         n.report = 10, 
+	         n.burn = 500, 
+	         n.chains = 1)
+  expect_s3_class(out, "spPGOcc")
+})
