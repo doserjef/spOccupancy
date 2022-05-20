@@ -127,8 +127,8 @@ We now fit the model using `spPGOcc()`. Random effects are included in the model
 
 ```{r}
 inits <- list(alpha = 0, beta = 0, sigma.sq.psi = 0.5, 
-	      sigma.sq.p = 0.5, z = apply(dat$y, 1, max, na.rm = TRUE), 
-	      sigma.sq = 1, phi = 3 / 0.5)
+              sigma.sq.p = 0.5, z = apply(dat$y, 1, max, na.rm = TRUE), 
+              sigma.sq = 1, phi = 3 / 0.5)
 out.full <- spPGOcc(occ.formula = ~ occ.cov.1 + (1 | occ.factor.1), 
                     det.formula = ~ det.cov.1 + (1 | det.factor.1), 
                     data = data.list, 

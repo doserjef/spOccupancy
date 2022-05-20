@@ -157,7 +157,7 @@ In our HBEF example, it is clear that there is a set of fairly common species as
 sp.names
 # Reorder species. 
 sp.ordered <- c('OVEN', 'BLPW', 'AMRE', 'BAWW', 'BHVI', 'BLBW', 
-	        'BTBW', 'BTNW', 'CAWA', 'MAWA', 'NAWA', 'REVI')
+                'BTBW', 'BTNW', 'CAWA', 'MAWA', 'NAWA', 'REVI')
 # Create new detection-nondetection data matrix in the new order
 y.new <- hbef2015$y[sp.ordered, , ]
 # Create a new data array

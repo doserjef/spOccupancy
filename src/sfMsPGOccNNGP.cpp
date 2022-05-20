@@ -1208,9 +1208,9 @@ extern "C" {
           Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
           Rprintf("\tLatent Factor\tParameter\tAcceptance\tTuning\n");	  
           for (ll = 0; ll < q; ll++) {
-            Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + phiIndx * q + ll], exp(tuning[phiIndx * q + ll]));
+            Rprintf("\t%i\t\t\tphi\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + phiIndx * q + ll], exp(tuning[phiIndx * q + ll]));
 	    if (corName == "matern") {
-            Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + nuIndx * q + ll], exp(tuning[nuIndx * q + ll]));
+            Rprintf("\t%i\t\t\tnu\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + nuIndx * q + ll], exp(tuning[nuIndx * q + ll]));
 	    }
           } // ll
           Rprintf("-------------------------------------------------\n");
