@@ -1176,7 +1176,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           if (sigma.sq.ig) {
             sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
 	  } else {
-            sigma.sq.inits <- runif(N, sigma.sq., sigma.sq.b)
+            sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
 	  }
 	}
         phi.inits <- runif(N, phi.a, phi.b)
