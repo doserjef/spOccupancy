@@ -211,9 +211,8 @@ fitted.PGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!is(object, "PGOcc")) {
-  # if (class(object) != "PGOcc") {
-    stop("error: object must be one of class PGOcc\n")
+  if (!(class(object) %in% c("PGOcc", "spPGOcc"))) {
+    stop("error: object must be one of class PGOcc or spPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
@@ -246,14 +245,14 @@ fitted.PGOcc <- function(object, ...) {
     det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
   }
   y.rep.samples <- t(apply(det.prob.samples * z.samples[, z.long.indx], 
-			   2, function(a) rbinom(n.post, 1, a)))
+  			   2, function(a) rbinom(n.post, 1, a)))
   tmp <- array(NA, dim = c(J * K.max, n.post))
   names.long <- which(!is.na(c(object$y)))
   tmp[names.long, ] <- y.rep.samples
   y.rep.samples <- array(tmp, dim = c(J, K.max, n.post))
   y.rep.samples <- aperm(y.rep.samples, c(3, 1, 2))
   tmp <- array(NA, dim = c(J * K.max, n.post))
-  tmp[names.long, ] <- det.prob.samples
+  tmp[names.long, ] <- t(det.prob.samples)
   det.prob.samples <- array(tmp, dim = c(J, K.max, n.post))
   det.prob.samples <- aperm(det.prob.samples, c(3, 1, 2))
   out <- list()
@@ -789,73 +788,7 @@ summary.spPGOcc <- function(object,
 
 
 fitted.spPGOcc <- function(object, ...) {
-  # Check for unused arguments ------------------------------------------
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-      if(! i %in% formal.args)
-          warning("'",i, "' is not an argument")
-  }
-  # Call ----------------------------------------------------------------
-  cl <- match.call()
-  # Functions -------------------------------------------------------------
-  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
-  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
-
-  # Some initial checks -------------------------------------------------
-  # Object ----------------------------
-  if (missing(object)) {
-    stop("error: object must be specified")
-  }
-  if (!is(object, 'spPGOcc')) {
-  # if (class(object) != 'spPGOcc') {
-    stop("error: object must be one of class spPGOcc\n")
-  }
-  n.post <- object$n.post * object$n.chains
-  X.p <- object$X.p
-  y <- object$y
-  n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
-  K.max <- max(n.rep)
-  J <- nrow(y)
-  z.long.indx <- rep(1:J, K.max)
-  z.long.indx <- z.long.indx[!is.na(c(y))]
-  if (nrow(X.p) == nrow(y)) {
-    X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
-    X.p <- X.p[!is.na(c(y)), , drop = FALSE]
-    if (object$pRE) {
-      lambda.p <- do.call(rbind, replicate(ncol(y), object$lambda.p, simplify = FALSE))
-      lambda.p <- lambda.p[!is.na(c(y)), , drop = FALSE]
-    }
-  } else {
-    if (object$pRE) {
-      lambda.p <- object$lambda.p
-    }
-  }
-  y <- c(y)
-  y <- y[!is.na(y)]
-  z.samples <- object$z.samples
-  alpha.samples <- object$alpha.samples
-  if (object$pRE) {
-    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples) +
-      			      lambda.p %*% t(object$alpha.star.samples)))
-  } else {
-    det.prob.samples <- t(logit.inv(X.p %*% t(alpha.samples)))
-  }
-  y.rep.samples <- t(apply(det.prob.samples * z.samples[, z.long.indx], 
-			   2, function(a) rbinom(n.post, 1, a)))
-  tmp <- array(NA, dim = c(J * K.max, n.post))
-  names.long <- which(!is.na(c(object$y)))
-  tmp[names.long, ] <- y.rep.samples
-  y.rep.samples <- array(tmp, dim = c(J, K.max, n.post))
-  y.rep.samples <- aperm(y.rep.samples, c(3, 1, 2))
-  tmp <- array(NA, dim = c(J * K.max, n.post))
-  tmp[names.long, ] <- det.prob.samples
-  det.prob.samples <- array(tmp, dim = c(J, K.max, n.post))
-  det.prob.samples <- aperm(det.prob.samples, c(3, 1, 2))
-  out <- list()
-  out$y.rep.samples <- y.rep.samples
-  out$p.samples <- det.prob.samples
-  return(out)
+  fitted.PGOcc(object)
 }
 
 # msPGOcc -----------------------------------------------------------------
@@ -1264,13 +1197,15 @@ fitted.msPGOcc <- function(object, ...) {
     }
   }
   out <- list()
+  # Get detection probability
+  # Need to be careful here that all arrays line up. 
+  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
   tmp <- array(NA, dim = c(n.post, N, J * K.max))
   names.long <- which(!is.na(c(object$y[1, , ])))
   tmp[, , names.long] <- det.prob.samples
   p.samples <- array(tmp, dim = c(n.post, N, J, K.max))
   out$p.samples <- p.samples
-  # Need to be careful here that all arrays line up. 
-  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+  # Get fitted values
   det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
   y.rep.samples <- array(NA, dim = dim(det.prob.samples))
   for (i in 1:N) {

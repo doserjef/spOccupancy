@@ -1,0 +1,285 @@
+---
+title: "Formatting data for use in `spOccupancy`"
+author: "Jeffrey W. Doser"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{dataFormatting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", cache = TRUE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+
+# Introduction
+
+This vignette gives an example of how to take raw data and format it for use in `spOccupancy` model fitting functions. This is not an exhaustive example, as data can be recorded and stored in a variety of ways, which requires different approaches to wrangle the data into the necessary format for `spOccupancy`. However, I hope this vignette can help provide some guidance on how to take raw data and efficiently reformat it for use in `spOccupancy`. Here I will focus solely on data preparation. For full details on the basic `spOccupancy` functionality, please see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). 
+
+First we load `spOccupancy` as well as two `tidyverse` packages that we will use for manipulating our data sets into the necessary format for `spOccupancy` (`dplyr` and `lubridate`). 
+
+```{r}
+library(spOccupancy)
+library(dplyr)
+library(lubridate)
+```
+
+# Raw Data: Hubbard Brook Experimental Forest
+
+As an exmaple data set, we will use data from point count surveys on breeding birds in the Hubbard Brook Experimental Forest (HBEF). Briefly, observers performed standard point count surveys at 374 sites throughout HBEF. Typically each site was revisited three times during a given year, providing the necessary replication for occupancy modeling. During each point count survey, the observer records each individual bird they see within a pre-specified detection radius and within the 10-minute duration of the survey. This results in a number of individual birds for each species observed during each point count survey. 
+
+In the following code chunk, we read in the HBEF data set directly from the Hubbard Brook website. Note this will only work on your computer if you have an internet connection. 
+
+```{r}
+hb.dat <- read.csv(url("https://portal.edirepository.org/nis/dataviewer?packageid=knb-lter-hbr.178.3&entityid=eecb146279aa290af2292d75d3ba0f8b"))
+# Take a look at the data set
+str(hb.dat)
+```
+
+We see the data set comes with a variety of auxiliary information such as the minute the species was detected, and information on the weather at the time of the survey. See [the Hubbard Brook website](https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-hbr&identifier=178) for full metadata information on this data set.
+
+Looking closely at the data set, we see that each row corresponds to an individual bird that was detected during a point count survey at a specific site (`Plot`) on a given date (`Date`). For our example, we only want to work with data from a single year, so we will first extract the year of each observation from the `Date` column using functions from `lubridate` and `dplyr`. 
+
+```{r}
+# Convert string "Date" column to Date R object
+class(hb.dat$Date)
+hb.dat$Date <- ymd(hb.dat$Date)
+class(hb.dat$Date)
+# Extract the year from the data column
+hb.dat$Year <- year(hb.dat$Date)
+str(hb.dat)
+```
+
+We will now use the `dplyr::filter()` function to only select data from 2014. Additionally, I apply two further restrictions on the data set. I only grab observations that come from the first, second, or third replicate, and I also remove data from plot 277, as we don't want to include this plot in our analysis as a result of data collection complications. 
+
+```{r}
+hb.2014 <- hb.dat %>%
+  filter(Year == 2014,  # Only use data from 2014
+         Replicate %in% c("1", "2", "3"), # Only use data from first 3 reps 
+         Plot != 277) # Don't use data from plot 277
+str(hb.2014)
+```
+
+After applying our filtering criteria, we see we have `r nrow(hb.2014)` observations of individual birds. 
+
+# Extract Detection-nondetection Data
+
+Now that we have filtered the data to only contain the data we wish to use in our analysis, our next step is to extract the detection-nondetection data for use in `spOccupancy`. Let's suppose we are interested first in fitting a multi-species occupancy model. All multi-species occupancy model fitting functions in `spOccupancy` require the detection-nondetection data to be in the format of a three-dimensional array, with dimensions corresponding to species, site, and replicate. 
+
+The easiest way to think about a three-dimensional array is as a series of stacked matrices. For a single-species, we can imagine having a two-dimensional matrix, with the rows corresponding to sites, the columns corresponding to replicate surveys, and the individual elements of the matrix denoting whether or not the species was observed (1) or not observed (0) during the specific survey at the specific site. If we have $N$ species, we can generate a separate matrix for each species, giving us a total of $N$ matrices. If we imagine "stacking" these $N$ species-specific matrices on top of one another, this gives us a three-dimensional array. This is excatly what we do to format the detection-nondetection data for use in `spOccupancy`. 
+
+First, we convert the raw data into a long format, where each row corresponds to the total number of individuals of a given species observed at a given site during a given point count survey. We do this using a series of `dplyr` functions.  
+
+```{r, message = FALSE, warning = FALSE}
+y.long <- hb.2014 %>%
+  group_by(Plot, Date, Replicate, Species) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  glimpse()
+```
+
+Next, we need to convert our `y.long` object into our three-dimensional array that contains the site/replicate matrices for each of our $N$ species. First, I extract the codes for each individual species and plot (site) and set up the array (`y`) that will store our detection-nondetection data.  
+
+```{r}
+# Species codes.
+sp.codes <- sort(unique(y.long$Species))
+# Plot (site) codes.
+plot.codes <- sort(unique(y.long$Plot))
+# Number of species
+N <- length(sp.codes)
+# Maximum number of replicates at a site
+K <- 3
+# Number of sites
+J <- length(unique(y.long$Plot))
+# Array for detection-nondetection data. 
+y <- array(NA, dim = c(N, J, K))
+# Label the dimensions of y (not necessary, but helpful)
+dimnames(y)[[1]] <- sp.codes
+dimnames(y)[[2]] <- plot.codes
+# Look at the structure of our array y
+str(y)
+```
+
+Looking at the output from `str(y)`, we see our detection-nondetection array will contain data for `r N` species at `r J` sites across a possible `r K` replicates at each site. Next we need to fill the array with our data for each species. I do this below by using nested for loops. Specifically, I fill in the data for each site and each replicate one at a time. Here we need to be careful to distinguish between site/replicate combinations where a species was not observed and site/replicate combinations that were not sampled (e.g., a site was sampled only twice and not three times). In this specific case here, I make the assumption that if a site was sampled for a given replicate, the observer will have detected at least one bird. If not, I assume the site was not sampled. This is a valid approach for this data set, but a different approach may need to be taken depending on the specific study system you're working with, and how the data were originally formatted. Further, for this data set, there are multiple dates listed for certain replicate surveys, and so for those cases where there are multiple dates listed for a specific replicate, I choose here to simply use the data that comes from the first date.  
+
+```{r}
+for (j in 1:J) { # Loop through sites.
+  for (k in 1:K) { # Loop through replicates at each site.
+    # Extract data for current site/replicate combination.
+    curr.df <- y.long %>%
+      filter(Plot == plot.codes[j], Replicate == k)
+    # Check if more than one date for a given replicate
+    if (n_distinct(curr.df$Date) > 1) {
+      # If there is more than 1 date, only use the data
+      # from the first date.
+      curr.dates <- unique(sort(curr.df$Date))
+      curr.df <- curr.df %>% 
+        filter(Date == curr.dates[1])
+    }
+    # If plot j was sampled during replicate k, 
+    # curr.df will have at least 1 row (i.e., at least 
+    # one species will be observed). If not, assume it 
+    # was not sampled for that replicate.
+    if (nrow(curr.df) > 0) {
+      # Extract the species that were observed during
+      # this site/replicate.
+      curr.sp <- which(sp.codes %in% curr.df$Species)
+      # Set value to 1 for species that were observed.
+      y[curr.sp, j, k] <- 1
+      # Set value to 0 for all other species.
+      y[-curr.sp, j, k] <- 0
+    }
+  } # k (replicates)
+} # j (sites)
+str(y)
+# Total number of observations for each species
+apply(y, 1, sum, na.rm = TRUE)
+```
+
+Not surprisingly, we see a wide range in the number of observations for the `r N` species observed at HBEF in 2014. 
+
+# Format detection covariates
+
+Next, we will extract and format two observation-level covariates that we will use to account for variation in detection probability across the different sites and the different surveys at each site. Specifically, we wish to extract the day of each survey and the time of day each survey began. All `spOccupancy` model functions assumes that observation-level detection covariates wil be formatted as matrices with rows corresponding to sites and columns corresponding to replicates. I first use a set of `dplyr` functions to extract the unique date and time of day (tod) for each plot and replicate combination in the data set.  
+
+```{r, message = FALSE, warning = FALSE}
+day.time.2014 <- hb.2014 %>%
+  group_by(Plot, Replicate) %>%
+  summarize(Date = unique(Date), 
+            tod = unique(Time)) %>%
+  ungroup() %>%
+  glimpse()
+```
+
+There are two things to mention. First, the date is currently stored as a date, and instead we want to extract the Julian date (i.e., the day of the year, where January first is day 1). Second, the time of day is currently stored as a character, and we want to extract the time of day as the number of minutes since midnight. Below, we use a similar nested loop statement like we used for the detection-nondetection data to extract the day and time of each survey, and convert the day and time to the desired formats.  
+
+```{r}
+hb.day <- matrix(NA, nrow = J, ncol = K)
+hb.tod <- matrix(NA, nrow = J, ncol = K)
+for (j in 1:J) { # Loop through sites
+  for (k in 1:K) { # Loop through replicate surveys
+    # Get current date and time for each survey 
+    curr.vals <- day.time.2014 %>%
+      filter(Plot == plot.codes[j], Replicate == k) %>%
+      mutate(Date = yday(Date), 
+	     tod = period_to_seconds(hm(tod)) / 60 ) %>%
+      select(Date, tod) %>%
+      arrange(Date)
+    # If the site was surveyed for the given replicate, 
+    # extract the first date and time value. 
+    if (nrow(curr.vals) > 0) {
+      hb.day[j, k] <- curr.vals$Date[1]
+      hb.tod[j, k] <- curr.vals$tod[1] 
+    }
+  } # k (replicates)
+} # j (sites) 
+# Check out the structure of our covariates. 
+str(hb.day)
+str(hb.tod)
+```
+
+# Format occurrence covariates
+
+Formatting covariates for the occurrence portion of an occupancy model in `spOccupancy` is straightforward, as covariates can only vary by site. Thus, occurrence covariates simply need to be formatted as either a data frame or a matrix, where the rows represent the sites and the columns represent the different covariates that you wish to include in the occupancy model. 
+
+Here we will use elevation as a site-level covariate on the occurrence portion of the occupancy model. I extract elevation at each of the `r J` sites from the `hbef2015` data object that comes along with the `spOccupancy` package. 
+
+```{r}
+elev <- hbef2015$occ.covs[, 1]
+str(elev)
+```
+
+# Format site coordinates
+
+For spatially-explicit models in `spOccupancy`, the model fitting functions additionally require the site coordinates. The coordinates should be formatted as a matrix with $J$ rows (where $J$ is the number of sites) and two columns, with the horizontal component (i.e., easting) in the first column, and the vertical component (i.e., northing) in the second column. Note that `spOccupancy` assumes coordinates are provided in a projected coordinate system. In other words, you should not provide latitude/longitude values to `spOccupancy`, and rather should convert these to some projected coordinate system. Below I extract the coordinates for the `r J` sites in the Hubbard Brook data set from the `hbef2015` data object that comes along with the `spOccupancy` package. These coordinates are in UTM Zone 19N.  
+
+```{r}
+coords <- hbef2015$coords
+str(coords)
+```
+
+# Package data into list object
+
+We now have all the necessary components for fitting an occupancy model in `spOccupancy`. Our final step for preparing the data is to package all of the data into a list object in the specific format that `spOccupancy` requires. When we fit occupancy models in `spOccupancy` we need to send in a list into the `data` argument that contains the detection-nondetection data, occurrence covariates, detection covariates, and spatial coordinates (for spatially-explicit models). The list should consist of four objects with the following names: `y` (the detection-nondetection data), `det.covs` (the detection covariates), `occ.covs` (the occurrence covariates, and `coords` (the spatial coordinates). Note that `coords` is only necessary for spatially-explicit models, and `det.covs` and/or `occ.covs` can be left out if you are fitting models with no covariates on detection and/or occurrence, respectively. The detection-nondetection data are in the three-dimensional array as we previously specified. For our simple example here, we will fit a spatially-explicit multi-species occupancy model with ten species, and so below I subset our full detection-nondetection data to only include ten species 
+
+```{r}
+# Detection-nondetection data ---------
+# Species of interest
+curr.birds <- c('BAWW', 'BLJA', 'BTBW', 'BTNW', 'EAWP', 
+		'OVEN', 'VEER', 'WBNU', 'SCTA', 'GCFL')
+y.msom <- y[which(sp.codes %in% curr.birds), , ]
+str(y.msom)
+```
+
+For the detection covariates, we need to create a list that contains all of the detection covariates we wish to include in the model. The individual detection covariates can be either site level covariates or observation level covariates. Site-level covariates are specified as a vector of length $J$ (the number of sites), while observation-level covariates are specified as a matrix or data frame with the number of rows equal to $J$ and number of columns equal to the maximum number of replicates at a given site. Here, we have two observation level covariates (`hb.day` and `hb.tod`), which are formatted correctly as matrices.  We put them together in a list in the following code chunk. 
+
+```{r}
+# Detection covariates ----------------
+det.covs <- list(day = hb.day, 
+                 tod = hb.tod)
+str(det.covs)
+```
+
+The occurrence covariates are stored as a matrix or data frame, with rows corresponding to sites and columns corresponding to the different covariates we wish to include in the model. Here, we have a single covariate (`elev`) and so we convert it to a data frame in the following code chunk. 
+
+```{r}
+# Occurrence covariates ---------------
+occ.covs <- data.frame(elev)
+str(occ.covs)
+```
+
+We already have the coordinates correctly specified as a $J \times 2$ matrix in the `coords` object, so we are now ready to package all the objects together into a single list. 
+
+```{r}
+# Package all data into list object
+data.msom <- list(y = y.msom, 
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs, 
+                  coords = coords)
+```
+
+Notice how we explicitly specify the name of each object (`y`, `occ.covs`, `det.covs`, and `coords`). The data are now ready to go, and below I fit a spatially-explicit multi-species occupancy model to verify that (see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details on model-fitting functions).  
+
+```{r}
+out.msom <- spMsPGOcc(occ.formula = ~ scale(elev) + I(scale(elev)^2), 
+                      det.formula = ~ scale(day) + I(scale(day)^2) + scale(tod), 
+                      data = data.msom,
+                      n.batch = 10, 
+                      batch.length = 25, 
+                      cov.model = 'exponential', 
+                      NNGP = TRUE, 
+                      verbose = FALSE) 
+summary(out.msom, level = 'community')
+```
+
+Finally, to fit a single-species occupancy model, we only need to make one change to the detection-nondetection data. Because we only have a single-species, we no longer need to specify `y` as a three-dimensional array, and instead it is simply a matrix with rows corresponding to sites and columns corresponding to replicates. Below I reformat the data for fitting a spatially-explicit occupancy model with a single-species. 
+
+```{r}
+curr.bird <- 'EAWP'
+y.ssom <- y[which(sp.codes == curr.bird), , ]
+str(y.ssom)
+data.ssom <- list(y = y.ssom, 
+                  occ.covs = occ.covs, 
+                  det.covs = det.covs, 
+                  coords = coords)
+out.ssom <- spPGOcc(occ.formula = ~ scale(elev) + I(scale(elev)^2), 
+                    det.formula = ~ scale(day) + I(scale(day)^2) + scale(tod), 
+                    data = data.ssom,
+                    n.batch = 10, 
+                    batch.length = 25, 
+                    cov.model = 'exponential', 
+                    NNGP = TRUE, 
+                    verbose = FALSE) 
+summary(out.ssom)
+```
