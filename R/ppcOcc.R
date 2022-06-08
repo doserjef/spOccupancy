@@ -21,8 +21,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   }
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                             'lfMsPGOcc', 'sfMsPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc\n")
+                             'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'spTPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, spTPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -36,16 +36,15 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(group)) {
     stop("error: group must be specified")
   }
-  if (!(group %in% c(1, 2)) & (class(object) %in% c('PGOcc', 'spPGOcc', 
-						    'intPGOcc', 'spIntPGOcc'))) {
-    stop("error: group must be 1 (row) or 2 (columns) for objects of class PGOcc, spPGOcc, intPGOcc, spIntPGOcc")
+  if (!(group %in% c(1, 2))) {
+    stop("error: group must be 1 (sites) or 2 (replicates)")
   }
   # Functions -------------------------------------------------------------
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
   out <- list()
-  # For single species models
+  # Single-species models -------------------------------------------------
   #if (is(object, c('PGOcc', 'spPGOcc'))) {
   if (class(object) %in% c('PGOcc', 'spPGOcc')) {
     y <- object$y
@@ -123,7 +122,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.post <- object$n.post
     out$n.chains <- object$n.chains
   } 
-  # Multispecies models
+  # Multispecies models ---------------------------------------------------
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc')) {
     y <- object$y
@@ -206,7 +205,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.chains <- object$n.chains
     out$sp.names <- object$sp.names
   }
-  # For integrated models
+  # Integrated models -----------------------------------------------------
   # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     y <- object$y
@@ -291,6 +290,87 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$fit.y.rep <- fit.y.rep.list
     out$fit.y.group.quants <- fit.y.group.quants.list
     out$fit.y.rep.group.quants <- fit.y.rep.group.quants.list
+    # For summaries
+    out$group <- group
+    out$fit.stat <- fit.stat
+    out$class <- class(object)
+    out$call <- cl
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
+    out$n.chains <- object$n.chains
+  }
+  # Dynamic models --------------------------------------------------------
+  # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
+  if (class(object) %in% c('tPGOcc', 'spTPGOcc')) {
+    y <- object$y
+    J <- dim(y)[1]
+    n.years.max <- dim(y)[2]
+    fitted.out <- fitted.spTPGOcc(object)
+    y.rep.samples <- fitted.out$y.rep.samples
+    det.prob <- fitted.out$p.samples
+    z.samples <- object$z.samples
+    n.samples <- object$n.post * object$n.chains
+    fit.y <- matrix(NA, n.samples, n.years.max)
+    fit.y.rep <- matrix(NA, n.samples, n.years.max)
+    e <- 0.0001
+    # Do the stuff 
+    if (group == 1) { # Group by site
+      y.grouped <- apply(y, c(1, 2), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2, 3), sum, na.rm = TRUE)
+      fit.big.y.rep <- array(NA, dim = c(n.samples, J, n.years.max))
+      fit.big.y <- array(NA, dim = c(n.samples, J, n.years.max))
+      for (t in 1:n.years.max) {
+        message(noquote(paste("Currently on time period ", t, " out of ", n.years.max, sep = '')))
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
+            for (j in 1:n.samples) {
+              E.grouped <- apply(det.prob[j, , t, ] * z.samples[j, , t], 1, sum, na.rm = TRUE)
+              fit.big.y[j, , t] <- (y.grouped[, t] - E.grouped)^2 / (E.grouped + e)
+              fit.y[j, t] <- sum(fit.big.y[j, , t])
+              fit.big.y.rep[j, , t] <- (y.rep.grouped[j, , t] - E.grouped)^2 / (E.grouped + e)
+              fit.y.rep[j, t] <- sum(fit.big.y.rep[j, , t])
+            }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, , t, ] * z.samples[j, , t], 1, sum, na.rm = TRUE)
+            fit.big.y[j, , t] <- (sqrt(y.grouped[, t]) - sqrt(E.grouped))^2 
+            fit.y[j, t] <- sum(fit.big.y[j, , t])
+            fit.big.y.rep[j, , t] <- (sqrt(y.rep.grouped[j, , t]) - sqrt(E.grouped))^2 
+            fit.y.rep[j, t] <- sum(fit.big.y.rep[j, , t])
+          }
+        }
+      }
+    } else if (group == 2) { # Group by visit
+      y.grouped <- apply(y, c(2, 3), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 3, 4), sum, na.rm = TRUE)
+      fit.big.y <- array(NA, dim = c(n.samples, n.years.max, dim(y)[3]))
+      fit.big.y.rep <- array(NA, dim = c(n.samples, n.years.max, dim(y)[3]))
+      for (t in 1:n.years.max) {
+        message(noquote(paste("Currently on time period ", t, " out of ", n.years.max, sep = '')))
+        if (fit.stat %in% c('chi-squared', 'chi-square')) {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, , t, ] * z.samples[j, , t], 2, sum, na.rm = TRUE)
+            fit.big.y[j, t, ] <- (y.grouped[t, ] - E.grouped)^2 / (E.grouped + e)
+            fit.y[j, t] <- sum(fit.big.y[j, t, ])
+            fit.big.y.rep[j, t, ] <- (y.rep.grouped[j, t, ] - E.grouped)^2 / (E.grouped + e)
+            fit.y.rep[j, t] <- sum(fit.big.y.rep[j, t, ])
+          }
+        } else if (fit.stat == 'freeman-tukey') {
+          for (j in 1:n.samples) {
+            E.grouped <- apply(det.prob[j, , t, ] * z.samples[j, , t], 2, sum, na.rm = TRUE)
+            fit.big.y[j, t, ] <- (sqrt(y.grouped[t, ]) - sqrt(E.grouped))^2 
+            fit.y[j, t] <- sum(fit.big.y[j, t, ])
+            fit.big.y.rep[j, t, ] <- (sqrt(y.rep.grouped[j, t, ]) - sqrt(E.grouped))^2 
+            fit.y.rep[j, t] <- sum(fit.big.y.rep[j, t, ])
+          }
+        }
+      }
+    }
+    out$fit.y <- fit.y
+    out$fit.y.rep <- fit.y.rep
+    out$fit.y.group.quants <- apply(fit.big.y, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    out$fit.y.rep.group.quants <- apply(fit.big.y.rep, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
     # For summaries
     out$group <- group
     out$fit.stat <- fit.stat

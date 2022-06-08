@@ -1,16 +1,16 @@
-\name{PGOcc}
-\alias{PGOcc}
-\title{Function for Fitting Single-Species Occupancy Models Using Polya-Gamma Latent Variables}
+\name{tPGOcc}
+\alias{tPGOcc}
+\title{Function for Fitting Multi-Season Single-Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
-PGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
+tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
       n.omp.threads = 1, verbose = TRUE, n.report = 100, 
       n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-      k.fold, k.fold.threads = 1, k.fold.seed, ...)
+      k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 }
 
 \description{
-  Function for fitting single-species occupancy models using Polya-Gamma latent variables. 
+  Function for fitting multi-season single-species occupancy models using Polya-Gamma latent variables. 
 }
 
 \arguments{
@@ -26,17 +26,22 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
 \item{data}{a list containing data necessary for model fitting.
   Valid tags are \code{y}, \code{occ.covs}, and \code{det.covs}. \code{y}
-  is a matrix or data frame with first dimension equal to the number of 
-  sites (\eqn{J}{J}) and second dimension equal to the maximum number of 
-  replicates at a given site. \code{occ.covs} is a matrix or data frame
-  containing the variables used in the occurrence portion of the model, with
-  \eqn{J}{J} rows for each column (variable). \code{det.covs} is a list of
-  variables included in the detection portion of the model. Each list element
-  is a different detection covariate, which can be site-level or 
-  observational-level. Site-level covariates are specified as a vector 
-  of length \eqn{J}{J} while observation-level covariates are specified 
-  as a matrix or data frame with the number of rows equal to \eqn{J}{J} and 
-  number of columns equal to the maximum number of replicates at a given site.}
+  is a three-dimensional array with first dimension equal to the number of 
+  sites (\eqn{J}{J}), second dimension equal to the maximum number of 
+  primary time periods (i.e., years or seasons), and third dimension equal 
+  to the maximum number of replicates at a given site. \code{occ.covs} is a
+  list of variables included in the occurrence portion of the model. Each
+  list element is a different occurrence covariate, which can be site level
+  or site/year level. Site-level covariates are specified as a vector of 
+  length \eqn{J}{J} while site/year level covariates are specified as a matrix
+  with rows corresponding to sites and columns correspond to primary time periods.
+  Similarly, \code{det.covs} is a list of variables included in the detection
+  portion of the model, with each list element corresponding to an 
+  individual variable. In addition to site-level and/or site/year-level, 
+  detection covariates can also be observational-level. Observation-level covariates
+  are specified as a three-dimensional array with first dimension corresponding to 
+  sites, second dimension corresponding to primary time period, and third 
+  dimension corresponding to replicate.}
 
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq.psi},
@@ -72,7 +77,7 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 \item{n.omp.threads}{a positive integer indicating the number of threads
   to use for SMP parallel processing. The package must be compiled for 
   OpenMP support. For most Intel-based machines, we recommend setting 
-  \code{n.omp.threads} up to the number of hypterthreaded cores. Note, 
+  \code{n.omp.threads} up to the number of hyperthreaded cores. Note, 
   \code{n.omp.threads} > 1 might not work on some systems. Currently only 
   relevant for spatial models.}
 
@@ -99,7 +104,10 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   \emph{k} - 1 subsamples are used to fit the model and the remaining \emph{k}
   samples are used for prediction. The cross-validation process is repeated 
   \emph{k} times (the folds). As a scoring rule, we use the model deviance 
-  as described in Hooten and Hobbs (2015). Cross-validation is performed
+  as described in Hooten and Hobbs (2015). For cross-validation in multi-season
+  models, the data are split along the site dimension, such that each hold-out
+  data set consists of a \code{J / k.fold} sites sampled over all primary time
+  periods during which data are available at each given site. Cross-validation is performed
   after the full model is fit using all the data. Cross-validation results
   are reported in the \code{k.fold.deviance} object in the return list.}
 
@@ -110,6 +118,10 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
 \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
   for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
+
+\item{k.fold.only}{a logical value indicating whether to only perform 
+  cross-validation (\code{TRUE}) or perform cross-validation after fitting 
+  the full model (\code{FALSE}). Default value is \code{FALSE}.} 
 
 \item{...}{currently no additional arguments}
 }
@@ -130,6 +142,10 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
+  Kéry, M., & Royle, J. A. (2021). Applied hierarchical modeling in ecology: 
+  Analysis of distribution, abundance and species richness in R and BUGS: 
+  Volume 2: Dynamic and advanced models. Academic Press. Section 4.6.
+
   Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
   selection for ecologists. Ecological monographs, 85(1), 3-28.
 
@@ -144,7 +160,7 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 }
 
 \value{
-  An object of class \code{PGOcc} that is a list comprised of: 
+  An object of class \code{tPGOcc} that is a list comprised of: 
 
   \item{beta.samples}{a \code{coda} object of posterior samples
     for the occupancy regression coefficients.}
@@ -152,11 +168,13 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   \item{alpha.samples}{a \code{coda} object of posterior samples
     for the detection regression coefficients.}
 
-  \item{z.samples}{a \code{coda} object of posterior samples 
-    for the latent occupancy values}
+  \item{z.samples}{a three-dimensional array of posterior samples 
+    for the latent occupancy values, with dimensions corresponding to 
+    posterior sample, site, and primary time period.}
 
-  \item{psi.samples}{a \code{coda} object of posterior samples
-    for the latent occupancy probability values}
+  \item{psi.samples}{a three-dimensional array of posterior samples
+    for the latent occupancy probability values, with dimensions 
+    corresponding to posterior sample, site, and primary time period.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occupancy portion
@@ -176,9 +194,9 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
-  \item{like.samples}{a \code{coda} object of posterior samples
-    for the likelihood value associated with each site. Used for calculating
-    WAIC.}
+  \item{like.samples}{a three-dimensional array of posterior samples
+    for the likelihood values associated with each site and primary
+    time period. Used for calculating WAIC.}
 
   \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
     parameters.}
@@ -193,51 +211,75 @@ PGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. Note that detection
   probability estimated values are not included in the model object, but can be 
-  extracted using \code{fitted()}. 
+  extracted using \code{fitted()}. Note that if \code{k.fold.only = TRUE}, the 
+  return list object will only contain \code{run.time} and \code{k.fold.deviance}. 
 
 }
 
 \examples{
-set.seed(400)
+set.seed(500)
+# Sites
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.rep <- sample(2:4, J, replace = TRUE)
-beta <- c(0.5, -0.15)
-p.occ <- length(beta)
-alpha <- c(0.7, 0.4)
-p.det <- length(alpha)
-dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
-              sp = FALSE)
-occ.covs <- dat$X[, 2, drop = FALSE]
-colnames(occ.covs) <- c('occ.cov')
-det.covs <- list(det.cov = dat$X.p[, , 2])
-# Data bundle
+# Primary time periods
+n.time <- sample(10, J, replace = TRUE)
+n.time.max <- max(n.time)
+# Replicates
+n.rep <- matrix(NA, J, max(n.time))
+for (j in 1:J) {
+  n.rep[j, 1:n.time[j]] <- sample(1:4, n.time[j], replace = TRUE)
+}
+# Occurrence --------------------------
+beta <- c(0.4, 0.5, -0.9)
+trend <- TRUE 
+sp.only <- 0
+psi.RE <- list()
+# Detection ---------------------------
+alpha <- c(-1, 0.7, -0.5)
+p.RE <- list()
+
+# Get all the data
+dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
+	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
+	       psi.RE = psi.RE, p.RE = p.RE, sp = FALSE)
+
+# Package all data into a list
+# Occurrence
+occ.covs <- list(int = dat$X[, , 1], 
+                 trend = dat$X[, , 2], 
+		 occ.cov.1 = dat$X[, , 3]) 
+# Detection
+det.covs <- list(det.cov.1 = dat$X.p[, , , 2], 
+		 det.cov.2 = dat$X.p[, , , 3]) 
+# Data list bundle
 data.list <- list(y = dat$y, 
-                  occ.covs = occ.covs, 
-                  det.covs = det.covs)
-
+		  occ.covs = occ.covs,
+		  det.covs = det.covs) 
 # Priors
-prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
-                   alpha.normal = list(mean = 0, var = 2.72))
-# Initial values
-inits.list <- list(alpha = 0, beta = 0,
-                   z = apply(data.list$y, 1, max, na.rm = TRUE))
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+		   alpha.normal = list(mean = 0, var = 2.72))
 
-n.samples <- 5000
-n.report <- 1000
+# Starting values
+z.init <- apply(dat$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
+inits.list <- list(beta = 0, alpha = 0, z = z.init)
 
-out <- PGOcc(occ.formula = ~ occ.cov, 
-             det.formula = ~ det.cov, 
-             data = data.list, 
-             inits = inits.list,
-             n.samples = n.samples,
-             priors = prior.list,
-             n.omp.threads = 1,
-             verbose = TRUE,
-             n.report = n.report, 
-             n.burn = 1000, 
-             n.thin = 1, 
-             n.chains = 1)
+n.samples <- 2500
+n.burn <- 2000
+n.thin <- 1
+
+# Run the model
+out <- tPGOcc(occ.formula = ~ trend + occ.cov.1, 
+              det.formula = ~ det.cov.1 + det.cov.2, 
+              data = data.list,
+              inits = inits.list,
+              priors = prior.list, 
+              n.samples = n.samples,
+              verbose = TRUE, 
+              n.report = 500,
+              n.burn = n.burn, 
+              n.thin = n.thin,
+              n.chains = 1) 
+
 summary(out)
 }

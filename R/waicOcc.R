@@ -15,13 +15,11 @@ waicOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  # if (!is(object, c('PGOcc', 'spPGOcc', 'msPGOcc', 
-  #                   'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-  #                   'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                             'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM\n")
+                             'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
+			     'tPGOcc', 'spTPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, spTPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -38,7 +36,8 @@ waicOcc <- function(object, ...) {
   }
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 
-			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM')) {
+			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
+			   'tPGOcc', 'spTPGOcc')) {
     elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))

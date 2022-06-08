@@ -1,3 +1,4 @@
 #!/bin/bash
 
 Rscript -e "rmarkdown::render('$1.Rmd')"
+xdg-open "$1.html"

@@ -1,2 +1,7 @@
-*.html
+dataFormatting.html
+factorModels.html
+mcmcFactorModels.html
+mcmcSamplers.html
+modelFitting.html
+randomEffects.html
 *.R
