@@ -191,7 +191,7 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			   function (a) sort(unique(a)))
 
   # Detection -----------------------
-  if (is(det.formula), 'formula') {
+  if (is(det.formula, 'formula')) {
     tmp <- parseFormula(det.formula, data$det.covs)
     X.p <- as.matrix(tmp[[1]])
     x.p.names <- tmp[[2]]
