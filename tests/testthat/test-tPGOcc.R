@@ -8,7 +8,7 @@ set.seed(100)
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -177,7 +177,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -349,7 +349,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -521,7 +521,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -726,7 +726,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -931,7 +931,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -1133,7 +1133,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -1334,7 +1334,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -1580,7 +1580,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -1827,7 +1827,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -2053,7 +2053,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -2281,7 +2281,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -2510,7 +2510,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -2755,7 +2755,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -3001,7 +3001,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
@@ -3232,7 +3232,7 @@ test_that("posterior predictive checks work for tPGOcc", {
 J.x <- 10
 J.y <- 10
 J <- J.x * J.y
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(2:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
