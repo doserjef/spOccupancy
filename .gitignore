@@ -19,3 +19,6 @@ vignettes/dataFormatting_cache
 vignettes/dataFormatting_files
 vignettes/trendModels_cache
 vignettes/trendModels_files
+vignettes/trendModels-pdf_cache
+vignettes/trendModels-pdf_files
+*.swp

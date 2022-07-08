@@ -61,7 +61,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -80,6 +80,7 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       accept.rate = 0.43,
 	       cov.model = "matern",
 	       tuning = tuning.list,
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = FALSE,
 	       NNGP = TRUE,
@@ -315,7 +316,7 @@ test_that("predict works for spTPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -324,7 +325,7 @@ test_that("detection prediction works", {
   # X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   # dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, p.det))
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -421,7 +422,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -590,6 +591,7 @@ test_that("verbose prints to the screen", {
 	       priors = prior.list,
 	       cov.model = "exponential", 
 	       tuning = tuning.list, 
+	       ar1 = TRUE,
 	       NNGP = TRUE, 
 	       n.neighbors = 5, 
 	       search.type = 'cb', 
@@ -675,14 +677,14 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
 })
 test_that("detection prediction works", {
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1))
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -780,7 +782,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -1034,14 +1036,14 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
 })
 test_that("detection prediction works", {
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -1140,7 +1142,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -1394,14 +1396,14 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
 })
 test_that("detection prediction works", {
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -1501,7 +1503,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -1520,6 +1522,7 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       accept.rate = 0.43,
 	       cov.model = "matern",
 	       tuning = tuning.list,
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = FALSE,
 	       NNGP = TRUE,
@@ -1755,7 +1758,7 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- abind(X.0, X.0[, , 3, drop = FALSE] * X.0[, , 2, drop = FALSE])
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -1763,7 +1766,7 @@ test_that("predict works for spTPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- dat$X.p[, , 1, ]
   X.p.0 <- abind(X.p.0, X.p.0[, , 2, drop = FALSE] * X.p.0[, , 3, drop = FALSE])
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -1862,7 +1865,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -1977,6 +1980,7 @@ test_that("default priors and inits work", {
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
 	         tuning = tuning.list, 
+		 ar1 = TRUE,
 	         NNGP = TRUE,
 		 verbose = FALSE, 
 	         n.neighbors = 5, 
@@ -2116,14 +2120,14 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
 })
 test_that("detection prediction works", {
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2222,7 +2226,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -2284,6 +2288,7 @@ test_that("random effect gives error when non-numeric", {
                               priors = prior.list, 
                               cov.model = "matern", 
                               tuning = tuning.list, 
+			      ar1 = TRUE,
                               n.omp.threads = 1, 
                               verbose = FALSE, 
                               NNGP = TRUE, 
@@ -2476,7 +2481,7 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -2485,7 +2490,7 @@ test_that("detection prediction works", {
   # X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1))
   # dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2584,7 +2589,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -2667,6 +2672,7 @@ test_that("random effect gives error when non-numeric", {
                               priors = prior.list, 
                               cov.model = "matern", 
                               tuning = tuning.list, 
+			      ar1 = TRUE,
                               n.omp.threads = 1, 
                               verbose = FALSE, 
                               NNGP = TRUE, 
@@ -2838,7 +2844,7 @@ test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1', 'occ.factor.2')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -2847,7 +2853,7 @@ test_that("detection prediction works", {
   # X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1))
   # dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2947,7 +2953,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -3116,6 +3122,7 @@ test_that("verbose prints to the screen", {
 	       priors = prior.list,
 	       cov.model = "exponential", 
 	       tuning = tuning.list, 
+	       ar1 = TRUE,
 	       NNGP = TRUE, 
 	       n.neighbors = 5, 
 	       search.type = 'cb', 
@@ -3200,7 +3207,7 @@ test_that("fitted works for spTPGOcc", {
 test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1', 'occ.factor.2')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -3209,7 +3216,7 @@ test_that("detection prediction works", {
   # X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1))
   # dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -3310,7 +3317,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -3535,6 +3542,7 @@ test_that("missing value error handling works", {
                  batch.length = batch.length,
                  cov.model = "exponential",
                  tuning = tuning.list,
+		 ar1 = TRUE,
                  NNGP = TRUE,
                  verbose = FALSE,
                  n.neighbors = 5,
@@ -3563,7 +3571,7 @@ test_that("fitted works for spTPGOcc", {
 test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1', 'occ.factor.2')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -3572,7 +3580,7 @@ test_that("detection prediction works", {
   # X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   X.p.0 <- dat$X.p[, , 1, ]
   # dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -3670,7 +3678,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -3924,7 +3932,7 @@ test_that("predict works for spTPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0		  
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -3933,7 +3941,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind::abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 			dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -4032,7 +4040,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -4051,6 +4059,7 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       accept.rate = 0.43,
 	       cov.model = "matern",
 	       tuning = tuning.list,
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = FALSE,
 	       NNGP = TRUE,
@@ -4286,7 +4295,7 @@ test_that("predict works for spTPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0		  
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -4295,7 +4304,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind::abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 			dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -4395,7 +4404,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -4478,6 +4487,7 @@ test_that("random effect gives error when non-numeric", {
                               priors = prior.list, 
                               cov.model = "matern", 
                               tuning = tuning.list, 
+			      ar1 = TRUE,
                               n.omp.threads = 1, 
                               verbose = FALSE, 
                               NNGP = TRUE, 
@@ -4649,7 +4659,7 @@ test_that("predict works for spTPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -4657,7 +4667,7 @@ test_that("predict works for spTPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -4758,7 +4768,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -4777,6 +4787,7 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       accept.rate = 0.43,
 	       cov.model = "matern",
 	       tuning = tuning.list,
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = FALSE,
 	       NNGP = TRUE,
@@ -5012,7 +5023,7 @@ test_that("predict works for spTPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -5020,7 +5031,7 @@ test_that("predict works for spTPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -5120,7 +5131,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -5182,6 +5193,7 @@ test_that("random effect gives error when non-numeric", {
                               priors = prior.list, 
                               cov.model = "matern", 
                               tuning = tuning.list, 
+			      ar1 = TRUE,
                               n.omp.threads = 1, 
                               verbose = FALSE, 
                               NNGP = TRUE, 
@@ -5373,7 +5385,7 @@ test_that("fitted works for spTPGOcc", {
 test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -5383,7 +5395,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind::abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 			array(dat$X.p.re[, , 1, ], dim = c(J, n.time.max, 1)), along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -5485,7 +5497,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 # Tuning
-tuning.list <- list(phi = 1, nu = 1)
+tuning.list <- list(phi = 1, nu = 1, rho = 1)
 
 batch.length <- 25
 n.batch <- 10
@@ -5547,6 +5559,7 @@ test_that("random effect gives error when non-numeric", {
                               priors = prior.list, 
                               cov.model = "matern", 
                               tuning = tuning.list, 
+			      ar1 = TRUE,
                               n.omp.threads = 1, 
                               verbose = FALSE, 
                               NNGP = TRUE, 
@@ -5678,6 +5691,7 @@ test_that("missing value error handling works", {
 	               batch.length = batch.length, 
 	               cov.model = "exponential", 
 	               tuning = tuning.list, 
+		       ar1 = TRUE,
 	               NNGP = TRUE,
 	               verbose = FALSE, 
 	               n.neighbors = 5, 
@@ -5738,7 +5752,7 @@ test_that("fitted works for spTPGOcc", {
 test_that("predict works for spTPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
-  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE)
+  pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, nrow(X.0.full), n.time.max))
@@ -5746,7 +5760,7 @@ test_that("predict works for spTPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })

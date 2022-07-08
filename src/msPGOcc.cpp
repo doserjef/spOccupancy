@@ -134,6 +134,9 @@ extern "C" {
       Rprintf("\tChain %i\n", currChain);
       Rprintf("----------------------------------------\n");
       Rprintf("Sampling ... \n");
+      #ifdef Win32
+        R_FlushConsole();
+      #endif
     }
 
     /**********************************************************************

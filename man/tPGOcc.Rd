@@ -3,10 +3,11 @@
 \title{Function for Fitting Multi-Season Single-Species Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
-tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
-      n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-      n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-      k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
+tPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
+       n.batch, batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+       verbose = TRUE, ar1 = FALSE, n.report = 100, 
+       n.burn = round(.10 * n.batch * batch.length), n.thin = 1, n.chains = 1,
+       k.fold, k.fold.threads = 1, k.fold.seed = 100, k.fold.only = FALSE, ...)
 }
 
 \description{
@@ -44,8 +45,8 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   dimension corresponding to replicate.}
 
 \item{inits}{a list with each tag corresponding to a parameter name.
-  Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq.psi},
-  and \code{sigma.sq.p}. The value portion of each tag is the 
+  Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq.psi}, 
+  \code{sigma.sq.p}, \code{sigma.sq.t}, and \code{rho}. The value portion of each tag is the 
   parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
   detection portion of the occupancy model, respectively. See \code{priors} 
@@ -56,7 +57,8 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{sigma.sq.psi.ig}, 
-  and \code{sigma.sq.p.ig}. Occupancy (\code{beta}) and detection (\code{alpha}) 
+  \code{sigma.sq.p.ig}, \code{sigma.sq.t.ig}, and \code{rho.unif}. 
+  Occupancy (\code{beta}) and detection (\code{alpha}) 
   regression coefficients are assumed to follow a normal distribution. 
   The hyperparameters of the normal distribution are passed as a list of 
   length two with the first and second elements corresponding to the mean 
@@ -70,9 +72,28 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   are passed as a list of length two with first and second elements corresponding
   to the shape and scale parameters, respectively, which are each specified as
   vectors of length equal to the number of random intercepts or of length one 
-  if priors are the same for all random effect variances.}
+  if priors are the same for all random effect variances. \code{sigma.sq.t} and 
+  \code{rho} are the AR(1) variance and correlation parameters for the AR(1) zero-mean
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow and inverse-Gamma
+  distribution, where the hyperparameters are specified as a vector with elements
+  corresponding to the shape and scale parameters, respectively. \code{rho} is 
+  assumed to follow a uniform distribution, where the hyperparameters are specified in 
+  a vector of length two with elements corresponding to the lower and upper bounds of
+  the uniform prior.}
 
-\item{n.samples}{the number of posterior samples to collect in each chain.}
+\item{tuning}{a list with each tag corresponding to a parameter
+  name. Valid tags are \code{rho}. The value portion of each
+  tag defines the initial tuning variance of the Adaptive sampler. See
+  Roberts and Rosenthal (2009) for details.}
+
+\item{n.batch}{the number of MCMC batches in each chain to run for the Adaptive MCMC 
+  sampler. See Roberts and Rosenthal (2009) for details.}
+
+\item{batch.length}{the length of each MCMC batch in each chain to run for the Adaptive 
+  MCMC sampler. See Roberts and Rosenthal (2009) for details.}
+
+\item{accept.rate}{target acceptance rate for Adaptive MCMC. Default is 
+  0.43. See Roberts and Rosenthal (2009) for details.}
 
 \item{n.omp.threads}{a positive integer indicating the number of threads
   to use for SMP parallel processing. The package must be compiled for 
@@ -85,7 +106,14 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   model specification, and progress of the sampler are printed to the screen. 
   Otherwise, no messages are printed.}
 
-\item{n.report}{the interval to report MCMC progress.}
+\item{ar1}{logical value indicating whether to include an AR(1) zero-mean 
+  temporal random effect in the model. If \code{FALSE}, the model is
+  fit without an AR(1) temporal autocovariance structure. If \code{TRUE},
+  an AR(1) random effect is included in the model to account for temporal 
+  autocorrelation across the primary time periods.}
+
+\item{n.report}{the interval to report MCMC progress. Note this is specified
+  in terms of batches, not MCMC samples.}
 
 \item{n.burn}{the number of samples out of the total \code{n.samples} to 
   discard as burn-in for each chain. By default, the first 10\% of samples is discarded.}
@@ -194,6 +222,13 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
+  \item{theta.samples}{a \code{coda} object of posterior samples for the 
+    AR(1) variance and correlation parameters. Only included if \code{ar1 = TRUE}.}
+
+  \item{eta.samples}{a \code{coda} object of posterior samples for the 
+    AR(1) random effects for each primary time period. Only included if 
+    \code{ar1 = TRUE}}.
+
   \item{like.samples}{a three-dimensional array of posterior samples
     for the likelihood values associated with each site and primary
     time period. Used for calculating WAIC.}
@@ -223,7 +258,7 @@ J.x <- 10
 J.y <- 10
 J <- J.x * J.y
 # Primary time periods
-n.time <- sample(10, J, replace = TRUE)
+n.time <- sample(5:10, J, replace = TRUE)
 n.time.max <- max(n.time)
 # Replicates
 n.rep <- matrix(NA, J, max(n.time))
@@ -238,11 +273,15 @@ psi.RE <- list()
 # Detection ---------------------------
 alpha <- c(-1, 0.7, -0.5)
 p.RE <- list()
+# Temporal parameters -----------------
+rho <- 0.7
+sigma.sq.t <- 0.6
 
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
 	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE, sp = FALSE)
+	       psi.RE = psi.RE, p.RE = p.RE, sp = FALSE, ar1 = TRUE, 
+               sigma.sq.t = sigma.sq.t, rho = rho)
 
 # Package all data into a list
 # Occurrence
@@ -258,14 +297,21 @@ data.list <- list(y = dat$y,
 		  det.covs = det.covs) 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = 0, var = 2.72))
+		   alpha.normal = list(mean = 0, var = 2.72), 
+                   rho.unif = c(-1, 1), 
+                   sigma.sq.t.ig = c(2, 0.5))
 
 # Starting values
 z.init <- apply(dat$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(beta = 0, alpha = 0, z = z.init)
 
-n.samples <- 2500
-n.burn <- 2000
+# Tuning
+tuning.list <- list(rho = 0.5)
+
+n.batch <- 50
+batch.length <- 25
+n.samples <- n.batch * batch.length
+n.burn <- 1000
 n.thin <- 1
 
 # Run the model
@@ -274,9 +320,12 @@ out <- tPGOcc(occ.formula = ~ trend + occ.cov.1,
               data = data.list,
               inits = inits.list,
               priors = prior.list, 
-              n.samples = n.samples,
+	      tuning = tuning.list,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
               verbose = TRUE, 
-              n.report = 500,
+	      ar1 = TRUE,
+              n.report = 25,
               n.burn = n.burn, 
               n.thin = n.thin,
               n.chains = 1) 

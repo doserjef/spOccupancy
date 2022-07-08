@@ -29,18 +29,42 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
     xobs  <- dimnames(X)[[1]] # X observation names
 
     # Get random effects
-    X.re <- matrix(NA, nrow(X), length(re.terms$Ztlist))
+    X.random <- matrix(NA, nrow(X), length(re.terms$Ztlist))
+    X.re <- matrix(NA, nrow(X), length(re.terms$flist))
+    # Account for RE only model when there are some missing values
     if (ncol(X.re) > 0) {
-      # Support for RE only model
-      if (length(re.terms$Ztlist[[1]]@i) != nrow(X)) {
+      if (nrow(X) > length(re.terms$Ztlist[[1]]@i)) {
         X.re <- matrix(NA, length(re.terms$Ztlist[[1]]@i), 
-		       length(re.terms$Ztlist)) 
+        	       length(re.terms$flist)) 
+        X.random <- matrix(NA, length(re.terms$Ztlist[[1]]@i), 
+        	       length(re.terms$Ztlist)) 
       }
+    }
+    # Get the random factors associated with each element. 
+    tmp <- sub('.*\\|\\s*', "", names(re.terms$Ztlist))
+    re.col.indx <- match(tmp, unique(tmp)) 
+    # Get the unique instance of a random factor. 
+    unique.indx <- match(unique(tmp), tmp)
+    if (ncol(X.re) > 0) {
       for (j in 1:ncol(X.re)) {
-        X.re[, j] <- as.vector(re.terms$Ztlist[[j]]@i)
+        curr.indx <- unique.indx[j]
+	tmp <- as.numeric(re.terms$flist[[re.col.indx[curr.indx]]])
+	miss.indx <- is.na(tmp)
+        X.re[, j] <- tmp[!miss.indx]
       }
       colnames(X.re) <- names(re.terms$flist)
+      X.re <- X.re[, re.col.indx, drop = FALSE]
+      for (j in 1:length(re.terms$Ztlist)) {
+        # TODO: will need to make sure this is correct. 
+        tmp <- re.terms$Ztlist[[j]]@x[re.terms$Ztlist[[j]]@p]
+        X.random[, j] <- tmp[!miss.indx] 
+      }
+      tmp <- sapply(re.terms$cnms, function(a) a[length(a)])
+      tmp.2 <- tmp
+      attr(tmp.2, 'names') <- NULL
+      tmp.2 <- paste(tmp.2, names(tmp), sep = '-') 
+      colnames(X.random) <- tmp.2
     }
-    return(list(X, xvars, xobs, X.re))
+    return(list(X, xvars, xobs, X.re, X.random))
   }
 

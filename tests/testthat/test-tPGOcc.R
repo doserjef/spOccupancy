@@ -22,9 +22,12 @@ psi.RE <- list()
 alpha <- c(-1)
 p.det <- length(alpha)
 p.RE <- list()
+ar1 <- TRUE
+rho <- 0.9
+sigma.sq.t <- 2.4
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
 	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE)
+	       psi.RE = psi.RE, p.RE = p.RE, ar1 = TRUE, rho = rho, sigma.sq.t = sigma.sq.t)
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
@@ -39,14 +42,19 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 out <- tPGOcc(occ.formula = ~ 1,
 	      det.formula = ~ 1,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
+	      ar1 = TRUE,
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -85,7 +93,8 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = ~ 1, 
 	        det.formula = ~ 1, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -102,7 +111,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = ~ 1, 
 	       det.formula = ~ 1, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -127,7 +138,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -135,7 +146,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- array(1, dim = c(J.str, 1, p.det))
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, t.cols = 1:n.time.max, type = 'detection')
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, 1))
 })
@@ -209,7 +220,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length
 n.report <- 100
 
 occ.formula <- ~ trend
@@ -218,7 +231,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -257,7 +272,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -274,7 +291,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -299,7 +318,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -307,7 +326,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- array(1, dim = c(J.str, 1, p.det))
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, 1))
 })
@@ -381,7 +400,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ 1 
@@ -390,7 +411,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -429,7 +452,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -446,7 +471,10 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -471,7 +499,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -479,7 +507,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -557,7 +585,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend + occ.cov.1
@@ -566,7 +596,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -605,7 +637,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -622,7 +656,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -637,7 +673,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -645,7 +683,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -653,7 +693,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -676,7 +718,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -684,7 +726,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -762,7 +804,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend * occ.cov.1
@@ -771,7 +815,10 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
+	      ar1 = TRUE,
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -810,7 +857,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -827,7 +876,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -842,7 +893,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -850,7 +903,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -858,7 +913,10 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -881,7 +939,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- out$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -889,7 +947,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p[, , 1, 3] * dat$X.p[, , 1, 4], along = 3)
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -964,7 +1022,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend + occ.cov.1
@@ -973,7 +1033,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -1012,7 +1074,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1029,7 +1093,10 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -1044,7 +1111,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1052,7 +1121,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1060,7 +1131,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1083,7 +1156,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -1091,7 +1164,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, 1:2]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -1165,7 +1238,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ occ.cov.1
@@ -1174,7 +1249,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -1213,7 +1290,8 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1230,7 +1308,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -1245,7 +1325,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1253,7 +1335,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1261,7 +1345,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1284,7 +1370,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -1292,7 +1378,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, 1:2]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -1373,7 +1459,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend + occ.cov.1 + (1 | occ.factor.1)
@@ -1382,7 +1470,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -1424,7 +1514,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1437,7 +1529,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1458,7 +1552,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1475,7 +1571,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -1490,7 +1588,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1498,7 +1598,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1506,7 +1608,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1530,7 +1634,7 @@ test_that("fitted works for tPGOcc", {
 test_that("predict works for tPGOcc", {
   X.0 <- abind(dat$X, dat$X.re, along = 3)
   dimnames(X.0)[[3]] <- c('(Intercept)', 'trend', 'occ.cov.1', 'occ.factor.1')
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -1538,7 +1642,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -1620,7 +1724,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend + occ.cov.1 + (1 | occ.factor.1) + (1 | occ.factor.2)
@@ -1629,7 +1735,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -1671,7 +1779,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1684,7 +1794,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1705,7 +1817,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1722,7 +1836,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -1737,7 +1853,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1745,7 +1863,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -1753,7 +1873,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1777,7 +1899,7 @@ test_that("fitted works for tPGOcc", {
 test_that("predict works for tPGOcc", {
   X.0 <- abind(dat$X, dat$X.re, along = 3)
   dimnames(X.0)[[3]] <- c('(Intercept)', 'trend', 'occ.cov.1', 'occ.factor.1', 'occ.factor.2')
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -1785,7 +1907,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- dat$X.p[, , 1, ]
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -1862,7 +1984,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ (1 | occ.factor.1) + (1 | occ.factor.2)
@@ -1871,7 +1995,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -1913,7 +2039,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1926,7 +2054,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -1947,7 +2077,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -1964,7 +2096,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -1979,7 +2113,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2003,7 +2139,7 @@ test_that("fitted works for tPGOcc", {
 test_that("predict works for tPGOcc", {
   X.0 <- abind(dat$X, dat$X.re, along = 3)
   dimnames(X.0)[[3]] <- c('(Intercept)', 'occ.factor.1', 'occ.factor.2')
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -2011,7 +2147,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   J.str <- 100
   X.p.0 <- array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1))
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J.str, n.time.max))
 })
@@ -2088,7 +2224,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ 1 
@@ -2097,7 +2235,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -2141,7 +2281,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2155,7 +2297,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2175,7 +2319,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2192,7 +2338,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -2207,7 +2355,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2230,7 +2380,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -2239,7 +2389,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 		 array(dat$X.p.re[, , 1, ], dim = c(J, n.time.max, 1)), along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2317,7 +2467,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ 1 
@@ -2326,7 +2478,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -2370,7 +2524,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2384,7 +2540,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2404,7 +2562,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2421,7 +2581,10 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -2436,7 +2599,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2459,7 +2624,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -2468,7 +2633,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind::abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 		 array(dat$X.p.re[, , 1, ], dim = c(J, n.time.max, 2)), along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1', 'det.factor.2')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2547,7 +2712,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ 1 
@@ -2556,7 +2723,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -2600,7 +2769,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2614,7 +2785,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2634,7 +2807,10 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
+		ar1 = TRUE,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2651,7 +2827,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -2666,7 +2844,9 @@ test_that("missing value error handling works", {
 #   expect_error(tPGOcc(occ.formula = occ.formula,
 # 	       det.formula = det.formula,
 # 	       data = tmp.data,
-# 	       n.samples = n.samples,
+#	       n.batch = n.batch, 
+#	       batch.length = batch.length,
+#	       tuning = list(rho = 1),
 # 	       n.omp.threads = 1,
 # 	       verbose = FALSE))
   tmp.data <- data.list
@@ -2674,7 +2854,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -2682,7 +2864,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2705,7 +2889,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -2713,7 +2897,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -2793,7 +2977,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend 
@@ -2802,7 +2988,10 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
+	      ar1 = TRUE,
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -2846,7 +3035,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2860,7 +3051,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -2880,7 +3073,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2897,7 +3092,10 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -2912,7 +3110,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -2920,7 +3120,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -2928,7 +3130,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -2951,7 +3155,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -2959,7 +3163,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -3039,7 +3243,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ (1 | occ.factor.1)
@@ -3048,7 +3254,10 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
+	      ar1 = TRUE,
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -3092,7 +3301,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -3106,7 +3317,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -3126,7 +3339,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -3143,7 +3358,10 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
+	       ar1 = TRUE,
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -3158,7 +3376,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -3181,7 +3401,7 @@ test_that("fitted works for tPGOcc", {
 # Check predictions -------------------
 test_that("predict works for tPGOcc", {
   X.0 <- dat$X
-  pred.out <- predict(out, X.0, ignore.RE = TRUE)
+  pred.out <- predict(out, X.0, ignore.RE = TRUE, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -3190,7 +3410,7 @@ test_that("detection prediction works", {
   X.p.0 <- abind::abind(array(dat$X.p[, , 1, ], dim = c(J, n.time.max, 1)), 
 		 array(dat$X.p.re[, , 1, ], dim = c(J, n.time.max, 2)), along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.factor.1', 'det.factor.2')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })
@@ -3272,7 +3492,9 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 z.init <- apply(y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha = 0, beta = 0, z = z.init)
 
-n.samples <- 1000
+n.batch <- 40
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.report <- 100
 
 occ.formula <- ~ trend + (1 | occ.factor.1)
@@ -3281,7 +3503,9 @@ out <- tPGOcc(occ.formula = occ.formula,
 	      det.formula = det.formula,
 	      data = data.list,
 	      inits = inits.list,
-	      n.samples = n.samples,
+	      n.batch = n.batch, 
+	      batch.length = batch.length,
+	      tuning = list(rho = 1),
 	      priors = prior.list,
 	      n.omp.threads = 1,
 	      verbose = FALSE,
@@ -3324,7 +3548,10 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
+			    ar1 = TRUE,
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -3338,7 +3565,9 @@ test_that("random effect gives error when non-numeric", {
 	                    det.formula = det.formula,
 	                    data = data.list,
 	                    inits = inits.list,
-	                    n.samples = n.samples,
+	                    n.batch = n.batch, 
+	                    batch.length = batch.length,
+	                    tuning = list(rho = 1),
 	                    priors = prior.list,
 	                    n.omp.threads = 1,
 	                    verbose = FALSE,
@@ -3358,7 +3587,9 @@ test_that("default priors, inits, burn, thin work", {
   out <- tPGOcc(occ.formula = occ.formula, 
 	        det.formula = det.formula, 
 	        data = data.list, 
-	        n.samples = n.samples,
+	        n.batch = n.batch, 
+	        batch.length = batch.length,
+	        tuning = list(rho = 1),
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -3375,7 +3606,9 @@ test_that("verbose prints to the screen", {
   expect_output(tPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
-	       n.samples = 100,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = TRUE,
 	       n.report = n.report, 
@@ -3390,7 +3623,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -3398,7 +3633,9 @@ test_that("missing value error handling works", {
   expect_error(tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
@@ -3406,7 +3643,9 @@ test_that("missing value error handling works", {
   out <- tPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = tmp.data,
-	       n.samples = n.samples,
+	       n.batch = n.batch, 
+	       batch.length = batch.length,
+	       tuning = list(rho = 1),
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "tPGOcc")
@@ -3430,7 +3669,7 @@ test_that("fitted works for tPGOcc", {
 test_that("predict works for tPGOcc", {
   X.0 <- abind::abind(dat$X, dat$X.re, along = 3)
   dimnames(X.0)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
-  pred.out <- predict(out, X.0)
+  pred.out <- predict(out, X.0, t.cols = 1:n.time.max)
   expect_type(pred.out, "list")
   expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
   expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
@@ -3438,7 +3677,7 @@ test_that("predict works for tPGOcc", {
 test_that("detection prediction works", {
   X.p.0 <- abind::abind(dat$X.p[, , 1, ], dat$X.p.re[, , 1, ], along = 3)
   dimnames(X.p.0)[[3]] <- c('(Intercept)', 'det.cov.1', 'det.factor.1', 'det.factor.2')  
-  pred.out <- predict(out, X.p.0, type = 'detection')
+  pred.out <- predict(out, X.p.0, type = 'detection', t.cols = 1:n.time.max)
   expect_type(pred.out, 'list')
   expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J, n.time.max))
 })

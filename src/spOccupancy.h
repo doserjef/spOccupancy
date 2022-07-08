@@ -4,6 +4,7 @@
 extern "C" {
 
   SEXP PGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
+             SEXP XRandom_r, SEXP XpRandom_r, 
              SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
              SEXP betaStarting_r, SEXP alphaStarting_r, 
              SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
@@ -269,7 +270,9 @@ extern "C" {
 	      SEXP muAlpha_r, SEXP SigmaAlpha_r, 
 	      SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 	      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
-	      SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, 
+	      SEXP ar1_r, SEXP ar1Vals_r, SEXP tuning_r,
+	      SEXP nBatch_r, SEXP batchLength_r, SEXP acceptRate_r,
+	      SEXP nThreads_r, SEXP verbose_r, 
 	      SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
 	      SEXP currChain_r, SEXP nChain_r);
 
@@ -291,6 +294,7 @@ extern "C" {
 		    SEXP phiA_r, SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r,
 		    SEXP nuA_r, SEXP nuB_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		    SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+		    SEXP ar1_r, SEXP ar1Vals_r,
 		    SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	            SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	            SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
@@ -300,7 +304,7 @@ extern "C" {
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			  SEXP thetaSamples_r, SEXP wSamples_r, 
-			  SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
+			  SEXP betaStarSiteSamples_r, SEXP etaSamples_r, SEXP nSamples_r, 
 			  SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
 			  SEXP nReport_r);
 

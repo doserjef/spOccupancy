@@ -1,7 +1,5 @@
-dataFormatting.html
-factorModels.html
-mcmcFactorModels.html
-mcmcSamplers.html
-modelFitting.html
-randomEffects.html
+*.html
 *.R
+*.pdf
+compile
+trendModels-pdf*

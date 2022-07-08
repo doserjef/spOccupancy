@@ -3,11 +3,11 @@
 \title{Function for prediction at new locations for multi-season single-species spatial occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `spTPGOcc`. Prediction is possible for both the latent occupancy state as well as detection. Predictions are currently only possible for sampled locations.  
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `spTPGOcc`. Prediction is possible for both the latent occupancy state as well as detection. Predictions are currently only possible for sampled primary time periods.  
 }
 
 \usage{
-\method{predict}{spTPGOcc}(object, X.0, coords.0, n.omp.threads = 1, 
+\method{predict}{spTPGOcc}(object, X.0, coords.0, t.cols, n.omp.threads = 1, 
 	                   verbose = TRUE, n.report = 100, 
 			   ignore.RE = FALSE, type = 'occupancy', ...)
 }
@@ -16,10 +16,12 @@
 
   \item{object}{an object of class spTPGOcc}
 
-  \item{X.0}{the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate, respectively. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations/time periods should be included as an element of the three-dimensional array. The ordering of the levels should match the ordering used to fit the data in \code{spTPGOcc}. The covariates should be organized in the same order as they were specified in the corresponding formula argument of \code{spTPGOcc}. Names of the third dimension (covariates) of the random effects must match the name of the random effects, if specified in the corresponding formula argument of \code{spTPGOcc}. See example below.}
+  \item{X.0}{the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate, respectively. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations/time periods should be included as an element of the three-dimensional array. The ordering of the levels should match the ordering used to fit the data in \code{spTPGOcc}. The covariates should be organized in the same order as they were specified in the corresponding formula argument of \code{spTPGOcc}. Names of the third dimension (covariates) of any random effects in X.0 must match the name of the random effects used to fit the model, if specified in the corresponding formula argument of \code{spTPGOcc}. See example below.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
   in a projected coordinate system.}
+
+  \item{t.cols}{an indexing vector used to denote which primary time periods are contained in the design matrix of covariates at the prediction locations (\code{X.0}). The values should denote the specific primary time periods used to fit the model. The values should indicate the columns in \code{data$y} used to fit the model for which prediction is desired. See example below.} 
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -107,7 +109,7 @@ phi <- 3 / .4
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
 	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
 	       psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
-               phi = phi, cov.model = cov.model)
+               phi = phi, cov.model = cov.model, ar1 = FALSE)
 
 # Subset data for prediction
 pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
@@ -165,6 +167,7 @@ out <- spTPGOcc(occ.formula = ~ trend + occ.cov.1,
                 cov.model = "exponential", 
                 tuning = tuning.list, 
                 NNGP = TRUE, 
+		ar1 = FALSE,
                 n.neighbors = 5, 
                 search.type = 'cb', 
                 n.report = 10, 
@@ -176,6 +179,9 @@ summary(out)
 # Predict at new sites across all n.max.years
 # Take a look at array of covariates for prediction
 str(X.0)
-out.pred <- predict(out, X.0, coords.0, type = 'occupancy')
+# Subset to only grab time periods 1, 2, and 5
+t.cols <- c(1, 2, 5)
+X.pred <- X.0[, t.cols, ]
+out.pred <- predict(out, X.0, coords.0, t.cols = t.cols, type = 'occupancy')
 str(out.pred)
 }

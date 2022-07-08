@@ -1,6 +1,6 @@
 simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, 
 		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
-		    cov.model, sigma.sq, phi, nu, ...) {
+		    cov.model, sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -75,6 +75,15 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
     }
     if (!'levels' %in% names(p.RE)) {
       stop("error: levels must be a tag in p.RE with the number of random effect levels for each detection random intercept.")
+    }
+  }
+  # AR1 -------------------------------
+  if (ar1) {
+    if (missing(rho)) {
+      stop("error: rho must be specified when ar1 = TRUE")
+    }
+    if (missing(sigma.sq.t)) {
+      stop("error: sigma.sq.t must be specified when ar1 = TRUE")
     }
   }
   # Subroutines -----------------------------------------------------------
@@ -196,7 +205,6 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
     alpha.star <- NA
   }
 
-  # TODO: eventually add in the potential for SVCs here. 
   # Simulate spatial random effect ----------------------------------------
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
@@ -215,15 +223,26 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
     w <- matrix(rep(0, J))
   }
 
+  # Simulate temporal (AR1) random effect ---------------------------------
+  if (ar1) {
+    exponent <- abs(matrix(1:n.time.max - 1, nrow = n.time.max, 
+			   ncol = n.time.max, byrow = TRUE) - (1:n.time.max - 1))
+    Sigma.eta <- sigma.sq.t * rho^exponent
+    eta <- rmvn(1, rep(0, n.time.max), Sigma.eta)
+  } else {
+    eta <- matrix(rep(0, n.time.max))
+  }
+
   # Latent Occupancy Process ----------------------------------------------
   psi <- matrix(NA, J, max(n.time))
   z <- matrix(NA, J, max(n.time))
   for (j in 1:J) {
     for (t in 1:n.time.max) {
       if (length(psi.RE) > 0) {
-        psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w[j] + beta.star.sites[j, t])
+        psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w[j] + beta.star.sites[j, t] + 
+	                       eta[t])
       } else {
-        psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w[j])
+        psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w[j] + eta[t])
       }
       z[j, t] <- rbinom(1, 1, psi[j, t])
     } # t
@@ -248,6 +267,6 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
     list(X = X, X.p = X.p, coords = coords,
 	 psi = psi, z = z, p = p, y = y, w = w,
 	 X.p.re = X.p.re, X.re = X.re,
-	 alpha.star = alpha.star, beta.star = beta.star)
+	 alpha.star = alpha.star, beta.star = beta.star, eta = eta)
   )
 }

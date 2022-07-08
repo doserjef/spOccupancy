@@ -52,6 +52,12 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     if (!'levels' %in% names(psi.RE)) {
       stop("error: levels must be a tag in psi.RE with the number of random effect levels for each occurrence random intercept.")
     }
+    if (!'beta.indx' %in% names(psi.RE)) {
+      psi.RE$beta.indx <- list()
+      for (i in 1:length(psi.RE$sigma.sq.psi)) {
+        psi.RE$beta.indx[[i]] <- 1
+      }
+    }
   }
   # p.RE ----------------------------
   names(p.RE) <- tolower(names(p.RE))
@@ -64,6 +70,12 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     }
     if (!'levels' %in% names(p.RE)) {
       stop("error: levels must be a tag in p.RE with the number of random effect levels for each detection random intercept.")
+    }
+    if (!'alpha.indx' %in% names(p.RE)) {
+      p.RE$alpha.indx <- list()
+      for (i in 1:length(p.RE$sigma.sq.p)) {
+        p.RE$alpha.indx[[i]] <- 1
+      }
     }
   }
   # Spatial parameters ----------------
@@ -141,40 +153,62 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
 
   # Random effects --------------------------------------------------------
   if (length(psi.RE) > 0) {
-    p.occ.re <- length(psi.RE$levels)
-    sigma.sq.psi <- rep(NA, p.occ.re)
-    n.occ.re.long <- psi.RE$levels
+    p.occ.re <- length(unlist(psi.RE$beta.indx))
+    tmp <- sapply(psi.RE$beta.indx, length)
+    re.col.indx <- unlist(lapply(1:length(psi.RE$beta.indx), function(a) rep(a, tmp[a])))
+    sigma.sq.psi <- psi.RE$sigma.sq.psi[re.col.indx]
+    n.occ.re.long <- psi.RE$levels[re.col.indx]
     n.occ.re <- sum(n.occ.re.long)
     beta.star.indx <- rep(1:p.occ.re, n.occ.re.long)
     beta.star <- rep(0, n.occ.re)
-    X.re <- matrix(NA, J, p.occ.re)
+    X.random <- X[, unlist(psi.RE$beta.indx), drop = FALSE]
+    n.random <- ncol(X.random)
+    X.re <- matrix(NA, J, length(psi.RE$levels))
+    for (i in 1:length(psi.RE$levels)) {
+      X.re[, i] <- sample(1:psi.RE$levels[i], J, replace = TRUE)  
+    }
+    indx.mat <- X.re[, re.col.indx, drop = FALSE]
     for (i in 1:p.occ.re) {
-      X.re[, i] <- sample(1:psi.RE$levels[i], J, replace = TRUE)         
-      beta.star[which(beta.star.indx == i)] <- rnorm(psi.RE$levels[i], 0, sqrt(psi.RE$sigma.sq.psi[i]))
+      beta.star[which(beta.star.indx == i)] <- rnorm(n.occ.re.long[i], 0, 
+						     sqrt(sigma.sq.psi[i]))
+    }
+    if (length(psi.RE$levels) > 1) {
+      for (j in 2:length(psi.RE$levels)) {
+        X.re[, j] <- X.re[, j] + max(X.re[, j - 1], na.rm = TRUE)
+      }
     }
     if (p.occ.re > 1) {
       for (j in 2:p.occ.re) {
-        X.re[, j] <- X.re[, j] + max(X.re[, j - 1], na.rm = TRUE)
+        indx.mat[, j] <- indx.mat[, j] + max(indx.mat[, j - 1], na.rm = TRUE)
       }
-    } 
-    beta.star.sites <- apply(X.re, 1, function(a) sum(beta.star[a]))
+    }
+    beta.star.sites <- rep(NA, J)
+    for (j in 1:J) {
+      beta.star.sites[j] <- beta.star[indx.mat[j, , drop = FALSE]] %*% t(X.random[j, , drop = FALSE])
+    }
   } else {
     X.re <- NA
     beta.star <- NA
   }
   if (length(p.RE) > 0) {
-    p.det.re <- length(p.RE$levels)
-    sigma.sq.p <- rep(NA, p.det.re)
-    n.det.re.long <- p.RE$levels
+    p.det.re <- length(unlist(p.RE$alpha.indx))
+    tmp <- sapply(p.RE$alpha.indx, length)
+    p.re.col.indx <- unlist(lapply(1:length(p.RE$alpha.indx), function(a) rep(a, tmp[a])))
+    sigma.sq.p <- p.RE$sigma.sq.p[p.re.col.indx]
+    n.det.re.long <- p.RE$levels[p.re.col.indx]
     n.det.re <- sum(n.det.re.long)
     alpha.star.indx <- rep(1:p.det.re, n.det.re.long)
     alpha.star <- rep(0, n.det.re)
-    X.p.re <- array(NA, dim = c(J, max(n.rep), p.det.re))
-    for (i in 1:p.det.re) {
+    X.p.random <- X.p[, , unlist(p.RE$alpha.indx), drop = FALSE]
+    X.p.re <- array(NA, dim = c(J, max(n.rep), length(p.RE$levels)))
+    for (i in 1:length(p.RE$levels)) {
       X.p.re[, , i] <- matrix(sample(1:p.RE$levels[i], J * max(n.rep), replace = TRUE), 
 		              J, max(n.rep))	      
-      alpha.star[which(alpha.star.indx == i)] <- rnorm(p.RE$levels[i], 0, sqrt(p.RE$sigma.sq.p[i]))
     }
+    for (i in 1:p.det.re) {
+      alpha.star[which(alpha.star.indx == i)] <- rnorm(n.det.re.long[i], 0, sqrt(sigma.sq.p[i]))
+    }
+    X.p.re <- X.p.re[, , p.re.col.indx, drop = FALSE]
     for (j in 1:J) {
       X.p.re[j, -(1:n.rep[j]), ] <- NA
     }
@@ -183,7 +217,12 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
         X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1], na.rm = TRUE) 
       }
     }
-    alpha.star.sites <- apply(X.p.re, c(1, 2), function(a) sum(alpha.star[a]))
+    alpha.star.sites <- matrix(NA, J, max(n.rep))
+    for (j in 1:J) {
+      for (k in 1:n.rep[j]) {
+        alpha.star.sites[j, k] <- alpha.star[X.p.re[j, k, ]] %*% X.p.random[j, k, ]
+      }
+    }
   } else {
     X.p.re <- NA
     alpha.star <- NA

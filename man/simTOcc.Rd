@@ -3,13 +3,13 @@
 \title{Simulate Multi-Season Single-Species Detection-Nondetection Data}
 
 \description{
-  The function \code{simTOcc} simulates multi-season single-species occurrence data following a temporal trend model for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
+  The function \code{simTOcc} simulates multi-season single-species occurrence data for simulation studies, power assessments, or function testing. Data can be optionally simulated with a spatial Gaussian Process in the occurrence portion of the model. Non-spatial random intercepts can also be included in the detection or occurrence portions of the occupancy model.
 }
 
 \usage{
 simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
 	psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
-	sigma.sq, phi, nu, ...)
+	sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
 }
 
 \arguments{
@@ -42,6 +42,12 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 \item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
 
 \item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
+
+\item{ar1}{a logical value indicating whether to simulate a temporal random effect with an AR(1) process. By default, set to \code{FALSE}.}
+
+\item{rho}{a numeric value indicating the AR(1) temporal correlation parameter. Ignored when \code{ar1 = FALSE}.}
+
+\item{sigma.sq.t}{a numeric value indicating the AR(1) temporal variance parameter. Ignored when \code{ar1 = FALSE}.}
 
 \item{...}{currently no additional arguments}
 }
@@ -96,9 +102,15 @@ cov.model <- "exponential"
 sigma.sq <- 2
 phi <- 3 / .4
 nu <- 1
+# Temporal parameters -----------------
+ar1 <- TRUE
+rho <- 0.5
+sigma.sq.t <- 0.8
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
 	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
 	       psi.RE = psi.RE, p.RE = p.RE, 
-	       sp = sp, cov.model = cov.model, sigma.sq = sigma.sq, phi = phi)
+	       sp = sp, cov.model = cov.model, sigma.sq = sigma.sq, phi = phi, 
+               ar1 = ar1, rho = rho, sigma.sq.t = sigma.sq.t)
+str(dat)
 }

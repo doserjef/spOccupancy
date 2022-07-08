@@ -19,6 +19,7 @@
 
 extern "C" {
   SEXP PGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
+             SEXP XRandom_r, SEXP XpRandom_r, 
              SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
              SEXP betaStarting_r, SEXP alphaStarting_r, 
              SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
@@ -51,6 +52,8 @@ extern "C" {
     double *Xp = REAL(Xp_r);
     int *XRE = INTEGER(XRE_r); 
     int *XpRE = INTEGER(XpRE_r); 
+    double *XRandom = REAL(XRandom_r);
+    double *XpRandom = REAL(XpRandom_r);
     // Load constants
     int J = INTEGER(consts_r)[0];
     int nObs = INTEGER(consts_r)[1]; 
@@ -128,6 +131,9 @@ extern "C" {
       Rprintf("\tChain %i\n", currChain);
       Rprintf("----------------------------------------\n");
       Rprintf("Sampling ... \n");
+      #ifdef Win32
+        R_FlushConsole();
+      #endif
     }
 
     /**********************************************************************
@@ -250,7 +256,7 @@ extern "C" {
     // Initial sums
     for (j = 0; j < J; j++) {
       for (l = 0; l < pOccRE; l++) {
-        betaStarSites[j] += betaStar[which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+        betaStarSites[j] += betaStar[which(XRE[l * J + j], betaLevelIndx, nOccRE)] * XRandom[l * J + j];
       }
     }
     // Observation-level sums of the detection random effects
@@ -259,7 +265,7 @@ extern "C" {
     // Get sums of the current REs for each site/visit combo
     for (i = 0; i < nObs; i++) {
       for (l = 0; l < pDetRE; l++) {
-        alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)];
+        alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)] * XpRandom[l * nObs + i];
       }
     }
     // Starting index for occurrence random effects
@@ -428,9 +434,9 @@ extern "C" {
           // of a random effect. 
           for (j = 0; j < J; j++) {
             if (XRE[betaStarIndx[l] * J + j] == betaLevelIndx[l]) {
-              tmp_one[0] += kappaOcc[j] - (F77_NAME(ddot)(&pOcc, &X[j], &J, beta, &inc) + 
-        		    betaStarSites[j] - betaStar[l]) * omegaOcc[j];
-              tmp_0 += omegaOcc[j];
+              tmp_one[0] += (kappaOcc[j] - (F77_NAME(ddot)(&pOcc, &X[j], &J, beta, &inc) + 
+        		    betaStarSites[j] - betaStar[l] * XRandom[betaStarIndx[l] * J + j]) * omegaOcc[j]) * XRandom[betaStarIndx[l] * J + j];
+              tmp_0 += XRandom[betaStarIndx[l] * J + j] * omegaOcc[j] * XRandom[betaStarIndx[l] * J + j];
             }
           }
           /********************************
@@ -445,7 +451,7 @@ extern "C" {
         zeros(betaStarSites, J);
         for (j = 0; j < J; j++) {
           for (l = 0; l < pOccRE; l++) {
-            betaStarSites[j] += betaStar[which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+            betaStarSites[j] += betaStar[which(XRE[l * J + j], betaLevelIndx, nOccRE)] * XRandom[l * J + j];
           }
         }
       }
@@ -464,8 +470,8 @@ extern "C" {
           tmp_0 = 0.0;
           for (r = 0; r < nObs; r++) {
             if ((z[zLongIndx[r]] == 1.0) && (XpRE[alphaStarIndx[l] * nObs + r] == alphaLevelIndx[l])) {
-              tmp_one[0] += kappaDet[r] - (F77_NAME(ddot)(&pDet, &Xp[r], &nObs, alpha, &inc) + alphaStarObs[r] - alphaStar[l]) * omegaDet[r];
-      	      tmp_0 += omegaDet[r];
+              tmp_one[0] += (kappaDet[r] - (F77_NAME(ddot)(&pDet, &Xp[r], &nObs, alpha, &inc) + alphaStarObs[r] - alphaStar[l] * XpRandom[alphaStarIndx[l] * nObs + r]) * omegaDet[r]) * XpRandom[alphaStarIndx[l] * nObs + r];
+      	      tmp_0 += XpRandom[alphaStarIndx[l] * nObs + r] * omegaDet[r] * XpRandom[alphaStarIndx[l] * nObs + r];
             }
           }
           /********************************
@@ -479,7 +485,7 @@ extern "C" {
         // Update the RE sums for the current species
         for (r = 0; r < nObs; r++) {
           for (l = 0; l < pDetRE; l++) {
-            alphaStarObs[r] += alphaStar[which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)]; 
+            alphaStarObs[r] += alphaStar[which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)] * XpRandom[l * nObs + r]; 
           }
         }
       }

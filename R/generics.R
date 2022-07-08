@@ -328,6 +328,22 @@ summary.PGOcc <- function(object,
 
     print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
   }
+
+  # if (class(object) == 'tPGOcc') {
+  if (is(object, 'tPGOcc')) {
+    if (object$ar1) {
+      cat("\n")
+      cat("AR(1) Temporal Covariance: \n")
+      tmp.1 <- t(apply(object$theta.samples, 2, 
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$theta.samples, 2, 
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$theta, round(object$ESS$theta, 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    }
+  }
 }
 
 # ppcOcc ------------------------------------------------------------------ 
@@ -793,7 +809,16 @@ summary.spPGOcc <- function(object,
   }
   cat("\n")
   # Covariance ------------------------
-  cat("Spatial Covariance: \n")
+  # if (class(object) == 'spTPGOcc') {
+  if (is(object, 'spTPGOcc')) {
+    if (object$ar1) {
+      cat("Spatio-temporal Covariance: \n")
+    } else {
+      cat("Spatial Covariance: \n")
+    }
+  } else {
+    cat("Spatial Covariance: \n")
+  }
   tmp.1 <- t(apply(object$theta.samples, 2, 
 		   function(x) c(mean(x), sd(x))))
   colnames(tmp.1) <- c("Mean", "SD")
@@ -852,7 +877,7 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE,
   if (tolower(type) == 'occupancy') {
     p.occ <- ncol(object$X)
     p.design <- p.occ
-    if (object$psiRE) {
+    if (object$psiRE & !ignore.RE) {
       p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -935,7 +960,7 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE,
   if (tolower(type) == 'detection') {
     p.det <- ncol(object$X.p)
     p.design <- p.det
-    if (object$pRE) {
+    if (object$pRE & !ignore.RE) {
       p.design <- p.det + ncol(object$sigma.sq.p.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -1444,7 +1469,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     n.neighbors <- object$n.neighbors
     cov.model.indx <- object$cov.model.indx
     sp.type <- object$type
-    if (object$psiRE) {
+    if (object$psiRE & !ignore.RE) {
       p.occ.re <- length(object$re.level.names)
     } else {
       p.occ.re <- 0
@@ -1637,7 +1662,7 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (tolower(type) == 'detection') {
     p.det <- ncol(object$X.p)
     p.design <- p.det
-    if (object$pRE) {
+    if (object$pRE & !ignore.RE) {
       p.design <- p.det + ncol(object$sigma.sq.p.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -2164,7 +2189,7 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
   if (tolower(type == 'occupancy')) {
     p.occ <- ncol(object$X)
     p.design <- p.occ
-    if (object$psiRE) {
+    if (object$psiRE & !ignore.RE) {
       p.design <- p.occ + ncol(object$sigma.sq.psi.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -2212,7 +2237,6 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
       X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
       X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-      # TODO: need to double check this works with multiple random effects. 
       for (i in 1:p.occ.re) {
         for (j in 1:nrow(X.re)) {
           tmp <- which(re.level.names[[i]] == X.re[j, i])
@@ -2291,7 +2315,7 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
   if (tolower(type) == 'detection') {
     p.det <- ncol(object$X.p)
     p.design <- p.det
-    if (object$pRE) {
+    if (object$pRE &!ignore.RE) {
       p.design <- p.det + ncol(object$sigma.sq.p.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -2584,7 +2608,7 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     n.neighbors <- object$n.neighbors
     cov.model.indx <- object$cov.model.indx
     sp.type <- object$type
-    if (object$psiRE) {
+    if (object$psiRE & !ignore.RE) {
       p.occ.re <- length(object$re.level.names)
     } else {
       p.occ.re <- 0
@@ -2631,7 +2655,6 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
       X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-      # TODO: need to double check this works with multiple random effects. 
       if (!ignore.RE) {
         for (i in 1:p.occ.re) {
           for (j in 1:nrow(X.re)) {
@@ -2744,7 +2767,7 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (tolower(type) == 'detection') {
     p.det <- ncol(object$X.p)
     p.design <- p.det
-    if (object$pRE) {
+    if (object$pRE &!ignore.RE) {
       p.design <- p.det + ncol(object$sigma.sq.p.samples)
     }
     if (ncol(X.0) != p.design) {
@@ -3124,7 +3147,7 @@ fitted.spTPGOcc <- function(object, ...) {
   return(out)
 }
 
-predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
+predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
 			     verbose = TRUE, n.report = 100,
 			     ignore.RE = FALSE, type = 'occupancy', ...) {
 
@@ -3163,6 +3186,10 @@ predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     stop("error: X.0 must be an array with three dimensions corresponding to site, time, and covariate")
   }
 
+  if (missing(t.cols)) {
+    stop("error: t.cols must be specified\n")
+  }
+
   # Occurrence predictions ------------------------------------------------
   if (tolower(type) == 'occupancy') {
     if (missing(coords.0)) {
@@ -3187,6 +3214,13 @@ predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     n.neighbors <- object$n.neighbors
     cov.model.indx <- object$cov.model.indx
     sp.type <- object$type
+    # Get AR1 random effect values for the corresponding years. 
+    ar1 <- object$ar1
+    if (ar1) {
+      eta.samples <- object$eta.samples[, t.cols, drop = FALSE]
+    } else {
+      eta.samples <- matrix(0, n.post, n.years.max)
+    }
     if (object$psiRE & !ignore.RE) {
       p.occ.re <- length(object$re.level.names)
     } else {
@@ -3261,9 +3295,18 @@ predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     }
 
     # Sub-sample previous
-    theta.samples <- t(theta.samples)
+    if (ar1) {
+      if (object$cov.model.indx == 2) { # matern == 2
+        theta.samples <- t(theta.samples[, 1:3])
+      } else {
+        theta.samples <- t(theta.samples[, 1:2])
+      }
+    } else {
+      theta.samples <- t(theta.samples)
+    }
     beta.samples <- t(beta.samples)
     w.samples <- t(w.samples)
+    eta.samples <- t(eta.samples)
     beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
 
     q <- nrow(X.fix) / n.years.max
@@ -3293,6 +3336,7 @@ predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(theta.samples) <- "double"
       storage.mode(w.samples) <- "double"
       storage.mode(beta.star.sites.0.samples) <- "double"
+      storage.mode(eta.samples) <- "double"
       storage.mode(n.post) <- "integer"
       storage.mode(cov.model.indx) <- "integer"
       storage.mode(nn.indx.0) <- "integer"
@@ -3304,7 +3348,7 @@ predict.spTPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 
       out <- .Call("spTPGOccNNGPPredict", coords, J, n.years.max, p.occ, n.neighbors,
                    X.fix, coords.0.new, q, nn.indx.0, beta.samples,
-                   theta.samples, w.samples, beta.star.sites.0.samples, n.post,
+                   theta.samples, w.samples, beta.star.sites.0.samples, eta.samples, n.post,
                    cov.model.indx, n.omp.threads, verbose, n.report)
     }
 
@@ -3431,7 +3475,7 @@ fitted.tPGOcc <- function(object, ...) {
   fitted.spTPGOcc(object)
 }
 
-predict.tPGOcc <- function(object, X.0, ignore.RE = FALSE,
+predict.tPGOcc <- function(object, X.0, t.cols, ignore.RE = FALSE,
 			   type = 'occupancy', ...) {
 
   ptm <- proc.time()
@@ -3468,6 +3512,9 @@ predict.tPGOcc <- function(object, X.0, ignore.RE = FALSE,
   if (length(dim(X.0)) != 3) {
     stop("error: X.0 must be an array with three dimensions corresponding to site, time, and covariate")
   }
+  if (missing(t.cols)) {
+    stop("error: t.cols must be specified\n")
+  }
 
   # Occurrence predictions ------------------------------------------------
   if (tolower(type) == 'occupancy') {
@@ -3477,6 +3524,7 @@ predict.tPGOcc <- function(object, X.0, ignore.RE = FALSE,
     n.years.max <- dim(X.0)[2]
     p.occ <- dim(X)[3]
     beta.samples <- object$beta.samples
+    ar1 <- object$ar1
     if (object$psiRE & !ignore.RE) {
       p.occ.re <- length(object$re.level.names)
     } else {
@@ -3538,11 +3586,22 @@ predict.tPGOcc <- function(object, X.0, ignore.RE = FALSE,
       beta.star.sites.0.samples <- matrix(0, n.post, nrow(X.fix))
       p.occ.re <- 0
     }
-
     J.str <- nrow(X.fix) / n.years.max
+    # Get AR1 REs if ar1 == TRUE
+    if (ar1) {
+      eta.samples <- object$eta.samples[, t.cols, drop = FALSE]
+      t.indx <- rep(1:n.years.max, each = J.str)
+    }
+
     out <- list()
-    out$psi.0.samples <- logit.inv(t(X.fix %*% t(beta.samples) +
+    if (ar1) {
+      out$psi.0.samples <- logit.inv(t(X.fix %*% t(beta.samples) +
+            				t(beta.star.sites.0.samples) + 
+					t(eta.samples[, t.indx])))
+    } else {
+      out$psi.0.samples <- logit.inv(t(X.fix %*% t(beta.samples) +
           				t(beta.star.sites.0.samples)))
+    }
     out$z.0.samples <- t(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)),
     		                 nrow = n.post, ncol = nrow(X.fix)))
     out$psi.0.samples <- array(t(out$psi.0.samples), dim = c(J.str, n.years.max, n.post))

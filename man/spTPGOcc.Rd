@@ -6,8 +6,8 @@
 spTPGOcc(occ.formula, det.formula, data, inits, priors, 
          tuning, cov.model = 'exponential', NNGP = TRUE, 
          n.neighbors = 15, search.type = 'cb', n.batch, 
-         batch.length, accept.rate = 0.43,
-         n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+         batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+	 verbose = TRUE, ar1 = FALSE, n.report = 100, 
          n.burn = round(.10 * n.batch * batch.length), 
          n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
          k.fold.seed = 100, k.fold.only = FALSE, ...)
@@ -143,6 +143,12 @@ of neighbors using WAIC or k-fold cross-validation.}
   model specification, and progress of the sampler are printed to the screen. 
   Otherwise, no messages are printed.}
 
+\item{ar1}{logical value indicating whether to include an AR(1) zero-mean
+  temporal random effect in the model. If \code{FALSE}, the model is
+  fit without an AR(1) temporal autocovariance structure. If \code{TRUE},
+  an AR(1) random effect is included in the model to account for temporal
+  autocorrelation across the primary time periods.}
+
 \item{n.report}{the interval to report MCMC progress.}
 
 \item{n.burn}{the number of samples out of the total \code{n.samples} to 
@@ -235,7 +241,8 @@ of neighbors using WAIC or k-fold cross-validation.}
     corresponding to posterior sample, site, and primary time period.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
-    for covariance parameters.}
+    for spatial covariance parameters and temporal covariance parameters
+    if \code{ar1 = TRUE}.}
 
   \item{w.samples}{a \code{coda} object of posterior samples
     for latent spatial random effects.}
@@ -257,6 +264,10 @@ of neighbors using WAIC or k-fold cross-validation.}
   \item{alpha.star.samples}{a \code{coda} object of posterior samples
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
+
+  \item{eta.samples}{a \code{coda} object of posterior samples for the 
+    AR(1) random effects for each primary time period. Only included if 
+    \code{ar1 = TRUE}}.
 
   \item{like.samples}{a three-dimensional array of posterior samples
     for the likelihood values associated with each site and primary
@@ -306,12 +317,16 @@ sp <- TRUE
 cov.model <- "exponential"
 sigma.sq <- 2
 phi <- 3 / .4
+# Temporal ----------------------------
+rho <- 0.5
+sigma.sq.t <- 1
 
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
 	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
 	       psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
-               phi = phi, cov.model = cov.model)
+               phi = phi, cov.model = cov.model, ar1 = TRUE, 
+	       sigma.sq.t = sigma.sq.t, rho = rho)
 
 # Package all data into a list
 # Occurrence
@@ -330,14 +345,16 @@ data.list <- list(y = dat$y,
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
 		   alpha.normal = list(mean = 0, var = 2.72), 
                    sigma.sq.ig = c(2, 2), 
-                   phi.unif = c(3 / 1, 3 / 0.1))
+                   phi.unif = c(3 / 1, 3 / 0.1), 
+                   rho.unif = c(-1, 1),
+                   sigma.sq.t.ig = c(2, 1))
 
 # Initial values
 z.init <- apply(dat$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(beta = 0, alpha = 0, z = z.init, phi = 3 / .5, sigma.sq = 2, 
-                   w = rep(0, J))
+                   w = rep(0, J), rho = 0, sigma.sq.t = 0.5)
 # Tuning
-tuning.list <- list(phi = 1)
+tuning.list <- list(phi = 1, rho = 1)
 # Number of batches
 n.batch <- 10
 # Batch length
@@ -355,6 +372,7 @@ out <- spTPGOcc(occ.formula = ~ trend + occ.cov.1,
                 cov.model = "exponential", 
                 tuning = tuning.list, 
                 NNGP = TRUE, 
+		ar1 = TRUE,
                 n.neighbors = 5, 
                 search.type = 'cb', 
                 n.report = 10, 

@@ -79,6 +79,7 @@ extern "C" {
 		    SEXP phiA_r, SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r,
 		    SEXP nuA_r, SEXP nuB_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		    SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+		    SEXP ar1_r, SEXP ar1Vals_r,
 		    SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	            SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	            SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
@@ -158,6 +159,14 @@ extern "C" {
     int *alphaLevelIndx = INTEGER(alphaLevelIndx_r);
     int *betaStarIndx = INTEGER(betaStarIndx_r); 
     int *betaLevelIndx = INTEGER(betaLevelIndx_r);
+    /**********************************
+     * AR1 Parameters 
+     * *******************************/
+    int ar1 = INTEGER(ar1_r)[0];
+    double rhoA = REAL(ar1Vals_r)[0];
+    double rhoB = REAL(ar1Vals_r)[1];
+    double sigmaSqTA = REAL(ar1Vals_r)[2];
+    double sigmaSqTB = REAL(ar1Vals_r)[3];
     int nBatch = INTEGER(nBatch_r)[0]; 
     int batchLength = INTEGER(batchLength_r)[0]; 
     int nSamples = nBatch * batchLength; 
@@ -193,7 +202,7 @@ extern "C" {
         Rprintf("----------------------------------------\n");
         Rprintf("\tModel description\n");
         Rprintf("----------------------------------------\n");
-        Rprintf("Spatial NNGP Trend Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i years.\n\n", J, nYearsMax);
+        Rprintf("Spatial NNGP Multi-season Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i primary time periods.\n\n", J, nYearsMax);
         Rprintf("Samples per chain: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 
@@ -201,6 +210,9 @@ extern "C" {
         Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
         Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
         Rprintf("Using %i nearest neighbors.\n\n", m);
+	if (ar1) {
+          Rprintf("Using an AR(1) temporal autocorrelation matrix.\n\n");
+	}
 #ifdef _OPENMP
        Rprintf("Source compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
@@ -268,6 +280,10 @@ extern "C" {
     PROTECT(zSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++; 
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    SEXP etaSamples_r; 
+    if (ar1) {
+      PROTECT(etaSamples_r = allocMatrix(REALSXP, nYearsMax, nPost)); nProtect++; 
+    }
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++; 
     // Detection random effects
@@ -293,6 +309,7 @@ extern "C" {
      * *******************************************************************/
     int nObspDet = nObs * pDet;
     int jj, kk;
+    int nnYears = nYearsMax * nYearsMax;
     double tmp_0 = 0.0;
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
@@ -382,15 +399,25 @@ extern "C" {
     }
 
     /**********************************************************************
-     Set up spatial stuff
+     Set up spatial and AR1 stuff
      * *******************************************************************/
-    int nTheta, sigmaSqIndx, phiIndx, nuIndx;
-    if (corName != "matern") {
-      nTheta = 2; // sigma^2, phi 
-      sigmaSqIndx = 0; phiIndx = 1; 
-    } else {
-      nTheta = 3; // sigma^2, phi, nu 
-      sigmaSqIndx = 0; phiIndx = 1; nuIndx = 2; 
+    int nTheta, sigmaSqIndx, phiIndx, nuIndx, sigmaSqTIndx, rhoIndx;
+    if (ar1 == 1) { // AR1
+      if (corName != "matern") {
+        nTheta = 4; 
+        sigmaSqIndx = 0; phiIndx = 1; sigmaSqTIndx = 2; rhoIndx = 3;
+      } else {
+        nTheta = 5;
+        sigmaSqIndx = 0; phiIndx = 1; nuIndx = 2; sigmaSqTIndx = 3; rhoIndx = 4;
+      }
+    } else { // No AR1
+      if (corName != "matern") {
+        nTheta = 2; 
+        sigmaSqIndx = 0; phiIndx = 1;
+      } else {
+        nTheta = 3;
+        sigmaSqIndx = 0; phiIndx = 1; nuIndx = 2;
+      }
     }
     double a, v, b, e, mu, var, aij; 
     // Initiate spatial values
@@ -423,18 +450,44 @@ extern "C" {
     updateBFT(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], theta[phiIndx], nu, covModel, bk, nuB);
 
     /**********************************************************************
+     * Set up AR1 stuff
+     *********************************************************************/
+    double rho, sigmaSqT; 
+    if (ar1) {
+      theta[sigmaSqTIndx] = REAL(ar1Vals_r)[5];
+      theta[rhoIndx] = REAL(ar1Vals_r)[4];
+      sigmaSqT = theta[sigmaSqTIndx];
+      rho = theta[rhoIndx];
+    }
+    double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
+    double *SigmaEtaCand = (double *) R_alloc(nnYears, sizeof(double));
+    double *tmp_nYearsMax = (double *) R_alloc(nYearsMax, sizeof(double));
+    double *tmp_nYearsMax2 = (double *) R_alloc(nYearsMax, sizeof(double));
+    double *tmp_nnYears = (double *) R_alloc(nnYears, sizeof(double));
+    if (ar1) {
+      AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
+      clearUT(SigmaEta, nYearsMax);
+      F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+      if(info != 0){error("c++ error: Cholesky failed in initial time covariance matrix\n");}
+      F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+      if(info != 0){error("c++ error: Cholesky inverse failed in initial time covariance matrix\n");}
+    }
+    double *eta = (double *) R_alloc(nYearsMax, sizeof(double)); zeros(eta, nYearsMax);
+    // For sigmaSqT sampler
+    double aSigmaSqTPost = 0.5 * nYearsMax + sigmaSqTA;
+    double bSigmaSqTPost = 0.0;
+    double *etaTRInv = (double *) R_alloc(nYearsMax, sizeof(double));
+
+    /**********************************************************************
      Set up stuff for Adaptive MH and other misc
      * *******************************************************************/
     double logPostCurr = 0.0, logPostCand = 0.0; 
     logPostCurr = R_NegInf; 
     double *accept = (double *) R_alloc(nTheta, sizeof(double)); zeros(accept, nTheta); 
-    double phiCand = 0.0, nuCand = 0.0; 
+    double *accept2 = (double *) R_alloc(nTheta, sizeof(double)); 
+    zeros(accept2, nTheta); 
+    double phiCand = 0.0, nuCand = 0.0, rhoCand = 0.0; 
     double logDet; 
-    // MCMC info if desired
-    SEXP acceptSamples_r; 
-    PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
-    SEXP tuningSamples_r; 
-    PROTECT(tuningSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
 
     GetRNGstate();
 
@@ -455,7 +508,7 @@ extern "C" {
 	    if (zDatIndx[t * J + j] == 1) { 
               tmp_JnYears[t * J + j] = F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, 
 	         	                      beta, &inc);
-	      omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + w[j] + betaStarSites[t * J + j]);
+	      omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + w[j] + betaStarSites[t * J + j] + eta[t]);
 	      // Update kappa values along the way. 
               kappaOcc[t * J + j] = z[t * J + j] - 1.0 / 2.0; 
 	    }
@@ -489,7 +542,7 @@ extern "C" {
 	for (t = 0; t < nYearsMax; t++) {
           for (j = 0; j < J; j++) {
             if (zDatIndx[t * J + j] == 1) {
-              tmp_JnYears[t * J + j] = kappaOcc[t * J + j] - omegaOcc[t * J + j] * (w[j] + betaStarSites[t * J + j]); 
+              tmp_JnYears[t * J + j] = kappaOcc[t * J + j] - omegaOcc[t * J + j] * (w[j] + betaStarSites[t * J + j] + eta[t]); 
 	    }
 	  } // j
 	} // t
@@ -617,9 +670,11 @@ extern "C" {
 	    for (t = 0; t < nYearsMax; t++) {
               for (j = 0; j < J; j++) {
                 if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
-                  tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
-                  	    betaStarSites[t * J + j] - betaStar[l] + w[j]) * omegaOcc[t * J + j];
-                  tmp_0 += omegaOcc[t * J + j];
+                  if (zDatIndx[t * J + j] == 1) {
+                    tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
+                    	    betaStarSites[t * J + j] - betaStar[l] + w[j] + eta[t]) * omegaOcc[t * J + j];
+                    tmp_0 += omegaOcc[t * J + j];
+		  }
                 }
               }
 	    }
@@ -705,12 +760,11 @@ extern "C" {
 	  mu = 0.0; 
 	  for (t = 0; t < nYearsMax; t++) {
             if (zDatIndx[t * J + ii] == 1) {
-              mu += (kappaOcc[t * J + ii] / omegaOcc[t * J + ii] - F77_NAME(ddot)(&pOcc, &X[t * J + ii], &JnYears, beta, &inc) - betaStarSites[t * J + ii]) * omegaOcc[t * J + ii];
+              mu += (kappaOcc[t * J + ii] / omegaOcc[t * J + ii] - F77_NAME(ddot)(&pOcc, &X[t * J + ii], &JnYears, beta, &inc) - betaStarSites[t * J + ii] - eta[t]) * omegaOcc[t * J + ii];
 	    }
 	  } // t
 	  mu += e/F[ii] + a;
 	 
-
 	  tmp_0 = 0.0;
 	  for (t = 0; t < nYearsMax; t++) {
             if (zDatIndx[t * J + ii] == 1) {
@@ -823,6 +877,126 @@ extern "C" {
             accept[nuIndx]++; 
           }
         }
+	if (ar1) {
+          /********************************************************************
+           *Update sigmaSqT
+           *******************************************************************/
+	  // Form correlation matrix. 
+          AR1(nYearsMax, theta[rhoIndx], 1.0, SigmaEta);
+	  clearUT(SigmaEta, nYearsMax);
+	  F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	  F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+	  fillUTri(SigmaEta, nYearsMax);
+	  // Compute t(eta) %*% SigmaEta^-1 %*% eta
+          for (t = 0; t < nYearsMax; t++) {
+            etaTRInv[t] = F77_NAME(ddot)(&nYearsMax, &SigmaEta[t], &nYearsMax, 
+	  		               eta, &inc); 
+	  }
+          bSigmaSqTPost = F77_NAME(ddot)(&nYearsMax, etaTRInv, &inc, eta, &inc);	
+	  bSigmaSqTPost /= 2.0;
+	  bSigmaSqTPost += sigmaSqTB;
+	  theta[sigmaSqTIndx] = rigamma(aSigmaSqTPost, bSigmaSqTPost);
+          
+          /********************************************************************
+           *Update rho
+           *******************************************************************/
+	  rho = theta[rhoIndx];
+	  sigmaSqT = theta[sigmaSqTIndx];
+	  rhoCand = logitInv(rnorm(logit(rho, rhoA, rhoB), exp(tuning[rhoIndx])), rhoA, rhoB); 
+	  theta[rhoIndx] = rhoCand; 
+
+	  // Construct proposal covariance matrix. 
+          AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEtaCand);
+	  clearUT(SigmaEtaCand, nYearsMax);
+
+          /********************************
+           * Proposal
+           *******************************/
+	  // Invert SigmaEtaCand and log det cov. 
+          logPostCand = 0.0;
+	  F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEtaCand, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky failed in proposal covariance matrix\n");}
+	  // Get log of the determinant of the covariance matrix. 
+	  for (k = 0; k < nYearsMax; k++) {
+	    logPostCand += 2.0 * log(SigmaEtaCand[k*nYearsMax+k]);
+	  } // k
+	  F77_NAME(dpotri)(lower, &nYearsMax, SigmaEtaCand, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky inverse failed in proposal covariance matrix\n");}
+          logPostCand = 0.0; 
+	  // Jacobian and Uniform prior. 
+	  logPostCand += log(rhoCand - rhoA) + log(rhoB - rhoCand); 
+	  F77_NAME(dsymv)(lower, &nYearsMax, &one,  SigmaEtaCand, &nYearsMax, eta, &inc, &zero, tmp_nYearsMax, &inc FCONE);
+	  logPostCand += -0.5*logPostCand-0.5*F77_NAME(ddot)(&nYearsMax, eta, &inc, tmp_nYearsMax, &inc);
+          /********************************
+           * Current
+           *******************************/
+	  theta[rhoIndx] = rho; 
+          AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
+	  clearUT(SigmaEta, nYearsMax);
+          logPostCurr = 0.0;
+	  F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	  for (k = 0; k < nYearsMax; k++) {
+	    logPostCurr += 2.0 * log(SigmaEta[k*nYearsMax+k]);
+	  } // k
+	  F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+          logPostCurr = 0.0; 
+	  logPostCurr += log(rho - rhoA) + log(rhoB - rho); 
+	  // (-1/2) * tmp_JD` *  C^-1 * tmp_JD
+	  F77_NAME(dsymv)(lower, &nYearsMax, &one, SigmaEta, &nYearsMax, eta, &inc, &zero, 
+	  		tmp_nYearsMax, &inc FCONE);
+	  logPostCurr += -0.5*logPostCurr-0.5*F77_NAME(ddot)(&nYearsMax, eta, &inc, tmp_nYearsMax, &inc);
+
+	  // MH Accept/Reject
+	  if (runif(0.0, 1.0) <= exp(logPostCand - logPostCurr)) {
+            theta[rhoIndx] = rhoCand;
+            accept[rhoIndx]++;
+	    F77_NAME(dcopy)(&nnYears, SigmaEtaCand, &inc, SigmaEta, &inc); 
+          }
+          /********************************************************************
+           *Update eta 
+           *******************************************************************/
+          /********************************
+           * Compute b.w
+           *******************************/
+	  zeros(tmp_nYearsMax, nYearsMax);
+          for (j = 0; j < J; j++) {
+            for (t = 0; t < nYearsMax; t++) {
+              if (zDatIndx[t * J + j] == 1) {
+                tmp_nYearsMax[t] += kappaOcc[t * J + j] - omegaOcc[t * J + j] * (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + betaStarSites[t * J + j] + w[j]);
+	      }
+	    }
+          }
+          /********************************
+           * Compute A.w
+           *******************************/
+	  // Copy inverse covariance matrix into tmp_JJ
+	  F77_NAME(dcopy)(&nnYears, SigmaEta, &inc, tmp_nnYears, &inc); 
+          for (j = 0; j < J; j++) {
+	    for (t = 0; t < nYearsMax; t++) {
+              if (zDatIndx[t * J + j] == 1) {
+                tmp_nnYears[t * nYearsMax + t] += omegaOcc[t * J + j];
+	      }
+	    } // t
+	  } // j
+
+          // Cholesky of A.eta
+          F77_NAME(dpotrf)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf on A.eta failed\n");}
+	  // Inverse of A.eta
+          F77_NAME(dpotri)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri on A.eta failed\n");}
+          // A.eta.inv %*% b.eta. Stored in tmp_
+          F77_NAME(dsymv)(lower, &nYearsMax, &one, tmp_nnYears, &nYearsMax, 
+	  		tmp_nYearsMax, &inc, &zero, tmp_nYearsMax2, &inc FCONE);
+          F77_NAME(dpotrf)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+	  if(info != 0){error("c++ error: dpotrf on A.eta failed\n");}
+          // Args: destination, mu, cholesky of the covariance matrix, dimension
+          mvrnorm(eta, tmp_nYearsMax2, tmp_nnYears, nYearsMax);
+	}
 
         /********************************************************************
          *Update Latent Occupancy
@@ -833,7 +1007,8 @@ extern "C" {
           if (tmp_JnYearsInt[zLongIndx[i]] == 0) {
             psi[zLongIndx[i]] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[i]], &JnYears, 
 	  			                      beta, &inc) + 
-	    			         w[zLongSiteIndx[i]] + betaStarSites[zLongIndx[i]], 
+	    			         w[zLongSiteIndx[i]] + betaStarSites[zLongIndx[i]] +
+					 eta[zYearIndx[zLongIndx[i]]], 
 				         zero, one); 
           }
           piProd[zLongIndx[i]] *= (1.0 - detProb[i]);
@@ -857,7 +1032,7 @@ extern "C" {
               }
 	    } else {
               psi[t * J + j] = logitInv(F77_NAME(ddot)(&pOcc, &X[t * J + j], 
-					&JnYears, beta, &inc) + w[j], zero, one); 
+					&JnYears, beta, &inc) + w[j] + betaStarSites[t * J + j] + eta[t], zero, one); 
               z[t * J + j] = rbinom(one, psi[t * J + j]);
 	    }
             piProd[t * J + j] = one;
@@ -880,6 +1055,9 @@ extern "C" {
             F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[sPost*J], &inc); 
 	    F77_NAME(dcopy)(&nTheta, theta, &inc, &REAL(thetaSamples_r)[sPost*nTheta], &inc); 
 	    F77_NAME(dcopy)(&JnYears, z, &inc, &REAL(zSamples_r)[sPost*JnYears], &inc); 
+	    if (ar1) {
+	      F77_NAME(dcopy)(&nYearsMax, eta, &inc, &REAL(etaSamples_r)[sPost*nYearsMax], &inc);
+	    }
             if (pOccRE > 0) {
               F77_NAME(dcopy)(&pOccRE, sigmaSqPsi, &inc, 
                   	    &REAL(sigmaSqPsiSamples_r)[sPost*pOccRE], &inc);
@@ -907,8 +1085,7 @@ extern "C" {
        *Adjust tuning 
        *******************************************************************/
       for (k = 0; k < nTheta; k++) {
-        REAL(acceptSamples_r)[s * nTheta + k] = accept[k]/batchLength; 
-        REAL(tuningSamples_r)[s * nTheta + k] = tuning[k]; 
+        accept2[k] = accept[k]/batchLength; 
         if (accept[k] / batchLength > acceptRate) {
           tuning[k] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
         } else{
@@ -923,9 +1100,12 @@ extern "C" {
 	if (status == nReport) {
 	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
 	  Rprintf("\tParameter\tAcceptance\tTuning\n");	  
-	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + phiIndx], exp(tuning[phiIndx]));
+	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[phiIndx], exp(tuning[phiIndx]));
 	  if (corName == "matern") {
-	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * nTheta + nuIndx], exp(tuning[nuIndx]));
+	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[nuIndx], exp(tuning[nuIndx]));
+	  }
+	  if (ar1) {
+	    Rprintf("\trho\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[rhoIndx], exp(tuning[rhoIndx]));
 	  }
 	  Rprintf("-------------------------------------------------\n");
           #ifdef Win32
@@ -945,12 +1125,15 @@ extern "C" {
  
     //make return object (which is a list)
     SEXP result_r, resultName_r;
-    int nResultListObjs = 9;
+    int nResultListObjs = 7;
     if (pDetRE > 0) {
       nResultListObjs += 2; 
     }
     if (pOccRE > 0) {
       nResultListObjs += 2;
+    }
+    if (ar1) {
+      nResultListObjs += 1;
     }
 
     PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -963,22 +1146,32 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 3, psiSamples_r);
     SET_VECTOR_ELT(result_r, 4, thetaSamples_r); 
     SET_VECTOR_ELT(result_r, 5, wSamples_r); 
-    SET_VECTOR_ELT(result_r, 6, tuningSamples_r); 
-    SET_VECTOR_ELT(result_r, 7, acceptSamples_r); 
-    SET_VECTOR_ELT(result_r, 8, likeSamples_r); 
+    SET_VECTOR_ELT(result_r, 6, likeSamples_r); 
     if (pDetRE > 0) {
-      SET_VECTOR_ELT(result_r, 9, sigmaSqPSamples_r);
-      SET_VECTOR_ELT(result_r, 10, alphaStarSamples_r);
+      SET_VECTOR_ELT(result_r, 7, sigmaSqPSamples_r);
+      SET_VECTOR_ELT(result_r, 8, alphaStarSamples_r);
     }
     if (pOccRE > 0) {
       if (pDetRE > 0) {
-        tmp_0 = 11;
-      } else {
         tmp_0 = 9;
+      } else {
+        tmp_0 = 7;
       }
       SET_VECTOR_ELT(result_r, tmp_0, sigmaSqPsiSamples_r);
       SET_VECTOR_ELT(result_r, tmp_0 + 1, betaStarSamples_r);
     }
+    int ar1Ind = 0;
+    if (ar1) {
+      if (pOccRE > 0) {
+        ar1Ind = tmp_0 + 2;
+      } else if (pDetRE > 0) {
+        ar1Ind = 9; 
+      } else {
+        ar1Ind = 7;
+      }
+      SET_VECTOR_ELT(result_r, ar1Ind, etaSamples_r);
+    }
+
     // mkChar turns a C string into a CHARSXP
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
     SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.samples")); 
@@ -986,16 +1179,17 @@ extern "C" {
     SET_VECTOR_ELT(resultName_r, 3, mkChar("psi.samples"));
     SET_VECTOR_ELT(resultName_r, 4, mkChar("theta.samples")); 
     SET_VECTOR_ELT(resultName_r, 5, mkChar("w.samples")); 
-    SET_VECTOR_ELT(resultName_r, 6, mkChar("tune")); 
-    SET_VECTOR_ELT(resultName_r, 7, mkChar("accept")); 
-    SET_VECTOR_ELT(resultName_r, 8, mkChar("like.samples")); 
+    SET_VECTOR_ELT(resultName_r, 6, mkChar("like.samples")); 
     if (pDetRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 9, mkChar("sigma.sq.p.samples")); 
-      SET_VECTOR_ELT(resultName_r, 10, mkChar("alpha.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, 7, mkChar("sigma.sq.p.samples")); 
+      SET_VECTOR_ELT(resultName_r, 8, mkChar("alpha.star.samples")); 
     }
     if (pOccRE > 0) {
       SET_VECTOR_ELT(resultName_r, tmp_0, mkChar("sigma.sq.psi.samples")); 
       SET_VECTOR_ELT(resultName_r, tmp_0 + 1, mkChar("beta.star.samples")); 
+    }
+    if (ar1) {
+      SET_VECTOR_ELT(resultName_r, ar1Ind, mkChar("eta.samples")); 
     }
     
     // Set the names of the output list.  

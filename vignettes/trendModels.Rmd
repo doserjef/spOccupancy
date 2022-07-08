@@ -1,9 +1,10 @@
 ---
-title: "Multi-season occupancy models for assessing species trends"
+title: "Multi-season occupancy models for assessing species trends and spatio-temporal occurrence patterns"
 author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
-  rmarkdown::html_vignette:
+  # rmarkdown::html_vignette:
+  bookdown::pdf_document2:
     toc: true
     toc_depth: 3
 bibliography: [references.bib]
@@ -22,12 +23,13 @@ knitr::opts_chunk$set(
 ```
 
 \newcommand{\bm}{\boldsymbol} 
+\newcommand{\pg}{\text{P{\'o}lya-Gamma}}
 
 # Introduction
 
-This vignette details `spOccupancy` functionality introduced in v0.4.0 to fit static, multi-season occupancy models. A primary goal of monitoring programs is often to document and understand trends in species occurrence over time, in addition to understanding how occurrence varies with covariates that vary across space and/or time. Until v0.4.0, `spOccupancy` functionality has focused solely in the spatial dimension. Here we introduce the functions `tPGOcc()` and `spTPGOcc()`, which fit nonspatial and spatial multi-season occurrence models, respectively, for assessing trends in species occurrence as well as the effects of spatially-varying and/or spatio-temporally varying covariates on occurrence. 
+This vignette details `spOccupancy` functionality introduced in v0.4.0 to fit multi-season occupancy models. A primary goal of monitoring programs is often to document and understand trends in species occurrence over time, in addition to understanding spatiotemporal variability in occurrence in relation to a set of covariates. Until v0.4.0, `spOccupancy` functionality has focused solely in the spatial dimension. Here we introduce the functions `tPGOcc()` and `spTPGOcc()`, which fit nonspatial and spatial multi-season occurrence models, respectively, for assessing trends in species occurrence as well as the effects of spatially-varying and/or spatio-temporally varying covariates on occurrence. 
 
-As with all `spOccupancy` model fitting functions, we leverage the magical P&oacute;lya-Gamma data augmentation framework for computational efficiency [@polson2013], and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in our spatially-explicit implementation (`spTPGOcc()`) to drastically reduce the computational burden encountered when fitting models with spatial random effects. In addition to fitting the models, we will also detail how `spOccupancy` provides functionality for posterior predictive checks, model comparison and assessment using the Widely Available Information Criterion (WAIC), k-fold cross-validation, and out-of sample predictions of both occurrence and detection probability. 
+As with all `spOccupancy` model fitting functions, we leverage the magical $\pg$ data augmentation framework for computational efficiency [@polson2013], and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in our spatially-explicit implementation (`spTPGOcc()`) to drastically reduce the computational burden encountered when fitting models with spatial random effects. In addition to fitting the models, we will also detail how `spOccupancy` provides functionality for posterior predictive checks, model comparison and assessment using the Widely Available Information Criterion (WAIC), k-fold cross-validation, and out-of sample predictions of both occurrence and detection probability. 
 
 Below, we first load the `spOccupancy` package, the `coda` package for some additional MCMC diagnostics, as well as the `stars` and `ggplot2` packages to create some basic plots of our results. We also set a seed so you can reproduce the same results we do.
 
@@ -35,7 +37,7 @@ Below, we first load the `spOccupancy` package, the `coda` package for some addi
 library(spOccupancy)
 library(stars)
 library(ggplot2)
-set.seed(500)
+set.seed(1996)
 ```
 
 # Data structure and example data set 
@@ -71,7 +73,15 @@ This is the same format we would use to specify a covariate that varies over bot
 
 For the detection covariates in `det.covs`, we specify space-varying, time-varying, and spatio-temporally varying covariates in the same manner as just described for `occ.covs`. Additionally, we can have detection covariates that vary across space, time, and replicate. We refer to these as observation-level covariates. Observation-level covariates are specified as three-dimensional arrays, with the first dimension corresponding to sites, the second dimension corresponding to primary time periods, and the third dimension corresponding to replicates. Here, we have two observation-level covariates in `det.covs`: `day` (the specific day of the year the survey took place) and `tod` (the specific time of day the survey began, in minutes since midnight). 
 
-Finally, `coords` is a two-dimensional matrix of coordinates, with rows corresponding to sites, and two columns that contain the horizontal (i.e., easting) and vertical (i.e., northing) dimensions for each site. Note that `spOccupancy` requires coordinates to be specific in a projected coordinate system (i.e., these should not be longitude/latitude values).  
+Finally, `coords` is a two-dimensional matrix of coordinates, with rows corresponding to sites, and two columns that contain the horizontal (i.e., easting) and vertical (i.e., northing) dimensions for each site. Note that `spOccupancy` requires coordinates to be specified in a projected coordinate system (i.e., these should not be longitude/latitude values).  
+
+# Brief overview of spatio-temporal occupancy models
+
+The statistical ecology literature is filled with a variety of ways to model spatio-temporal occurrence dynamics (see Chapter 4 in @keryRoyle2021 for a lovely overview, as well as Chapter 9 for some spatially-explicit extensions). Dynamic occupancy models and their numerous extensions (e.g., @sutherland2014demographic) explicitly model species occurrence through time as a function of initial occurrence, colonization, and persistence/extinction [@mackenzie2003estimating]. These approaches model occurrence of a species in primary time period $t$ based on the status (i.e., present or absent) of the species in the previous time period $t - 1$. Such mechanistic, dynamic models are extremely valuable tools for understanding the processes governing species distributions in space and time, but these approaches can require large amounts of data (e.g., lots of sites and primary time periods) in order to separately estimate colonization and extinction/persistence dynamics [@briscoe2021can]. 
+
+Further, when interest lies in understanding spatio-temporal patterns of species occurrence (e.g., species trends) and not explicitly in colonization and/or extinction dynamics, fully dynamic occupancy models may not be ideal, in particular across large spatio-temporal regions when models may take drastically long to reach convergence. A variety of alternative modeling frameworks exist to model spatio-temporal occurrence dynamics in both a single-species [@outhwaite2018prior; @rushing2019modeling; @diana2021fast] and multi-species context [@hepler2021spatiotemporal; @wright2021spatial]. Rather than focus on colonization/extinction dynamics, these approaches seek to model spatio-temporal occurrence dynamics by incorporating spatial and/or temporal random effects that can accommodate non-linear patterns in occurrence across both space and time. As a result of computational advancements such as $\pg$ data augmentation [@polson2013], these approaches can serve as efficient ways to model spatio-temporal occurrence dynamics across a potentially large number of sites and/or time periods [@diana2021fast]. 
+
+In `spOccupancy`, our approach closely resembles that of @diana2021fast, where we model spatio-temporal occurrence patterns using independent spatial and temporal random effects, although we use slightly different structures for both the temporal and spatial random effects. In the spatio-temporal statistics literature, such an approach with independent spatial and temporal covariance structures is referred to as a *separable* spatio-temporal covariance structure [@wikle2019spatio].  
 
 # Model description {#modelDescription}
 
@@ -82,23 +92,41 @@ Let $z_{j, t}$ denote the presence (1) or absence (0) of a species at site $j$ a
 \begin{equation}
 \begin{split}
 &z_{j, t} \sim \text{Bernoulli}(\psi_{j, t}), \\
-&\text{logit}(\psi_{j, t}) = \beta_0 + \beta_1 \cdot \text{TIME}_t + \sum_{r = 2}^{p_{\psi}}x_{r, j, t} \cdot \beta_r,
+&\text{logit}(\psi_j) = \bm{x}^{\top}_{j, t}\bm{\beta} + \text{w}_j + \eta_t,
 \end{split}
 \end{equation}
 
-where $\psi_{j, t}$ is the probability of occurrence at site $j$ during time period $t$, $\beta_0$ is an intercept parameter, $\beta_1$ is a temporal trend parameter (where $TIME_t$ simply denotes the time period corresponding to $t$), and $\beta_r$ for $r = 2, \dots, p_{\psi}$ is the effect of some covariate $x_{r, j, t}$ that may vary over space and/or time. Note that here we have explicitly separated a trend parameter, as we view understanding trends in occurrence as a primary motivation for using `tPGOcc()` and `spTPGOcc()`. However, the trend component can be removed from the model if interest solely lies in understanding the effect of spatio-temporally varying covariates on occurrence, temporally-varying intercepts can be estimated instead of a trend parameter, or additional trend components can be included in the model to allow for additional flexibility (e.g., a quadratic trend component).  
+where $\psi_{j, t}$ is the probability of occurrence at site $j$ during time period $t$, $\bm{\beta}$ are the effects of a series of spatial and/or temporally-varying covariates $\bm{x}_{j, t}$ (including an intercept), $\text{w}_j$ is a zero-mean site random effect, and $\eta_t$ is a zero-mean temporal random effect. Note that if interest lies in estimating a trend in occurrence over time, the primary time period can be included as a covariate in $\bm{x}_{j, t}$ to explicitly estimate a linear trend. 
 
-As our model for species occurrence is currently written, we are assuming independence among the repeated measurements at each site over the $T$ primary time periods (beyond that explained by the trend parameter and the spatiotemporally-varying covariates). This assumption may (likely) not be reasonable, as data points at the same point over time are likely more related to each other (i.e., correlated) compared to data points at different site and or time points. If such non-independence among data points exists and we fail to ignore it, our estimates of uncertainty would be too small. In the classical statistics literature, this is a phenomenon known as pseudoreplication [@hurlbert1984pseudoreplication]. Depending on the study system, this may be an important phenomenon to address in our modeling approach.
+`spOccupancy` provides users with flexibility in how to specify the site-level and temporal random effects (see Table \@ref(tab:modelTypes) for a summary of the different approaches). In the most basic approach, we can remove both the site-level and temporal random effects and assume that all variability in occurrence is explained by the covariates. Such a model may be adequate in certain scenarios, but the assumption of independence among the repeated measurements at each site over the $T$ primary time periods may not be reasonable (ignoring such non-independence is referred to as pseudoreplication [@hurlbert1984pseudoreplication] in the classical statistics literature).
 
-The statistical ecology literature is filled with a variety of ways to accommodate such non-independence over time when modeling species occurrence (see Chapter 4 in @keryRoyle2021 for a lovely overview). Dynamic occupancy models and their numerous extensions model multi-season detection-nondetection data by explicitly modeling species occurrence through time as a function of initial occurrence, colonization, and persistence/extinction [@mackenzie2003estimating]. By modeling occurrence of a species in primary time period $t$ based on the previous time period in $t - 1$, these models clearly account for the fact that repeated measurements at a site over time are likely to be correlated. Such mechanistic, dynamic models are extremely valuable tools for understanding the processes governing species distributions in space and time. However, the standard dynamic occupancy model is not directly suited to model trends in occurrence over time as it does not explicitly estimate a trend parameter, which is often of key interest in monitoring programs. Further, the dynamic occupancy model can require large amounts of data (e.g., lots of sites and primary time periods) in order to separately estimate colonization and extinction/persistence dynamics. If we aren't explicitly interested in the dynamics of the species and rather just seek to understand spatio-temporal patterns in species occurrence, we can account for non-independence in our repeated samples at a given site over time by including a random site effect into our model. We can extend our above model for the occurrence probability $\psi_{j, t}$ to become
+```{r modelTypes, echo = FALSE, results = 'asis'}
+library(knitr)
+library(kableExtra)
+df <- data.frame(c('None', 'None', 'None', 'Unstructured', 'Unstructured', 
+		   'Unstructured', 'Spatial (NNGP)', 'Spatial (NNGP)', 'Spatial (NNGP)'), 
+                 rep(c('None', 'Unstructured', 'AR(1)'), 3), 
+                 c('$\\texttt{tPGOcc()}$', '$\\texttt{tPGOcc()}$ with random time intercept', '$\\texttt{tPGOcc()}$ with $\\texttt{ar1 = TRUE}$', '$\\texttt{tPGOcc()}$ with random site intercept', '$\\texttt{tPGOcc()}$ with random time and site intercept', '$\\texttt{tPGOcc()}$ with random site intercept and $\\texttt{ar1 = TRUE}$', '$\\texttt{spTPGOcc()}$', '$\\texttt{spTPGOcc()}$ with random time intercept', '$\\texttt{spTPGOcc()}$ with $\\texttt{ar1 = TRUE}$'))
+df %>%
+   kbl(col.names = c('Site Effect', 'Temporal Effect', '$\\texttt{spOccupancy}$'), 
+       escape = FALSE, caption = 'Different ways to model the site-level and temporal random effects in multi-season occupancy models in $\\texttt{spOccupancy}$', 
+       linesep = "\\addlinespace", align = "l") %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F) %>%
+   row_spec(0, align = "c")
 
-\begin{equation}
-\text{logit}(\psi_{j, t}) = \beta_0 + \beta_1 \cdot \text{TIME}_t + \text{w}_j + \sum_{r = 2}^{p_{\psi}}x_{r, j, t} \cdot \beta_r,
-\end{equation}
+```
 
-where $\text{w}_j$ is a site-level random effect. By incorporating a random effect in this simple manner, we account for non-independence between repeated measurements at a given site over time, and thus our measurements of uncertainty are likely to be more accurate.  
+We can model the site-level effect in two ways: 
 
-There are two ways in which we can include the site effects ($\text{w}_j$). First, we can assume the site effects are basic random intercepts, where we envision each $\text{w}_j$ is drawn from a Normal distribution with a mean of 0 and variance $\sigma^2_{\psi}$. This model can be fit using the `spOccupancy` function `tPGOcc()` by including random intercepts using `lme4` syntax [@bates2015]. Alternatively, we can assign a spatial structure to the random effects and treat them as spatial random effects. By modeling the site-level random effects as spatial random effects, we not only account for the non-independence between repeated measurements at each site over time, but we can also account for residual spatial autocorrelation in species distributions, which is a common phenomenon when working across large spatial domains [@guelat2018]. When there are a sufficient number of sites sampled in the data set, modeling the site-level effects as spatial random effects will likely improve both inference and prediction of species distributions [@guelat2018]. The `spOccupancy` function `spTPGOcc()` fits such a model with spatially-structured random effects. We model the spatial random effects using Nearest Neighbor Gaussin Processes [@datta2016hierarchical] to yield a computationally efficient implementation of these spatially-explicit models. See the [spOccupancy introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) and @doser2022spoccupancy for specific details.  
+1. Model $\text{w}_j$ as a basic, unstructured random effect, where $\text{w}_j \sim \text{Normal}(0, \sigma^2_{\text{SITE}})$. The `spOccupancy` function `tPGOcc()` can fit such a model by including a random site-level intercept using `lme4` syntax [@bates2015] for the random effects in the model formula. 
+2. Model $\text{w}_j$ as a spatial random effect. When there are a sufficient number of sites sampled in the data set, modeling the site-level effects as spatial random effects will likely improve both inference and prediction of species distributions [@guelat2018]. The `spOccupancy` function `spTPGOcc()` fits such a model with spatially-structured random effects. We model the spatial random effects using Nearest Neighbor Gaussin Processes [@datta2016hierarchical] to yield a computationally efficient implementation of these spatially-explicit models. See the [spOccupancy introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) and @doser2022spoccupancy for specific details.  
+
+Similarly, we can model the temporal random effect in two ways: 
+
+1. Model $\eta_t$ as a basic, unstructured random effect, where $\eta_t \sim \text{Normal}(0, \sigma^2_{\text{TIME}})$. The functions `tPGOcc()` and `spTPGOcc()` both allow the inclusion of an unstructured, random temporal effect using `lme4` syntax [@bates2015]. For example, if the variable `years` contains the specific survey year in the `occ.covs` object, then we can include `(1 | years)` in the occurrence model formula to specify an unstructured, random effect of year.
+2. Model $\eta_t$ using an AR(1) covariance structure. An AR(1) covariance structure allows for more structure in the temporal random effect instead of assuming independence among the random effects for each primary time period. The logical argument `ar1` (taking values `TRUE` or `FALSE`) in both `tPGOcc()` and `spTPGOcc()` controls whether or not an AR(1) temporal random effect is included in the model. With an AR(1) covariance structure, we estimate a temporal variance parameter ($\sigma^2_T$) and a temporal correlation parameter ($\rho$).  
+
+
 
 ## Observation model
 
@@ -113,21 +141,21 @@ We do not directly observe $z_{j, t}$, but rather we observe an imperfect repres
 
 where $p_{j, t, k}$ is the probability of detecting a species at site $j$ in primary time period $t$ during replicate $k$ (given it is present at site $j$ during time period $t$), which is a function of site, primary time period, and/or replicate specific covariates $\bm{V}$ and a vector of regression coefficients ($\bm{\alpha}$).
 
-To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. For non-spatial random intercepts included in the occurrence or detection portions of the occupancy model, we assign an inverse-Gamma prior on the variance parameter. If spatial random effects are included in the ecological sub-model, we assign an inverse-Gamma prior to the spatial variance parameter, and a uniform prior to the spatial range and the spatial smoothness parameter. See Supporting Information S1 in @doser2022spoccupancy for more details on prior distributions used in `spOccupancy`. 
-
+To complete the Bayesian specification of the model, we assign multivariate normal priors for the occurrence ($\bm{\beta}$) and detection ($\bm{\alpha}$) regression coefficients. For non-spatial random intercepts included in the occurrence or detection portions of the occupancy model, we assign an inverse-Gamma prior on the variance parameter. If AR(1) temporal random effects are included in the model, we specify an inverse-Gamma prior on the temporal variance parameter and a uniform prior on the temporal correlation parameter. If spatial random effects are included in the ecological sub-model, we assign an inverse-Gamma prior to the spatial variance parameter, and a uniform prior to the spatial range and the spatial smoothness parameter. See Supporting Information S1 in @doser2022spoccupancy for more details on prior distributions used in `spOccupancy`. 
 
 # Fitting multi-season occupancy models with `tPGOcc()`
 
 The function `tPGOcc()` fits multi-season single species occupancy models. `tPGOcc()` has the following arguments 
 
 ```{r, eval = FALSE}
-tPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
-       n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+tPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
+       n.batch, batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+       verbose = TRUE, ar1 = FALSE, n.report = 100, 
        n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-       k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = TRUE, ...)
+       k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 ```
 
-The arguments for `tPGOcc()` are identical to those used in all other non-spatial `spOccupancy` functions, and so we won't go into too much detail on each argument and will focus on fitting the models (see [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more specific details on function arguments). The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to specify the covariates to include in the occurrence and detection portions of the model, respectively. We only specify the right side of the formulas. We can include random intercepts in the occurrence and detection portion of the models using `lme4` syntax [@bates2015]. We will see this clearly when we include a site-level random effect in the occurrence portion of our model for REVI. The `data` argument contains the necessary data for fitting the multi-season occupancy model. This should be a list object of the form previously described with our `revi.data` object. As a reminder, let's take a look at the structure of `revi.data`
+The arguments for `tPGOcc()` are very similar to other `spOccupancy` functions, and so we won't go into too much detail on each argument and will focus on fitting the models (see [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more specific details on function arguments). The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to specify the covariates to include in the occurrence and detection portions of the model, respectively. We only specify the right side of the formulas. We can include random (unstructured) intercepts in the occurrence and detection portion of the models using `lme4` syntax [@bates2015]. The `data` argument contains the necessary data for fitting the multi-season occupancy model. This should be a list object of the form previously described with our `revi.data` object. As a reminder, let's take a look at the structure of `revi.data`
 
 ```{r}
 str(revi.data)
@@ -143,10 +171,11 @@ plot(2010:2018, raw.occ.prob, pch = 19,
 
 Quickly looking at this plot reveals what appears to be a positive trend in raw occurrence probability over the nine year period. Of course, there are some clear annual deviations from an overall trend (in particular in 2016). Also remember that this is the raw occurrence probability, which is a confounded process of true species occurrence and detection probability. Based on this plot, we will move forward with fitting a linear temporal trend in the occurrence model to summarize the overall pattern in occurrence probability over the nine year period.  
 
-More specifically, we will model REVI occurrence as a function of a linear temporal trend as well as a linear and quadratic effect of elevation. We will model detection as a function of day of survey (linear and quadratic) and time of day the survey began (linear). Note that for now we will not include any site-level random effect in our model. As per usual, we will standardize all covariates using the `scale()` function to help with model convergence. Note that the names in the formula must match up with names provided in the `occ.covs` and `det.covs` portions of the data list. 
+More specifically, we will model REVI occurrence as a function of a linear temporal trend as well as a linear and quadratic effect of elevation. We will model detection as a function of day of survey (linear and quadratic) and time of day the survey began (linear). We will first fit a model with an unstructured site-level random effect and an unstructured temporal random effect, which we specify in the occurrence formula below using `lme4` syntax.  
 
 ```{r}
-revi.occ.formula <- ~ scale(years) + scale(elev) + I(scale(elev)^2)
+revi.occ.formula <- ~ scale(years) + scale(elev) + I(scale(elev)^2) + 
+                      (1 | years) + (1 | site.effect)
 revi.det.formula <- ~ scale(day) + I(scale(day)^2) + scale(tod)
 ```
 
@@ -154,39 +183,48 @@ Below we specify the initial values for all model parameters. Note that the init
 
 ```{r}
 z.inits <- apply(revi.data$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
-revi.inits <- list(beta = 0, alpha = 0, z = z.inits)
+revi.inits <- list(beta = 0, # occurrence coefficients
+                   alpha = 0, # detection coefficients
+                   sigma.sq.psi = 1, # occurrence random effect variances
+                   z = z.inits)  # latent occurrence values
 ```
 
-We specify priors in the `priors` argument. Here we set priors for the occurrence and detection regression coefficients to vague normal priors (which are also the default values, so we could just not do this). 
+We specify priors in the `priors` argument. Here we set priors for the occurrence and detection regression coefficients to vague normal priors (which are also the default values, so we could just not do this), as well as vague inverse-gamma priors for the random effect variances. 
 
 ```{r}
 revi.priors <- list(beta.normal = list(mean = 0, var = 2.72), 
-                    alpha.normal = list(mean = 0, var = 2.72))
+                    alpha.normal = list(mean = 0, var = 2.72), 
+                    sigma.sq.psi.ig = list(a = 0.1, b = 0.1))
 ```
 
-Finally, we specify the number of MCMC chains (`n.chains`), samples (`n.samples`), the amount of burn-in (`n.burn`), and our thinning rate (`n.thin`). 
+Finally, we set the arguments that control how long we run the MCMC. Instead of specifying an argument with the total number of MCMC samples (e.g., as in `PGOcc()`), we split the samples into a set of `n.batch` batches, each comprised of a length of `batch.length`. This is because we use an adaptive algorithm to improve mixing of the MCMC chains of the temporal range parameter when we fit multi-season occupancy models with an AR(1) temporal random effect. We will run the model for 5000 samples, comprised of 200 batches each of length 25. We specify a burn-in period of 2000 iterations and a thinning rate of 12. See [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details on the adaptive algorithm. We also set `ar1 <- FALSE` to indicate we will not fit the model with an AR(1) temporal random effect (this is the default).
 
 ```{r}
 n.chains <- 3
-n.samples <- 5000
+n.batch <- 200
+batch.length <- 25
+n.samples <- n.batch * batch.length 
 n.burn <- 2000
 n.thin <- 12
+ar1 <- FALSE
 ```
 
-We are now set to run the model with `tPGOcc()`. We set `n.report = 1000` to report model progress after every 1000th iteration. 
+We are now set to run the model with `tPGOcc()`. We set `n.report = 50` to report model progress after every 50th batch. 
 
 ```{r}
-# Approx. run time: ~ 1 min
+# Approx. run time: ~ 1.3 min
 out <- tPGOcc(occ.formula = revi.occ.formula, 
               det.formula = revi.det.formula, 
               data = revi.data, 
-              n.samples = n.samples, 
+              n.batch = n.batch, 
+              batch.length = batch.length,
               inits = revi.inits,
               priors = revi.priors,
+              ar1 = ar1,
               n.burn = n.burn, 
               n.thin = n.thin, 
               n.chains = n.chains, 
-              n.report = 1000)
+              n.report = 50)
 ```
 
 Note the message about missing values in `data$y` and `data$det.covs`. All `spOccupancy` model fitting functions check for discrepancies in the missing values between the detection-nondetection data points and the occurrence and detection covariate values. In this case, there are missing detection-nondetection data points in certain site/time period/replicate combinations where there are non-missing values in the detection covariates. `tPGOcc()` kindly informs us that these combinations are not used when the model is fit. In other scenarios where `spOccupancy` encounters missing values (e.g., missing values in `data$occ.covs`), you will receive an error with information on potential ways to handle the missing values.   
@@ -197,86 +235,54 @@ As with all `spOccupancy` model functions, we can use `summary()` to get a quick
 summary(out)
 ```
 
-Taking a quick look, we see adequate convergence of all parameters (i.e., Rhats are all less than 1.1 and ESS values are sufficiently large). In this model, we don't include any site effect to account for potential correlation in occurrence over the multiple time periods at each given site. We see a positive trend in occurrence probability, which matches with the EDA plot we produced earlier. As we discussed in the model description section, a simple way to account for this potential correlation is to include a random site-level effect in the model. We do this below and take a look at the results from the new model. Note that we set `verbose = FALSE` to suppress information on model progress.  
+Taking a quick look, we see fairly adequate convergence of all parameters (i.e., most Rhats are all less than 1.1), although we may want to run the chains a bit longer to ensure convergence of the occurrence trend and year random effect. We see a positive trend in occurrence probability, which matches with the EDA plot we produced earlier. We also see that the variance of both the site-level effect and temporal random effect are decently large, indicating substantial variation in occurrence probabilities across sites and years (beyond that which is explained by the fixed covariates).
+
+Next we will fit the same model, but instead of using an unstructured temporal random effect, we will use an AR(1) temporal random effect. We do this by removing `(1 | years)` from the `occ.formula` and setting `ar1 = TRUE`. 
 
 ```{r}
 # Approx. run time: ~ 1.2 min
-out.site.re <- tPGOcc(occ.formula = ~ scale(years) + scale(elev) + I(scale(elev)^2) + 
-                                      (1 | site.effect),
-                      det.formula = revi.det.formula, 
-                      data = revi.data, 
-                      n.samples = n.samples, 
-                      inits = revi.inits,
-                      priors = revi.priors,
-                      n.burn = n.burn, 
-                      n.thin = n.thin, 
-                      n.chains = n.chains, 
-                      verbose = FALSE)
-summary(out.site.re)
+out.ar1 <- tPGOcc(occ.formula = ~ scale(years) + scale(elev) + I(scale(elev)^2) + 
+                                  (1 | site.effect), 
+                  det.formula = revi.det.formula, 
+                  data = revi.data, 
+                  n.batch = n.batch, 
+                  batch.length = batch.length,
+                  inits = revi.inits,
+                  priors = revi.priors,
+                  ar1 = TRUE,
+                  n.burn = n.burn, 
+                  n.thin = n.thin, 
+                  n.chains = n.chains, 
+                  n.report = 50)
+summary(out.ar1)
 ```
 
-Immediately, we see the site random effect variance is fairly large, indicating there is substantial correlation in the occurrence states at a given site over the 9 year period that this random effect is accounting for. We see slight differences in the occurrence covariate effects compared to the model without the site-level random effect. In particular, our uncertainty is larger in the model that does include the site-level random effect. This is exactly what we expect. 
+Note the messages from `tPGOcc()` in the `Preparing the data` section. We use the default priors and starting values for the AR(1) variance (`sigma.sq.t`) and correlation (`rho`) parameters, which take the form of a weakly-informative inverse-Gamma prior for `sigma.sq.t` and  a uniform prior on `rho` with bounds of -1 and 1. Note that when `rho` falls between -1 and 1, the AR(1) component is considered *stationary*. When `rho` is allowed to range outside of these bounds, the model is more unstable and can result in unrealistic estimates, and so we recommend using this default prior unless you have a strong reason not to. 
 
-We can also do a more formal model comparison with the `waicOcc()` function, which calculates the WAIC [@watanabe2010] for any model object in `spOccupancy`. 
+We see pretty strong correspondence between the estimated values from the model with the unstructured temporal random effect and the model with the AR(1) temporal random effect. Looking at the AR(1) covariance parameters, we see the temporal variance (`sigma.sq.t`) is again fairly large, and the temporal correlation parameter (`rho`) is moderately positive, indicating there is residual positive correlation in the occurrence values from one year to the next. Again, note the positive trend in occurrence probability. 
+
+We can use the WAIC [@watanabe2010] to do a formal comparison of the two models that use different temporal random effects. We do this using the `waicOcc()` function.  
 
 ```{r}
 waicOcc(out)
-waicOcc(out.site.re)
+waicOcc(out.ar1)
 ```
 
-We see adding in the site-level random effect substantially reduces the WAIC, suggesting there is additional variation across the sites that is an important source of variability in the data.
+Here we see the WAIC values are very similar, with the model using the AR(1) covariance structure slightly favored over the unstructured random effect (lower values of WAIC indicate better model fit). 
 
 Next, let's perform a Goodness of Fit assessment by performing a posterior predictive check on the two models. We do this using the `ppcOcc()` function. Because posterior predictive checks are not valid for binary responses [@mccullagh2019], we group the data across sites (`group = 1`) and use the Freeman-Tukey statistic as a fit statistic. The `summary()` function provides us with a Bayesian p-value for the entire data set, as well as for each time period to give an indication on how our model fits the data points across each time period.
 
 ```{r}
-# No site-level random effect
+# Unstructured temporal random effect
 ppc.out <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
 summary(ppc.out)
 
-# Site-level random effect
-ppc.out.site.re <- ppcOcc(out.site.re, fit.stat = 'freeman-tukey', group = 1)
-summary(ppc.out.site.re)
+# AR(1) temporal random effect
+ppc.out.ar1 <- ppcOcc(out.ar1, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out.ar1)
 ```
 
-We see for both models the overall Bayesian p-value is close to 0.5, indicating adequate overall model fit. However, when looking at the Bayesian p-values for individual time periods, we see that a few of the values are either very close to 1 or close to 0, indicating that in certain time periods our model underestimates the data, while in other time periods our model overestimates the data. This really is not all that surprising given that we are only using a linear trend to explain temporal variation in the occurrence probability over the 9 year period. Occurrence probability almost surely does not exactly follow a linear trend over the 9 year period, and rather there will be certain years that fluctuate from this overall trend and have either on average a higher occurrence probability or a lower occurrence probability. When we fit a model with a linear trend, we don't necessarily care about these seasonal fluctuations, and rather are just interested in the overall trend across the entire time period. To get a further understanding of what's going on here, we can look back at the plot of time vs. raw occurrence proability and imagine fitting a linear trend through the figure, which would represent our predicted values from the model. Across the figure, some points would fall above the line, and others would fall below. If the point fell well below the line, the Bayesian p-value would be close to 0. If the point fell well above the line, the Bayesian p-value would be close to 1. Looking back at our yearly Bayesian p-values, we see that our p-values are very low for years 2010 and 2016, whereas the p-values are very high for years 2012, 2014, and 2015. Looking at the plot, these are exactly the years where the raw occurrence probabilities fall well below and above our imaginary trend line, respectively. Because there is no consistent pattern in the under or overestimation, we can feel pretty confident about this model if our goal is simply to estimate the trend. 
-
-However, if we want to more accurately characterize the annual fluctations in the data, we can follow @keryRoyle2021 and add in a random effect of year, which will account for any deviations in yearly occurrence probabilities from the trend line. Convergence and mixing of this model is slower than for the previous models, which is not suprising given that we are now estimating two random effects.
-
-```{r}
-# Approx. run time: ~ 1.35 min
-out.year.site.re <- tPGOcc(occ.formula = ~ scale(years) + scale(elev) + 
-                                           I(scale(elev)^2) + 
-                                           (1 | site.effect) + (1 | years),
-                           det.formula = revi.det.formula, 
-                           data = revi.data, 
-                           n.samples = n.samples, 
-                           inits = revi.inits,
-                           priors = revi.priors,
-                           n.burn = n.burn, 
-                           n.thin = n.thin, 
-                           n.chains = n.chains, 
-                           n.report = 1000, 
-                           verbose = FALSE)
-summary(out.year.site.re)
-```
-
-```{r}
-# No random effects
-waicOcc(out)
-# Site random effects
-waicOcc(out.site.re)
-# Site and year random effects
-waicOcc(out.year.site.re)
-```
-
-Incorporating the year random effects in addition to the site random effects yielded substantial decreases in WAIC. As the final part of our model assessment and comparison, we take a look at the Bayesian p-values
-
-```{r}
-ppc.out.year.site <- ppcOcc(out.year.site.re, fit.stat = 'freeman-tukey', group = 1)
-summary(ppc.out.year.site)
-```
-
-Looking at the individual Bayesian p-values for each time period, we see many of them are much less extreme than our analysis without the year random effect. This is a result of the random year effects accounting for any yearly deviations from the overall linear trend line.  
+We see very similar values for both models, with the overall Bayesian p-value close to 0.5, indicating adequate model fit across the whole data set. We do see that the Bayesian p-values for certain years are quite close to 1, potentially indicating a lack of fit during these years which we may wish to explore further in a full analysis. 
 
 Finally, we will conclude this section by predicting REVI occurrence probability across the entire Hubbard Brook forest. The object `hbefEelev` (which comes as part of the `spOccupancy` package) contains elevation data at a 30x30m resolution from the National Elevation Data set across the entire HBEF. We load the data below
 
@@ -285,9 +291,9 @@ data(hbefElev)
 str(hbefElev)
 ```
 
-The column `val` contains the elevation values, while `Easting` and `Northing` contain the spatial coordinates that we will use for plotting. We can use the `predict()` function and our `tPGOcc()` fitted model object to predict occurrence across these sites and over any primary time periods in our data set. We can predict for a single time period or multiple time periods at once. Currently, `spOccupancy` only supports prediction at primary time periods that are sampled in the data (i.e., forecasting is not supported), although we hope to allow this at some point in the future. The `predict()` function for `tPGOcc()` has five arguments: `object`, `X.0`, `ignore.RE = FALSE`, and `type = 'occupancy'`. The `object` argument is simply the fitted model object we obtain from `tPGOcc`. Because we found it had the best performance according to WAIC, we will use the model object with site and year random effects (`out.year.site.re`). The `X.0` argument is the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. The `ignore.RE` argument is used to specify whether or not we want to ignore random effects in the prediction and just use the fixed effects (`ignore.RE = TRUE`), or include random effects for prediction (`ignore.RE = FALSE`). By default, we set this to `FALSE`. Lastly, the `type` argument is used to specify whether we want to predict occurrence/occupancy (`type = 'occupancy'`) or detection (`type = 'detection'`). 
+The column `val` contains the elevation values, while `Easting` and `Northing` contain the spatial coordinates that we will use for plotting. We can use the `predict()` function and our `tPGOcc()` fitted model object to predict occurrence across these sites and over any primary time periods in our data set. We can predict for a single time period or multiple time periods at once. Currently, `spOccupancy` only supports prediction at primary time periods that are sampled in the data (i.e., forecasting is not supported), although we hope to allow this at some point in the future. The `predict()` function for `tPGOcc()` has five arguments: `object`, `X.0`, `t.cols`, `ignore.RE = FALSE`, and `type = 'occupancy'`. The `object` argument is simply the fitted model object we obtain from `tPGOcc`. Because we found it had the best performance according to WAIC, we will use the AR(1) model object (`out.ar1`). The `X.0` argument is the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. The `t.cols` argument is a vector that denotes which primary time periods are contained in the design matrix of covariates at the prediction locations. This is used to indicate what primary time periods we want to predict for. The values should indicate the columns in `data$y` used to fit the model for which prediction is desired. The `ignore.RE` argument is used to specify whether or not we want to ignore unstructured random effects in the prediction and just use the fixed effects and any structured random effects (`ignore.RE = TRUE`), or include unstructured random effects for prediction (`ignore.RE = FALSE`). By default, we set this to `FALSE`. Lastly, the `type` argument is used to specify whether we want to predict occurrence/occupancy (`type = 'occupancy'`) or detection (`type = 'detection'`). 
 
-Below we will predict occurrence in the first (2010) and last (2018) year of our data set for the entire HBEF. Given that we standardized the elevation and year values when we fit the model, we need to standardize both covariates for prediction using the exact same values of the mean and standard deviation of the values used to fit the model. We set the `ignore.RE = TRUE` to only perform prediction with the fixed effects.  
+Below we will predict occurrence in the first (2010) and last (2018) year of our data set for the entire HBEF. Given that we standardized the elevation and year values when we fit the model, we need to standardize both covariates for prediction using the exact same values of the mean and standard deviation of the values used to fit the model. We set the `ignore.RE = TRUE` to only perform prediction with the fixed effects and the AR(1) structure temporal random effects (i.e., we don't use the unstructured site random effects for prediction).  
 
 ```{r}
 # Number of prediction sites.
@@ -295,7 +301,7 @@ J.pred <- nrow(hbefElev)
 # Number of prediction years.
 n.years.pred <- 2
 # Number of predictors (including intercept)
-p.occ <- ncol(out.year.site.re$beta.samples)
+p.occ <- ncol(out.ar1$beta.samples)
 # Get covariates and standardize them using values used to fit the model
 elev.pred <- (hbefElev$val - mean(revi.data$occ.covs$elev)) / sd(revi.data$occ.covs$elev)
 year.pred <- matrix(rep((c(2010, 2018) - mean(revi.data$occ.covs$years)) / sd(revi.data$occ.covs$years), 
@@ -311,56 +317,61 @@ X.0[, , 3] <- elev.pred
 X.0[, , 4] <- elev.pred^2
 # Check out the structure
 str(X.0)
-out.pred <- predict(out.year.site.re, X.0,
+# Indicate which primary time periods (years) we are predicting for
+t.cols <- c(1, 9)
+# Approx. run time: < 30 sec
+out.pred <- predict(out.ar1, X.0, t.cols = t.cols,
                     ignore.RE = TRUE, type = 'occupancy')
 # Check out the structure
 str(out.pred)
 ```
 
-We see the `out.pred` object is a list with two main components: `psi.0.samples` (the occurrence probability predictions) and `z.0.samples` (the latent occurrence predictions). Both objects are three-dimensional arrays with dimensions corresponding to MCMC sample, site, and primary time period, respectively. Below we plot the mean and sd of REVI occurrence probability in 2018 across the forest. 
+We see the `out.pred` object is a list with two main components: `psi.0.samples` (the occurrence probability predictions) and `z.0.samples` (the latent occurrence predictions). Both objects are three-dimensional arrays with dimensions corresponding to MCMC sample, site, and primary time period, respectively. Below we plot the mean of REVI occurrence probability in 2009 and 2018 across the forest. 
 
 ```{r, warning = FALSE, message = FALSE, fig.height = 4, fig.width = 7, fig.align = 'center', units = 'in'}
 plot.dat <- data.frame(x = hbefElev$Easting, 
                        y = hbefElev$Northing, 
-                       mean.psi = apply(out.pred$psi.0.samples[, , 2], 2, mean), 
-                       sd.psi = apply(out.pred$psi.0.samples[, , 2], 2, sd), 
+                       mean.2009.psi = apply(out.pred$psi.0.samples[, , 1], 2, mean), 
+                       mean.2018.psi = apply(out.pred$psi.0.samples[, , 2], 2, mean), 
+                       sd.2009.psi = apply(out.pred$psi.0.samples[, , 1], 2, sd), 
+                       sd.2018.psi = apply(out.pred$psi.0.samples[, , 2], 2, sd), 
                        stringsAsFactors = FALSE)
 # Make a species distribution map showing the point estimates,
 # or predictions (posterior means)
 dat.stars <- st_as_stars(plot.dat, dims = c('x', 'y'))
+# 2009
 ggplot() + 
-  geom_stars(data = dat.stars, aes(x = x, y = y, fill = mean.psi)) +
+  geom_stars(data = dat.stars, aes(x = x, y = y, fill = mean.2009.psi)) +
+  scale_fill_viridis_c(na.value = 'transparent') +
+  labs(x = 'Easting', y = 'Northing', fill = '', 
+       title = 'Mean REVI occurrence probability 2009') +
+  theme_bw()
+# 2018
+ggplot() + 
+  geom_stars(data = dat.stars, aes(x = x, y = y, fill = mean.2018.psi)) +
   scale_fill_viridis_c(na.value = 'transparent') +
   labs(x = 'Easting', y = 'Northing', fill = '', 
        title = 'Mean REVI occurrence probability 2018') +
   theme_bw()
-# Map of the associated uncertainty of these predictions
-# (i.e., posterior sds)
-ggplot() + 
-  geom_stars(data = dat.stars, aes(x = x, y = y, fill = sd.psi)) +
-  scale_fill_viridis_c(na.value = 'transparent') +
-  labs(x = 'Easting', y = 'Northing', fill = '', 
-       title = 'SD REVI occurrence probability 2018') +
-  theme_bw()
 ```
+
+We see that compared to 2009, REVI occurrence probability appears higher throughout much of the interior region of the forest. This corresponds fairly closely with increasing occurrence probability at higher elevations in the forest, which could be something interesting to explore further.  
 
 # Fitting spatially-explicit multi-season occupancy models with `spTPGOcc()`
 
-Instead of including a random site effect as an unstructured random effect to account for the multiple measurements at the same site over the $T$ primary time periods, we can use a spatially-structured random effect. This provides us with the additional benefit of accounting for spatial autocorrelation across the sites, which if present can lead to overly precise and potentially inaccurate estimates of species occurrence [@guelat2018]. As we discussed in the model description section, in `spOccupancy` we incorporate such spatial random effects into our model using the `spTPGOcc()` and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] to ensure models are computationally efficient even when modeling over a large number of spatial locations. 
+We will now extend our multi-season occupancy model to the case where the site-level random effect is modeled as a spatial random effect rather than an unstructured random effect. As we discussed previously, we will incorporate such spatial random effects into our model using Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in the `spTPGOcc()` function. This will ensure models are computationally efficient even when modeling over a large number of spatial locations. Because we found the model with an AR(1) temporal random effect was the most supported model according to WAIC (although only very slightly) we will incorporate an AR(1) temporal random effect into our model.
 
-In the previous section, we saw our model for REVI with a random site effect and a random year effect was the most supported model according to the WAIC. Here we will extend this model to now incoporate a spatially-structured random effect. 
-
-The function `spTPGOcc()` has similar arguments to `tPGOcc()` and exactly the same arguments as the `spPGOcc()` function for fitting single season spatial occupancy models: 
+The function `spTPGOcc()` has similar arguments to `tPGOcc()` and exactly the same arguments as the `spPGOcc()` function for fitting single season spatial occupancy models (with the addition of the `ar1` argument): 
 
 ```{r, eval = FALSE}
-spTPGOcc(occ.formula, det.formula, data, inits, priors, 
-         tuning, cov.model = 'exponential', NNGP = TRUE, 
-         n.neighbors = 15, search.type = 'cb', n.batch, 
-         batch.length, accept.rate = 0.43,
-         n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-         n.burn = round(.10 * n.batch * batch.length), 
-         n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-         k.fold.seed = 100, ...)
+spTPGOcc(occ.formula, det.formula, data, inits, priors,
+         tuning, cov.model = 'exponential', NNGP = TRUE,
+         n.neighbors = 15, search.type = 'cb', n.batch,
+         batch.length, accept.rate = 0.43, n.omp.threads = 1,
+         verbose = TRUE, ar1 = FALSE, n.report = 100,
+         n.burn = round(.10 * n.batch * batch.length),
+         n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1,
+         k.fold.seed = 100, k.fold.only = FALSE, ...)
 ```
 
 Because the arguments of `spTPGOcc()` are identical to other spatially-explicit functions in `spOccupancy`, we won't go into all that much detail on them here, and rather encourage you to look at [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more specific details, in particular the section on single-species spatial occupancy models. 
@@ -368,8 +379,7 @@ Because the arguments of `spTPGOcc()` are identical to other spatially-explicit 
 The `occ.formula`, `det.formula`, and `data` arguments all take the same form as what we saw previously for `tPGOcc()`, with the exception that we are now required to include the spatial coordinates in the `data` object as a matrix with rows corresponding to sites and columns containing the easting and northing coordinates of each site. Notice in `occ.formula` we remove the non-spatial random effect for site (`(1 | site.effect)`), as `spTPGOcc()` will incorporate a spatial random effect into the model instead. 
 
 ```{r}
-revi.sp.occ.formula <- ~ scale(years) + scale(elev) + I(scale(elev)^2) + 
-                         (1 | years)
+revi.sp.occ.formula <- ~ scale(years) + scale(elev) + I(scale(elev)^2)
 revi.sp.det.formula <- ~ scale(day) + I(scale(day)^2) + scale(tod)
 # Remind ourselves of the format of the data
 str(revi.data)
@@ -382,7 +392,8 @@ z.inits <- apply(revi.data$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRU
 # Pair-wise distance between all sites
 dist.hbef <- dist(revi.data$coords)
 revi.sp.inits <- list(beta = 0, alpha = 0, z = z.inits,
-                      sigma.sq = 1, phi = 3 / mean(dist.hbef))
+                      sigma.sq = 1, phi = 3 / mean(dist.hbef), 
+                      sigma.sq.t = 1.5, rho = 0.2)
 ```
 
 We specify priors in the `priors` argument just as we saw with `tPGOcc()`. We use an inverse-Gamma prior for the spatial variance `sigma.sq` and a uniform prior for the spatial range parameter `phi`. 
@@ -390,32 +401,35 @@ We specify priors in the `priors` argument just as we saw with `tPGOcc()`. We us
 ```{r}
 revi.sp.priors <- list(beta.normal = list(mean = 0, var = 2.72), 
                        alpha.normal = list(mean = 0, var = 2.72), 
+                       sigma.sq.t.ig = c(2, 0.5), 
+                       rho.unif = c(-1, 1),
                        sigma.sq.ig = c(2, 1), 
                        phi.unif = c(3 / max(dist.hbef), 3 / min(dist.hbef)))
 ```
 
-Next we specify parameters associated with the spatial random effects. In particular, we set `cov.model = 'exponential'` to use an exponential spatial correlation function and `n.neighbors = 5` to use an NNGP with 5 nearest neighbors. 
+Next we specify parameters associated with the spatial random effects. In particular, we set `cov.model = 'exponential'` to use an exponential spatial correlation function and `n.neighbors = 5` to use an NNGP with 5 nearest neighbors. We also specify the `ar1` argument to indicate we will use an AR(1) temporal covariance structure. 
 
 ```{r}
 cov.model <- 'exponential'
 n.neighbors <- 5
+ar1 <- TRUE
 ```
 
-Finally, we set the arguments that control how long we run the MCMC. For all spatially-explicit models in `spOccupancy`, instead of specifying an argument with the total number of samples (`n.samples`), we split the samples into a set of `n.batch` batches, each comprised of a length of `batch.length`. This is because we use an adaptive algorithm to improve mixing of the MCMC chains for the spatial range parameter. We will run the model for 5000 samples, comprised of 200 batches each of length 25. We specify a burn-in period of 2000 iterations and a thinning rate of 12. See [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details on the adaptive algorithm. 
+Finally, we set the number of MCMC batches, batch length, the amount of burn-in, and our thinning rate. Note we run the model longer than we ran the non-spatial multi-season model, as spatially-explicit models often take longer longer to converge. 
 
 ```{r}
-n.batch <- 200
+n.batch <- 400
 batch.length <- 25
 # Total number of samples
 n.batch * batch.length
-n.burn <- 2000
+n.burn <- 7000
 n.thin <- 12 
 ```
 
 We now run the model with `spTPGOcc()` and take a look at a summary of the results using `summary()`. 
 
 ```{r}
-# Approx. run time: ~ 1.3 min
+# Approx. run time: ~ 2.5 min
 out.sp <- spTPGOcc(occ.formula = revi.sp.occ.formula, 
                    det.formula = revi.sp.det.formula, 
                    data = revi.data, 
@@ -426,22 +440,23 @@ out.sp <- spTPGOcc(occ.formula = revi.sp.occ.formula,
                    n.batch = n.batch, 
                    batch.length = batch.length, 
                    verbose = TRUE, 
-                   n.report = 50,
+                   ar1 = ar1,
+                   n.report = 100,
                    n.burn = n.burn, 
                    n.thin = n.thin, 
                    n.chains = 3) 
 summary(out.sp)
 ```
 
-We see most parameters have converged, although the intercept and yearly trend have not quite reached convergence. For a full analysis, we would run the model longer to ensure convergence. 
+We see most parameters have converged, although the intercept and trend have not quite reached convergence. For a full analysis, we would run the model longer to ensure convergence. 
 
 As with `tPGOcc()`, we can do model assessment using `ppcOcc()` and prediction using `predict()`, which we do not show here for the sake of brevity. We will note the only exception for prediction is that the coordinates of the new sites must also be sent into the `predict()` function. See `?predict.spTPGOcc()` for details. 
 
 Below we compare the model with spatially-explicit random effects to that with non-spatial site-level random effects using WAIC. 
 
 ```{r}
-# Non-spatial random effects
-waicOcc(out.year.site.re)
+# Non-spatial (unstructured) site-level random effects
+waicOcc(out.ar1)
 # Spatial random effects
 waicOcc(out.sp)
 ```
@@ -453,24 +468,25 @@ In addition to WAIC, both `tPGOcc()` and `spTPGOcc()` allow for performing k-fol
 The arguments `k.fold`, `k.fold.threads`, `k.fold.seed`, and `k.fold.only` control whether or not we perform k-fold cross-validation in both `tPGOcc()` and `spTPGOcc()`. `k.fold` specifies the number of k folds for cross-validation. If this is not specified, k-fold cross-validation is not performed. `k.fold.threads` specifies the number of threads we want to use to perform the cross-validation. `k.fold.seed` is a random seed that is used to split the data set into `k.fold` parts. Lastly, the `k.fold.only` is a logical value that indicates whether or not we only want to perform cross-validation (`k.fold.only = TRUE`) or we want to perform cross-validation after fitting the entire model (`k.fold.only = FALSE`). By default, `k.fold.only = FALSE`. Below we perform four-fold cross-validation for both the non-spatial model and the spatial model. We run the cross-validation across four threads, and only perform cross-validation since we have already fit the models with the whole data set. We use the default value of `k.fold.seed`, which is 100. 
 
 ```{r}
-# Non-spatial (Approx. run time: ~ 1.3 min)
-k.fold.non.sp <- tPGOcc(occ.formula = ~ scale(years) + scale(elev) + 
-                                        I(scale(elev)^2) + 
-                                        (1 | site.effect) + (1 | years),
+# Non-spatial (Approx. run time: ~ 2.5 min)
+k.fold.non.sp <- tPGOcc(occ.formula = ~ scale(years) + scale(elev) + I(scale(elev)^2) + 
+                                        (1 | site.effect), 
                         det.formula = revi.det.formula, 
                         data = revi.data, 
-                        n.samples = n.batch * batch.length, 
+                        n.batch = 200, 
+                        batch.length = 25,
                         inits = revi.inits,
                         priors = revi.priors,
-                        n.burn = n.burn, 
-                        n.thin = n.thin, 
+                        ar1 = TRUE,
+                        verbose = FALSE,
+                        n.burn = 2000, 
+                        n.thin = 12, 
                         n.chains = n.chains, 
-                        n.report = 1000, 
-                        verbose = FALSE, 
-                        k.fold = 4, 
+                        n.report = 50, 
+                        k.fold = 4,
                         k.fold.threads = 4,
                         k.fold.only = TRUE)
-# Spatial (Approx run time: ~ 1.3 min)
+# Spatial (Approx run time: ~ 2.5 min)
 k.fold.sp <- spTPGOcc(occ.formula = revi.sp.occ.formula, 
                       det.formula = revi.sp.det.formula, 
                       data = revi.data, 
@@ -480,7 +496,8 @@ k.fold.sp <- spTPGOcc(occ.formula = revi.sp.occ.formula,
                       n.neighbors = n.neighbors,
                       n.batch = n.batch, 
                       batch.length = batch.length, 
-                      verbose = TRUE, 
+                      verbose = FALSE, 
+                      ar1 = TRUE,
                       n.report = 50,
                       n.burn = n.burn, 
                       n.thin = n.thin, 
@@ -494,6 +511,6 @@ k.fold.non.sp$k.fold.deviance
 k.fold.sp$k.fold.deviance
 ```
 
-When `k.fold.only = TRUE`, the resulting object from the call to the model function will be a list with two elements: `k.fold.deviance` (the resulting model deviance value from the cross-validation) and `run.time` (the total run time). We see the spatial model outperforms the non-spatial model, which is in agreement with the non-spatial model. 
+When `k.fold.only = TRUE`, the resulting object from the call to the model function will be a list with two elements: `k.fold.deviance` (the resulting model deviance value from the cross-validation) and `run.time` (the total run time). We see the spatial model outperforms the non-spatial model, which is in agreement with the results from WAIC. 
 
 # References {-}

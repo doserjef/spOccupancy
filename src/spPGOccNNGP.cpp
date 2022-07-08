@@ -403,7 +403,6 @@ extern "C" {
     }
     updateBF1RE(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], theta[phiIndx], nu, covModel, bk, nuB);
 
-
     GetRNGstate();
    
     /**********************************************************************

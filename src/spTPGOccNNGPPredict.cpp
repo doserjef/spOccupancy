@@ -22,7 +22,7 @@ extern "C" {
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			  SEXP thetaSamples_r, SEXP wSamples_r, 
-			  SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
+			  SEXP betaStarSiteSamples_r, SEXP etaSamples_r, SEXP nSamples_r, 
 			  SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
 			  SEXP nReport_r){
 
@@ -49,6 +49,7 @@ extern "C" {
     double *theta = REAL(thetaSamples_r);
     double *w = REAL(wSamples_r);
     double *betaStarSite = REAL(betaStarSiteSamples_r);
+    double *eta = REAL(etaSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -70,7 +71,7 @@ extern "C" {
       Rprintf("----------------------------------------\n");
       Rprintf("\tPrediction description\n");
       Rprintf("----------------------------------------\n");
-      Rprintf("Spatial NNGP Trend Occupancy model with Polya-Gamma latent\nvariable fit with %i observations and %i years.\n\n", J, nYears);
+      Rprintf("Spatial NNGP Multi-season Occupancy model with Polya-Gamma latent\nvariable fit with %i observations and %i years.\n\n", J, nYears);
       Rprintf("Number of fixed covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Using %i nearest neighbors.\n\n", m);
@@ -214,7 +215,7 @@ extern "C" {
     for(i = 0; i < q; i++){
       for (t = 0; t < nYears; t++) {
         for(s = 0; s < nSamples; s++){
-          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + w0[s * q + i] + betaStarSite[s * qnYears + t * q + i], zero, one);
+          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + w0[s * q + i] + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
           z0[s * qnYears + t * q + i] = rbinom(one, psi0[s * qnYears + t * q + i]);
         } // s
       } // t

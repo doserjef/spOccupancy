@@ -517,3 +517,13 @@ void clearUT(double *m, int n){
   }
 }
 
+void AR1(int n, double rho, double sigmaSq, double *C){
+  
+  int i, j;
+  
+  for(i = 0; i < n; i++){
+    for(j = 0; j < n; j++){
+      C[i*n+j] = sigmaSq*pow(rho, abs(i-j));
+    }
+  }
+}
