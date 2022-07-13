@@ -8,8 +8,8 @@
 
 \usage{
 simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
-  psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
-  sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
+        psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
+        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
 }
 
 \arguments{
@@ -109,9 +109,9 @@ rho <- 0.5
 sigma.sq.t <- 0.8
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
-	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE, 
-	       sp = sp, cov.model = cov.model, sigma.sq = sigma.sq, phi = phi, 
+               beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
+               psi.RE = psi.RE, p.RE = p.RE, 
+               sp = sp, cov.model = cov.model, sigma.sq = sigma.sq, phi = phi, 
                ar1 = ar1, rho = rho, sigma.sq.t = sigma.sq.t)
 str(dat)
 }

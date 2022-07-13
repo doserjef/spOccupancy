@@ -4,13 +4,13 @@
 
 \usage{
 stPGOcc(occ.formula, det.formula, data, inits, priors, 
-         tuning, cov.model = 'exponential', NNGP = TRUE, 
-         n.neighbors = 15, search.type = 'cb', n.batch, 
-         batch.length, accept.rate = 0.43, n.omp.threads = 1, 
-	 verbose = TRUE, ar1 = FALSE, n.report = 100, 
-         n.burn = round(.10 * n.batch * batch.length), 
-         n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-         k.fold.seed = 100, k.fold.only = FALSE, ...)
+        tuning, cov.model = 'exponential', NNGP = TRUE, 
+        n.neighbors = 15, search.type = 'cb', n.batch, 
+        batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+        verbose = TRUE, ar1 = FALSE, n.report = 100, 
+        n.burn = round(.10 * n.batch * batch.length), 
+        n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+        k.fold.seed = 100, k.fold.only = FALSE, ...)
 }
 
 \description{
@@ -36,12 +36,12 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
   to the maximum number of replicates at a given site. \code{occ.covs} is a
   list of variables included in the occurrence portion of the model. Each
   list element is a different occurrence covariate, which can be site level
-  or site/year level. Site-level covariates are specified as a vector of 
-  length \eqn{J}{J} while site/year level covariates are specified as a matrix
+  or site/primary timer period level. Site-level covariates are specified as a vector of 
+  length \eqn{J}{J} while site/primary time period level covariates are specified as a matrix
   with rows corresponding to sites and columns correspond to primary time periods.
   Similarly, \code{det.covs} is a list of variables included in the detection
   portion of the model, with each list element corresponding to an 
-  individual variable. In addition to site-level and/or site/year-level, 
+  individual variable. In addition to site-level and/or site/primary time period-level, 
   detection covariates can also be observational-level. Observation-level covariates
   are specified as a three-dimensional array with first dimension corresponding to 
   sites, second dimension corresponding to primary time period, and third 
@@ -51,11 +51,13 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
 
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 
-  \code{w}, \code{nu}, \code{sigma.sq.psi}, and \code{sigma.sq.p}. The value portion of each tag is the 
+  \code{w}, \code{nu}, \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{sigma.sq.t}, 
+  \code{rho}. The value portion of each tag is the 
   parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
   detection portion of the occupancy model, respectively. \code{nu} is only
-  specified if \code{cov.model = "matern"}. See \code{priors} 
+  specified if \code{cov.model = "matern"}. \code{sigma.sq.t} and \code{rho} 
+  are only relevant when \code{ar1 = TRUE}. See \code{priors} 
   description for definition of each parameter name.
   Additionally, the tag \code{fix} can be set to \code{TRUE} 
   to fix the starting values across all chains. If \code{fix} is not specified
@@ -63,7 +65,8 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
 
 \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{sigma.sq.psi.ig}, 
-  \code{sigma.sq.p.ig}, \code{phi.unif}, \code{sigma.sq.ig}, \code{nu.unif}. 
+  \code{sigma.sq.p.ig}, \code{phi.unif}, \code{sigma.sq.ig}, \code{nu.unif}, 
+  \code{sigma.sq.t.ig}, and \code{rho.unif}. 
   Occupancy (\code{beta}) and detection (\code{alpha}) 
   regression coefficients are assumed to follow a normal distribution. 
   The hyperparameters of the normal distribution are passed as a list of 
@@ -86,7 +89,14 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
   elements corresponding to the shape and scale parameters, respectively. The 
   hyperparameters of the uniform are also passed as a vector of length two
   with the first and second elements corresponding to the lower and upper support, 
-  respectively.}
+  respectively. \code{sigma.sq.t} and 
+  \code{rho} are the AR(1) variance and correlation parameters for the AR(1) zero-mean
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow an inverse-Gamma
+  distribution, where the hyperparameters are specified as a vector with elements
+  corresponding to the shape and scale parameters, respectively. \code{rho} is 
+  assumed to follow a uniform distribution, where the hyperparameters are specified in 
+  a vector of length two with elements corresponding to the lower and upper bounds of
+  the uniform prior.}
 
 \item{cov.model}{a quoted keyword that specifies the covariance
   function used to model the spatial dependence structure among the
@@ -323,27 +333,27 @@ sigma.sq.t <- 1
 
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
-	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+               beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
+               psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
                phi = phi, cov.model = cov.model, ar1 = TRUE, 
-	       sigma.sq.t = sigma.sq.t, rho = rho)
+               sigma.sq.t = sigma.sq.t, rho = rho)
 
 # Package all data into a list
 # Occurrence
 occ.covs <- list(int = dat$X[, , 1], 
                  trend = dat$X[, , 2], 
-		 occ.cov.1 = dat$X[, , 3]) 
+                 occ.cov.1 = dat$X[, , 3]) 
 # Detection
 det.covs <- list(det.cov.1 = dat$X.p[, , , 2], 
-		 det.cov.2 = dat$X.p[, , , 3]) 
+                 det.cov.2 = dat$X.p[, , , 3]) 
 # Data list bundle
 data.list <- list(y = dat$y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
                   coords = dat$coords) 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = 0, var = 2.72), 
+                   alpha.normal = list(mean = 0, var = 2.72), 
                    sigma.sq.ig = c(2, 2), 
                    phi.unif = c(3 / 1, 3 / 0.1), 
                    rho.unif = c(-1, 1),
@@ -363,21 +373,21 @@ n.iter <- n.batch * batch.length
 
 # Run the model
 out <- stPGOcc(occ.formula = ~ trend + occ.cov.1, 
-                det.formula = ~ det.cov.1 + det.cov.2, 
-                data = data.list, 
-                inits = inits.list, 
-                n.batch = n.batch, 
-                batch.length = batch.length, 
-                priors = prior.list,
-                cov.model = "exponential", 
-                tuning = tuning.list, 
-                NNGP = TRUE, 
-		ar1 = TRUE,
-                n.neighbors = 5, 
-                search.type = 'cb', 
-                n.report = 10, 
-                n.burn = 50, 
-                n.chains = 1)
+               det.formula = ~ det.cov.1 + det.cov.2, 
+               data = data.list, 
+               inits = inits.list, 
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               priors = prior.list,
+               cov.model = "exponential", 
+               tuning = tuning.list, 
+               NNGP = TRUE, 
+               ar1 = TRUE,
+               n.neighbors = 5, 
+               search.type = 'cb', 
+               n.report = 10, 
+               n.burn = 50, 
+               n.chains = 1)
 
 summary(out)
 }

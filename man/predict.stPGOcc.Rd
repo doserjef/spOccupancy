@@ -8,8 +8,8 @@
 
 \usage{
 \method{predict}{stPGOcc}(object, X.0, coords.0, t.cols, n.omp.threads = 1, 
-	                   verbose = TRUE, n.report = 100, 
-			   ignore.RE = FALSE, type = 'occupancy', ...)
+                          verbose = TRUE, n.report = 100, 
+                          ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
@@ -33,7 +33,7 @@
     sampler is printed to the screen. Otherwise, nothing is printed to
     the screen.}
 
-  \item{ignore.RE}{logical value that specifies whether or not to remove random occurrence (or detection if \code{type = 'detection'}) effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be generated from the fixed effects.}
+  \item{ignore.RE}{logical value that specifies whether or not to remove random unstructured occurrence (or detection if \code{type = 'detection'}) effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, unstructured random effects will be set to 0 and predictions will only be generated from the fixed effects, the spatial random effects, and AR(1) random effects if the model was fit with \code{ar1 = TRUE}.}
 
   \item{n.report}{the interval to report sampling progress.}
 
@@ -43,7 +43,7 @@
 }
 
 \note{
-  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. 
+  When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of unstructured random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. 
 
   Occurrence predictions at sites that are only sampled for a subset of the total number of primary time periods are obtained directly when fitting the model. See the \code{psi.samples} and \code{z.samples} portions of the output list from the model object of class \code{stPGOcc}. 
 }
@@ -107,8 +107,8 @@ phi <- 3 / .4
 
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
-	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
+               beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
+               psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq, 
                phi = phi, cov.model = cov.model, ar1 = FALSE)
 
 # Subset data for prediction
@@ -129,18 +129,18 @@ coords.0 <- dat$coords[pred.indx, ]
 # Occurrence
 occ.covs <- list(int = X[, , 1], 
                  trend = X[, , 2], 
-		 occ.cov.1 = X[, , 3]) 
+                 occ.cov.1 = X[, , 3]) 
 # Detection
 det.covs <- list(det.cov.1 = X.p[, , , 2], 
-		 det.cov.2 = X.p[, , , 3]) 
+                 det.cov.2 = X.p[, , , 3]) 
 # Data list bundle
 data.list <- list(y = y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs, 
+                  occ.covs = occ.covs,
+                  det.covs = det.covs, 
                   coords = coords) 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = 0, var = 2.72), 
+                   alpha.normal = list(mean = 0, var = 2.72), 
                    sigma.sq.ig = c(2, 2), 
                    phi.unif = c(3 / 1, 3 / 0.1))
 
@@ -158,21 +158,21 @@ n.iter <- n.batch * batch.length
 
 # Run the model
 out <- stPGOcc(occ.formula = ~ trend + occ.cov.1, 
-                det.formula = ~ det.cov.1 + det.cov.2, 
-                data = data.list, 
-                inits = inits.list, 
-                n.batch = n.batch, 
-                batch.length = batch.length, 
-                priors = prior.list,
-                cov.model = "exponential", 
-                tuning = tuning.list, 
-                NNGP = TRUE, 
-		ar1 = FALSE,
-                n.neighbors = 5, 
-                search.type = 'cb', 
-                n.report = 10, 
-                n.burn = 50, 
-                n.chains = 1)
+               det.formula = ~ det.cov.1 + det.cov.2, 
+               data = data.list, 
+               inits = inits.list, 
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               priors = prior.list,
+               cov.model = "exponential", 
+               tuning = tuning.list, 
+               NNGP = TRUE, 
+               ar1 = FALSE,
+               n.neighbors = 5, 
+               search.type = 'cb', 
+               n.report = 10, 
+               n.burn = 50, 
+               n.chains = 1)
 
 summary(out)
 
