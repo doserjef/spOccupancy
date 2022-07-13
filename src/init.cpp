@@ -5,7 +5,7 @@
 #include "spOccupancy.h"
 
 static const R_CallMethodDef CallEntries[] = {
-    {"PGOcc", (DL_FUNC) &PGOcc, 37},
+    {"PGOcc", (DL_FUNC) &PGOcc, 35},
     {"spPGOcc", (DL_FUNC) &spPGOcc, 52}, 
     {"spPGOccNNGP", (DL_FUNC) &spPGOccNNGP, 58},
     {"spPGOccPredict", (DL_FUNC) &spPGOccPredict, 15},
@@ -24,8 +24,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"lfJSDM", (DL_FUNC) &lfJSDM, 25},
     {"sfJSDMNNGP", (DL_FUNC) &sfJSDMNNGP, 42},
     {"tPGOcc", (DL_FUNC) &tPGOcc, 46},
-    {"spTPGOccNNGP", (DL_FUNC) &spTPGOccNNGP, 64},
-    {"spTPGOccNNGPPredict", (DL_FUNC) &spTPGOccNNGPPredict, 19},
+    {"stPGOccNNGP", (DL_FUNC) &stPGOccNNGP, 64},
+    {"stPGOccNNGPPredict", (DL_FUNC) &stPGOccNNGPPredict, 19},
     {NULL, NULL, 0}
 };
 

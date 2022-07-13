@@ -33,12 +33,12 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   to the maximum number of replicates at a given site. \code{occ.covs} is a
   list of variables included in the occurrence portion of the model. Each
   list element is a different occurrence covariate, which can be site level
-  or site/year level. Site-level covariates are specified as a vector of 
-  length \eqn{J}{J} while site/year level covariates are specified as a matrix
+  or site/primary time period level. Site-level covariates are specified as a vector of 
+  length \eqn{J}{J} while site/primary time period level covariates are specified as a matrix
   with rows corresponding to sites and columns correspond to primary time periods.
   Similarly, \code{det.covs} is a list of variables included in the detection
   portion of the model, with each list element corresponding to an 
-  individual variable. In addition to site-level and/or site/year-level, 
+  individual variable. In addition to site-level and/or site/primary time period-level, 
   detection covariates can also be observational-level. Observation-level covariates
   are specified as a three-dimensional array with first dimension corresponding to 
   sites, second dimension corresponding to primary time period, and third 
@@ -49,7 +49,8 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \code{sigma.sq.p}, \code{sigma.sq.t}, and \code{rho}. The value portion of each tag is the 
   parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p} are 
   only relevant when including random effects in the occurrence and 
-  detection portion of the occupancy model, respectively. See \code{priors} 
+  detection portion of the occupancy model, respectively. \code{sigma.sq.t} and \code{rho}
+  are only relevant when \code{ar1 = TRUE}. See \code{priors} 
   description for definition of each parameter name.
   Additionally, the tag \code{fix} can be set to \code{TRUE} 
   to fix the starting values across all chains. If \code{fix} is not specified
@@ -66,7 +67,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   length equal to the number of coefficients to be estimated or of length one
   if priors are the same for all coefficients. If not specified, prior means 
   are set to 0 and prior variances set to 2.72. \code{sigma.sq.psi} and 
-  \code{sigma.sq.p} are the random effect variances for any occurrence or 
+  \code{sigma.sq.p} are the random effect variances for any unstructured occurrence or 
   detection random effects, respectively, and are assumed to follow an inverse
   Gamma distribution. The hyperparameters of the inverse-Gamma distribution
   are passed as a list of length two with first and second elements corresponding
@@ -74,7 +75,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   vectors of length equal to the number of random intercepts or of length one 
   if priors are the same for all random effect variances. \code{sigma.sq.t} and 
   \code{rho} are the AR(1) variance and correlation parameters for the AR(1) zero-mean
-  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow and inverse-Gamma
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow an inverse-Gamma
   distribution, where the hyperparameters are specified as a vector with elements
   corresponding to the shape and scale parameters, respectively. \code{rho} is 
   assumed to follow a uniform distribution, where the hyperparameters are specified in 
@@ -134,7 +135,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \emph{k} times (the folds). As a scoring rule, we use the model deviance 
   as described in Hooten and Hobbs (2015). For cross-validation in multi-season
   models, the data are split along the site dimension, such that each hold-out
-  data set consists of a \code{J / k.fold} sites sampled over all primary time
+  data set consists of \code{J / k.fold} sites sampled over all primary time
   periods during which data are available at each given site. Cross-validation is performed
   after the full model is fit using all the data. Cross-validation results
   are reported in the \code{k.fold.deviance} object in the return list.}
@@ -198,11 +199,15 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{z.samples}{a three-dimensional array of posterior samples 
     for the latent occupancy values, with dimensions corresponding to 
-    posterior sample, site, and primary time period.}
+    posterior sample, site, and primary time period. Note this object
+    will contain predicted occupancy values for sites/primary time periods
+    that were not sampled.}
 
   \item{psi.samples}{a three-dimensional array of posterior samples
     for the latent occupancy probability values, with dimensions 
-    corresponding to posterior sample, site, and primary time period.}
+    corresponding to posterior sample, site, and primary time period. Note
+    this object will contained predicted occupancy probabilities for
+    sites/primary time periods that were not sampled.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occupancy portion
@@ -223,7 +228,8 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     are specified in \code{det.formula}.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples for the 
-    AR(1) variance and correlation parameters. Only included if \code{ar1 = TRUE}.}
+    AR(1) variance (\code{sigma.sq.t}) and correlation (\code{rho}) 
+    parameters. Only included if \code{ar1 = TRUE}.}
 
   \item{eta.samples}{a \code{coda} object of posterior samples for the 
     AR(1) random effects for each primary time period. Only included if 
@@ -279,25 +285,25 @@ sigma.sq.t <- 0.6
 
 # Get all the data
 dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, 
-	       beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
-	       psi.RE = psi.RE, p.RE = p.RE, sp = FALSE, ar1 = TRUE, 
+               beta = beta, alpha = alpha, sp.only = sp.only, trend = trend, 
+               psi.RE = psi.RE, p.RE = p.RE, sp = FALSE, ar1 = TRUE, 
                sigma.sq.t = sigma.sq.t, rho = rho)
 
 # Package all data into a list
 # Occurrence
 occ.covs <- list(int = dat$X[, , 1], 
                  trend = dat$X[, , 2], 
-		 occ.cov.1 = dat$X[, , 3]) 
+                 occ.cov.1 = dat$X[, , 3]) 
 # Detection
 det.covs <- list(det.cov.1 = dat$X.p[, , , 2], 
-		 det.cov.2 = dat$X.p[, , , 3]) 
+                 det.cov.2 = dat$X.p[, , , 3]) 
 # Data list bundle
 data.list <- list(y = dat$y, 
-		  occ.covs = occ.covs,
-		  det.covs = det.covs) 
+                  occ.covs = occ.covs,
+                  det.covs = det.covs) 
 # Priors
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
-		   alpha.normal = list(mean = 0, var = 2.72), 
+                   alpha.normal = list(mean = 0, var = 2.72), 
                    rho.unif = c(-1, 1), 
                    sigma.sq.t.ig = c(2, 0.5))
 
@@ -320,11 +326,11 @@ out <- tPGOcc(occ.formula = ~ trend + occ.cov.1,
               data = data.list,
               inits = inits.list,
               priors = prior.list, 
-	      tuning = tuning.list,
-	      n.batch = n.batch, 
-	      batch.length = batch.length,
+              tuning = tuning.list,
+              n.batch = n.batch, 
+              batch.length = batch.length,
               verbose = TRUE, 
-	      ar1 = TRUE,
+              ar1 = TRUE,
               n.report = 25,
               n.burn = n.burn, 
               n.thin = n.thin,

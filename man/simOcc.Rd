@@ -32,7 +32,7 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
 
-\item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
+\item{phi}{a numeric value indicating the spatial decay parameter. Ignored when \code{sp = FALSE}. }
 
 \item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
 
@@ -49,7 +49,7 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 
   \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occupancy portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
-  \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
+  \item{coords}{a \eqn{J \times 2}{J x 2} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
   \item{w}{a \eqn{J \times 1}{J x 1} matrix of the spatial random effects. Only used to simulate data when \code{sp = TRUE}.}
   \item{psi}{a \eqn{J \times 1}{J x 1} matrix of the occupancy probabilities for each site.}
   \item{z}{a length \eqn{J}{J} vector of the latent occupancy states at each site.}

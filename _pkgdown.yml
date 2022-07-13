@@ -3,6 +3,8 @@ authors:
           href: "https://www.jeffdoser.com"
   Andrew Finley:
           href: "https://www.finley-lab.com/"
+template:
+  bootstrap: 5
 reference:
  - title: "Fitting Models"
  - contents:
@@ -16,6 +18,8 @@ reference:
    - sfJSDM
    - lfMsPGOcc
    - sfMsPGOcc
+   - tPGOcc
+   - stPGOcc
  - title: Goodness of Fit and Model Assessment
  - contents:
    - ppcOcc
@@ -25,6 +29,7 @@ reference:
    - simOcc
    - simMsOcc
    - simIntOcc
+   - simTOcc
  - title: "Summary"
  - contents: 
    - summary.PGOcc
@@ -37,6 +42,8 @@ reference:
    - summary.sfJSDM
    - summary.lfMsPGOcc
    - summary.sfMsPGOcc
+   - summary.tPGOcc
+   - summary.stPGOcc
    - summary.ppcOcc
  - title: "Prediction"
  - contents:
@@ -50,6 +57,8 @@ reference:
    - predict.sfJSDM
    - predict.lfMsPGOcc
    - predict.sfMsPGOcc
+   - predict.tPGOcc
+   - predict.stPGOcc
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -62,8 +71,25 @@ reference:
    - fitted.sfJSDM
    - fitted.lfMsPGOcc
    - fitted.sfMsPGOcc
+   - fitted.tPGOcc
+   - fitted.stPGOcc
  - title: "Data"
  - contents: 
    - hbef2015
    - hbefElev
    - neon2015 
+   - hbefTrends
+articles:
+  - title: Fit occupancy models 
+    contents:
+    - modelFitting 
+    - dataFormatting
+    - factorModels
+    - spaceTimeModels
+    - spaceTimeModelsHTML
+    - randomEffects
+  - title: MCMC sampler details 
+    contents:
+    - mcmcSamplers 
+    - mcmcFactorModels 
+

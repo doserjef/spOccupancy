@@ -21,8 +21,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   }
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                             'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'spTPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, spTPGOcc\n")
+                             'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -303,11 +303,11 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   }
   # Dynamic models --------------------------------------------------------
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
-  if (class(object) %in% c('tPGOcc', 'spTPGOcc')) {
+  if (class(object) %in% c('tPGOcc', 'stPGOcc')) {
     y <- object$y
     J <- dim(y)[1]
     n.years.max <- dim(y)[2]
-    fitted.out <- fitted.spTPGOcc(object)
+    fitted.out <- fitted.stPGOcc(object)
     y.rep.samples <- fitted.out$y.rep.samples
     det.prob <- fitted.out$p.samples
     z.samples <- object$z.samples

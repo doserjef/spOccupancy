@@ -16,10 +16,12 @@ integration of multiple single-species occupancy data sets using a joint
 likelihood framework. For multi-species models, spOccupancy provides
 functions to account for residual species correlations in a joint
 species distribution model framework while accounting for imperfect
-detection. Below we provide a very brief introduction to some of the
-package’s functionality, and illustrate just one of the model fitting
-funcitons. For more information, see the resources referenced at the
-bottom of this page.
+detection. As of v0.4.0, `spOccupancy` provides functions for
+multi-season (i.e., spatio-temporal) single-species occupancy models.
+Below we provide a very brief introduction to some of the package’s
+functionality, and illustrate just one of the model fitting funcitons.
+For more information, see the resources referenced at the bottom of this
+page.
 
 ## Installation
 
@@ -44,6 +46,8 @@ install.packages("spOccupancy")
 | `sfJSDM()`             | Spatial joint species distribution model without imperfect detection |
 | `lfMsPGOcc()`          | Multi-species occupancy model with species correlations              |
 | `sfMsPGOcc()`          | Multi-species spatial occupancy model with species correlations      |
+| `tPGOcc()`             | Single-species multi-season occupancy model                          |
+| `stPGOcc()`            | Single-species multi-season spatio-temporal occupancy model          |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                   |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)               |
 | `simOcc()`             | Simulate single-species occupancy data                               |
@@ -127,25 +131,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4477
+#> Run Time (min): 1.4284
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            3.9871 0.5702  3.0346  3.9280  5.2375 1.0550  294
-#> scale(Elevation)      -0.5244 0.2233 -1.0009 -0.5155 -0.1102 1.0151 1436
-#> I(scale(Elevation)^2) -1.1613 0.2114 -1.6292 -1.1487 -0.7914 1.0593  399
+#> (Intercept)            3.9306 0.5843  2.9649  3.8718  5.3272 1.0703  278
+#> scale(Elevation)      -0.5134 0.2112 -0.9457 -0.5051 -0.1178 1.0070 1110
+#> I(scale(Elevation)^2) -1.1388 0.2044 -1.6050 -1.1181 -0.7881 1.0705  466
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6629 0.1139  0.4432  0.6620 0.8905 1.0006 5243
-#> scale(day)       0.2902 0.0701  0.1535  0.2899 0.4333 1.0019 6000
-#> scale(tod)      -0.0297 0.0693 -0.1649 -0.0300 0.1074 1.0021 6000
-#> I(scale(day)^2) -0.0753 0.0852 -0.2445 -0.0761 0.0907 1.0004 5497
+#> (Intercept)      0.6663 0.1136  0.4486  0.6656 0.8900 0.9999 5769
+#> scale(day)       0.2933 0.0704  0.1531  0.2929 0.4308 1.0000 6000
+#> scale(tod)      -0.0290 0.0702 -0.1638 -0.0293 0.1070 1.0024 6000
+#> I(scale(day)^2) -0.0763 0.0863 -0.2447 -0.0768 0.0910 1.0011 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.1054 0.8433 0.2176 0.8835 3.2688 1.0867 116
-#> phi      0.0072 0.0074 0.0007 0.0038 0.0272 1.1358  56
+#> sigma.sq 1.0481 0.9929 0.2094 0.7385 3.8056 1.2883  86
+#> phi      0.0085 0.0078 0.0005 0.0053 0.0274 1.1606  53
 ```
 
 ### Posterior predictive check
@@ -171,7 +175,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4797 
+#> Bayesian p-value:  0.4873 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -184,7 +188,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -681.65894   21.05316 1405.42422
+#> -682.35028   20.86682 1406.43420
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -197,7 +201,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1497.037
+#> [1] 1496.56
 ```
 
 ### Prediction
@@ -227,7 +231,9 @@ package in more detail (Doser et al. 2022a). For a detailed description
 and tutorial of joint species distribution models in `spOccupancy` that
 account for residual species correlations, see
 `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")`
-for full statistical details.
+for full statistical details. For a description and tutoral of
+multi-season (spatio-temporal) occupancy models in `spOccupancy`, see
+`vignette("spaceTimeModels")`.
 
 ## References
 

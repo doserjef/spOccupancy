@@ -1,3 +1,10 @@
+# spOccupancy 0.4.0
+
++ Major new functionality for fitting multi-season (i.e., spatio-temporal) single-species occupancy models using the functions `tPGOcc()` and `stPGOcc()`. 
++ Fixed a bug in calculation of the detection probability values in `fitted()` functions for all spOccupancy model objects. See [this Github issue](https://github.com/doserjef/spOccupancy/issues/10) for more details. 
++ Fixed an error that occurred when predicting for multi-species models and setting `ignore.RE = TRUE`.  
++ Fixed other small bugs that caused model fitting functions to break under specific circumstances.
+
 # spOccupancy 0.3.2
 
 + Fixed a bug in `waicOcc()` for integrated models (`intPGOcc()` and `spIntPGOcc()`) that sometimes resulted in incorrect estimates of WAIC for data sets other than the first data set. We strongly encourage users who have used `waicOcc()` with an integrated model to rerun their analyses using v0.3.2. 

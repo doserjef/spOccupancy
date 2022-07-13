@@ -8,8 +8,8 @@
 
 \usage{
 simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
-	psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
-	sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
+  psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
+  sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
 }
 
 \arguments{
@@ -29,9 +29,9 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 
 \item{trend}{a logical value. If \code{TRUE}, a temporal trend will be used to simulate the detection-nondetection data and the second element of \code{beta} is assumed to be the trend parameter. If \code{FALSE} no trend is used to simulate the data and all elements of \code{beta} (except the first value which is the intercept) correspond to covariate effects.}
 
-\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. An additional tag \code{site.RE} can be set to \code{TRUE} to simulate data with a site-specific non-spatial random effect on occurrence. If not specified, no random effects are included in the occupancy portion of the model.}
+\item{psi.RE}{a list used to specify the unstructured random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. An additional tag \code{site.RE} can be set to \code{TRUE} to simulate data with a site-specific non-spatial random effect on occurrence. If not specified, no random effects are included in the occupancy portion of the model.}
 
-\item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
+\item{p.RE}{a list used to specify the unstructured random intercepts included in the detection portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process. By default set to \code{FALSE}.}
 
@@ -39,7 +39,7 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
 
-\item{phi}{a numeric value indicating the spatial range parameter. Ignored when \code{sp = FALSE}. }
+\item{phi}{a numeric value indicating the spatial decay parameter. Ignored when \code{sp = FALSE}. }
 
 \item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
 
@@ -61,7 +61,7 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 
   \item{X}{a \eqn{J \times T \times p.occ}{J x T x p.occ} numeric array containing the design matrix for the occurrence portion of the occupancy model.}
   \item{X.p}{a four-dimensional numeric array with dimensions corresponding to sites, primary time periods, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
-  \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
+  \item{coords}{a \eqn{J \times 2}{J x 2} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
   \item{w}{a \eqn{J \times 1}{J x 1} matrix of the spatial random effects. Only used to simulate data when \code{sp = TRUE}.}
   \item{psi}{a \eqn{J \times T}{J x T} matrix of the occupancy probabilities for each site during each primary time period.}
   \item{z}{a  \eqn{J \times T}{J x T} matrix of the latent occupancy states at each site during each primary time period.}
@@ -71,6 +71,7 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
   \item{X.re}{a numeric matrix containing the levels of any occurrence random effect included in the model. Only relevant when occurrence random effects are specified in \code{psi.RE}.}
   \item{alpha.star}{a numeric vector that contains the simulated detection random effects for each given level of the random effects included in the detection model. Only relevant when detection random effects are included in the model.}
   \item{beta.star}{a numeric vector that contains the simulated occurrence random effects for each given level of the random effects included in the occurrence model. Only relevant when occurrence random effects are included in the model.}
+  \item{eta}{a \eqn{T \times 1}{T x 1} matrix of the latent AR(1) random effects. Only included when \code{ar1 = TRUE}.}
 }
 
 \examples{

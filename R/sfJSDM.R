@@ -913,9 +913,10 @@ sfJSDM <- function(formula, data, inits, priors,
           beta.star.inits.fit <- rnorm(n.occ.re.fit, 
 	  			      sqrt(sigma.sq.psi.inits[beta.star.indx.fit + 1]))
           beta.star.inits.fit <- rep(beta.star.inits.fit, N)
-	  re.level.names.fit <- re.level.names
+          re.level.names.fit <- list()
 	  for (t in 1:p.occ.re) {
-            re.level.names.fit[[t]] <- re.level.names[[t]][beta.level.indx.fit + 1]    
+            tmp.indx <- beta.level.indx.fit[beta.star.indx.fit == t - 1]
+            re.level.names.fit[[t]] <- re.level.names[[t]][tmp.indx + 1]    
 	  }
 	} else {
           beta.star.indx.fit <- beta.star.indx
@@ -1026,7 +1027,7 @@ sfJSDM <- function(formula, data, inits, priors,
         # Predict occurrence at new sites. 
 	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
         out.pred <- predict.sfJSDM(out.fit, X.0, 
-				      coords.0, verbose = FALSE, ignore.RE = TRUE)
+				      coords.0, verbose = FALSE, ignore.RE = FALSE)
 	like.samples <- matrix(NA, N, J.0)
 	for (q in 1:N) {
           for (j in 1:J.0) {

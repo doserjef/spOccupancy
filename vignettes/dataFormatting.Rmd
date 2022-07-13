@@ -1,7 +1,8 @@
 ---
-title: "Formatting data for use in `spOccupancy`"
+title: "Formatting data for use in spOccupancy"
 author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
+description: Learn how to format raw data to fit occupancy models in spOccupancy 
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -29,7 +30,7 @@ This vignette gives an example of how to take raw data and format it for use in 
 
 First we load `spOccupancy` as well as two `tidyverse` packages that we will use for manipulating our data sets into the necessary format for `spOccupancy` (`dplyr` and `lubridate`). 
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 library(spOccupancy)
 library(dplyr)
 library(lubridate)

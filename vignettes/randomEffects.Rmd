@@ -1,7 +1,8 @@
 ---
-title: "Fitting occupancy models with random intercepts in `spOccupancy`"
+title: "Fitting occupancy models with random intercepts in spOccupancy"
 author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
+description: Learn how to include random effects in spOccupancy 
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -56,7 +57,7 @@ psi.RE <- list(levels = 20, sigma.sq.psi = 0.75)
 # Single random intercept on detection 
 p.RE <- list(levels = 25, sigma.sq.p = 1.1)
 # Spatial range
-phi <- 3 / .3
+phi <- 3 / .8
 # Spatial variance
 sigma.sq <- 1
 # Simulate the data

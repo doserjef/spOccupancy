@@ -1,22 +1,22 @@
-\name{predict.spTPGOcc}
-\alias{predict.spTPGOcc}
+\name{predict.stPGOcc}
+\alias{predict.stPGOcc}
 \title{Function for prediction at new locations for multi-season single-species spatial occupancy models}
 
 \description{
-  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `spTPGOcc`. Prediction is possible for both the latent occupancy state as well as detection. Predictions are currently only possible for sampled primary time periods.  
+  The function \code{predict} collects posterior predictive samples for a set of new locations given an object of class `stPGOcc`. Prediction is possible for both the latent occupancy state as well as detection. Predictions are currently only possible for sampled primary time periods.  
 }
 
 \usage{
-\method{predict}{spTPGOcc}(object, X.0, coords.0, t.cols, n.omp.threads = 1, 
+\method{predict}{stPGOcc}(object, X.0, coords.0, t.cols, n.omp.threads = 1, 
 	                   verbose = TRUE, n.report = 100, 
 			   ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
 
-  \item{object}{an object of class spTPGOcc}
+  \item{object}{an object of class stPGOcc}
 
-  \item{X.0}{the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate, respectively. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations/time periods should be included as an element of the three-dimensional array. The ordering of the levels should match the ordering used to fit the data in \code{spTPGOcc}. The covariates should be organized in the same order as they were specified in the corresponding formula argument of \code{spTPGOcc}. Names of the third dimension (covariates) of any random effects in X.0 must match the name of the random effects used to fit the model, if specified in the corresponding formula argument of \code{spTPGOcc}. See example below.}
+  \item{X.0}{the design matrix of covariates at the prediction locations. This should be a three-dimensional array, with dimensions corresponding to site, primary time period, and covariate, respectively. Note that the first covariate should consist of all 1s for the intercept if an intercept is included in the model. If random effects are included in the occupancy (or detection if \code{type = 'detection'}) portion of the model, the levels of the random effects at the new locations/time periods should be included as an element of the three-dimensional array. The ordering of the levels should match the ordering used to fit the data in \code{stPGOcc}. The covariates should be organized in the same order as they were specified in the corresponding formula argument of \code{stPGOcc}. Names of the third dimension (covariates) of any random effects in X.0 must match the name of the random effects used to fit the model, if specified in the corresponding formula argument of \code{stPGOcc}. See example below.}
 
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
   in a projected coordinate system.}
@@ -45,7 +45,7 @@
 \note{
   When \code{ignore.RE = FALSE}, both sampled levels and non-sampled levels of random effects are supported for prediction. For sampled levels, the posterior distribution for the random intercept corresponding to that level of the random effect will be used in the prediction. For non-sampled levels, random values are drawn from a normal distribution using the posterior samples of the random effect variance, which results in fully propagated uncertainty in predictions with models that incorporate random effects. 
 
-  Occurrence predictions at sites that are only sampled for a subset of the total number of primary time periods are obtained directly when fitting the model. See the \code{psi.samples} and \code{z.samples} portions of the output list from the model object of class \code{spTPGOcc}. 
+  Occurrence predictions at sites that are only sampled for a subset of the total number of primary time periods are obtained directly when fitting the model. See the \code{psi.samples} and \code{z.samples} portions of the output list from the model object of class \code{stPGOcc}. 
 }
 
 \author{
@@ -54,7 +54,7 @@
 }
 
 \value{
-  A list object of class \code{predict.spTPGOcc}. When \code{type = 'occupancy'}, the list consists of: 
+  A list object of class \code{predict.stPGOcc}. When \code{type = 'occupancy'}, the list consists of: 
 
   \item{psi.0.samples}{a three-dimensional object of posterior predictive samples for the
     latent occupancy probability values with dimensions corresponding to posterior predictive
@@ -157,7 +157,7 @@ batch.length <- 25
 n.iter <- n.batch * batch.length
 
 # Run the model
-out <- spTPGOcc(occ.formula = ~ trend + occ.cov.1, 
+out <- stPGOcc(occ.formula = ~ trend + occ.cov.1, 
                 det.formula = ~ det.cov.1 + det.cov.2, 
                 data = data.list, 
                 inits = inits.list, 

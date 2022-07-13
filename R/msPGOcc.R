@@ -192,6 +192,7 @@ msPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     p.re.level.names <- lapply(data$det.covs[, x.p.re.names, drop = FALSE],
 			       function (a) sort(unique(a)))
 
+
     # Extract data from inputs --------------------------------------------
     # Number of species 
     N <- dim(y)[1]

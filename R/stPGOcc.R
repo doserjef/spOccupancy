@@ -1,4 +1,4 @@
-spTPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
+stPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		     tuning, cov.model = 'exponential', NNGP = TRUE, 
 		     n.neighbors = 15, search.type = 'cb', n.batch, 
 		     batch.length, accept.rate = 0.43, n.omp.threads = 1, 
@@ -984,7 +984,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   curr.chain <- 1
 
   if (!NNGP) {
-    stop("error: spTPGOcc is currently only implemented for NNGP models. Please set NNGP = TRUE") 
+    stop("error: stPGOcc is currently only implemented for NNGP models. Please set NNGP = TRUE") 
   } else {
     # Nearest Neighbor Search ---------------------------------------------
     if(verbose){
@@ -1108,7 +1108,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
                   rho.inits, sigma.sq.t.inits)
     storage.mode(ar1.vals) <- "double"
                                                
-    # spTPGOccNNGP                             
+    # stPGOccNNGP                             
     out.tmp <- list()                          
     out <- list()                              
     if (!k.fold.only) {                        
@@ -1138,7 +1138,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         storage.mode(curr.chain) <- "integer"
         # Note that the upper limit on the number of arguments is 65, which 
         # you're getting close to. 
-        out.tmp[[i]] <- .Call("spTPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, 
+        out.tmp[[i]] <- .Call("stPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, 
                               consts, K, n.occ.re.long, n.det.re.long,
                               n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
                               beta.inits, alpha.inits, sigma.sq.psi.inits, 
@@ -1469,7 +1469,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         storage.mode(beta.star.inits.fit) <- "double"
         storage.mode(beta.star.indx.fit) <- "integer"
 
-        out.fit <- .Call("spTPGOccNNGP", y.fit, X.fit, X.p.fit, coords.fit, 
+        out.fit <- .Call("stPGOccNNGP", y.fit, X.fit, X.p.fit, coords.fit, 
 			 X.re.fit, X.p.re.fit, 
                          consts.fit, K.fit, n.occ.re.long.fit, n.det.re.long.fit,
                          n.neighbors, nn.indx.fit, nn.indx.lu.fit, u.indx.fit, 
@@ -1535,7 +1535,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         } else {
           out.fit$psiRE <- FALSE	
         }
-        class(out.fit) <- "spTPGOcc"
+        class(out.fit) <- "stPGOcc"
 
 	# Predict occurrence at new sites
         if (p.occ.re > 0) {
@@ -1544,7 +1544,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	tmp.names <- colnames(X.0)
 	X.0 <- array(X.0, dim = c(J.0, n.years.max, ncol(X.0)))
 	dimnames(X.0)[[3]] <- tmp.names
-        out.pred <- predict.spTPGOcc(out.fit, X.0, coords.0, 
+        out.pred <- predict.stPGOcc(out.fit, X.0, coords.0, 
 				     t.cols = 1:n.years.max, 
 				     verbose = FALSE)
 
@@ -1585,7 +1585,7 @@ spTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       stopImplicitCluster()
     } # cross-validation
   } # NNGP
-  class(out) <- "spTPGOcc"
+  class(out) <- "stPGOcc"
   out$run.time <- proc.time() - ptm
   out
 }

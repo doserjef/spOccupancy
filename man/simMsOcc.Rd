@@ -36,7 +36,7 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 
 \item{sigma.sq}{a numeric vector of length \eqn{N}{N} containing the spatial variance parameter for each species. Ignored when \code{sp = FALSE} or when \code{factor.model = TRUE}.}
 
-\item{phi}{a numeric vector of length \eqn{N}{N} containing the spatial range parameter for each species. Ignored when \code{sp = FALSE}. If \code{factor.model = TRUE}, this should be of length \code{n.factors}.}
+\item{phi}{a numeric vector of length \eqn{N}{N} containing the spatial decay parameter for each species. Ignored when \code{sp = FALSE}. If \code{factor.model = TRUE}, this should be of length \code{n.factors}.}
 
 \item{nu}{a numeric vector of length \eqn{N}{N} containing the spatial smoothness parameter for each species. Only used when \code{sp = TRUE} and \code{cov.model = 'matern'}. If \code{factor.model = TRUE}, this should be of length \code{n.factors}.} 
 
@@ -57,7 +57,7 @@ simMsOcc(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 
   \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occurrence portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
-  \item{coords}{a \eqn{J \times J}{J x J} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
+  \item{coords}{a \eqn{J \times 2}{J x 2} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
   \item{w}{a \eqn{N \times J}{N x J} matrix of the spatial random effects for each species. Only used to simulate data when \code{sp = TRUE}. If \code{factor.model = TRUE}, the first dimension is \code{n.factors}.}
   \item{psi}{a \eqn{N \times J}{N x J} matrix of the occurrence probabilities for each species at each site.}
   \item{z}{a \eqn{N \times J}{N x J} matrix of the latent occurrence states for each species at each site.}

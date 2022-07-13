@@ -141,14 +141,14 @@ extern "C" {
         Rprintf("----------------------------------------\n");
         Rprintf("\tModel description\n");
         Rprintf("----------------------------------------\n");
-        Rprintf("Multi-season Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i primary time periods.\n\n", J, nYearsMax);
+        Rprintf("Multi-season Occupancy Model with Polya-Gamma latent variable\nfit with %i sites and %i primary time periods.\n\n", J, nYearsMax);
         Rprintf("Samples per chain: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 
         Rprintf("Number of Chains: %i \n", nChain);
         Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
 	if (ar1) {
-          Rprintf("Using an AR(1) temporal autocorrelation matrix.\n\n");
+          Rprintf("Using an AR(1) temporal autocorrelation matrix in the occurrence sub-model.\n\n");
 	}
 #ifdef _OPENMP
        Rprintf("Source compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
@@ -552,7 +552,6 @@ extern "C" {
             // of a random effect. 
             for (t = 0; t < nYearsMax; t++) {
               for (j = 0; j < J; j++) {
-                // TODO: think about adding in if for zDatIndx here. 
                 if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
                   if (zDatIndx[t * J + j] == 1) {
                     tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
@@ -574,7 +573,6 @@ extern "C" {
           zeros(betaStarSites, JnYears);
           for (t = 0; t < nYearsMax; t++) {
             for (j = 0; j < J; j++) {
-              // TODO: think about adding in if for zDatIndx here. 
               for (l = 0; l < pOccRE; l++) {
                 betaStarSites[t * J + j] += betaStar[which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
               }

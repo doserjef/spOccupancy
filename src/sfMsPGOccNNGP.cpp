@@ -891,7 +891,6 @@ extern "C" {
 	        for(k = 0; k < nnIndxLU[J+jj]; k++){ // these are the neighbors of the jjth location
 	          kk = nnIndx[nnIndxLU[jj]+k]; // kk is the index for the jth locations neighbors
 	          if(kk != ii){ //if the neighbor of jj is not ii
-		    // TODO: check this. 
 	    	    b += B[ll*nIndx + nnIndxLU[jj]+k]*w[kk * q + ll]; //covariance between jj and kk and the random effect of kk
 	          }
 	        } // k

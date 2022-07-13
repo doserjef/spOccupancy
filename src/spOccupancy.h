@@ -4,7 +4,6 @@
 extern "C" {
 
   SEXP PGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
-             SEXP XRandom_r, SEXP XpRandom_r, 
              SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
              SEXP betaStarting_r, SEXP alphaStarting_r, 
              SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
@@ -276,7 +275,7 @@ extern "C" {
 	      SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
 	      SEXP currChain_r, SEXP nChain_r);
 
-  SEXP spTPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
+  SEXP stPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
 		    SEXP XpRE_r, SEXP consts_r, 
 	            SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
 		    SEXP m_r, SEXP nnIndx_r, SEXP nnIndxLU_r, 
@@ -300,7 +299,7 @@ extern "C" {
 	            SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
 		    SEXP currChain_r, SEXP nChain_r);
 
-  SEXP spTPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
+  SEXP stPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			  SEXP thetaSamples_r, SEXP wSamples_r, 

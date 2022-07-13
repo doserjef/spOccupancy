@@ -333,7 +333,7 @@ summary.PGOcc <- function(object,
   if (is(object, 'tPGOcc')) {
     if (object$ar1) {
       cat("\n")
-      cat("AR(1) Temporal Covariance: \n")
+      cat("Occurrence AR(1) Temporal Covariance: \n")
       tmp.1 <- t(apply(object$theta.samples, 2, 
             	   function(x) c(mean(x), sd(x))))
       colnames(tmp.1) <- c("Mean", "SD")
@@ -419,10 +419,10 @@ summary.ppcOcc <- function(object, level = 'both',
     }
   }
 
-  if (object$class %in% c('tPGOcc', 'spTPGOcc')) {
+  if (object$class %in% c('tPGOcc', 'stPGOcc')) {
 
     cat("----------------------------------------\n");
-    cat("\tAll time periods\n");
+    cat("\tAll time periods combined\n");
     cat("----------------------------------------\n");
     cat("Bayesian p-value: ", round(mean(object$fit.y.rep > object$fit.y), digits), "\n")
     cat("\n")
@@ -809,8 +809,8 @@ summary.spPGOcc <- function(object,
   }
   cat("\n")
   # Covariance ------------------------
-  # if (class(object) == 'spTPGOcc') {
-  if (is(object, 'spTPGOcc')) {
+  # if (class(object) == 'stPGOcc') {
+  if (is(object, 'stPGOcc')) {
     if (object$ar1) {
       cat("Spatio-temporal Covariance: \n")
     } else {
@@ -3073,18 +3073,18 @@ summary.sfJSDM <- function(object,
   print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 }
 
-# spTPGOcc ----------------------------------------------------------------
-print.spTPGOcc <- function(x, ...) {
+# stPGOcc ----------------------------------------------------------------
+print.stPGOcc <- function(x, ...) {
   print.spPGOcc(x)
 }
 
-summary.spTPGOcc <- function(object,
+summary.stPGOcc <- function(object,
 			    quantiles = c(0.025, 0.5, 0.975), 
 			    digits = max(3L, getOption("digits") - 3L), ...) {
   summary.spPGOcc(object, quantiles, digits)
 }
 
-fitted.spTPGOcc <- function(object, ...) {
+fitted.stPGOcc <- function(object, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -3103,8 +3103,8 @@ fitted.spTPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!(class(object) %in% c('tPGOcc', 'spTPGOcc'))) {
-    stop("error: object must be one of class tPGOcc or spTPGOcc\n")
+  if (!(class(object) %in% c('tPGOcc', 'stPGOcc'))) {
+    stop("error: object must be one of class tPGOcc or stPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
   X.p <- object$X.p
@@ -3147,7 +3147,7 @@ fitted.spTPGOcc <- function(object, ...) {
   return(out)
 }
 
-predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
+predict.stPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
 			     verbose = TRUE, n.report = 100,
 			     ignore.RE = FALSE, type = 'occupancy', ...) {
 
@@ -3171,8 +3171,8 @@ predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
     stop("error: predict expects object\n")
   }
   #if (!is(object, c('spPGOcc', 'spIntPGOcc'))) {
-  if (!(class(object) %in% c('spTPGOcc'))) {
-    stop("error: requires an output object of class spTPGOcc\n")
+  if (!(class(object) %in% c('stPGOcc'))) {
+    stop("error: requires an output object of class stPGOcc\n")
   }
 
   if (!(tolower(type) %in% c('occupancy', 'detection'))) {
@@ -3314,11 +3314,11 @@ predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
     # Check if sampled sites are included and make sure predicting across
     # all years.
     if ((nrow(coords.0) != q) & n.years.max != dim(object$X)[2]) {
-      stop("error: when predicting at sampled sites using spTPGOcc, you must predict across all primary time periods")
+      stop("error: when predicting at sampled sites using stPGOcc, you must predict across all primary time periods")
     }
 
     if (sp.type == 'GP') {
-      stop("NNGP = FALSE is not currently supported for spTPGOcc")
+      stop("NNGP = FALSE is not currently supported for stPGOcc")
     } else {
       # Get nearest neighbors
       # nn2 is a function from RANN.
@@ -3346,7 +3346,7 @@ predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
 
       ptm <- proc.time()
 
-      out <- .Call("spTPGOccNNGPPredict", coords, J, n.years.max, p.occ, n.neighbors,
+      out <- .Call("stPGOccNNGPPredict", coords, J, n.years.max, p.occ, n.neighbors,
                    X.fix, coords.0.new, q, nn.indx.0, beta.samples,
                    theta.samples, w.samples, beta.star.sites.0.samples, eta.samples, n.post,
                    cov.model.indx, n.omp.threads, verbose, n.report)
@@ -3458,7 +3458,7 @@ predict.spTPGOcc <- function(object, X.0, coords.0, t.cols, n.omp.threads = 1,
   out$run.time <- proc.time() - ptm
   out$call <- cl
   out$object.class <- class(object)
-  class(out) <- "predict.spTPGOcc"
+  class(out) <- "predict.stPGOcc"
   out
 }
 # tPGOcc ------------------------------------------------------------------
@@ -3472,7 +3472,7 @@ summary.tPGOcc <- function(object, quantiles = c(0.025, 0.5, 0.975),
 }
 
 fitted.tPGOcc <- function(object, ...) {
-  fitted.spTPGOcc(object)
+  fitted.stPGOcc(object)
 }
 
 predict.tPGOcc <- function(object, X.0, t.cols, ignore.RE = FALSE,

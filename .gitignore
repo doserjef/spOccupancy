@@ -17,8 +17,8 @@ vignettes/factorModels_files
 vignettes/factorModels_cache
 vignettes/dataFormatting_cache
 vignettes/dataFormatting_files
-vignettes/trendModels_cache
-vignettes/trendModels_files
-vignettes/trendModels-pdf_cache
-vignettes/trendModels-pdf_files
+vignettes/spaceTimeModels_cache
+vignettes/spaceTimeModels_files
+vignettes/spaceTimeModelsHTML_cache
+vignettes/spaceTimeModelsHTML_files
 *.swp

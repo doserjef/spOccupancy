@@ -1,4 +1,4 @@
-# Test spPGOcc.R  ---------------------------------------------------------
+# Test stPGOcc.R  ---------------------------------------------------------
 # NNGP --------------------------------------------------------------------
 skip_on_cran()
 
@@ -70,7 +70,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ 1 
 det.formula <- ~ 1 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -93,8 +93,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -114,7 +114,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -135,7 +135,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -170,7 +170,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -184,11 +184,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -202,9 +202,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -218,11 +218,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -248,7 +248,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   # tmp.data <- data.list
   # tmp.data$occ.covs$trend[3, ] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -264,7 +264,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -280,7 +280,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -294,11 +294,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -306,13 +306,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
@@ -431,7 +431,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend
 det.formula <- ~ 1 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -453,8 +453,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -474,7 +474,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -495,7 +495,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -530,7 +530,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -544,11 +544,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -562,9 +562,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -578,11 +578,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -609,7 +609,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -625,7 +625,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -641,7 +641,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -655,11 +655,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -667,13 +667,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
@@ -791,7 +791,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ 1 
 det.formula <- ~ det.cov.1 + det.cov.2 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -813,8 +813,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -834,7 +834,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -855,7 +855,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -890,7 +890,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -904,11 +904,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -922,9 +922,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -938,11 +938,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -968,7 +968,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
 #   tmp.data <- data.list
 #   tmp.data$occ.covs$trend[3, ] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 # 	               det.formula = det.formula, 
 # 	               data = tmp.data, 
 # 	               n.batch = 40, 
@@ -984,7 +984,7 @@ test_that("missing value error handling works", {
 # 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -1000,7 +1000,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -1014,11 +1014,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -1026,13 +1026,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
@@ -1151,7 +1151,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ occ.cov.1
 det.formula <- ~ det.cov.1 + det.cov.2 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -1173,8 +1173,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -1194,7 +1194,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1215,7 +1215,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1250,7 +1250,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1264,11 +1264,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1282,9 +1282,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1298,11 +1298,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -1328,7 +1328,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$occ.cov.1[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -1344,7 +1344,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -1360,7 +1360,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -1374,11 +1374,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -1386,13 +1386,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
@@ -1512,7 +1512,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend * occ.cov.1
 det.formula <- ~ det.cov.1 * det.cov.2 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -1535,8 +1535,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -1556,7 +1556,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1577,7 +1577,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1612,7 +1612,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1626,11 +1626,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1644,9 +1644,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1660,11 +1660,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -1690,7 +1690,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -1706,7 +1706,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -1722,7 +1722,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -1736,11 +1736,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -1748,13 +1748,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind(X.0, X.0[, , 3, drop = FALSE] * X.0[, , 2, drop = FALSE])
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
@@ -1874,7 +1874,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend 
 det.formula <- ~ trend 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -1896,8 +1896,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -1917,7 +1917,7 @@ test_that("random effects are empty", {
 # test_that("random effect gives error when non-numeric", {
 #   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
 #   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1938,7 +1938,7 @@ test_that("random effects are empty", {
 # 		              n.chains = 1))
 #   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
 #   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-#   expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+#   expect_error(out <- stPGOcc(occ.formula = occ.formula,
 # 	                      det.formula = det.formula,
 #                               data = data.list,
 #                               inits = inits.list, 
@@ -1973,7 +1973,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -1988,11 +1988,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2006,9 +2006,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2022,11 +2022,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -2052,7 +2052,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -2068,7 +2068,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$trend[1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -2084,7 +2084,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -2098,11 +2098,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -2110,13 +2110,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- X.0
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend')
@@ -2235,7 +2235,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ (1 | occ.factor.1)
 det.formula <- ~ 1 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -2257,8 +2257,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -2278,7 +2278,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   #data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -2300,7 +2300,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -2335,7 +2335,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2349,11 +2349,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2367,9 +2367,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2383,11 +2383,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -2413,7 +2413,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   # tmp.data <- data.list
   # tmp.data$occ.covs$trend[3, ] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -2429,7 +2429,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -2445,7 +2445,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -2459,11 +2459,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -2471,13 +2471,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1')
@@ -2598,7 +2598,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ (1 | occ.factor.1) + (1 | occ.factor.2)
 det.formula <- ~ 1 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -2620,8 +2620,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -2641,7 +2641,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   #data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -2662,7 +2662,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -2698,7 +2698,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2712,11 +2712,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2730,9 +2730,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -2746,11 +2746,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -2776,7 +2776,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   # tmp.data <- data.list
   # tmp.data$occ.covs$trend[3, ] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -2792,7 +2792,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -2808,7 +2808,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -2822,11 +2822,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -2834,13 +2834,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1', 'occ.factor.2')
@@ -2962,7 +2962,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend + (1 | occ.factor.1) + (1 | occ.factor.2)
 det.formula <- ~ 1 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -2984,8 +2984,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -3005,7 +3005,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   #data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -3026,7 +3026,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -3061,7 +3061,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3075,11 +3075,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3093,9 +3093,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3109,11 +3109,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -3140,7 +3140,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -3156,7 +3156,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -3172,7 +3172,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -3186,11 +3186,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -3198,13 +3198,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1', 'occ.factor.2')
   pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
@@ -3326,7 +3326,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend + (1 | occ.factor.1) + (1 | occ.factor.2)
 det.formula <- ~ det.cov.1
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -3348,8 +3348,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -3369,7 +3369,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   #data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list,
@@ -3390,7 +3390,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   # data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list,
@@ -3425,7 +3425,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula,
+  out <- stPGOcc(occ.formula = occ.formula,
 	         det.formula = det.formula,
 	         data = data.list,
 	         n.batch = 40,
@@ -3439,11 +3439,11 @@ test_that("default priors and inits work", {
 	         n.report = 10,
 	         n.burn = 100,
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula,
+  out <- stPGOcc(occ.formula = occ.formula,
 	         det.formula = det.formula,
 	         data = data.list,
 	         n.batch = 40,
@@ -3457,9 +3457,9 @@ test_that("all correlation functions work", {
 	         n.report = 10,
 	         n.burn = 100,
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula,
+  out <- stPGOcc(occ.formula = occ.formula,
 	         det.formula = det.formula,
 	         data = data.list,
 	         n.batch = 40,
@@ -3473,11 +3473,11 @@ test_that("all correlation functions work", {
 	         n.report = 10,
 	         n.burn = 100,
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula,
+  expect_output(stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -3503,7 +3503,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula,
+  expect_error(stPGOcc(occ.formula = occ.formula,
                        det.formula = det.formula,
                        data = tmp.data,
                        n.batch = 40,
@@ -3519,7 +3519,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula,
+  expect_error(stPGOcc(occ.formula = occ.formula,
                        det.formula = det.formula,
                        data = tmp.data,
                        n.batch = 40,
@@ -3535,7 +3535,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula,
+  out <- stPGOcc(occ.formula = occ.formula,
                  det.formula = det.formula,
                  data = tmp.data,
                  n.batch = 40,
@@ -3550,11 +3550,11 @@ test_that("missing value error handling works", {
                  n.report = 10,
                  n.burn = 100,
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -3562,13 +3562,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1', 'occ.factor.2')
   pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
@@ -3687,7 +3687,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ 1 
 det.formula <- ~ (1 | det.factor.1)
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -3709,8 +3709,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -3730,7 +3730,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -3751,7 +3751,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -3786,7 +3786,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3800,11 +3800,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3818,9 +3818,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -3834,11 +3834,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -3864,7 +3864,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
 #   tmp.data <- data.list
 #   tmp.data$occ.covs$trend[3, ] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 # 	               det.formula = det.formula, 
 # 	               data = tmp.data, 
 # 	               n.batch = 40, 
@@ -3880,7 +3880,7 @@ test_that("missing value error handling works", {
 # 	               n.chains = 1))
 #   tmp.data <- data.list
 #   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 #                        det.formula = det.formula, 
 #                        data = tmp.data, 
 #                        n.batch = 40, 
@@ -3896,7 +3896,7 @@ test_that("missing value error handling works", {
 #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -3910,11 +3910,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -3922,13 +3922,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0		  
@@ -4049,7 +4049,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ 1 
 det.formula <- ~ (1 | det.factor.1) + (1 | det.factor.2)
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -4072,8 +4072,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -4093,7 +4093,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4114,7 +4114,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4149,7 +4149,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4163,11 +4163,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4181,9 +4181,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4197,11 +4197,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -4227,7 +4227,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
 #   tmp.data <- data.list
 #   tmp.data$occ.covs$trend[3, ] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 # 	               det.formula = det.formula, 
 # 	               data = tmp.data, 
 # 	               n.batch = 40, 
@@ -4243,7 +4243,7 @@ test_that("missing value error handling works", {
 # 	               n.chains = 1))
 #   tmp.data <- data.list
 #   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 #                        det.formula = det.formula, 
 #                        data = tmp.data, 
 #                        n.batch = 40, 
@@ -4259,7 +4259,7 @@ test_that("missing value error handling works", {
 #                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -4273,11 +4273,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -4285,13 +4285,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0		  
@@ -4413,7 +4413,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ 1
 det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2) 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -4435,8 +4435,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -4456,7 +4456,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4477,7 +4477,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4513,7 +4513,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4527,11 +4527,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4545,9 +4545,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4561,11 +4561,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -4591,7 +4591,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
 #   tmp.data <- data.list
 #   tmp.data$occ.covs$trend[3, ] <- NA
-#   expect_error(spTPGOcc(occ.formula = occ.formula, 
+#   expect_error(stPGOcc(occ.formula = occ.formula, 
 # 	               det.formula = det.formula, 
 # 	               data = tmp.data, 
 # 	               n.batch = 40, 
@@ -4607,7 +4607,7 @@ test_that("missing value error handling works", {
 # 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -4623,7 +4623,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -4637,11 +4637,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -4649,13 +4649,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
@@ -4777,7 +4777,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend
 det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2) 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -4800,8 +4800,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -4821,7 +4821,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   # data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4842,7 +4842,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   # data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -4877,7 +4877,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4891,11 +4891,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4909,9 +4909,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -4925,11 +4925,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -4955,7 +4955,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -4971,7 +4971,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -4987,7 +4987,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -5001,11 +5001,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -5013,13 +5013,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   # X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   # dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   X.0.full <- X.0
@@ -5140,7 +5140,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ (1 | occ.factor.1)
 det.formula <- ~ (1 | det.factor.1)
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -5162,8 +5162,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -5183,7 +5183,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -5205,7 +5205,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -5240,7 +5240,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5254,11 +5254,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5272,9 +5272,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5288,11 +5288,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -5318,7 +5318,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   # tmp.data <- data.list
   # tmp.data$occ.covs$trend[3, ] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -5334,7 +5334,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   # tmp.data <- data.list
   # tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  # expect_error(spTPGOcc(occ.formula = occ.formula, 
+  # expect_error(stPGOcc(occ.formula = occ.formula, 
   #                      det.formula = det.formula, 
   #                      data = tmp.data, 
   #                      n.batch = 40, 
@@ -5350,7 +5350,7 @@ test_that("missing value error handling works", {
   #                      n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -5364,11 +5364,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -5376,13 +5376,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'occ.factor.1')
   pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)
@@ -5506,7 +5506,7 @@ n.samples <- batch.length * n.batch
 occ.formula <- ~ trend + (1 | occ.factor.1)
 det.formula <- ~ det.cov.1 + (1 | det.factor.1) + (1 | det.factor.2) 
 
-out <- spTPGOcc(occ.formula = occ.formula,
+out <- stPGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
 	       data = data.list,
 	       inits = inits.list,
@@ -5528,8 +5528,8 @@ out <- spTPGOcc(occ.formula = occ.formula,
 	       k.fold.threads = 2)
 
 # Test to make sure it worked ---------
-test_that("out is of class spTPGOcc", {
-  expect_s3_class(out, "spTPGOcc")
+test_that("out is of class stPGOcc", {
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check cross-validation --------------
@@ -5549,7 +5549,7 @@ test_that("random effects are empty", {
 test_that("random effect gives error when non-numeric", {
   data.list$occ.covs$occ.factor.1 <- factor(data.list$occ.covs$occ.factor.1)
   data.list$det.covs$det.factor.1 <- factor(data.list$det.covs$det.factor.1)
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -5571,7 +5571,7 @@ test_that("random effect gives error when non-numeric", {
 		              n.chains = 1))
   data.list$occ.covs$occ.factor.1 <- as.character(factor(data.list$occ.covs$occ.factor.1))
   data.list$det.covs$det.factor.1 <- as.character(factor(data.list$det.covs$det.factor.1))
-  expect_error(out <- spTPGOcc(occ.formula = occ.formula,
+  expect_error(out <- stPGOcc(occ.formula = occ.formula,
 	                      det.formula = det.formula,
                               data = data.list,
                               inits = inits.list, 
@@ -5606,7 +5606,7 @@ test_that("out$y == y", {
 })
 
 test_that("default priors and inits work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5620,11 +5620,11 @@ test_that("default priors and inits work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("all correlation functions work", {
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5638,9 +5638,9 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
@@ -5654,11 +5654,11 @@ test_that("all correlation functions work", {
 	         n.report = 10, 
 	         n.burn = 100, 
 	         n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 test_that("verbose prints to the screen", {
-  expect_output(spTPGOcc(occ.formula = occ.formula, 
+  expect_output(stPGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
@@ -5684,7 +5684,7 @@ test_that("summary works", {
 test_that("missing value error handling works", {
   tmp.data <- data.list
   tmp.data$occ.covs$trend[3, ] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
 	               det.formula = det.formula, 
 	               data = tmp.data, 
 	               n.batch = 40, 
@@ -5701,7 +5701,7 @@ test_that("missing value error handling works", {
 	               n.chains = 1))
   tmp.data <- data.list
   tmp.data$det.covs$det.cov.1[1, 1, 1] <- NA
-  expect_error(spTPGOcc(occ.formula = occ.formula, 
+  expect_error(stPGOcc(occ.formula = occ.formula, 
                        det.formula = det.formula, 
                        data = tmp.data, 
                        n.batch = 40, 
@@ -5717,7 +5717,7 @@ test_that("missing value error handling works", {
                        n.chains = 1))
   tmp.data <- data.list
   tmp.data$y[1, 1, 1] <- NA
-  out <- spTPGOcc(occ.formula = occ.formula, 
+  out <- stPGOcc(occ.formula = occ.formula, 
                  det.formula = det.formula, 
                  data = tmp.data, 
                  n.batch = 40, 
@@ -5731,11 +5731,11 @@ test_that("missing value error handling works", {
                  n.report = 10, 
                  n.burn = 100, 
                  n.chains = 1)
-  expect_s3_class(out, "spTPGOcc")
+  expect_s3_class(out, "stPGOcc")
 })
 
 # Check waicOcc -----------------------
-test_that("waicOCC works for spTPGOcc", {
+test_that("waicOCC works for stPGOcc", {
   # as.vector gets rid of names
   waic.out <- as.vector(waicOcc(out))
   expect_equal(length(waic.out), 3)
@@ -5743,13 +5743,13 @@ test_that("waicOCC works for spTPGOcc", {
 })
 
 # Check fitted ------------------------
-test_that("fitted works for spTPGOcc", {
+test_that("fitted works for stPGOcc", {
   fitted.out <- fitted(out)
   expect_equal(length(fitted.out), 2)
 })
 
 # Check predictions -------------------
-test_that("predict works for spTPGOcc", {
+test_that("predict works for stPGOcc", {
   X.0.full <- abind::abind(X.0, X.re.0, along = 3)
   dimnames(X.0.full)[[3]] <- c('(Intercept)', 'trend', 'occ.factor.1')
   pred.out <- predict(out, X.0.full, coords.0, verbose = FALSE, t.cols = 1:n.time.max)

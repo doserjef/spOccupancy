@@ -1,6 +1,7 @@
 ---
-title: "Fitting occupancy models with `spOccupancy`"
+title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
+description: Learn how to get started with the core spOccupancy functionality
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   rmarkdown::html_vignette:
@@ -191,7 +192,7 @@ plot(out$alpha.samples, density = FALSE) # Detection parameters.
 
 ## Posterior predictive checks
 
-The function `ppcOcc()` performs a posterior predictive check on all `spOccupancy` model objects as a Goodness of Fit (GoF) assessment. The fundamental idea of GoF testing is that a good model should generate data that closely align with the observed data. If there are drastic differences in the true data from the model generated data, our model is likely not very useful [@hobbs2015]. GoF assessments are more complicated using binary data, like detection-nondetection used in occupancy models, as standard approaches are not valid assessments for the raw data in binary response models such as occupancy models [@broms2016model; @mccullagh2019]. Thus, any approach to assess model fit for detection-nondetection data must bin, or aggregate, the raw values in some manner, and then perform a model fit assessment on the binned values. There are numerous ways we could envision binning the raw detection-nondetection values [@mackenzie2004assessing; @kery2015applied]. In `spOccupancy`, a posterior predictive check broadly takes the following steps:
+The function `ppcOcc()` performs a posterior predictive check on all `spOccupancy` model objects as a Goodness of Fit (GoF) assessment. The fundamental idea of GoF testing is that a good model should generate data that closely align with the observed data. If there are drastic differences in the true data from the model generated data, our model is likely not very useful [@hobbs2015]. GoF assessments are more complicated using binary data, like detection-nondetection used in occupancy models, as standard approaches are not valid assessments for the raw data in binary response models such as occupancy models [@broms2016model; @mccullagh2019generalized]. Thus, any approach to assess model fit for detection-nondetection data must bin, or aggregate, the raw values in some manner, and then perform a model fit assessment on the binned values. There are numerous ways we could envision binning the raw detection-nondetection values [@mackenzie2004assessing; @kery2015applied]. In `spOccupancy`, a posterior predictive check broadly takes the following steps:
 
 1. Fit the model using any of the model-fitting functions (here `PGOcc()`), which generates replicated values for all detection-nondetection data points.
 2. Bin both the actual and the replicated detection-nondetection data in a suitable manner, such as by site or replicate [@mackenzie2004assessing].

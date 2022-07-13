@@ -18,7 +18,7 @@
 
 extern "C" {
 
-  SEXP spTPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
+  SEXP stPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			  SEXP thetaSamples_r, SEXP wSamples_r, 
@@ -251,3 +251,4 @@ extern "C" {
 }
 
     
+

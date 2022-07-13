@@ -14,7 +14,7 @@ waicOcc(object, ...)
 \arguments{
   \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfJSDM}, 
-  \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, or \code{spTPGOcc}.}
+  \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, or \code{stPGOcc}.}
 
 \item{...}{currently no additional arguments}
 
@@ -36,14 +36,14 @@ waicOcc(object, ...)
 }
 
 \author{
-  Jeffrey W. Doser \email{doserjef@msu.edu}
+  Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
   Andrew O. Finley \email{finleya@msu.edu}
 }
 
 \value{
   When \code{object} is of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{lfJSDM}, \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc},
-  \code{tPGOcc}, or \code{spTPGOcc}, returns a vector with three elements corresponding to 
+  \code{tPGOcc}, or \code{stPGOcc}, returns a vector with three elements corresponding to 
   estimates of the expected log pointwise predictive density (elpd), the 
   effective number of parameters (pD), and the WAIC. When \code{object} is 
   of class \code{intPGOcc} or \code{spIntPGOcc}, returns a data frame with 

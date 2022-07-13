@@ -1,7 +1,8 @@
 ---
-title: "Joint species distribution models with imperfect detection in `spOccupancy`"
+title: "Joint species distribution models with imperfect detection in spOccupancy"
 author: "Jeffrey W. Doser"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
+description: Learn how to account for species correlations within multi-species occupancy models 
 output: 
   rmarkdown::html_vignette:
     toc: true

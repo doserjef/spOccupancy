@@ -23,7 +23,7 @@ cat(
 )
 ```
 
-spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;ly-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
+spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;ly-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. As of v0.4.0, `spOccupancy` provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
 
 ## Installation
 
@@ -47,6 +47,8 @@ install.packages("spOccupancy")
 |`sfJSDM()`         | Spatial joint species distribution model without imperfect detection |
 |`lfMsPGOcc()`      | Multi-species occupancy model with species correlations              |
 |`sfMsPGOcc()`      | Multi-species spatial occupancy model with species correlations      |
+|`tPGOcc()`         | Single-species multi-season occupancy model                          |
+|`stPGOcc()`        | Single-species multi-season spatio-temporal occupancy model          |
 |`ppcOcc()`         | Posterior predictive check using Bayesian p-values                   | 
 |`waicOcc()`        | Compute Widely Applicable Information Criterion (WAIC)               |
 |`simOcc()`         | Simulate single-species occupancy data                               |
@@ -132,7 +134,7 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022a). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")` for full statistical details.
+The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [our recent paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022a). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")` for full statistical details. For a description and tutoral of multi-season (spatio-temporal) occupancy models in `spOccupancy`, see `vignette("spaceTimeModels")`. 
 
 ## References
 

@@ -117,7 +117,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # return error if they are. 
     # Occurrence ----------------------
     if (!is.null(findbars(occ.formula))) {
-      occ.re.names <- unique(unlist(sapply(findbars(occ.formula), all.vars)))
+      occ.re.names <- sapply(findbars(occ.formula), all.vars)
       for (i in 1:length(occ.re.names)) {
         if (is(data$occ.covs[, occ.re.names[i]], 'factor')) {
           stop(paste("error: random effect variable ", occ.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
@@ -129,7 +129,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     # Detection -----------------------
     if (!is.null(findbars(det.formula))) {
-      det.re.names <- unique(unlist(sapply(findbars(det.formula), all.vars)))
+      det.re.names <- sapply(findbars(det.formula), all.vars)
       for (i in 1:length(det.re.names)) {
         if (is(data$det.covs[, det.re.names[i]], 'factor')) {
           stop(paste("error: random effect variable ", det.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
@@ -177,11 +177,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
     }
 
-    # Remove missing values from det.covs in order to ensure formula parsing
-    # works when random slopes are provided.
-    tmp <- apply(data$det.covs, 1, function (a) sum(is.na(a)))
-    data$det.covs <- as.data.frame(data$det.covs[tmp == 0, , drop = FALSE])
-
     # Formula -------------------------------------------------------------
     # Occupancy -----------------------
     if (is(occ.formula, 'formula')) {
@@ -190,15 +185,12 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       X.re <- as.matrix(tmp[[4]])
       x.re.names <- colnames(X.re)
       x.names <- tmp[[2]]
-      X.random <- as.matrix(tmp[[5]])
-      x.random.names <- colnames(X.random)
     } else {
       stop("error: occ.formula is misspecified")
     }
     # Get RE level names
     re.level.names <- lapply(data$occ.covs[, x.re.names, drop = FALSE],
 			     function (a) sort(unique(a)))
-    x.re.names <- x.random.names
 
     # Detection -----------------------
     if (is(det.formula, 'formula')) {
@@ -207,14 +199,11 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       X.p.re <- as.matrix(tmp[[4]])
       x.p.re.names <- colnames(X.p.re)
       x.p.names <- tmp[[2]]
-      X.p.random <- as.matrix(tmp[[5]])
-      x.p.random.names <- colnames(X.p.random)
     } else {
       stop("error: det.formula is misspecified")
     }
     p.re.level.names <- lapply(data$det.covs[, x.p.re.names, drop = FALSE],
 			       function (a) sort(unique(a)))
-    x.p.re.names <- x.p.random.names
 
     # Get basic info from inputs ------------------------------------------
     # Number of sites
@@ -222,11 +211,11 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # Number of occupancy parameters
     p.occ <- ncol(X)
     # Number of occupancy random effect parameters
-    p.occ.re <- ncol(X.random)
+    p.occ.re <- ncol(X.re)
     # Number of detection parameters
     p.det <- ncol(X.p)
     # Number of detection random effect parameters
-    p.det.re <- ncol(X.p.random)
+    p.det.re <- ncol(X.p.re)
     # Number of latent occupancy random effect values
     n.occ.re <- length(unlist(apply(X.re, 2, unique)))
     n.occ.re.long <- apply(X.re, 2, function(a) length(unique(a)))
@@ -261,23 +250,16 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (nrow(X.p.re) == length(y) & p.det.re > 0) {
       X.p.re <- X.p.re[!is.na(y), , drop = FALSE]
     }
-    if (nrow(X.p.random) == length(y) & p.det.re > 0) {
-      X.p.random <- X.p.random[!is.na(y), , drop = FALSE]
-    }
     y <- y[!is.na(y)]
     # Number of data points for the y vector
     n.obs <- nrow(X.p)
 
     # Get random effect matrices all set ----------------------------------
-    # Subtract 1 for c
-    X.re <- X.re - 1
     if (p.occ.re > 1) {
       for (j in 2:p.occ.re) {
         X.re[, j] <- X.re[, j] + max(X.re[, j - 1]) + 1
       }
     }
-    # Subtract 1 for C
-    X.p.re <- X.p.re - 1
     if (p.det.re > 1) {
       for (j in 2:p.det.re) {
         X.p.re[, j] <- X.p.re[, j] + max(X.p.re[, j - 1]) + 1
@@ -636,7 +618,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(samples.info) <- "integer"
     # For detection random effects
     storage.mode(X.p.re) <- "integer"
-    storage.mode(X.p.random) <- "double"
     alpha.level.indx <- sort(unique(c(X.p.re)))
     storage.mode(alpha.level.indx) <- "integer"
     storage.mode(n.det.re.long) <- "integer"
@@ -647,7 +628,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(alpha.star.indx) <- "integer"
     # For occurrence random effects
     storage.mode(X.re) <- "integer"
-    storage.mode(X.random) <- "double"
     beta.level.indx <- sort(unique(c(X.re)))
     storage.mode(beta.level.indx) <- "integer"
     storage.mode(sigma.sq.psi.inits) <- "double"
@@ -674,7 +654,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       storage.mode(chain.info) <- "integer"
       # Run the model in C
-      out.tmp[[i]] <- .Call("PGOcc", y, X, X.p, X.re, X.p.re, X.random, X.p.random, consts, 
+      out.tmp[[i]] <- .Call("PGOcc", y, X, X.p, X.re, X.p.re, consts, 
 			    K, n.occ.re.long, n.det.re.long, beta.inits, alpha.inits, 
 			    sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits, 
 			    alpha.star.inits, z.inits, z.long.indx, beta.star.indx, 
@@ -778,7 +758,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     } else {
       out$psiRE <- FALSE
     }
-    # TODO: need to make this work with random slopes.
     # K-fold cross-validation -------
     if (!missing(k.fold)) {
       if (verbose) {
@@ -820,8 +799,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         lambda.p.0 <- lambda.p[!y.indx, , drop = FALSE]
         X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
         X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
-	X.p.random.fit <- X.p.random[y.indx, , drop = FALSE]
-	X.p.random.0 <- X.p.random[!y.indx, , drop = FALSE]
         n.det.re.fit <- length(unique(c(X.p.re.fit)))
         n.det.re.long.fit <- apply(X.p.re.fit, 2, function(a) length(unique(a)))
         if (p.det.re > 0) {	
@@ -837,8 +814,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	# Random Occurrence Effects
         X.re.fit <- X.re[-curr.set, , drop = FALSE]
         X.re.0 <- X.re[curr.set, , drop = FALSE]
-	X.random.fit <- X.random[-curr.set, , drop = FALSE]
-	X.random.0 <- X.random[curr.set, , drop = FALSE]
         n.occ.re.fit <- length(unique(c(X.re.fit)))
         n.occ.re.long.fit <- apply(X.re.fit, 2, function(a) length(unique(a)))
         if (p.occ.re > 0) {	
@@ -903,8 +878,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         chain.info[1] <- 1
         storage.mode(chain.info) <- "integer"
         # Run the model in C
-        out.fit <- .Call("PGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.fit, 
-			 X.random.fit, X.p.random.fit, consts.fit, 
+        out.fit <- .Call("PGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.fit, consts.fit, 
 			 K.fit, n.occ.re.long.fit, n.det.re.long.fit, beta.inits, alpha.inits, 
 			 sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits.fit, 
 			 alpha.star.inits.fit, z.inits.fit, z.long.indx.fit, beta.star.indx.fit, 

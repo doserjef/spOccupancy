@@ -1,9 +1,9 @@
-\name{spTPGOcc}
-\alias{spTPGOcc}
+\name{stPGOcc}
+\alias{stPGOcc}
 \title{Function for Fitting Multi-Season Single-Species Spatial Occupancy Models Using Polya-Gamma Latent Variables}
 
 \usage{
-spTPGOcc(occ.formula, det.formula, data, inits, priors, 
+stPGOcc(occ.formula, det.formula, data, inits, priors, 
          tuning, cov.model = 'exponential', NNGP = TRUE, 
          n.neighbors = 15, search.type = 'cb', n.batch, 
          batch.length, accept.rate = 0.43, n.omp.threads = 1, 
@@ -362,7 +362,7 @@ batch.length <- 25
 n.iter <- n.batch * batch.length
 
 # Run the model
-out <- spTPGOcc(occ.formula = ~ trend + occ.cov.1, 
+out <- stPGOcc(occ.formula = ~ trend + occ.cov.1, 
                 det.formula = ~ det.cov.1 + det.cov.2, 
                 data = data.list, 
                 inits = inits.list, 

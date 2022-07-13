@@ -18,8 +18,8 @@ waicOcc <- function(object, ...) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			     'tPGOcc', 'spTPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, spTPGOcc\n")
+			     'tPGOcc', 'stPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -37,7 +37,7 @@ waicOcc <- function(object, ...) {
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 
 			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			   'tPGOcc', 'spTPGOcc')) {
+			   'tPGOcc', 'stPGOcc')) {
     elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))

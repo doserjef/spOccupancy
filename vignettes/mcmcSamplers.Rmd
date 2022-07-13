@@ -1,5 +1,5 @@
 ---
-title: "MCMC samplers for models fit in `spOccupancy`"
+title: "MCMC samplers for models fit in spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 date: "2022"
 output: 

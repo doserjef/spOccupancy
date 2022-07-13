@@ -13,7 +13,7 @@ ppcOcc(object, fit.stat, group, ...)
 \arguments{
 \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
 \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, 
-\code{tPGOcc}, or \code{spTPGOcc}.}
+\code{tPGOcc}, or \code{stPGOcc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
@@ -49,7 +49,7 @@ column (replicate).}
   and columns corresponding to species. When \code{object} is of class
   \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   of the list being a vector of posterior samples for each data set. 
-  When \code{object} is of class \code{tPGOcc} or \code{spTPGOcc}, this is a
+  When \code{object} is of class \code{tPGOcc} or \code{stPGOcc}, this is a
   numeric matrix with rows corresponding to posterior samples and columns 
   corresponding to primary sampling periods.}
 
@@ -61,7 +61,7 @@ column (replicate).}
   and columns corresponding to species. When \code{object} is of class
   \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   of the list being a vector of posterior samples for each data set. 
-  When \code{object} is of class \code{tPGOcc} or \code{spTPGOcc}, this is a
+  When \code{object} is of class \code{tPGOcc} or \code{stPGOcc}, this is a
   numeric matrix with rows corresponding to posterior samples and columns 
   corresponding to primary sampling periods.}
 
@@ -74,7 +74,7 @@ column (replicate).}
   array with the additional dimension corresponding to species. When \code{object} is 
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 
-  is of class \code{tPGOcc} or \code{spTPGOcc}, this is a three-dimensional array 
+  is of class \code{tPGOcc} or \code{stPGOcc}, this is a three-dimensional array 
   with the additional dimension corresponding to primary sampling periods.}
 
   \item{fit.y.rep.group.quants}{a matrix consisting of posterior quantiles
@@ -86,7 +86,7 @@ column (replicate).}
   array with the additional dimension corresponding to species. When \code{object} is 
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 
-  is of class \code{tPGOcc} or \code{spTPGOcc}, this is a three-dimensional array 
+  is of class \code{tPGOcc} or \code{stPGOcc}, this is a three-dimensional array 
   with the additional dimension corresponding to primary sampling periods.}
 
   The return object will include additional objects used for 
