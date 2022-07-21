@@ -263,6 +263,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     n.obs <- sum(n.obs.long)
     z.long.indx.r <- list()
     for (i in 1:n.data) {
+      # TODO: check this 
       z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])
       z.long.indx.r[[i]] <- z.long.indx.r[[i]][!is.na(c(y[[i]]))]
     }

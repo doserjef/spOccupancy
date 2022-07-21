@@ -240,6 +240,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     n.obs.long <- sapply(X.p, nrow)
     n.obs <- sum(n.obs.long)
+    # TODO: check this
     z.long.indx.r <- list()
     for (i in 1:n.data) {
       z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])

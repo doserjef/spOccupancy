@@ -265,7 +265,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   # Get indices to map z to y -------------------------------------------
   if (!binom) {
-    z.long.indx <- rep(1:J, K.max)
+    z.long.indx <- rep(1:J, dim(y.big)[2])
     z.long.indx <- z.long.indx[!is.na(c(y.big))]
     # Subtract 1 for indices in C
     z.long.indx <- z.long.indx - 1

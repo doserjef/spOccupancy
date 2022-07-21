@@ -263,7 +263,7 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # This corresponds to the specific value in the n.years.max * J length 
   # vector of latent occurrence values, and corresponds with the z.site.indx
   # and z.year.indx
-  z.long.indx <- rep(1:(J * n.years.max), K.max)
+  z.long.indx <- rep(1:(J * n.years.max), dim(y.big)[3])
   # Order of c(y.big): All sites year 1 v 1, All sites year 2 v 1, ....
   z.long.indx <- z.long.indx[!is.na(c(y.big))]
   # Subtract 1 for indices in C
