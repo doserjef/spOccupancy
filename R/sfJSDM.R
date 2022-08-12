@@ -92,8 +92,7 @@ sfJSDM <- function(formula, data, inits, priors,
   data$covs <- as.data.frame(data$covs)
 
   # Checking missing values ---------------------------------------------
-  y.na.test <- apply(y, c(1, 2), function(a) sum(!is.na(a)))
-  if (sum(y.na.test == 0) > 0) {
+  if (sum(is.na(y) != 0)) {
     stop("error: some sites in y have missing data. Remove these from the data, and subsequently predict at those sites if interested.")
   }
   # occ.covs ------------------------
@@ -176,12 +175,6 @@ sfJSDM <- function(formula, data, inits, priors,
   if (p.occ.re > 1) {
     for (j in 2:p.occ.re) {
       X.re[, j] <- X.re[, j] + max(X.re[, j - 1]) + 1
-    }
-  }
-  lambda.psi <- matrix(0, J, n.occ.re)
-  if (p.occ.re > 0) {
-    for (i in 1:n.occ.re) {
-      lambda.psi[which(X.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
     }
   }
   # Priors --------------------------------------------------------------
@@ -269,7 +262,6 @@ sfJSDM <- function(formula, data, inits, priors,
     tau.sq.beta.b <- rep(0.1, p.occ)
   }
   # phi -----------------------------
-  coords.D <- iDist(coords)
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -295,6 +287,7 @@ sfJSDM <- function(formula, data, inits, priors,
     if (verbose) {
     message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
     }
+    coords.D <- iDist(coords)
     phi.a <- rep(3 / max(coords.D), q)
     phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
   }
@@ -838,7 +831,6 @@ sfJSDM <- function(formula, data, inits, priors,
     out$z.samples <- out$z.samples[, order(ord), ]
     out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
     out$X.re <- X.re[order(ord), , drop = FALSE]
-    out$lambda.psi <- lambda.psi[order(ord), , drop = FALSE]
     # Calculate effective sample sizes
     out$ESS <- list()
     out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
@@ -900,9 +892,6 @@ sfJSDM <- function(formula, data, inits, priors,
         coords.0 <- coords[curr.set, , drop = FALSE]
         J.fit <- nrow(X.fit)
         J.0 <- nrow(X.0)
-	# Random occurrence effects
-	lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
-	lambda.psi.0 <- lambda.psi[curr.set, , drop = FALSE]
 	X.re.fit <- X.re[-curr.set, , drop = FALSE]
 	X.re.0 <- X.re[curr.set, , drop = FALSE]
 	n.occ.re.fit <- length(unique(c(X.re.fit)))
