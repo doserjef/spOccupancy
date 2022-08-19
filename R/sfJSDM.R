@@ -6,7 +6,8 @@ sfJSDM <- function(formula, data, inits, priors,
 		   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 		   n.burn = round(.10 * n.batch * batch.length), 
 		   n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		   k.fold.seed = 100, ...){
+		   k.fold.seed = 100, monitors, 
+		   keep.only.mean.95, ...){
 
   ptm <- proc.time()
 
@@ -646,6 +647,60 @@ sfJSDM <- function(formula, data, inits, priors,
     u.indx.lu <- indx$u.indx.lu
     ui.indx <- indx$ui.indx
     u.indx.run.time <- indx$run.time
+
+    # Determine parameters that are monitored -----------------------------
+    # The monitored parameters will be directly manipulated on the C side 
+    n.track <- 11
+    beta.comm.monitor <- 1
+    tau.sq.beta.monitor <- 2
+    beta.monitor <- 3
+    z.monitor <- 4
+    psi.monitor <- 5
+    lambda.monitor <- 6
+    theta.monitor <- 7
+    w.monitor <- 8
+    like.monitor <- 9
+    beta.star.monitor <- 10 
+    sigma.sq.psi.monitor <- 11
+    if (missing(monitors)) {
+      monitors <- rep(1, n.track) 
+    } else {
+      monitors.input <- monitors
+      monitors <- rep(0, n.track)
+      if ('beta.comm' %in% monitors.input) {
+        monitors[beta.comm.monitor] <- 1
+      }
+      if ('tau.sq.beta' %in% monitors.input) {
+        monitors[tau.sq.beta.monitor] <- 1
+      }
+      if ('beta' %in% monitors.input) {
+        monitors[beta.monitor] <- 1
+      }
+      if ('z' %in% monitors.input) {
+        monitors[z.monitor] <- 1
+      }
+      if ('psi' %in% monitors.input) {
+        monitors[psi.monitor] <- 1
+      }
+      if ('lambda' %in% monitors.input) {
+        monitors[lambda.monitor] <- 1
+      }
+      if ('theta' %in% monitors.input) {
+        monitors[theta.monitor] <- 1
+      }
+      if ('w' %in% monitors.input) {
+        monitors[w.monitor] <- 1
+      }
+      if ('like' %in% monitors.input) {
+        monitors[like.monitor] <- 1
+      }
+      if ('beta.star' %in% monitors.input) {
+        monitors[beta.star.monitor] <- 1
+      }
+      if ('sigma.sq.psi' %in% monitors.input) {
+        monitors[sigma.sq.psi.monitor] <- 1
+      }
+    }
     
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
@@ -700,6 +755,8 @@ sfJSDM <- function(formula, data, inits, priors,
     storage.mode(sigma.sq.psi.b) <- "double"
     storage.mode(beta.star.inits) <- "double"
     storage.mode(beta.star.indx) <- "integer"
+    # Monitors
+    storage.mode(monitors) <- "integer"
 
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
@@ -738,7 +795,7 @@ sfJSDM <- function(formula, data, inits, priors,
         	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 			    tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info)
+        	            samples.info, chain.info, monitors)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -746,26 +803,38 @@ sfJSDM <- function(formula, data, inits, priors,
     out$rhat <- list()
     if (n.chains > 1) {
       # as.vector removes the "Upper CI" when there is only 1 variable. 
-      out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$beta.comm.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
-      out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      if (monitors[beta.comm.monitor]) {
+        out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$beta.comm.samples)))), 
+        			     autoburnin = FALSE)$psrf[, 2])
+      }
+      if (monitors[tau.sq.beta.monitor]) {
+        out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$tau.sq.beta.samples)))), 
       			     autoburnin = FALSE)$psrf[, 2])
-      out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      }
+      if (monitors[beta.monitor]) {
+        out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					         mcmc(t(a$beta.samples)))), 
       			     autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      }
+      if (monitors[theta.monitor]) {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2]
-      lambda.mat <- matrix(lambda.inits, N, q)
-      out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      }
+      if (monitors[lambda.monitor]) {
+        lambda.mat <- matrix(lambda.inits, N, q)
+        out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
 						       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
 						       autoburnin = FALSE)$psrf[, 2])
+      }
       if (p.occ.re > 0) {
-        out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        if (monitors[sigma.sq.psi.monitor]) {
+          out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
 						      mcmc(t(a$sigma.sq.psi.samples)))), 
 				     autoburnin = FALSE)$psrf[, 2])
+	}
       }
     } else {
       out$rhat$beta.comm <- rep(NA, p.occ)
@@ -778,68 +847,102 @@ sfJSDM <- function(formula, data, inits, priors,
     }
 
     # Put everything into MCMC objects
-    out$beta.comm.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.comm.samples))))
-    colnames(out$beta.comm.samples) <- x.names
-    out$tau.sq.beta.samples <- mcmc(do.call(rbind, 
-      				lapply(out.tmp, function(a) t(a$tau.sq.beta.samples))))
-    colnames(out$tau.sq.beta.samples) <- x.names
+    if (monitors[beta.comm.monitor]) {
+      out$beta.comm.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.comm.samples))))
+      colnames(out$beta.comm.samples) <- x.names
+    }
+    if (monitors[tau.sq.beta.monitor]) {
+      out$tau.sq.beta.samples <- mcmc(do.call(rbind, 
+        				lapply(out.tmp, function(a) t(a$tau.sq.beta.samples))))
+      colnames(out$tau.sq.beta.samples) <- x.names
+    }
 
     if (is.null(sp.names)) {
       sp.names <- paste('sp', 1:N, sep = '')
     }
     coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
-    out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
-    colnames(out$beta.samples) <- coef.names
+    if (monitors[beta.monitor]) {
+      out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
+      colnames(out$beta.samples) <- coef.names
+    }
     if (p.occ.re > 0) {
-      out$sigma.sq.psi.samples <- mcmc(
-        do.call(rbind, lapply(out.tmp, function(a) t(a$sigma.sq.psi.samples))))
-      colnames(out$sigma.sq.psi.samples) <- x.re.names
-      out$beta.star.samples <- mcmc(
-        do.call(rbind, lapply(out.tmp, function(a) t(a$beta.star.samples))))
-      tmp.names <- unlist(re.level.names)
-      beta.star.names <- paste(rep(x.re.names, n.occ.re.long), tmp.names, sep = '-')
-      beta.star.names <- paste(beta.star.names, rep(sp.names, each = n.occ.re), sep = '-')
-      colnames(out$beta.star.samples) <- beta.star.names
+      if (monitors[sigma.sq.psi.monitor]) {
+        out$sigma.sq.psi.samples <- mcmc(
+          do.call(rbind, lapply(out.tmp, function(a) t(a$sigma.sq.psi.samples))))
+        colnames(out$sigma.sq.psi.samples) <- x.re.names
+      }
+      if (monitors[beta.star.monitor]) {
+        out$beta.star.samples <- mcmc(
+          do.call(rbind, lapply(out.tmp, function(a) t(a$beta.star.samples))))
+        tmp.names <- unlist(re.level.names)
+        beta.star.names <- paste(rep(x.re.names, n.occ.re.long), tmp.names, sep = '-')
+        beta.star.names <- paste(beta.star.names, rep(sp.names, each = n.occ.re), sep = '-')
+        colnames(out$beta.star.samples) <- beta.star.names
+      }
       out$re.level.names <- re.level.names
     }
     loadings.names <- paste(rep(sp.names, times = n.factors), rep(1:n.factors, each = N), sep = '-')
-    out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
-    colnames(out$lambda.samples) <- loadings.names
-    out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
+    if (monitors[lambda.monitor]) {
+      out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
+      colnames(out$lambda.samples) <- loadings.names
+    }
     if (cov.model != 'matern') {
       theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
     } else {
       theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
     } 
-    colnames(out$theta.samples) <- theta.names
+    if (monitors[theta.monitor]) {
+      out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
+      colnames(out$theta.samples) <- theta.names
+    }
 
     # Return things back in the original order. 
-    out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-      								dim = c(q, J, n.post.samples))))
-    out$w.samples <- out$w.samples[, order(ord), , drop = FALSE]
-    out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
-    out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
-      								dim = c(N, J, n.post.samples))))
-    out$psi.samples <- out$psi.samples[, order(ord), ]
-    out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
-    out$like.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$like.samples, 
-      								dim = c(N, J, n.post.samples))))
-    out$like.samples <- out$like.samples[, order(ord), ]
-    out$like.samples <- aperm(out$like.samples, c(3, 1, 2))
-    out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
-      								dim = c(N, J, n.post.samples))))
-    out$z.samples <- out$z.samples[, order(ord), ]
-    out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
+    if (monitors[w.monitor]) {
+      out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
+        								dim = c(q, J, n.post.samples))))
+      out$w.samples <- out$w.samples[, order(ord), , drop = FALSE]
+      out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
+    }
+    if (monitors[psi.monitor]) {
+      out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
+        								dim = c(N, J, n.post.samples))))
+      out$psi.samples <- out$psi.samples[, order(ord), ]
+      out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
+    }
+    if (monitors[like.monitor]) {
+      out$like.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$like.samples, 
+        								dim = c(N, J, n.post.samples))))
+      out$like.samples <- out$like.samples[, order(ord), ]
+      out$like.samples <- aperm(out$like.samples, c(3, 1, 2))
+    }
+    if (monitors[z.monitor]) {
+      out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
+        								dim = c(N, J, n.post.samples))))
+      out$z.samples <- out$z.samples[, order(ord), ]
+      out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
+    }
     out$X.re <- X.re[order(ord), , drop = FALSE]
     # Calculate effective sample sizes
     out$ESS <- list()
-    out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
-    out$ESS$tau.sq.beta <- effectiveSize(out$tau.sq.beta.samples)
-    out$ESS$beta <- effectiveSize(out$beta.samples)
-    out$ESS$theta <- effectiveSize(out$theta.samples)
-    out$ESS$lambda <- effectiveSize(out$lambda.samples)
+    if (monitors[beta.comm.monitor]) {
+      out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
+    }
+    if (monitors[tau.sq.beta.monitor]) {
+      out$ESS$tau.sq.beta <- effectiveSize(out$tau.sq.beta.samples)
+    }
+    if (monitors[beta.monitor]) {
+      out$ESS$beta <- effectiveSize(out$beta.samples)
+    }
+    if (monitors[theta.monitor]) {
+      out$ESS$theta <- effectiveSize(out$theta.samples)
+    }
+    if (monitors[lambda.monitor]) {
+      out$ESS$lambda <- effectiveSize(out$lambda.samples)
+    }
     if (p.occ.re > 0) {
-      out$ESS$sigma.sq.psi <- effectiveSize(out$sigma.sq.psi.samples)
+      if (monitors[sigma.sq.psi.monitor]) {
+        out$ESS$sigma.sq.psi <- effectiveSize(out$sigma.sq.psi.samples)
+      }
     }
     out$X <- X[order(ord), , drop = FALSE]
     out$y <- y.big[, order(ord), drop = FALSE]
@@ -857,6 +960,7 @@ sfJSDM <- function(formula, data, inits, priors,
     out$n.thin <- n.thin
     out$n.burn <- n.burn
     out$n.chains <- n.chains
+    out$monitors <- monitors
     if (p.occ.re > 0) {
       out$psiRE <- TRUE
     } else {

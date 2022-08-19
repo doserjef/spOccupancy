@@ -73,7 +73,7 @@ extern "C" {
 		  SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		  SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP samplesInfo_r, SEXP chainInfo_r){
+		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r){
    
     /**********************************************************************
      * Initial constants
@@ -142,6 +142,19 @@ extern "C" {
     int status = 0; 
     int thinIndx = 0; 
     int sPost = 0; 
+    int *monitors = INTEGER(monitors_r);
+    // Indices for monitoring
+    int betaCommMonitor = 0;
+    int tauSqBetaMonitor = 1;
+    int betaMonitor = 2;
+    int zMonitor = 3;
+    int psiMonitor = 4;
+    int lambdaMonitor = 5;
+    int thetaMonitor = 6;
+    int wMonitor = 7;
+    int likeMonitor = 8;
+    int betaStarMonitor = 9;
+    int sigmaSqPsiMonitor = 10;
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -259,33 +272,53 @@ extern "C" {
      * *******************************************************************/
     // Community level
     SEXP betaCommSamples_r; 
-    PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
-    SEXP tauSqBetaSamples_r; 
-    PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    if (monitors[betaCommMonitor]) {
+      PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    }
+    SEXP tauSqBetaSamples_r;
+    if (monitors[tauSqBetaMonitor]) {
+      PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    }
     // Species level
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    if (monitors[betaMonitor]) {
+      PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    }
     // Fitted values
     double *z = (double *) R_alloc(JN, sizeof(double)); zeros(z, JN);
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    if (monitors[zMonitor]) {
+      PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    }
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    if (monitors[psiMonitor]) {
+      PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    }
     // Spatial parameters
     SEXP lambdaSamples_r; 
-    PROTECT(lambdaSamples_r = allocMatrix(REALSXP, Nq, nPost)); nProtect++;
+    if (monitors[lambdaMonitor]) {
+      PROTECT(lambdaSamples_r = allocMatrix(REALSXP, Nq, nPost)); nProtect++;
+    }
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
+    if (monitors[wMonitor]) {
+      PROTECT(wSamples_r = allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
+    }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
-      PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
-      PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+      if (monitors[sigmaSqPsiMonitor]) {
+        PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      }
+      if (monitors[betaStarMonitor]) {
+        PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+      }
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
-    PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    if (monitors[likeMonitor]) {
+      PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    }
     
     /**********************************************************************
      * Additional Sampler Prep
@@ -361,7 +394,9 @@ extern "C" {
     } // ll
     SEXP thetaSamples_r; 
     // Note the - 1 so you don't save sigmaSq, which is fixed at 1. 
-    PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaqSave, nPost)); nProtect++; 
+    if (monitors[thetaMonitor]) {
+      PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaqSave, nPost)); nProtect++; 
+    }
     // Species-level spatial random effects
     double *wStar = (double *) R_alloc(JN, sizeof(double)); zeros(wStar, JN);
     // Multiply Lambda %*% w[j] to get wStar. 
@@ -408,10 +443,7 @@ extern "C" {
     double phiCand = 0.0, nuCand = 0.0; 
     double logDet; 
     // MCMC info if desired
-    SEXP acceptSamples_r; 
-    PROTECT(acceptSamples_r = allocMatrix(REALSXP, nThetaq, nBatch)); nProtect++; 
-    SEXP tuningSamples_r; 
-    PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaq, nBatch)); nProtect++; 
+    double *accept2 = (double *) R_alloc(nThetaq, sizeof(double)); zeros(accept2, nThetaq);
 
     GetRNGstate();
 
@@ -845,19 +877,41 @@ extern "C" {
         if (g >= nBurn) {
           thinIndx++;
           if (thinIndx == nThin) {
-            F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[sPost*pOcc], &inc);
-            F77_NAME(dcopy)(&pOcc, tauSqBeta, &inc, &REAL(tauSqBetaSamples_r)[sPost*pOcc], &inc);
-            F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[sPost*pOccN], &inc); 
-            F77_NAME(dcopy)(&Nq, lambda, &inc, &REAL(lambdaSamples_r)[sPost*Nq], &inc); 
-            F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[sPost*JN], &inc); 
-            F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[sPost*JN], &inc); 
-            F77_NAME(dcopy)(&Jq, w, &inc, &REAL(wSamples_r)[sPost*Jq], &inc); 
-            F77_NAME(dcopy)(&nThetaqSave, &theta[phiIndx * q], &inc, &REAL(thetaSamples_r)[sPost*nThetaqSave], &inc); 
-	    if (pOccRE > 0) {
-              F77_NAME(dcopy)(&pOccRE, sigmaSqPsi, &inc, &REAL(sigmaSqPsiSamples_r)[sPost*pOccRE], &inc);
-              F77_NAME(dcopy)(&nOccREN, betaStar, &inc, &REAL(betaStarSamples_r)[sPost*nOccREN], &inc);
+            if (monitors[betaCommMonitor]) {
+              F77_NAME(dcopy)(&pOcc, betaComm, &inc, &REAL(betaCommSamples_r)[sPost*pOcc], &inc);
 	    }
-            F77_NAME(dcopy)(&JN, yWAIC, &inc, &REAL(likeSamples_r)[sPost*JN], &inc); 
+	    if (monitors[tauSqBetaMonitor]) {
+              F77_NAME(dcopy)(&pOcc, tauSqBeta, &inc, &REAL(tauSqBetaSamples_r)[sPost*pOcc], &inc);
+	    }
+	    if (monitors[betaMonitor]) {
+              F77_NAME(dcopy)(&pOccN, beta, &inc, &REAL(betaSamples_r)[sPost*pOccN], &inc); 
+	    }
+	    if (monitors[lambdaMonitor]) {
+              F77_NAME(dcopy)(&Nq, lambda, &inc, &REAL(lambdaSamples_r)[sPost*Nq], &inc); 
+	    }
+	    if (monitors[psiMonitor]) {
+              F77_NAME(dcopy)(&JN, psi, &inc, &REAL(psiSamples_r)[sPost*JN], &inc); 
+	    }
+	    if (monitors[zMonitor]) {
+              F77_NAME(dcopy)(&JN, z, &inc, &REAL(zSamples_r)[sPost*JN], &inc); 
+	    }
+	    if (monitors[wMonitor]) {
+              F77_NAME(dcopy)(&Jq, w, &inc, &REAL(wSamples_r)[sPost*Jq], &inc); 
+	    }
+	    if (monitors[thetaMonitor]) {
+              F77_NAME(dcopy)(&nThetaqSave, &theta[phiIndx * q], &inc, &REAL(thetaSamples_r)[sPost*nThetaqSave], &inc); 
+	    }
+	    if (pOccRE > 0) {
+              if (monitors[sigmaSqPsiMonitor]) {
+                F77_NAME(dcopy)(&pOccRE, sigmaSqPsi, &inc, &REAL(sigmaSqPsiSamples_r)[sPost*pOccRE], &inc);
+	      }
+	      if (monitors[betaStarMonitor]) {
+                F77_NAME(dcopy)(&nOccREN, betaStar, &inc, &REAL(betaStarSamples_r)[sPost*nOccREN], &inc);
+	      }
+	    }
+	    if (monitors[likeMonitor]) {
+              F77_NAME(dcopy)(&JN, yWAIC, &inc, &REAL(likeSamples_r)[sPost*JN], &inc); 
+	    }
             sPost++; 
             thinIndx = 0; 
           }
@@ -870,8 +924,8 @@ extern "C" {
        *******************************************************************/
       for (ll = 0; ll < q; ll++) {
         for (k = 0; k < nTheta; k++) {
-          REAL(acceptSamples_r)[s * nThetaq + k * q + ll] = accept[k * q + ll]/batchLength; 
-          REAL(tuningSamples_r)[s * nThetaq + k * q + ll] = tuning[k * q + ll]; 
+        accept2[k] = accept[k]/batchLength; 
+	  accept2[k * q + ll] = accept[k * q + ll] / batchLength;
           if (accept[k * q + ll] / batchLength > acceptRate) {
             tuning[k * q + ll] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
           } else{
@@ -889,9 +943,9 @@ extern "C" {
           Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
           Rprintf("\tLatent Factor\tParameter\tAcceptance\tTuning\n");	  
           for (ll = 0; ll < q; ll++) {
-            Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + phiIndx * q + ll], exp(tuning[phiIndx * q + ll]));
+            Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*accept2[phiIndx * q + ll], exp(tuning[phiIndx * q + ll]));
 	    if (corName == "matern") {
-            Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaq + nuIndx * q + ll], exp(tuning[nuIndx * q + ll]));
+            Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*accept2[nuIndx * q + ll], exp(tuning[nuIndx * q + ll]));
 	    }
           } // ll
           Rprintf("-------------------------------------------------\n");
@@ -913,7 +967,7 @@ extern "C" {
 
     // make return object (which is a list)
     SEXP result_r, resultName_r;
-    int nResultListObjs = 13;
+    int nResultListObjs = 9;
     if (pOccRE > 0) {
       nResultListObjs += 2;
     }
@@ -922,37 +976,77 @@ extern "C" {
     PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // Setting the components of the output list.
-    SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
-    SET_VECTOR_ELT(result_r, 1, tauSqBetaSamples_r);
-    SET_VECTOR_ELT(result_r, 2, betaSamples_r);
-    SET_VECTOR_ELT(result_r, 3, zSamples_r);
-    SET_VECTOR_ELT(result_r, 4, psiSamples_r);
-    SET_VECTOR_ELT(result_r, 5, lambdaSamples_r);
-    SET_VECTOR_ELT(result_r, 6, wSamples_r); 
-    SET_VECTOR_ELT(result_r, 7, thetaSamples_r); 
-    SET_VECTOR_ELT(result_r, 8, tuningSamples_r); 
-    SET_VECTOR_ELT(result_r, 9, acceptSamples_r); 
-    SET_VECTOR_ELT(result_r, 10, likeSamples_r); 
+    if (monitors[betaCommMonitor]) {
+      SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
+    }
+    if (monitors[tauSqBetaMonitor]) {
+      SET_VECTOR_ELT(result_r, 1, tauSqBetaSamples_r);
+    }
+    if (monitors[betaMonitor]) {
+      SET_VECTOR_ELT(result_r, 2, betaSamples_r);
+    }
+    if (monitors[zMonitor]) {
+      SET_VECTOR_ELT(result_r, 3, zSamples_r);
+    }
+    if (monitors[psiMonitor]) {
+      SET_VECTOR_ELT(result_r, 4, psiSamples_r);
+    }
+    if (monitors[lambdaMonitor]) {
+      SET_VECTOR_ELT(result_r, 5, lambdaSamples_r);
+    }
+    if (monitors[wMonitor]) {
+      SET_VECTOR_ELT(result_r, 6, wSamples_r); 
+    }
+    if (monitors[thetaMonitor]) {
+      SET_VECTOR_ELT(result_r, 7, thetaSamples_r); 
+    }
+    if (monitors[likeMonitor]) {
+      SET_VECTOR_ELT(result_r, 8, likeSamples_r); 
+    }
     if (pOccRE > 0) {
-      SET_VECTOR_ELT(result_r, 11, sigmaSqPsiSamples_r);
-      SET_VECTOR_ELT(result_r, 12, betaStarSamples_r);
+      if (monitors[sigmaSqPsiMonitor]) {
+        SET_VECTOR_ELT(result_r, 9, sigmaSqPsiSamples_r);
+      }
+      if (monitors[betaStarMonitor]) {
+        SET_VECTOR_ELT(result_r, 10, betaStarSamples_r);
+      }
     }
 
     // mkChar turns a C string into a CHARSXP
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("tau.sq.beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, mkChar("z.samples")); 
-    SET_VECTOR_ELT(resultName_r, 4, mkChar("psi.samples")); 
-    SET_VECTOR_ELT(resultName_r, 5, mkChar("lambda.samples")); 
-    SET_VECTOR_ELT(resultName_r, 6, mkChar("w.samples")); 
-    SET_VECTOR_ELT(resultName_r, 7, mkChar("theta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 8, mkChar("tune")); 
-    SET_VECTOR_ELT(resultName_r, 9, mkChar("accept")); 
-    SET_VECTOR_ELT(resultName_r, 10, mkChar("like.samples")); 
+    if (monitors[betaCommMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
+    }
+    if (monitors[tauSqBetaMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 1, mkChar("tau.sq.beta.samples")); 
+    }
+    if (monitors[betaMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 2, mkChar("beta.samples")); 
+    }
+    if (monitors[zMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 3, mkChar("z.samples")); 
+    }
+    if (monitors[psiMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 4, mkChar("psi.samples")); 
+    }
+    if (monitors[lambdaMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 5, mkChar("lambda.samples")); 
+    }
+    if (monitors[wMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 6, mkChar("w.samples")); 
+    }
+    if (monitors[thetaMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 7, mkChar("theta.samples")); 
+    }
+    if (monitors[likeMonitor]) {
+      SET_VECTOR_ELT(resultName_r, 8, mkChar("like.samples")); 
+    }
     if (pOccRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 11, mkChar("sigma.sq.psi.samples")); 
-      SET_VECTOR_ELT(resultName_r, 12, mkChar("beta.star.samples")); 
+      if (monitors[sigmaSqPsiMonitor]) {
+        SET_VECTOR_ELT(resultName_r, 9, mkChar("sigma.sq.psi.samples")); 
+      }
+      if (monitors[betaStarMonitor]) {
+        SET_VECTOR_ELT(resultName_r, 10, mkChar("beta.star.samples")); 
+      }
     }
    
     // Set the names of the output list.  

@@ -12,7 +12,8 @@ sfJSDM(formula, data, inits, priors, tuning,
        batch.length, accept.rate = 0.43, n.omp.threads = 1, 
        verbose = TRUE, n.report = 100, 
        n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
+       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, 
+       monitors, keep.only.mean.95, ...)
 }
 
 \arguments{
@@ -178,6 +179,21 @@ sfJSDM(formula, data, inits, priors, tuning,
   
   \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
     for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
+
+  \item{monitors}{a character vector used to indicate if only a subset of the model
+    model parameters are desired to be monitored. If posterior samples of all parameters
+    are desired, then don't specify the argument (this is the default). When working
+    with a large number of species and/or sites, the full model object can be quite
+    large, and so this argument can be used to only return samples of specific 
+    parameters to help reduce the size of this resulting object. Valid tags include
+    \code{beta.comm}, \code{tau.sq.beta}, \code{beta}, \code{z}, \code{psi}, \code{lambda}, 
+    \code{theta}, \code{w}, \code{like} (used for WAIC calculation), 
+    \code{beta.star}, \code{sigma.sq.psi}. Note that if all parameters are not returned, 
+    subsequent functions that require the model object may not work. We only recommend
+    specifying this option when working with large data sets (e.g., > 100 species and
+    > 10,000 sites).} 
+
+  \item{keep.only.mean.95}{not currently supported.}
   
   \item{...}{currently no additional arguments}
 }
