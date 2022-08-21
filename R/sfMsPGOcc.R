@@ -858,9 +858,9 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   } else {
     lambda.inits <- matrix(0, N, q)
     diag(lambda.inits) <- 1
-    lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+    lambda.inits[lower.tri(lambda.inits)] <- 0
     if (verbose) {
-      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
+      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0\n")
     }
     # lambda.inits are organized by factor, then by species. This is necessary for working
     # with dgemv.  

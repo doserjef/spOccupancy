@@ -155,6 +155,9 @@ extern "C" {
     int likeMonitor = 8;
     int betaStarMonitor = 9;
     int sigmaSqPsiMonitor = 10;
+    
+
+
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -335,8 +338,8 @@ extern "C" {
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info FCONE); 
     if(info != 0){error("c++ error: dpotri SigmaBetaCommInv failed\n");}
     double *SigmaBetaCommInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
-    // dgemv computes linear combinations of different variables. 
-    F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, SigmaBetaCommInvMuBeta, &inc FCONE); 	  
+    F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, 
+        	    SigmaBetaCommInvMuBeta, &inc FCONE);
     // Put community level occurrence variances in a pOcc x pOcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
@@ -353,7 +356,6 @@ extern "C" {
     // Site-level sums of the occurrence random effects
     double *betaStarSites = (double *) R_alloc(JN, sizeof(double)); 
     zeros(betaStarSites, JN); 
-    // Initial sums (initiate with the first species)
     for (i = 0; i < N; i++) {
       for (j = 0; j < J; j++) {
         for (l = 0; l < pOccRE; l++) {
@@ -393,7 +395,6 @@ extern "C" {
       } 
     } // ll
     SEXP thetaSamples_r; 
-    // Note the - 1 so you don't save sigmaSq, which is fixed at 1. 
     if (monitors[thetaMonitor]) {
       PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaqSave, nPost)); nProtect++; 
     }
@@ -924,7 +925,6 @@ extern "C" {
        *******************************************************************/
       for (ll = 0; ll < q; ll++) {
         for (k = 0; k < nTheta; k++) {
-        accept2[k] = accept[k]/batchLength; 
 	  accept2[k * q + ll] = accept[k * q + ll] / batchLength;
           if (accept[k * q + ll] / batchLength > acceptRate) {
             tuning[k * q + ll] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));

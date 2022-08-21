@@ -13,7 +13,7 @@ sfJSDM(formula, data, inits, priors, tuning,
        verbose = TRUE, n.report = 100, 
        n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
        n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, 
-       monitors, keep.only.mean.95, ...)
+       k.fold.only = FALSE, monitors, keep.only.mean.95, ...)
 }
 
 \arguments{
@@ -180,6 +180,10 @@ sfJSDM(formula, data, inits, priors, tuning,
   \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
     for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
 
+  \item{k.fold.only}{a logical value indicating whether to only perform 
+    cross-validation (\code{TRUE}) or perform cross-validation after fitting 
+    the full model (\code{FALSE}). Default value is \code{FALSE}.} 
+
   \item{monitors}{a character vector used to indicate if only a subset of the model
     model parameters are desired to be monitored. If posterior samples of all parameters
     are desired, then don't specify the argument (this is the default). When working
@@ -299,27 +303,22 @@ sfJSDM(formula, data, inits, priors, tuning,
 }
 
 \examples{
-set.seed(408)
-J.x <- 10
-J.y <- 10
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
-n.rep <- rep(1, J) 
-N <- 10
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
 # Community-level covariate effects
 # Occurrence
-beta.mean <- c(0.2, 1.3, 0.5)
+beta.mean <- c(0.2)
 p.occ <- length(beta.mean)
-tau.sq.beta <- c(0.6, .5, 1.6)
+tau.sq.beta <- c(0.6)
 # Detection
-# Fix this to be constant and really close to 1. 
-alpha.mean <- c(9)
-tau.sq.alpha <- c(0.05)
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
 p.det <- length(alpha.mean)
 # Random effects
 psi.RE <- list()
-# Include a single random effect
-psi.RE <- list(levels = c(50), 
-               sigma.sq.psi = c(1.5))
 p.RE <- list()
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
@@ -331,53 +330,88 @@ for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
 alpha.true <- alpha
-# Factor model
-factor.model <- TRUE
-n.factors <- 4
-sigma.sq <- rep(1, n.factors)
-phi <- rep(3/.4, n.factors)
-sp <- TRUE
-cov.model <- "exponential"
+n.factors <- 3
+phi <- rep(3 / .7, n.factors)
+sigma.sq <- rep(2, n.factors)
+nu <- rep(2, n.factors)
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-                psi.RE = psi.RE, p.RE = p.RE, sp = sp, sigma.sq = sigma.sq, 
-                phi = phi, cov.model = cov.model, factor.model = TRUE, n.factors = n.factors)
+	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq,
+		phi = phi, nu = nu, cov.model = 'matern', factor.model = TRUE,
+                n.factors = n.factors)
 
-X <- dat$X
-y <- dat$y
-coords <- dat$coords
-X.re <- dat$X.re
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
 
-occ.covs <- data.frame(X, X.re)
-occ.covs$X.re <- occ.covs$X.re
-colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.re.1')
-data.list <- list(y = y[, , 1], 
-                  covs = occ.covs, 
-                  coords = coords)
+y <- apply(y, c(1, 2), max, na.rm = TRUE)
+data.list <- list(y = y, coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-                   phi.unif = list(a = 3 / 1, b = 3 / .1))
-inits.list <- list(beta.comm = 0, 
-                   beta = 0, 
-                   tau.sq.beta = 1, 
-                   phi = 3 / .5) 
-tuning.list <- list(phi = 1)
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+		   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(beta.comm = 0,
+		   beta = 0,
+		   fix = TRUE,
+		   tau.sq.beta = 1)
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
 
-out <- sfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1), 
-              data = data.list, 
-              inits = inits.list, 
-              priors = prior.list, 
-              tuning = tuning.list, 
-              cov.model = 'spherical', 
-              NNGP = TRUE, 
+batch.length <- 25
+n.batch <- 40
+n.report <- 100
+formula <- ~ 1
+
+# For testing
+data <- data.list
+inits <- inits.list
+priors <- prior.list
+tuning <- tuning.list
+cov.model <- 'matern'
+NNGP <- TRUE
+n.neighbors <- 5
+search.type <- 'cb'
+n.factors <- n.factors
+accept.rate <- 0.43
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 10
+n.burn <- 400
+n.thin <- 2
+n.chains <- 2
+k.fold <- 2
+k.fold.threads <- 1
+k.fold.seed <- 100
+monitors <- rep(1, 11)
+
+
+
+out <- sfJSDM(formula = formula,
+              data = data.list,
+              inits = inits.list,
+              n.batch = n.batch,
+              batch.length = batch.length,
+              accept.rate = 0.43,
+              priors = prior.list,
+              cov.model = "matern",
+              tuning = tuning.list,
+	      n.factors = 3,
+              n.omp.threads = 1,
+              verbose = TRUE,
+              NNGP = TRUE,
               n.neighbors = 5,
-              n.factors = 4, 
-              n.batch = 10, 
-              batch.length = 25, 
-              n.report = 250, 
-              n.burn = 50,
-              n.thin = 2,
-              n.chains = 1) 
+              search.type = 'cb',
+              n.report = 10,
+              n.burn = 400,
+	      n.thin = 2,
+	      n.chains = 2)
 summary(out)
 }
