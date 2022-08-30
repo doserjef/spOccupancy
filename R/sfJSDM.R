@@ -47,6 +47,8 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: data must be a list")
   }
   names(data) <- tolower(names(data))
+  # TODO: maybe a better way to do this
+  data.orig <- data
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
   }
@@ -509,9 +511,9 @@ sfJSDM <- function(formula, data, inits, priors,
     }
   }
 
+  if (p.occ.re > 0) {
   # sigma.sq.psi ------------------
   # ORDER: a length p.occ.re vector ordered by the random effects in the formula.
-  if (p.occ.re > 0) {
     if ("sigma.sq.psi" %in% names(inits)) {
       sigma.sq.psi.inits <- inits[["sigma.sq.psi"]]
       if (length(sigma.sq.psi.inits) != p.occ.re & length(sigma.sq.psi.inits) != 1) {
@@ -533,12 +535,56 @@ sfJSDM <- function(formula, data, inits, priors,
       }
     }
     beta.star.indx <- rep(0:(p.occ.re - 1), n.occ.re.long)
-    beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-    beta.star.inits <- rep(beta.star.inits, N)
+  # beta.star -------------------------
+  # ORDER: an N x n.occ.re matrix of random effects values for different levels.
+  if ("beta.star" %in% names(inits)) {
+    beta.star.inits <- inits[["beta.star"]]
+    if (is.matrix(beta.star.inits)) {
+      if (ncol(beta.star.inits) != n.occ.re | nrow(beta.star.inits) != N) {
+        stop(paste("error: initial values for beta.star must be a matrix with dimensions ", 
+        	   N, "x", n.occ.re, " or a single numeric value", sep = ""))
+      }
+    }
+    if (!is.matrix(beta.star.inits) & length(beta.star.inits) != 1) {
+      stop(paste("error: initial values for beta.star must be a matrix with dimensions ", 
+      	   N, " x ", n.occ.re, " or a single numeric value", sep = ""))
+    }
+    if (length(beta.star.inits) == 1) {
+      beta.star.inits <- matrix(beta.star.inits, N, n.occ.re)
+    }
+    beta.star.inits <- t(beta.star.inits)
+  } else {
+      beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+      beta.star.inits <- rep(beta.star.inits, N)
+      if (verbose) {
+        message('beta.star is not specified in initial values.\nSetting initial values to random values from the random effects variance\n')
+      }
+  }
+  beta.star.inits <- c(beta.star.inits)
   } else {
     sigma.sq.psi.inits <- 0
     beta.star.indx <- 0
     beta.star.inits <- 0
+  }
+  # w -----------------------------
+  if ("w" %in% names(inits)) {
+    w.inits <- inits[["w"]]
+    if (!is.matrix(w.inits)) {
+      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      	   q, " x ", J, sep = ""))
+    }
+    if (nrow(w.inits) != q | ncol(w.inits) != J) {
+      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      	   q, " x ", J, sep = ""))
+    }
+    if (NNGP) {
+      w.inits <- w.inits[, ord]
+    }
+  } else {
+    w.inits <- matrix(0, q, J)
+    if (verbose) {
+      message("w is not specified in initial values.\nSetting initial value to 0\n")
+    }
   }
   # Should initial values be fixed --
   if ("fix" %in% names(inits)) {
@@ -757,9 +803,14 @@ sfJSDM <- function(formula, data, inits, priors,
     storage.mode(beta.star.indx) <- "integer"
     # Monitors
     storage.mode(monitors) <- "integer"
+    # Initial seed
+    if (! exists(".Random.seed")) runif(1)
+    init.seed <- .Random.seed
 
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
+    # Random seed information for each chain of the model. 
+    seeds.list <- list()
     out <- list()
     if (!k.fold.only) {
       for (i in 1:n.chains) {
@@ -790,7 +841,7 @@ sfJSDM <- function(formula, data, inits, priors,
         out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X, coords, X.re, consts, n.occ.re.long, 
           	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
           	            beta.inits, beta.comm.inits, tau.sq.beta.inits, phi.inits, 
-          	            lambda.inits, nu.inits, sigma.sq.psi.inits, beta.star.inits, 
+          	            lambda.inits, nu.inits, sigma.sq.psi.inits, beta.star.inits, w.inits,
           		    beta.star.indx, beta.level.indx, mu.beta.comm, Sigma.beta.comm, 
           	            tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b,
           	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
@@ -798,6 +849,7 @@ sfJSDM <- function(formula, data, inits, priors,
           	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
           	            samples.info, chain.info, monitors)
         chain.info[1] <- chain.info[1] + 1
+	seeds.list[[i]] <- .Random.seed
       }
       # Calculate R-Hat ---------------
       out <- list()
@@ -1009,6 +1061,25 @@ sfJSDM <- function(formula, data, inits, priors,
       out$n.burn <- n.burn
       out$n.chains <- n.chains
       out$monitors <- monitors
+      # Send out objects needed for updateMCMC 
+      update.list <- list()
+      tmp.val <- ifelse(cov.model == 'matern', q * 3, q * 2)
+      update.list$tuning <- matrix(NA, tmp.val, n.chains)
+      for (i in 1:n.chains) {
+        update.list$tuning[, i] <- exp(out.tmp[[i]]$tuning)
+      }
+      update.list$accept.rate <- accept.rate
+      update.list$n.batch <- n.batch
+      update.list$batch.length <- batch.length
+      update.list$n.omp.threads <- n.omp.threads
+      update.list$data <- data.orig
+      update.list$cov.model <- cov.model
+      update.list$priors <- priors
+      update.list$search.type <- search.type
+      update.list$formula <- formula
+      # Random seed to have for updating. 
+      update.list$final.seed <- seeds.list
+      out$update <- update.list
       if (p.occ.re > 0) {
         out$psiRE <- TRUE
       } else {
@@ -1026,6 +1097,7 @@ sfJSDM <- function(formula, data, inits, priors,
       	      " thread(s).", sep = ''))
       }
       # Currently implemented without parellization. 
+      # TODO: may need to look into this. 
       set.seed(k.fold.seed)
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    

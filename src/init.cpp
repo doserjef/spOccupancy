@@ -22,7 +22,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"sfMsPGOccNNGP", (DL_FUNC) &sfMsPGOccNNGP, 61},
     {"sfMsPGOccNNGPPredict", (DL_FUNC) &sfMsPGOccNNGPPredict, 20},
     {"lfJSDM", (DL_FUNC) &lfJSDM, 25},
-    {"sfJSDMNNGP", (DL_FUNC) &sfJSDMNNGP, 42},
+    {"sfJSDMNNGP", (DL_FUNC) &sfJSDMNNGP, 44},
     {"tPGOcc", (DL_FUNC) &tPGOcc, 46},
     {"stPGOccNNGP", (DL_FUNC) &stPGOccNNGP, 64},
     {"stPGOccNNGPPredict", (DL_FUNC) &stPGOccNNGPPredict, 19},

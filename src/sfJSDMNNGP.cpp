@@ -66,7 +66,7 @@ extern "C" {
 		  SEXP nnIndxLU_r, SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r, 
 		  SEXP betaStarting_r, SEXP betaCommStarting_r, SEXP tauSqBetaStarting_r, 
 		  SEXP phiStarting_r, SEXP lambdaStarting_r, SEXP nuStarting_r, 
-		  SEXP sigmaSqPsiStarting_r, SEXP betaStarStarting_r, 
+		  SEXP sigmaSqPsiStarting_r, SEXP betaStarStarting_r, SEXP wStarting_r,
 		  SEXP betaStarIndx_r, SEXP betaLevelIndx_r, SEXP muBetaComm_r, 
 	          SEXP SigmaBetaComm_r, SEXP tauSqBetaA_r, SEXP tauSqBetaB_r, SEXP phiA_r, 
 		  SEXP phiB_r, SEXP nuA_r, SEXP nuB_r, 
@@ -156,9 +156,6 @@ extern "C" {
     int betaStarMonitor = 9;
     int sigmaSqPsiMonitor = 10;
     
-
-
-
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
 #else
@@ -251,7 +248,8 @@ extern "C" {
     double *sigmaSqPsi = (double *) R_alloc(pOccRE, sizeof(double)); 
     F77_NAME(dcopy)(&pOccRE, REAL(sigmaSqPsiStarting_r), &inc, sigmaSqPsi, &inc); 
     // Spatial random effects
-    double *w = (double *) R_alloc(Jq, sizeof(double)); zeros(w, Jq);
+    double *w = (double *) R_alloc(Jq, sizeof(double));
+    F77_NAME(dcopy)(&Jq, REAL(wStarting_r), &inc, w, &inc); 
     // Latent spatial factors
     double *lambda = (double *) R_alloc(Nq, sizeof(double));
     F77_NAME(dcopy)(&Nq, REAL(lambdaStarting_r), &inc, lambda, &inc);
@@ -445,6 +443,8 @@ extern "C" {
     double logDet; 
     // MCMC info if desired
     double *accept2 = (double *) R_alloc(nThetaq, sizeof(double)); zeros(accept2, nThetaq);
+    SEXP tuningSamples_r; 
+    PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaq, inc)); nProtect++; 
 
     GetRNGstate();
 
@@ -932,6 +932,9 @@ extern "C" {
               tuning[k * q + ll] -= std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
             }
           accept[k * q + ll] = 0.0;
+          if (s == (nBatch - 1)) {
+          REAL(tuningSamples_r)[k * q + ll] = tuning[k * q + ll]; 
+	  }
         } // k
       } // i
 
@@ -961,13 +964,13 @@ extern "C" {
     if (verbose) {
       Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
     }
-  
+
     // This is necessary when generating random numbers in C.     
     PutRNGstate();
 
     // make return object (which is a list)
     SEXP result_r, resultName_r;
-    int nResultListObjs = 9;
+    int nResultListObjs = 10;
     if (pOccRE > 0) {
       nResultListObjs += 2;
     }
@@ -1003,12 +1006,13 @@ extern "C" {
     if (monitors[likeMonitor]) {
       SET_VECTOR_ELT(result_r, 8, likeSamples_r); 
     }
+    SET_VECTOR_ELT(result_r, 9, tuningSamples_r);
     if (pOccRE > 0) {
       if (monitors[sigmaSqPsiMonitor]) {
-        SET_VECTOR_ELT(result_r, 9, sigmaSqPsiSamples_r);
+        SET_VECTOR_ELT(result_r, 10, sigmaSqPsiSamples_r);
       }
       if (monitors[betaStarMonitor]) {
-        SET_VECTOR_ELT(result_r, 10, betaStarSamples_r);
+        SET_VECTOR_ELT(result_r, 11, betaStarSamples_r);
       }
     }
 
@@ -1040,12 +1044,13 @@ extern "C" {
     if (monitors[likeMonitor]) {
       SET_VECTOR_ELT(resultName_r, 8, mkChar("like.samples")); 
     }
+    SET_VECTOR_ELT(resultName_r, 9, mkChar("tuning"));
     if (pOccRE > 0) {
       if (monitors[sigmaSqPsiMonitor]) {
-        SET_VECTOR_ELT(resultName_r, 9, mkChar("sigma.sq.psi.samples")); 
+        SET_VECTOR_ELT(resultName_r, 10, mkChar("sigma.sq.psi.samples")); 
       }
       if (monitors[betaStarMonitor]) {
-        SET_VECTOR_ELT(resultName_r, 10, mkChar("beta.star.samples")); 
+        SET_VECTOR_ELT(resultName_r, 11, mkChar("beta.star.samples")); 
       }
     }
    

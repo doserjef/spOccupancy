@@ -248,14 +248,14 @@ extern "C" {
 		  SEXP nnIndxLU_r, SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r, 
 		  SEXP betaStarting_r, SEXP betaCommStarting_r, SEXP tauSqBetaStarting_r, 
 		  SEXP phiStarting_r, SEXP lambdaStarting_r, SEXP nuStarting_r, 
-		  SEXP sigmaSqPsiStarting_r, SEXP betaStarStarting_r, 
+		  SEXP sigmaSqPsiStarting_r, SEXP betaStarStarting_r, SEXP wStarting_r,
 		  SEXP betaStarIndx_r, SEXP betaLevelIndx_r, SEXP muBetaComm_r, 
 	          SEXP SigmaBetaComm_r, SEXP tauSqBetaA_r, SEXP tauSqBetaB_r, SEXP phiA_r, 
 		  SEXP phiB_r, SEXP nuA_r, SEXP nuB_r, 
 		  SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		  SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP samplesInfo_r, SEXP chainInfo_r);
+		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r);
 
   SEXP tPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, 
 	      SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 

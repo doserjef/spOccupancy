@@ -1,0 +1,442 @@
+updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin, 
+		       keep.orig = TRUE, verbose = TRUE, n.report = 100, ...) {
+
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
+                             'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
+                             'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
+			     'tPGOcc', 'stPGOcc', 'svcPGOcc', 'svcPGBinom', 'svcMsPGBinom', 
+			     'svcTPGOcc', 'svcTPGBinom', 'svcMsPGOcc', 'svcTMsPGOcc', 'svcFa'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcPGBinom, svcMsPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc, svcTMsPGOcc, svcFa\n")
+  }
+  if (missing(n.batch)) {
+    if (class(object) %in% c('spPGOcc', 'spMsPGOcc', 'spIntPGOcc', 
+			     'sfMsPGOcc', 'sfJSDM', 'tPGOcc', 'stPGOcc', 
+			     'svcPGOcc', 'svcPGBinom', 'svcMsPGBinom', 
+			     'svcTPGOcc', 'svcTPGBinom', 'svcMsPGOcc', 
+			     'svcTMsPGOcc', 'svcFa')) {
+      n.batch <- object$update$n.batch
+    }
+  }
+  if (missing(n.samples)) {
+    if (class(object) %in% c('PGOcc', 'msPGOcc', 'intPGOcc', 
+			     'lfMsPGOcc', 'lfJSDM')) {
+      n.samples <- object$n.samples
+    }
+  }
+  if (missing(n.thin)) {
+    n.thin <- object$n.thin
+  }
+
+  # Updates for each specific function ------------------------------------
+  n.chains <- object$n.chains
+  n.post.samples <- object$n.post * n.chains
+  n.post.one.chain <- object$n.post
+  out.tmp <- list()
+  seeds.new <- list()
+  run.time.new <- 0 
+  # sfJSDM ----------------------------------------------------------------
+  if (is(object, 'sfJSDM')) {
+    for (i in 1:n.chains) {
+      # Set the random seed based on the previous set of the model
+      assign(".Random.seed", object$update$final.seed[[i]], .GlobalEnv)
+      N <- nrow(object$y)
+      p.occ <- ncol(object$beta.comm.samples)
+      cov.model <- object$update$cov.model
+      q <- object$q
+      # Get initial values
+      curr.inits <- n.post.one.chain * i
+      inits <- list()
+      # beta.comm, tau.sq.beta, beta, phi, lambda, nu, sigma.sq.psi, w
+      inits$beta.comm <- object$beta.comm.samples[curr.inits, ]
+      inits$tau.sq.beta <- object$tau.sq.beta.samples[curr.inits, ]
+      inits$beta <- matrix(object$beta.samples[curr.inits, ], N, p.occ)
+      if (cov.model != 'matern') {
+        inits$phi <- object$theta.samples[curr.inits, ]
+      } else {
+        inits$phi <- object$theta.samples[curr.inits, 1:q]
+        inits$nu <- object$theta.samples[curr.inits, (q+1):(q*2)]
+      }
+      inits$lambda <- matrix(object$lambda.samples[curr.inits, ], N, q)
+      if (object$psiRE) {
+        inits$sigma.sq.psi <- object$sigma.sq.psi.samples[curr.inits, ]
+        inits$beta.star <- t(matrix(object$beta.star.samples[curr.inits, ], 
+          			  ncol = N))
+      }
+      inits$w <- object$w.samples[curr.inits, , ]
+      if (q == 1) {
+        inits$w <- t(as.matrix(inits$w))
+      }
+      # Get tuning values
+      tuning <- list()
+      sigma.sq.indx <- 1
+      phi.indx <- 2
+      nu.indx <- 3
+      tuning$phi <- object$update$tuning[((phi.indx - 1) * q + 1):(phi.indx * q), i]
+      if (cov.model == 'matern') {
+        tuning$nu <- object$update$tuning[((nu.indx - 1) * q + 1):(nu.indx * q), i]
+      }
+      out.tmp[[i]] <- sfJSDM(formula = object$update$formula,
+                             data = object$update$data,
+                             inits = inits,
+                             priors = object$update$priors,
+                             tuning = tuning,
+                             cov.model = object$update$cov.model,
+                             NNGP = ifelse(object$type == 'NNGP', TRUE, FALSE),
+                             n.neighbors = object$n.neighbors,
+                             search.type = object$update$search.type,
+                             n.factors = object$q,
+                             n.batch = n.batch,
+                             batch.length = object$update$batch.length,
+                             accept.rate = object$update$accept.rate,
+                             n.omp.threads = object$update$n.omp.threads,
+                             verbose = verbose,
+                             n.report = n.report,
+                             n.burn = n.burn,
+                             n.thin = n.thin,
+                             n.chains = 1) # TODO: will make output look weird.
+      run.time.new <- run.time.new + out.tmp[[i]]$run.time
+      seeds.new[[i]] <- out.tmp[[i]]$update$final.seed[[1]]
+    }
+    # Put everything together
+    beta.samples.new <- list()
+    beta.comm.samples.new <- list()
+    tau.sq.beta.samples.new <- list()
+    theta.samples.new <- list()
+    lambda.samples.new <- list()
+    sigma.sq.psi.samples.new <- list()
+    beta.star.samples.new <- list()
+    w.samples.new <- list()
+    psi.samples.new <- list()
+    z.samples.new <- list()
+    like.samples.new <- list()
+
+    rhat.new <- list()
+    ess.new <- list()
+    n.samples.one.chain <- object$n.post
+    for (i in 1:n.chains) {
+      if (keep.orig) {
+        beta.comm.samples.new[[i]] <- rbind(object$beta.comm.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.comm.samples)
+        beta.samples.new[[i]] <- rbind(object$beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.samples)
+        tau.sq.beta.samples.new[[i]] <- rbind(object$tau.sq.beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$tau.sq.beta.samples)
+        theta.samples.new[[i]] <- rbind(object$theta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$theta.samples)
+        lambda.samples.new[[i]] <- rbind(object$lambda.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$lambda.samples)
+        w.samples.new[[i]] <- abind(object$w.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$w.samples, along = 1)
+        if (object$psiRE) {
+          sigma.sq.psi.samples.new[[i]] <- rbind(object$sigma.sq.psi.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$sigma.sq.psi.samples)
+          beta.star.samples.new[[i]] <- rbind(object$beta.star.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.star.samples)
+        }
+        psi.samples.new[[i]] <- abind(object$psi.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$psi.samples, along = 1)
+        like.samples.new[[i]] <- abind(object$like.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$like.samples, along = 1)
+        z.samples.new[[i]] <- abind(object$z.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$z.samples, along = 1)
+      } else {
+        beta.comm.samples.new[[i]] <- out.tmp[[i]]$beta.comm.samples
+        beta.samples.new[[i]] <- out.tmp[[i]]$beta.samples
+        tau.sq.beta.samples.new[[i]] <- out.tmp[[i]]$tau.sq.beta.samples
+        theta.samples.new[[i]] <- out.tmp[[i]]$theta.samples
+        lambda.samples.new[[i]] <- out.tmp[[i]]$lambda.samples
+        w.samples.new[[i]] <- out.tmp[[i]]$w.samples
+	if (object$psiRE) {
+          sigma.sq.psi.samples.new[[i]] <- out.tmp[[i]]$sigma.sq.psi.samples
+          beta.star.samples.new[[i]] <- out.tmp[[i]]$beta.star.samples
+	}
+        psi.samples.new[[i]] <- out.tmp[[i]]$psi.samples
+        z.samples.new[[i]] <- out.tmp[[i]]$z.samples
+        like.samples.new[[i]] <- out.tmp[[i]]$like.samples
+      }
+    }
+    # Update Gelman-Rubin diagnostics. 
+    if (n.chains > 1) {
+      # as.vector removes the "Upper CI" when there is only 1 variable. 
+      rhat.new$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(beta.comm.samples.new, function(a) 
+        					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+      rhat.new$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(tau.sq.beta.samples.new, function(a) 
+      					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+      rhat.new$beta <- as.vector(gelman.diag(mcmc.list(lapply(beta.samples.new, function(a) 
+      					         mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+      rhat.new$theta <- gelman.diag(mcmc.list(lapply(theta.samples.new, function(a) 
+      					      mcmc(a))), autoburnin = FALSE)$psrf[, 2]
+      rhat.new$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(lambda.samples.new, function(a) 
+        					       mcmc(a[, c(lower.tri(inits$lambda))]))), 
+        					       autoburnin = FALSE)$psrf[, 2])
+      if (object$psiRE) {
+        rhat.new$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(sigma.sq.psi.samples.new, function(a) 
+        					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+      }
+    }
+
+
+    object$rhat <- rhat.new
+    object$beta.comm.samples <- mcmc(do.call(rbind, beta.comm.samples.new))
+    object$tau.sq.beta.samples <- mcmc(do.call(rbind, tau.sq.beta.samples.new))
+    object$beta.samples <- mcmc(do.call(rbind, beta.samples.new))
+    if (object$psiRE) {
+      object$sigma.sq.psi.samples <- mcmc(do.call(rbind, sigma.sq.psi.samples.new))
+      object$beta.star.samples <- mcmc(do.call(rbind, beta.star.samples.new))
+    }
+    object$lambda.samples <- mcmc(do.call(rbind, lambda.samples.new))
+    object$theta.samples <- mcmc(do.call(rbind, theta.samples.new))
+    object$w.samples <- do.call(abind, list('...' = w.samples.new, 
+          				  along = 1))
+    object$psi.samples <- do.call(abind, list('...' = psi.samples.new, 
+          				  along = 1))
+    object$z.samples <- do.call(abind, list('...' = z.samples.new, 
+          				  along = 1))
+    object$like.samples <- do.call(abind, list('...' = like.samples.new, 
+          				  along = 1))
+    object$ESS <- list()
+    # Calculate effective sample sizes
+    object$ESS$beta.comm <- effectiveSize(object$beta.comm.samples)
+    object$ESS$tau.sq.beta <- effectiveSize(object$tau.sq.beta.samples)
+    object$ESS$beta <- effectiveSize(object$beta.samples)
+    object$ESS$theta <- effectiveSize(object$theta.samples)
+    object$ESS$lambda <- effectiveSize(object$lambda.samples)
+    if (object$psiRE) {
+      object$ESS$sigma.sq.psi <- effectiveSize(object$sigma.sq.psi.samples)
+    }
+    object$n.burn <- ifelse(keep.orig, object$n.burn + n.burn, object$n.samples + n.burn)
+    object$n.samples <- object$n.samples + n.batch * object$update$batch.length
+    n.post.new <- length(seq(from = n.burn + 1, 
+                             to = n.batch * object$update$batch.length, 
+                             by = as.integer(n.thin)))
+    object$n.post <- ifelse(keep.orig, object$n.post + n.post.new, n.post.new)
+    # TODO: note the thinning rate may be different across models. Just ignoring
+    #       this for now, but may want to update for summary. Note these values
+    #       also might not be correct if keep.orig = FALSE, which is something
+    #       you should look into. 
+    object$run.time <- object$run.time + run.time.new 
+    tmp.val <- ifelse(cov.model == 'matern', q * 3, q * 2)
+    object$update$tuning <- matrix(NA, tmp.val, n.chains)
+    for (i in 1:n.chains) {
+      object$update$tuning[, i] <- out.tmp[[i]]$update$tuning
+    }
+    object$update$final.seed <- seeds.new
+    object$update$n.batch <- n.batch + object$update$n.batch
+  } # sfJSDM 
+
+  # svcFa (not in spOccupancy) --------------------------------------------
+  # if (is(object, 'svcFa')) {
+  #   if (object$two.stage) {
+  #     z.full <- object$update$data$z
+  #   }
+  #   for (i in 1:n.chains) {
+  #     # Set the random seed based on the previous set of the model
+  #     assign(".Random.seed", object$update$final.seed[[i]], .GlobalEnv)
+  #     N <- nrow(object$y)
+  #     p.occ <- ncol(object$beta.comm.samples)
+  #     cov.model <- object$update$cov.model
+  #     q <- object$q
+  #     p.svc <- length(object$svc.cols)
+  #     q.p.svc <- q * p.svc
+  #     Nq <- N * q
+  #     # Get initial values
+  #     curr.inits <- n.post.one.chain * i
+  #     inits <- list()
+  #     # beta.comm, tau.sq.beta, beta, phi, lambda, nu, sigma.sq.psi, w
+  #     inits$beta.comm <- object$beta.comm.samples[curr.inits, ]
+  #     inits$tau.sq.beta <- object$tau.sq.beta.samples[curr.inits, ]
+  #     inits$beta <- matrix(object$beta.samples[curr.inits, ], N, p.occ)
+  #     if (cov.model != 'matern') {
+  #       inits$phi <- object$theta.samples[curr.inits, ]
+  #     } else {
+  #       inits$phi <- object$theta.samples[curr.inits, 1:q.p.svc]
+  #       inits$nu <- object$theta.samples[curr.inits, (q.p.svc+1):(q.p.svc*2)]
+  #     }
+  #     inits$lambda <- list()
+  #     for (j in 1:p.svc) {
+  #       indx <- ((j - 1) * Nq + 1):(j * Nq) 
+  #       inits$lambda[[j]] <- matrix(object$lambda.samples[curr.inits, indx], 
+  #       			    N, q)
+  #     }
+  #     if (object$psiRE) {
+  #       inits$sigma.sq.psi <- object$sigma.sq.psi.samples[curr.inits, ]
+  #       inits$beta.star <- t(matrix(object$beta.star.samples[curr.inits, ], 
+  #         			  ncol = N))
+  #     }
+  #     # Order is samples, factor, site, svc
+  #     inits$w <- list()
+  #     for (j in 1:p.svc) {
+  #       inits$w[[j]] <- object$w.samples[curr.inits, , , j] 
+  #       if (q == 1) {
+  #         inits$w[[j]] <- t(as.matrix(inits$w[[j]]))
+  #       }
+  #     }
+  #     # Get tuning values
+  #     tuning <- list()
+  #     sigma.sq.indx <- 1
+  #     phi.indx <- 2
+  #     nu.indx <- 3
+  #     tuning$phi <- object$update$tuning[((phi.indx - 1) * q.p.svc + 1):(phi.indx * q.p.svc), 
+  #       				 i]
+  #     if (cov.model == 'matern') {
+  #       tuning$nu <- object$update$tuning[((nu.indx - 1) * q.p.svc + 1):(nu.indx * q.p.svc), i]
+  #     }
+  #     # TODO: include an error message to warn if using a different number of iterations
+  #     #       for a two stage model, which is not valid. 
+  #     if (object$two.stage) {
+  #       object$update$data$z <- aperm(z.full[((i - 1) * n.post.one.chain + 1):(i * n.n.post.one.chain), , , drop = FALSE], c(2, 3, 1))
+
+  #     }
+  #     out.tmp[[i]] <- svcFa(formula = object$update$formula,
+  #                           data = object$update$data,
+  #                           inits = inits,
+  #                           priors = object$update$priors,
+  #                           tuning = tuning,
+  #       		    svc.cols = object$svc.cols,
+  #                           cov.model = object$update$cov.model,
+  #                           NNGP = ifelse(object$type == 'NNGP', TRUE, FALSE),
+  #                           n.neighbors = object$n.neighbors,
+  #                           search.type = object$update$search.type,
+  #                           n.factors = object$q,
+  #       		    two.stage = object$two.stage,
+  #                           n.batch = n.batch,
+  #                           batch.length = object$update$batch.length,
+  #                           accept.rate = object$update$accept.rate,
+  #                           n.omp.threads = object$update$n.omp.threads,
+  #                           verbose = verbose,
+  #                           n.report = n.report,
+  #                           n.burn = n.burn,
+  #                           n.thin = n.thin,
+  #                           n.chains = 1) # TODO: will make output look weird.
+  #     run.time.new <- run.time.new + out.tmp[[i]]$run.time
+  #     seeds.new[[i]] <- out.tmp[[i]]$update$final.seed[[1]]
+  #   }
+  #   # Put everything together
+  #   beta.samples.new <- list()
+  #   beta.comm.samples.new <- list()
+  #   tau.sq.beta.samples.new <- list()
+  #   theta.samples.new <- list()
+  #   lambda.samples.new <- list()
+  #   sigma.sq.mu.samples.new <- list()
+  #   beta.star.samples.new <- list()
+  #   w.samples.new <- list()
+  #   mu.samples.new <- list()
+  #   y.rep.samples.new <- list()
+  #   like.samples.new <- list()
+
+  #   rhat.new <- list()
+  #   ess.new <- list()
+  #   n.samples.one.chain <- object$n.post
+  #   for (i in 1:n.chains) {
+  #     if (keep.orig) {
+  #       beta.comm.samples.new[[i]] <- rbind(object$beta.comm.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.comm.samples)
+  #       beta.samples.new[[i]] <- rbind(object$beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.samples)
+  #       tau.sq.beta.samples.new[[i]] <- rbind(object$tau.sq.beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$tau.sq.beta.samples)
+  #       theta.samples.new[[i]] <- rbind(object$theta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$theta.samples)
+  #       lambda.samples.new[[i]] <- rbind(object$lambda.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$lambda.samples)
+  #       w.samples.new[[i]] <- abind(object$w.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , , drop = FALSE], out.tmp[[i]]$w.samples, along = 1)
+  #       if (object$psiRE) {
+  #         sigma.sq.mu.samples.new[[i]] <- rbind(object$sigma.sq.mu.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$sigma.sq.mu.samples)
+  #         beta.star.samples.new[[i]] <- rbind(object$beta.star.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.star.samples)
+  #       }
+  #       mu.samples.new[[i]] <- abind(object$mu.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$mu.samples, along = 1)
+  #       like.samples.new[[i]] <- abind(object$like.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$like.samples, along = 1)
+  #       y.rep.samples.new[[i]] <- abind(object$y.rep.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$y.rep.samples, along = 1)
+  #     } else {
+  #       beta.comm.samples.new[[i]] <- out.tmp[[i]]$beta.comm.samples
+  #       beta.samples.new[[i]] <- out.tmp[[i]]$beta.samples
+  #       tau.sq.beta.samples.new[[i]] <- out.tmp[[i]]$tau.sq.beta.samples
+  #       theta.samples.new[[i]] <- out.tmp[[i]]$theta.samples
+  #       lambda.samples.new[[i]] <- out.tmp[[i]]$lambda.samples
+  #       w.samples.new[[i]] <- out.tmp[[i]]$w.samples
+  #       if (object$psiRE) {
+  #         sigma.sq.mu.samples.new[[i]] <- out.tmp[[i]]$sigma.sq.mu.samples
+  #         beta.star.samples.new[[i]] <- out.tmp[[i]]$beta.star.samples
+  #       }
+  #       mu.samples.new[[i]] <- out.tmp[[i]]$mu.samples
+  #       y.rep.samples.new[[i]] <- out.tmp[[i]]$y.rep.samples
+  #       like.samples.new[[i]] <- out.tmp[[i]]$like.samples
+  #     }
+  #   }
+  #   # Update Gelman-Rubin diagnostics. 
+  #   if (n.chains > 1) {
+  #     # as.vector removes the "Upper CI" when there is only 1 variable. 
+  #     rhat.new$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(beta.comm.samples.new, function(a) 
+  #       					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+  #     rhat.new$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(tau.sq.beta.samples.new, function(a) 
+  #     					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+  #     rhat.new$beta <- as.vector(gelman.diag(mcmc.list(lapply(beta.samples.new, function(a) 
+  #     					         mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+  #     rhat.new$theta <- gelman.diag(mcmc.list(lapply(theta.samples.new, function(a) 
+  #     					      mcmc(a))), autoburnin = FALSE)$psrf[, 2]
+  #       rhat.new$lambda.lower.tri <- list()
+  #       for (j in 1:p.svc) {
+  #         lambda.mat <- matrix(0, N, q)
+  #         indx <- (((j - 1) * N * q + 1):(j * N * q))[c(lower.tri(lambda.mat))]
+  #         rhat.new$lambda.lower.tri[[j]] <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+  #           					       mcmc(t(lambda.samples.new[indx, ])))), 
+  #           					       autoburnin = FALSE)$psrf[, 2])
+  #       }
+  #     rhat.new$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(lambda.samples.new, function(a) 
+  #       					       mcmc(a[, c(lower.tri(inits$lambda))]))), 
+  #       					       autoburnin = FALSE)$psrf[, 2])
+  #     if (object$psiRE) {
+  #       rhat.new$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(sigma.sq.psi.samples.new, function(a) 
+  #       					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
+  #     }
+  #   }
+
+
+  #   object$rhat <- rhat.new
+  #   object$beta.comm.samples <- mcmc(do.call(rbind, beta.comm.samples.new))
+  #   object$tau.sq.beta.samples <- mcmc(do.call(rbind, tau.sq.beta.samples.new))
+  #   object$beta.samples <- mcmc(do.call(rbind, beta.samples.new))
+  #   if (object$psiRE) {
+  #     object$sigma.sq.psi.samples <- mcmc(do.call(rbind, sigma.sq.psi.samples.new))
+  #     object$beta.star.samples <- mcmc(do.call(rbind, beta.star.samples.new))
+  #   }
+  #   object$lambda.samples <- mcmc(do.call(rbind, lambda.samples.new))
+  #   object$theta.samples <- mcmc(do.call(rbind, theta.samples.new))
+  #   object$w.samples <- do.call(abind, list('...' = w.samples.new, 
+  #         				  along = 1))
+  #   object$psi.samples <- do.call(abind, list('...' = psi.samples.new, 
+  #         				  along = 1))
+  #   object$z.samples <- do.call(abind, list('...' = z.samples.new, 
+  #         				  along = 1))
+  #   object$like.samples <- do.call(abind, list('...' = like.samples.new, 
+  #         				  along = 1))
+  #   object$ESS <- list()
+  #   # Calculate effective sample sizes
+  #   object$ESS$beta.comm <- effectiveSize(object$beta.comm.samples)
+  #   object$ESS$tau.sq.beta <- effectiveSize(object$tau.sq.beta.samples)
+  #   object$ESS$beta <- effectiveSize(object$beta.samples)
+  #   object$ESS$theta <- effectiveSize(object$theta.samples)
+  #   object$ESS$lambda <- effectiveSize(object$lambda.samples)
+  #   if (object$psiRE) {
+  #     object$ESS$sigma.sq.psi <- effectiveSize(object$sigma.sq.psi.samples)
+  #   }
+  #   object$n.burn <- ifelse(keep.orig, object$n.burn + n.burn, object$n.samples + n.burn)
+  #   object$n.samples <- object$n.samples + n.batch * object$update$batch.length
+  #   n.post.new <- length(seq(from = n.burn + 1, 
+  #                            to = n.batch * object$update$batch.length, 
+  #                            by = as.integer(n.thin)))
+  #   object$n.post <- ifelse(keep.orig, object$n.post + n.post.new, n.post.new)
+  #   # TODO: note the thinning rate may be different across models. Just ignoring
+  #   #       this for now, but may want to update for summary. Note these values
+  #   #       also might not be correct if keep.orig = FALSE, which is something
+  #   #       you should look into. 
+  #   object$run.time <- object$run.time + run.time.new 
+  #   tmp.val <- ifelse(cov.model == 'matern', q * 3, q * 2)
+  #   object$update$tuning <- matrix(NA, tmp.val, n.chains)
+  #   for (i in 1:n.chains) {
+  #     object$update$tuning[, i] <- out.tmp[[i]]$update$tuning
+  #   }
+  #   object$update$final.seed <- seeds.new
+  #   object$update$n.batch <- n.batch + object$update$n.batch
+  # } # sfJSDM 
+  return(object)
+}

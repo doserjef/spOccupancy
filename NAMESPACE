@@ -18,6 +18,7 @@ export(tPGOcc)
 export(stPGOcc)
 export(ppcOcc)
 export(waicOcc)
+export(updateMCMC)
 
 S3method("predict", "PGOcc")
 S3method("print", "PGOcc")
