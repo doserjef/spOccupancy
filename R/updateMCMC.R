@@ -177,10 +177,17 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
         rhat.new$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(sigma.sq.psi.samples.new, function(a) 
         					      mcmc(a))), autoburnin = FALSE)$psrf[, 2])
       }
+    } else {
+      rhat.new$beta.comm <- rep(NA, p.occ)
+      rhat.new$tau.sq.beta <- rep(NA, p.occ)
+      rhat.new$beta <- rep(NA, p.occ * N)
+      rhat.new$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q, q))
+      if (object$psiRE > 0) {
+        rhat.new$sigma.sq.psi <- rep(NA, ncol(object$sigma.sq.psi.samples))
+      }
     }
-
-
     object$rhat <- rhat.new
+
     object$beta.comm.samples <- mcmc(do.call(rbind, beta.comm.samples.new))
     object$tau.sq.beta.samples <- mcmc(do.call(rbind, tau.sq.beta.samples.new))
     object$beta.samples <- mcmc(do.call(rbind, beta.samples.new))
