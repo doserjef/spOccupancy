@@ -1,5 +1,6 @@
 simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(), 
-		   sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
+		   sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu, 
+                   x.positive = FALSE, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -78,6 +79,9 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
       }
     }
   }
+  if (length(svc.cols) > 1 & !sp) {
+    stop("error: if simulating data with spatially-varying coefficients, set sp = TRUE")
+  }
   # Spatial parameters ----------------
   if (sp) {
     if(missing(sigma.sq)) {
@@ -97,6 +101,18 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     if (cov.model == 'matern' & missing(nu)) {
       stop("error: nu must be specified when cov.model = 'matern'")
     }
+    p.svc <- length(svc.cols)
+    if (length(phi) != p.svc) {
+      stop("error: phi must have the same number of elements as svc.cols")
+    }
+    if (length(sigma.sq) != p.svc) {
+      stop("error: sigma.sq must have the same number of elements as svc.cols")
+    }
+    if (cov.model == 'matern') {
+      if (length(nu) != p.svc) {
+        stop("error: nu must have the same number of elements as svc.cols")
+      }
+    }
   }
 
   # Subroutines -----------------------------------------------------------
@@ -112,6 +128,11 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
 
+  # Matrix of spatial locations
+  s.x <- seq(0, 1, length.out = J.x)
+  s.y <- seq(0, 1, length.out = J.y)
+  coords <- as.matrix(expand.grid(s.x, s.y))
+
   # Form occupancy covariates (if any) ------------------------------------
   n.beta <- length(beta)
   X <- matrix(1, nrow = J, ncol = n.beta)
@@ -119,6 +140,12 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
     for (i in 2:n.beta) {
       X[, i] <- rnorm(J)
     } # i
+    if (x.positive) {
+      for (i in 2:n.beta) {
+        X[, i] <- runif(J, 0, 1)
+      }
+    } else {
+    }
   }
 
   # Form detection covariate (if any) -------------------------------------
@@ -132,24 +159,36 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
       } # j
     } # i
   }
-
+  
   # Simulate spatial random effect ----------------------------------------
   # Matrix of spatial locations
-  s.x <- seq(0, 1, length.out = J.x)
-  s.y <- seq(0, 1, length.out = J.y)
-  coords <- as.matrix(expand.grid(s.x, s.y))
   if (sp) {
+    w.mat <- matrix(NA, J, p.svc)
     if (cov.model == 'matern') {
-      theta <- c(phi, nu)
+      theta <- cbind(phi, nu)
     } else {
-      theta <- phi
+      theta <- as.matrix(phi)
     }
-    Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
-    # Random spatial process
-    w <- rmvn(1, rep(0, J), Sigma)
+    for (i in 1:p.svc) {
+      Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      # Random spatial process
+      w.mat[, i] <- rmvn(1, rep(0, J), Sigma)
+    }
+    X.w <- X[, svc.cols, drop = FALSE]
+    # Convert w to a J*ptilde x 1 vector, sorted so that the p.svc values for 
+    # each site are given, then the next site, then the next, etc.
+    w <- c(t(w.mat))
+    # Create X.tilde, which is a J x J*p.tilde matrix. 
+    X.tilde <- matrix(0, J, J * p.svc)
+    # Fill in the matrix
+    for (j in 1:J) {
+      X.tilde[j, ((j - 1) * p.svc + 1):(j * p.svc)] <- X.w[j, ]
+    }
   } else {
-    w <- NA
+    w.mat <- NA
+    X.w <- NA
   }
+
 
   # Random effects --------------------------------------------------------
   if (length(psi.RE) > 0) {
@@ -231,9 +270,9 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {
     if (length(psi.RE) > 0) {
-      psi <- logit.inv(X %*% as.matrix(beta) + w + beta.star.sites)
+      psi <- logit.inv(X %*% as.matrix(beta) + X.tilde %*% w + beta.star.sites)
     } else {
-      psi <- logit.inv(X %*% as.matrix(beta) + w)
+      psi <- logit.inv(X %*% as.matrix(beta) + X.tilde %*% w)
     }
   } else {
     if (length(psi.RE) > 0) {
@@ -259,8 +298,8 @@ simOcc <- function(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), p.RE = list(),
 
   return(
     list(X = X, X.p = X.p, coords = coords,
-         w = w, psi = psi, z = z, p = p, y = y, 
-	 X.p.re = X.p.re, X.re = X.re, 
+         w = w.mat, psi = psi, z = z, p = p, y = y, 
+	 X.p.re = X.p.re, X.re = X.re, X.w = X.w, 
 	 alpha.star = alpha.star, beta.star = beta.star)
   )
 }

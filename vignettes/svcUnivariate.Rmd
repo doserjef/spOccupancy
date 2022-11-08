@@ -1,0 +1,1388 @@
+---
+title: "Spatially-varying coefficient models in `spOccupancy`"
+author: 'Jeffrey W. Doser, Marc K&eacute;ry, Andrew O. Finley, Sarah P. Saunders, Aaron S. Weed, Elise F. Zipkin'
+date: "2022"
+fontsize: 11pt
+linestretch: 1.25
+output: 
+  # rmarkdown::html_vignette:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 3
+pkgdown:
+  as_is: true
+  extension: pdf
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{spaceTimeModels}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", cache = TRUE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+\newcommand{\pg}{\text{P{\'o}lya-Gamma}}
+
+# Introduction
+
+This vignette details `spOccupancy` functionality introduced in v0.5.0 to fit single-species spatially-varying coefficient (SVC) models. When fitting models across large spatial domains, it is increasingly likely that the effect of spatial and/or temporal covariates on species occurrence varies across space. Ignoring nonstationarity can result in reduced predictive performance and biased inference on the effect of covariates at different spatial regions [@finley2011comparing; @rollinson2021working]. SVC occupancy models are a flexible extension of spatial occupancy models that allows for not only the intercept to vary across space, but also allows the effects of the covariates themselves to vary spatially, resulting in each spatial location having a unique effect of the covariate [@pease2022exploring]. These models can generate key insights into how environmental factors differentially influence species across its range, how temporal trends vary across different parts of a species range, and the relative importance of different covariate effects at different parts of the species range. 
+
+Here we introduce four functions for fitting SVC models in `spOccupancy`. The function `svcPGOcc()` fits a single-season SVC occupancy model, and is an extension to the basic spatial occupancy model fit by `spPGOcc()`. The function `svcTPGOcc()` fits a multi-season SVC occupancy model, which serves as an extension to the spatio-temporal occupancy model fit by `stPGOcc()` where replicated detection-nondetection data are collected over multiple primary time periods (i.e., breeding seasons, years). Additionally, we include two functions for fitting SVC generalized linear models (GLMs) where we ignore imperfect detection: `svcPGBinom()` fits a single-season SVC GLM and `svcTPGBinom()` fits a multi-species GLM. In these functions, we also allow for modeling binomial data instead of the usual binary detection-nondetection data, which may be applicable for certain species or scenarios where imperfect detection may not be as large of an issue (e.g., modeling tree species distributions using a nested plot/subplot design).  
+
+As per usual, we use $\pg$ data augmentation to yield a computationally efficient Gibbs sampler for GLM-type models with a logit link function [@polson2013], and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in all SVC models to greatly reduce the computational burden encountered when fitting models with spatial random effects formulated as a Gaussian process.
+
+In this vignette, we will walk through each of the four single-species SVC models in `spOccupancy`, detailing how to fit the models, do model comparison using the Widely Available Information Criterion (WAIC) and k-fold cross-validation, as well as make predictions across an area of interest to generate maps of the spatially-varying coefficients. We will work with simulated data sets and will walk through how to simulate data sets using the `spOccupancy` functions `simOcc()`, `simTOcc()`, `simBinom()`, and `simTBinom()`. We will not go into explicit detail for some of the model-fitting function arguments (e.g., priors, initial values) as the syntax is nearly identical to other `spOccupancy` functions, so we encourage you to first work through the [spOccupancy introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) if you are not at least vaguely familiar with `spOccupancy` syntax. 
+
+Below, we first load the `spOccupancy` package, as well as the `ggplot2` package to create some basic plots of our results. We also set a seed so you can reproduce our results.
+
+```{r, message = FALSE}
+library(spOccupancy)
+library(ggplot2)
+set.seed(300)
+```
+
+# Spatially-varying coefficients occupancy model
+
+## Basic model description
+
+Let $\bm{s}_j$ denote the spatial coordinates of site $j$, where $j = 1, \dots, J$. We define $z(\bm{s}_j)$ as the true presence (1) or absence (0) at site $j$ with spatial coordinates $\bm{s}_j$. We model $z(\bm{s}_j)$ as
+
+\begin{equation}\label{z}
+    z(\bm{s}_j) \sim \text{Bernoulli}(\psi(\bm{s}_j)),
+\end{equation}
+
+where $\psi(\bm{s}_j)$ is the occurrence probability at site $j$. We model $\psi(\bm{s}_j)$ according to
+
+\begin{equation}\label{psi}
+   \text{logit}(\psi(\bm{s}_j)) = \textbf{x}(\bm{s}_j)\bm{\beta} + \tilde{\textbf{x}}(\bm{s}_j)\textbf{w}(\bm{s}_j),
+\end{equation}
+
+where $\bm{\beta}$ is a vector of $q$ regression coefficients (including an intercept) that describe the non-spatial effects of covariates $\textbf{x}(\bm{s}_j)$, and $\textbf{w}(\bm{s}_j)$ is a vector of $\tilde{q}$ spatially-varying effects of covariates $\tilde{\textbf{x}}(\bm{s}_j)$. Note that $\tilde{\textbf{x}}(\bm{s}_j)$ may be identical to $\textbf{x}(\bm{s}_j)$ if all covariates effects are assumed to vary spatially, or a subset of $\textbf{x}(\bm{s}_j)$ if some effects are assumed to be constant across space. The model reduces to a traditional single-species occupancy model when all covariate effects are assumed constant across space and a spatial occupancy model [@johnson2013spatial; @doser2022spoccupancy] when only the intercept is assumed to vary across space.
+
+The spatially-varying effects $\textbf{w}(\bm{s}_j)$ serve as local adjustments of the covariate effects at site $j$ from the overall non-spatial effects $\bm{\beta}$, resulting in the covariate having a unique effect on species occurrence at each site $j$. Following @gelfand2003spatial, we model each $r = 1, \dots, \tilde{q}$ spatially-varying effect $\text{w}_r(\bm{s}_j)$ using a zero-mean spatial Gaussian process. More specifically, we have
+
+\begin{equation}\label{w}
+	\text{$\text{w}_r(\bm{s})$} \sim N(\bm{0}, \bm{C}_r(\bm{s}, \bm{s}', \bm{\theta}_r)),
+\end{equation}
+
+where $\bm{C}_r(\bm{s}, \bm{s}', \bm{\theta}_r)$ is a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters ($\bm{\theta}_r$) that govern the spatial process according to a spatial correlation function. Our associated software implementation in \texttt{spOccupancy} supports four correlation functions: exponential, spherical, Gaussian, and Matern [@banerjee2003]. For the exponential, spherical, and Gaussian correlation functions, $\bm{\theta}_r = \{\sigma^2_r, \phi_r\}$, where $\sigma^2_r$ is a spatial variance parameter and $\phi_r$ is a spatial decay parameter. Large values of $\sigma^2_r$ indicate large variation in the magnitude of a covariate effect across space, while values of $\sigma^2_r$ close to 0 suggests little spatial variability in the magnitude of the effect. $\phi_r$ controls the range of the spatial dependence in the covariate effect and is inversely related to the spatial range, such that when $\phi_r$ is small, the covariate effect has a larger range of spatial dependence and varies more smoothly across space compared to larger values of $\phi_r$. The Matern correlation function has an additional smoothness parameter $\nu_r$, which provides further flexibility in the smoothness and decay of the spatial process. To avoid the computational burden associated with fitting the full Gaussian process model, we use NNGPs as a computationally efficient and statistically robust alternative [@datta2016hierarchical]. See the supplemental material in [the spOccupancy manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13897) and @datta2016hierarchical for more details on NNGPs and their implementations in occupancy models.
+
+To account for imperfect detection in an occupancy modeling framework [@mackenzie2002, @tyre2003improving], $k = 1, \dots, K(\bm{s}_j)$ sampling replicates are obtained at each site $j$. We model the observed detection (1) or nondetection (0) of a study species at site $j$, denoted $y_k(\bm{s}_j)$, conditional on the true latent occupancy process $z(\bm{s}_j)$ following
+
+\begin{equation}\label{yDet}
+        y_{k}(\bm{s}_j) \mid z(\bm{s}_j) \sim \text{Bernoulli}(p_{k}(\bm{s}_j)z(\bm{s}_j)),
+\end{equation}
+
+where $p_k(\bm{s})$ is the probability of detecting the species at site $j$ during replicate $k$ given the species is truly present at the site. We model detection probability as a function of site and/or observation-level covariates according to
+
+\begin{equation}\label{pDet}
+  \text{logit}(p_{k}(\bm{s}_j)) = \bm{v}_{k}(\bm{s}_j)\bm{\alpha},
+\end{equation}
+
+where $\bm{\alpha}$ is a vector of regression coefficients (including an intercept) that describe the effect of site and/or observation covariates $\bm{v}_{k}(\bm{s}_j)$ on detection.
+
+To complete the Bayesian specification of the model, we assign Gaussian priors to the non-spatial occurrence and detection regression coefficients, an inverse-Gamma or uniform prior to the spatial variance parameters, and a uniform prior for the spatial decay (and smoothness if using a Matern correlation function) parameters.
+
+## Simulating data with `simOcc()`
+
+The function `simOcc()` simulates single-species detection-nondetection data. `simOcc()` has the following arguments. 
+
+```{r, eval = FALSE}
+simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
+       p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
+       sigma.sq, phi, nu, x.positive = FALSE, ...)
+```
+
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.rep` is a numeric vector of length `J` that indicates the number of replicates at each of the J sites (denoted as `K` in the previous model description). `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively. These are only specified when we want to simulate data with unstructured random intercepts. Each list should be comprised of two tags: `levels`, a vector that specifies the number of levels for each random effect included in the model, and `sigma.sq.psi` or `sigma.sq.p`, which specify the variances of the random effects for each random effect included in the model. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially-varying effects. By default, `svc.cols = 1`, which corresponds to a spatially-varying intercept when `sp = TRUE` (i.e., a spatial occupancy model). `cov.model` specifies the covariance function used to model the spatial dependence structure, with supported values of `exponential`, `matern`, `spherical`, and `gaussian`. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial range parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially-varying effects specified in `svc.cols`. Lastly, the `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). 
+
+Below we simulate data across 1600 sites with anywhere between 1-4 replicates at a given site, a single covariate effect on occurrence, and a single covariate effect on detection. We assume both the occupancy intercept and the effect of the covariate vary across space, so we set `svc.cols = c(1, 2)`. We use a spherical correlation function. We do not include any unstructured random effects on occurrence or detection.
+
+```{r}
+J.x <- 40
+J.y <- 40
+# Total number of sites
+(J <- J.x * J.y)
+# Number of replicates at each site
+n.rep <- sample(4:4, J, replace = TRUE)
+# Intercept and covariate effect on occurrence
+# Note these are the non-spatial effects. 
+beta <- c(-0.5, -0.2)
+# Intercept and covariate effect on detection
+alpha <- c(0.9, -0.3)
+# No unstructured random intercept on occurrence
+psi.RE <- list() 
+# No unstructured random intercept on detection
+p.RE <- list()
+# Spatial range for intercept and covariate effect
+phi <- c(3 / .8, 3 / .7)
+# Spatial variance for intercept and covariate effect
+sigma.sq <- c(1, 0.5)
+# Simulate the occupancy covariate from a Normal(0, 1) distribution
+x.positive <- FALSE 
+# Spatially-varying coefficient columns
+svc.cols <- c(1, 2)
+# Simulate the data
+dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, 
+              alpha = alpha, psi.RE = psi.RE, p.RE = p.RE, 
+              sp = TRUE, sigma.sq = sigma.sq, phi = phi, 
+              cov.model = 'spherical', svc.cols = svc.cols, 
+              x.positive = x.positive)
+```
+
+Next, let's explore the simulated data a bit before we move on (plotting code adapted from @hooten2019bringing). 
+
+```{r}
+str(dat)
+```
+
+The simulated data object consists of the following objects: `X` (the occurrence design matrix), `X.p` (the detection design matrix), `coords` (the spatial coordinates of each site), `w` (the latent spatial process for any covariates (and intercept) whose effects vary across space), `psi` (occurrence probability), `z` (the latent occupancy status), `y` (the detection-nondetection data), `X.w` (the design matrix for the spatially-varying coefficients), `X.p.re` (the detection random effect levels for each site), `X.re` (the occurrence random effect levels for each site), `alpha.star` (the detection random effects for each level of the random effect), `beta.star` (the occurrence random effects for each level of the random effect). Note because we did not include any unstructured effects on detection or occurrence, the objects associated with the unstructured random effects all have a value of NA. 
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Detection-nondetection data
+y <- dat$y
+# Occurrence design matrix for fixed effects
+X <- dat$X
+# Detection design matrix for fixed effets
+X.p <- dat$X.p
+# Occurrence values
+psi <- dat$psi
+# Spatial coordinates
+coords <- dat$coords
+# Spatially-varying intercept and covariate effects
+w <- dat$w
+# Simple plot of the occurrence probability across space.
+# Dark points indicate high occurrence. 
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "Simulated Occurrence", bty = 'n')
+points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi-min(psi))/diff(range(psi))))
+```
+
+We see there is clear variation in occurrence probability across the simulated spatial region. 
+
+We can also visualize the spatially-varying intercept and spatially-varying covariate effect. We do that by adding the spatial component of the intercept and covariate effect (stored in the `w` matrix) to the non-spatial components of the intercept and covariate effect (stored in `beta`), and then visualizing using the same code as before
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Intercept
+int.effect <- beta[1] + w[, 1]
+cov.effect <- beta[2] + w[, 2]
+# Dark points indicate more positive effects, white points indicate more negative effects.
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Intercept", 
+     bty = 'n')
+points(coords, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(int.effect-min(int.effect))/diff(range(int.effect))))
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Covariate Effect", 
+     bty = 'n')
+points(coords, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(cov.effect-min(cov.effect))/diff(range(cov.effect))))
+```
+
+Note the spatial intercept corresponds fairly closely with the map of occurrence probability, which makes sense.   
+
+The final step before we can fit the model is to package up the data in a list for use in `spOccupancy` model fitting functions. This requires creating a list that consists of the detection-nondetection data (`y`), occurrence covariates (`occ.covs`), detection covariates (`det.covs`), and coordinates (`coords`). See the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details. For our example here (and throughout the vignette), we will fit the model to 75% of the data points (1200 locations) and subsequently predict at the remaining 400 values to show the predictive ability of the model. 
+
+```{r}
+# Subset data for prediction. 
+# Split into fitting and prediction data set
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y.fit <- y[-pred.indx, ]
+y.pred <- y[pred.indx, ]
+X.fit <- X[-pred.indx, ]
+X.pred <- X[pred.indx, ]
+X.p.fit <- X.p[-pred.indx, , ]
+X.p.pred <- X.p[pred.indx, , ]
+coords.fit <- coords[-pred.indx, ]
+coords.pred <- coords[pred.indx, ]
+psi.fit <- psi[-pred.indx]
+psi.pred <- psi[pred.indx]
+w.fit <- w[-pred.indx, ]
+w.pred <- w[pred.indx, ]
+
+# Package all data into a list
+# Occurrence covariates
+occ.covs <- X.fit[, 2, drop = FALSE]
+colnames(occ.covs) <- c('occ.cov.1')
+# Detection covariates
+det.covs <- list(det.cov.1 = X.p.fit[, , 2])
+# Package into a list for spOccupancy
+data.list <- list(y = y.fit,
+                  occ.covs = occ.covs,
+                  det.covs = det.covs,
+                  coords = coords.fit)
+# Take a look at the data structure.
+str(data.list)
+```
+
+## Fitting spatially-varying coefficients occupancy models with `svcPGOcc()`
+
+The function `svcPGOcc()` fits single-season SVC occupancy models. `svcPGOcc()` has the following arguments: 
+
+```{r, eval = FALSE}
+svcPGOcc(occ.formula, det.formula, data, inits, priors, 
+         tuning, svc.cols = 1, cov.model = "exponential", NNGP = TRUE, 
+         n.neighbors = 15, search.type = "cb", n.batch,
+         batch.length, accept.rate = 0.43, 
+         n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+         n.burn = round(.10 * n.batch * batch.length), 
+         n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+         k.fold.seed = 100, k.fold.only = FALSE, ...)
+```
+
+The arguments to `svcPGOcc()` are identical as those for a spatial occupancy model fit using `spPGOcc()`, with the addition of the `svc.cols` argument to specify the SVCs in the model. `occ.formula` and `det.formula` contain the R model formulas for the occurrence and detection portions of the occupancy model. Here we fit the model with a single covariate on both occupancy and detection
+
+
+```{r}
+occ.formula <- ~ occ.cov.1
+det.formula <- ~ det.cov.1
+```
+
+The `svc.cols` argument is used to specify the covariates whose effects are estimated as SVCs. `svc.cols` can either be a numeric indexing vector with integer numbers corresponding to the order in which you specified covariates in the `occ.formula` argument, or can be a character vector with the names of the covariates specified in `occ.formula`. Note that by default, `svc.cols = 1`, which is equivalent to fitting a spatial occupancy model with `spPGOcc()`. This clearly shows how SVC occupancy models are a simple extension of a spatial occupancy model. A spatial occupancy model is simply an SVC occupancy model where the only spatially varying "covariate" is the intercept. If specifying `svc.cols` as a character vector, use `'(Intercept)'` to specify a spatially-varying intercept. Here we set `svc.cols` to include a spatially-varying intercept and spatially-varying effect of the occurrence covariate. We also specify the `cov.model` argument to indicate we will use a spherical correlation function (note `spOccupancy` uses the same correlation function for all SVCs). Usually, our default correlation function is the exponential, which is what we use throughout most of the other vignettes, but here we use a spherical correlation function to show how `spOccupancy` can handle these other functions.  
+
+```{r}
+svc.cols <- c(1, 2)
+# OR
+# svc.cols <- c('(Intercept)', 'occ.cov.1')
+cov.model <- 'spherical'
+```
+
+We next specify the initial values, which are specified in a list analogous to a spatial occupancy model using `spPGOcc`, with the only difference being that if you supply initial values for the spatial random effects `w`, these must be specified as a two-dimensional matrix with rows corresponding to SVC and column corresponding to site.  
+
+```{r}
+dist.data <- dist(data.list$coords)
+inits.list <- list(alpha = 0, beta = 0, sigma.sq = 0.5,
+                   phi = 3 / mean(dist.data), 
+                   z = apply(data.list$y, 1, max, na.rm = TRUE), 
+                   w = matrix(0, length(svc.cols), nrow(data.list$y)))
+```
+
+We next specify the priors to use for all parameters in the model (alternatively, we could not specify `priors` and simply use the default values `svcPGOcc()` provides). We will use the default normal priors for the occurrence (`beta`) and detection (`alpha`) regression coefficients. For the spatial decay parameter (`phi`), we specify a uniform prior with bounds based on the maximum and minimum inter-site distances. Our default prior for `phi` is to set the lower bound to `3 / max` and upper bound to `3 / min`, where `max` and `min` are the maximum and minimum inter-site distances, respectively. This results in a prior that states the effective spatial range is anywhere between the maximum distance between sites and the smallest distance between sites. Lastly, we specify an inverse-Gamma prior for `sigma.sq`. Following @banerjee2003, we generally will set the scale parameter of the inverse-Gamma to 2 and the shape parameter to our buest guess of the spatial variance. We could also specify a uniform prior for the spatial variance parameter. For binary data, very large values of `sigma.sq` can result in undesirable and unrealistic values of the spatial random effects on the logit scale, and so a uniform prior can be used to restrict `sigma.sq` to some maximum value (e.g., 5) that is reasonable on the logit scale [@wright2021spatial].
+
+```{r}
+priors.list <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72),
+                    sigma.sq.ig = list(a = 2, b = 0.5),
+                    phi.unif = list(a = 3 / max(dist.data), 
+                                    b = 3 / min(dist.data)))
+```
+
+The next three arguments (`n.batch`, `batch.length`, and `accept.rate`) are all related to the Adaptive MCMC sampler used when we fit the model. Updates for all parameters with a uniform prior (in this case the spatial decay parameter `phi` and the spatial variance parameter `sigma.sq`) require the use of a Metropolis-Hastings algorithm. We implement an adaptive Metropolis-Hastings algorithm as discussed in @roberts2009examples. This algorithm adjusts the tuning values for each parameter that requires a Metropolis-Hastings update within the sampler itself. This process results in a more efficient sampler than if we were to fix the tuning parameters prior to fitting the model. The parameter `accept.rate` is the target acceptance rate for each parameter, and the algorithm will adjust the tuning parameters to hover around this value. The default value is 0.43, which we suggest leaving as is unless you have a good reason to change it. The tuning parameters are updated after a single "batch". We break up the total number of MCMC samples into a set of "batches", where each batch has a specific number of samples. We must specify both the total number of batches (`n.batch`) as well as the number of MCMC samples each batch contains (`batch.length`). Thus, the total number of MCMC samples is `n.batch * batch.length`. Typically, we set `batch.length = 25` and then play around with `n.batch` until convergence is reached. Here we set `n.batch = 400` for a total of 10000 MCMC samples. We will additionally specify a burn-in period of length 6000 and a thinning rate of 4. We run the model for 3 chains, ultimately resulting in 3000 posterior samples. Importantly, we also need to specify an initial value for the tuning parameters for the spatial decay parameter, spatial variance parameter if using a uniform prior for `sigma.sq`, and the smoothness parameter (if `cov.model = 'matern'`). These values are supplied as input in the form of a list with tags `phi`, `sigma.sq`, and `nu`. The initial tuning value can be any value greater than 0, but we recommend starting the value out around 0.5. After some initial runs of the model, if you notice the final acceptance rate of a parameter is much larger or smaller than the target acceptance rate (`accept.rate`), you can then change the initial tuning value to get closer to the target rate. Here we set the initial tuning value for `phi` to 0.1 after some initial exploratory runs of the model.
+
+```{r}
+batch.length <- 25
+n.batch <- 800
+n.burn <- 10000
+n.thin <- 10
+n.chains <- 1
+tuning.list <- list(phi = 0.2, sigma.sq = 0.2)
+```
+
+We are now ready to run the model. We set the `verbose` argument equal to `TRUE` and the `n.report` argument to 100 to report progress on the MCMC chain after every 100th batch. Additionally, we fit the model with an NNGP (`NNGP = TRUE`) using 5 neighbors (`n.neighbors = 5`). See the supplemental material in @doser2022spoccupancy for more information on choosing the number of neighbors in the NNGP approximation. 
+
+```{r}
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 100 # Report progress at every 100th batch.
+# Approx. run time: 4.2 min
+out.svc <- svcPGOcc(occ.formula = occ.formula, 
+                    det.formula = det.formula, 
+                    data = data.list, 
+                    inits = inits.list, 
+                    n.batch = n.batch, 
+                    batch.length = batch.length, 
+                    priors = priors.list, 
+                    svc.cols = svc.cols,
+                    cov.model = cov.model, 
+                    NNGP = TRUE, 
+                    n.neighbors = 5,
+                    tuning = tuning.list, 
+                    n.report = n.report, 
+                    n.burn = n.burn, 
+                    n.thin = n.thin, 
+                    n.chains = n.chains)
+```
+
+We can take a look at the model results using the `summary()` function and compare them to the true values we used to simulate the data. 
+
+```{r}
+summary(out.svc)
+# True values
+beta
+alpha
+sigma.sq
+phi
+```
+
+Because we only ran one chain of the model, we see the Rhat values are reported as NA. For a complete analysis, we would run the model for multiple chains, make sure the Rhat values are less than 1, and also ensure the effective sample sizes are adequately large. Here, the ESS values are somewhat low for the occurrence parameters and spatial covariance parameters, but we will continue interpreting the results for our exploratory purposes here. We see our model does a good job of recovering the true occurrence and detection regression coefficient values. The spatial variance parameters are also quite close to the estimated values. The spatial decay parameter value for the intercept is a bit larger than the simulated value. The spatial decay parameters are only weakly identifiable (i.e., there is very little information to estimate them), and thus estimating their true values can be a difficult task, in particular when fitting a model with multiple SVCs. Generally, we do not attempt to interpret the spatial decay parameters when fitting spatially-explicit occupancy models. Instead, we will often interpret the actual estimated spatial process values at each location, which are of particular interest in spatially-varying coefficient models.
+
+Next, let's take a look at the resulting objects contained in the `out.svc` list. 
+
+```{r}
+names(out.svc)
+```
+
+The resulting model object contains a variety of things, most of which are just used in subsequent functions for posterior predictive checks, prediction, and summarization. The objects that end in "samples" are the posterior MCMC samples for the different objects. See `?svcPGOcc` for more information. 
+
+To extract the estimates of the spatially-varying coefficients at each of the spatial locations in the data set used to fit the model, we need to combine the non-spatial component of the coefficient (contained in `out.svc$beta.samples`) and the spatial component of the coefficient (contained in `out.svc$w.samples`). Recall that in an SVC occupancy model, the total effect of a covariate at any given location is the sum of the non-spatial effect and the adjustment of the effect at that specific location. We provide the function `getSVCSamples()` to extract the SVCs at each location.  
+
+```{r}
+svc.samples <- getSVCSamples(out.svc) 
+str(svc.samples)
+```
+
+The resulting object, here called `svc.samples`, is a list with each component corresponding to a matrix of the MCMC samples of each spatially-varying coefficient estimated in the model, with rows corresponding to MCMC sample and column corresponding to site. 
+
+<!-- First let's create traceplots for the first few SVC values for the simulated covariate. -->
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in', include = FALSE}
+plot(svc.samples$occ.cov.1[, 1:6], density = FALSE)
+```
+
+<!--We see the traceplots for the full SVC samples (i.e., the spatial effect at each site plus the nonspatial effect at each site) resemble the "grassy" looking plot we desire for full convergence of our model. With SVC models, convergence and mixing of the non-spatial effect (the `beta` values) and the spatial effects (the `w` values) individually may be quite slow, but when put together to form the entire effect of the covariate you may see the mixing of the MCMC chains be sufficient. Thus, if inference solely lies on interpreting the full effect of the covariate at each location and the full covariate effect shows adequate convergence, we can proceed with inference.--> 
+
+Below we plot the true SVCs for the covariate at the 1200 locations used for fitting the model compared to the mean estimates from our model. 
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Get true covariate values at the locations used to fit the mdoel
+cov.effect.fit <- beta[2] + w.fit[, 2]
+# Get mean values of the SVC for the covariate
+svc.cov.mean <- apply(svc.samples$occ.cov.1, 2, mean)
+# Dark points indicate more positive effects, white points 
+# indicate more negative effects.
+plot(coords.fit, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "True values", bty = 'n')
+points(coords.fit, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(cov.effect.fit-min(cov.effect.fit))/diff(range(cov.effect.fit))))
+plot(coords.fit, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "Estimated values", bty = 'n')
+points(coords.fit, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(svc.cov.mean-min(svc.cov.mean))/diff(range(svc.cov.mean))))
+```
+
+Note that because we held out 400 random values across the study area, some of the white squares in the above image correspond to locations where we did not have any data (we will subsequently predict at these locations). We see our estimates align pretty closely with the true values used to simulate the data. Our mean estimates are smoother than the values used to generate the data. This is what we would expect, as the true values are a single instance of a simulated spatial process, whereas the mean values we have plotted average across individual instances to generate a more smoothed estimate. Overall, the model seems to accurately identify locations of low and high effects of the covariate.
+
+## Posterior Predictive Checks
+
+The `spOccupancy` function `ppcOcc()` performs a posterior predictive check for all `spOccupancy` model objects as an assessment of Goodness of Fit (GoF). The key idea of GoF testing is that a good model should generate data that closely align with the observed data. If there are large differences in the observed data from the model-generated data, our model is likely not very useful [@hooten2015guide]. We can use the `ppcOcc()` and `summary()` functions to generate a Bayesian p-value as a quick assessment of model fit. A Bayesian p-value that hovers around 0.5 indicates adequate model fit, while values less than 0.1 or greater than 0.9 suggest our model does not fit the data well. See [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) and help page for `ppcOcc()` for more details. Below we perform a posterior predictive check with the Freeman-Tukey statistic, grouping the data by individual sites.
+
+```{r}
+ppc.out <- ppcOcc(out.svc, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out)
+```
+
+We see our Bayesian p-value is very close to the optimal 0.5, suggesting adequate model fit (it would be a bit concerning if we didn't see a good model fit here since we are using simulated data!).
+
+## Model Selection using WAIC
+
+The `spOccupancy` function `waicOcc()` calculates the Widely Applicable Information Criterion (WAIC) for all `spOccupancy` fitted model objects. The WAIC is a fully Bayesian information criterion that is adequate for comparing a set of hierarchical models and selecting the best-performing model for final analysis (see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details). Smaller values of WAIC indicate a better performing model. Below, we fit a spatial occupancy model without the SVC of the covariate effect using the `spOcc()` function (we could equivalently do this by using `svcPGOcc()` and setting `svc.cols = 1`).
+
+```{r}
+# Using default priors and initial values.
+# Approx. run time: 4.2 min
+out.sp <- spPGOcc(occ.formula = occ.formula, 
+                  det.formula = det.formula, 
+                  data = data.list, 
+                  n.batch = n.batch, 
+                  batch.length = batch.length, 
+                  cov.model = cov.model, 
+                  NNGP = TRUE, 
+                  n.neighbors = 5,
+                  tuning = tuning.list, 
+                  n.report = n.report, 
+                  n.burn = n.burn, 
+                  n.thin = n.thin, 
+                  n.chains = n.chains)
+# WAIC for the SVC model
+waicOcc(out.svc)
+# WAIC for the spatial occupancy model
+waicOcc(out.sp)
+```
+
+We see the WAIC for the SVC occupancy model is lower than the WAIC for the spatial occupancy model, indicating the SVC model has improved model performance.  
+
+## Prediction
+
+Finally, we can use the `predict()` function with all `spOccupancy` model-fitting functions to generate a series of posterior predictive samples at new locations (as well as already sampled locations), given a set of covariates and their spatial locations. Note that we can predict both new occupancy values as well as new detection values. 
+
+Below we predict occupancy probability at the 400 locations we held out when fitting the model. The `predict()` function for `svcPGOcc()` objects requires the model object, the design matrix of covariates at the new locations (including the intercept if specified in the model), and the spatial coordinates of the new locations. Below we predict across the 400 "new" locations and plot them in comparison to the true values we used to simulate the data.   
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+# Take a look at X.pred, the design matrix for the prediction locations
+head(X.pred)
+# Predict occupancy at the 400 new sites
+out.pred <- predict(out.svc, X.pred, coords.pred)
+# Use the getSVCSamples() function to extract the SVC values
+# at the prediction locations
+svc.pred.samples <- getSVCSamples(out.svc, pred.object = out.pred) 
+# True covariate effect values at new locations
+cov.effect.pred <- beta[2] + w.pred[, 2]
+# Get mean values of the SVC for the covariate
+svc.cov.pred.mean <- apply(svc.pred.samples$occ.cov.1, 2, mean)
+# Dark points indicate more positive effects, white points indicate more 
+# negative effects.
+plot(coords.pred, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "True values", bty = 'n')
+points(coords.pred, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(cov.effect.pred-min(cov.effect.pred))/
+                        diff(range(cov.effect.pred))))
+plot(coords.pred, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "Estimated values", bty = 'n')
+points(coords.pred, pch=15, cex = 2.1, 
+       col = rgb(0,0,0,(svc.cov.pred.mean-min(svc.cov.pred.mean))/
+                        diff(range(svc.cov.pred.mean))))
+```
+
+We see a pretty close correspondence between the true values and the predicted values. 
+
+# Spatially-varying coefficients generalized linear model 
+
+Accounting for imperfect detection explicitly in an occupancy modeling framework may not be feasible given the data. In particular, single-visit (or nonreplicated) detection-nondetection data are a very common data source due to the extra expenses of doing multiple surveys at a given location. In this case, we cannot separately estimate imperfect detection from occupancy probability in an occupancy modeling framework without making strict assumptions [@lele2012dealing], and so instead we might fit a more standard generalized linear model (GLM). 
+
+Additionally, occupancy models are much less frequently used for modeling plant species distributions than animal distributions. While imperfect detection is still prevalent in plant distribution studies [@chen2013imperfect], we may wish to model plant distribution data using a standard generalized linear modeling framework, in particular if we do not have replicate surveys available in our data set. If our inference focuses solely on the effects of covariates on where a species occurs and not the overall estimates of "occupancy probability", this may be a feasible approach. However, all inferences made from such models that ignore imperfect detection should carefully consider how detection probability may vary across space and/or time, and what consequences this has on the interpretation of the results. For example, if a spatially-varying covariate influences both the probability a species occurs at a location and the probability the species is detected, one would interpret the effect of the covariate as the effect on the confounded process of detection/occupancy probability. 
+
+## Basic model description
+
+As before, let $y_k(\bm{s}_j)$ be the detection (1) or non-detection (0) of our species of interest at site $j$ with spatial coordinates $\bm{s}_j$. When not explicitly accounting for imperfect detection in an occupancy model, we will model the detection-nondetection data directly in a SVC-GLM framework. Specifically, we have
+
+\begin{equation}\label{yNoDet}
+   y^*(\bm{s}_j) \sim \text{Binomial}(K(\bm{s}_j), \psi(\bm{s}_j)),
+\end{equation}
+
+where $y^*(\bm{s}_j) = \sum_{k = 1}^{K(\bm{s}_j)}y_{k}(\bm{s}_j)$, $K(\bm{s}_j)$ is the number of replicate surveys at site $j$, and $\bm{\psi}(\bm{s}_j)$ is the occurrence probability at site $j$. When only one replicate survey is available at each site, the Binomial likelihood in Equation \ref{yNoDet} reduces to a Bernoulli likelihood. We model $\psi(\bm{s}_j)$ following Equations \ref{psi} and \ref{w}. Note that we can incorporate spatially-varying covariates in the model of $\psi(\bm{s}_j)$ that may influence detection probability of the species, but our estimates of $\psi(\bm{s}_j)$ are still interpreted as relative occurrence probabilities.
+
+
+## Simulating data with `simBinom()`
+
+The function `simBinom()` simulates single-species detection-nondetection data for which detection is assumed perfect. `simBinom()` has the following arguments, which are very similar to those we saw previously with `simOcc()`. 
+
+```{r, eval = FALSE}
+simBinom(J.x, J.y, weights, beta, psi.RE = list(), 
+         sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu, 
+         x.positive = FALSE, ...)
+```
+
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `weights` is a numeric vector of length `J` that indicates the number of Bernoulli trials (replicates) at each of the J sites (denoted as `K` in the previous model description). `beta` is a numeric vector containing the intercept and any regression coefficient parameters for the model, respectively. `psi.RE` is a list that is used to specify unstructured random intercepts, respectively. These are only specified when we want to simulate data with random intercepts. All other arguments are the same as those we saw `simOcc()`.  
+
+We simulate data across 1600 sites where we assume there is only a single replicate survey at a given site and a single covariate effect on relative occurrence. We assume both the intercept and the effect of the covariate vary across space, so we set `svc.cols = c(1, 2)`. We use an exponential correlation function. We do not include any unstructured random effects on occurrence or detection.
+
+```{r}
+# Set seed again to get the same data set
+set.seed(488)
+J.x <- 40
+J.y <- 40
+# Total number of sites
+(J <- J.x * J.y)
+# Number of replicates at each site
+weights <- rep(1, J)
+# Intercept and covariate effect
+# Note these are the non-spatial effects. 
+beta <- c(-0.5, -0.2)
+# No unstructured random intercepts
+psi.RE <- list() 
+# Spatial range for intercept and covariate effect
+phi <- c(3 / .8, 3 / .7)
+# Spatial variance for intercept and covariate effect
+sigma.sq <- c(1, 0.5)
+# Simulate the covariate from a Normal(0, 1) distribution
+x.positive <- FALSE 
+# Spatially-varying coefficient columns
+svc.cols <- c(1, 2)
+# Simulate the data
+dat <- simBinom(J.x = J.x, J.y = J.y, weights = weights, beta = beta, 
+                psi.RE = psi.RE, sp = TRUE, sigma.sq = sigma.sq, phi = phi, 
+                cov.model = 'exponential', svc.cols = svc.cols, 
+                x.positive = x.positive)
+```
+
+Next, let's explore the simulated data a bit before we move on (plotting code adapted from @hooten2019bringing). 
+
+```{r}
+str(dat)
+```
+
+The simulated data object consists of the following objects: `X` (the design matrix), `coords` (the spatial coordinates of each site), `w` (the latent spatial process for any covariates (and intercept) whose effects vary across space), `psi` (relative occurrence probability), `y` (the detection-nondetection data), `X.w` (the design matrix for the spatially-varying coefficients), `X.re` (the occurrence random effect levels for each site), `beta.star` (the random effects for each level of the unstructured random effect). Note because we did not include any unstructured effects, the objects associated with the unstructured random effects all have a value of NA. 
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Detection-nondetection data
+y <- dat$y
+# Design matrix
+X <- dat$X
+# Occurrence values
+psi <- dat$psi
+# Spatial coordinates
+coords <- dat$coords
+# Spatially-varying intercept and covariate effects
+w <- dat$w
+# Simple plot of the relative occurrence probability across space.
+# Dark points indicate high occurrence. 
+plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, 
+     main = "Simulated Occurrence", bty = 'n')
+points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi-min(psi))/diff(range(psi))))
+```
+
+Lastly, we package the data up in a list for use in `spOccupancy` model fitting functions. For SVC-GLMs, his requires creating a list that consists of the detection-nondetection data (`y`), covariates (`covs`), the binomial weights aka the number of replicates (`weights`), and coordinates (`coords`). Note that the covariates here are stored in a single matrix object `covs` rather than split apart into the occurrence (`occ.covs`) and detection (`det.covs`) covariates as we do for occupancy models. As we did for the SVC occupancy model, we will fit the model to 75% of the data points (1200 locations) and subsequently predict at the remaining 400 values to show the predictive ability of the model. 
+
+```{r}
+# Subset data for prediction. 
+# Split into fitting and prediction data set
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y.fit <- y[-pred.indx]
+y.pred <- y[pred.indx]
+X.fit <- X[-pred.indx, ]
+X.pred <- X[pred.indx, ]
+coords.fit <- coords[-pred.indx, ]
+coords.pred <- coords[pred.indx, ]
+psi.fit <- psi[-pred.indx]
+psi.pred <- psi[pred.indx]
+w.fit <- w[-pred.indx, ]
+w.pred <- w[pred.indx, ]
+weights.fit <- weights[-pred.indx]
+weights.pred <- weights[pred.indx]
+
+# Package all data into a list
+# Covariates
+covs <- X.fit[, 2, drop = FALSE]
+colnames(covs) <- c('cov.1')
+# Package into a list for spOccupancy
+data.list <- list(y = y.fit,
+                  covs = covs,
+                  coords = coords.fit, 
+                  weights = weights.fit)
+# Take a look at the data structure.
+str(data.list)
+```
+
+## Fitting spatially-varying coefficients generalized linear models with `svcPGBinom()`
+
+The function `svcPGBinom()` fits single-season SVC GLMs. `svcPGBinom()` has the following arguments, which are nearly identical to those we saw with `svcPGOcc()`: 
+
+```{r, eval = FALSE}
+svcPGBinom(formula, data, inits, priors, tuning, svc.cols = 1,
+           cov.model = "exponential", NNGP = TRUE,
+           n.neighbors = 15, search.type = "cb", n.batch,
+           batch.length, accept.rate = 0.43,
+           n.omp.threads = 1, verbose = TRUE, n.report = 100,
+           n.burn = round(.10 * n.batch * batch.length),
+           n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1,
+           k.fold.seed = 100, k.fold.only = FALSE, ...)
+```
+
+The only difference between the arguments of `svcPGBinom()` and `svcPGOcc()` is that now we only specify a single formula, `formula`, since we do not separately model detection probability from occurrence probability. Below we specify the formula, including the single covariate we simulated the data with. 
+
+
+```{r}
+formula <- ~ cov.1
+```
+
+As before, the `svc.cols` argument specifies the covariates whose effects are estimated as SVCs. Here we set `svc.cols` to include a spatially-varying intercept and spatially-varying effect of the covariate. We also specify the `cov.model` argument to indicate we will use an exponential correlation function.  
+
+```{r}
+svc.cols <- c(1, 2)
+cov.model <- 'exponential'
+```
+
+We next specify the initial values, which is exactly analogous to `svcPGOcc()`, but we don't have any initial values for the detection parameters or the latent occupancy values, since we don't estimate those in an SVC-GLM. 
+
+```{r}
+dist.data <- dist(data.list$coords)
+inits.list <- list(beta = 0, sigma.sq = 0.5,
+                   phi = 3 / mean(dist.data), 
+                   w = matrix(0, length(svc.cols), length(data.list$y)))
+```
+
+We next specify the priors to use for all parameters in the model, which we set to be the same as those we used for `svcPGOcc()`.  
+
+```{r}
+priors.list <- list(beta.normal = list(mean = 0, var = 2.72),
+                    sigma.sq.ig = list(a = 2, b = 0.5),
+                    phi.unif = list(a = 3 / max(dist.data), 
+                                    b = 3 / min(dist.data)))
+```
+
+Finally, we specify the MCMC criteria exactly as we saw previously and then we are all set to run the model. 
+```{r}
+batch.length <- 25
+n.batch <- 800
+n.burn <- 10000
+n.thin <- 10
+n.chains <- 1
+tuning.list <- list(phi = 0.2, sigma.sq = 0.2)
+n.omp.threads <- 1
+verbose <- TRUE
+n.report <- 100 # Report progress at every 100th batch.
+# Approx. run time: 3.7 min
+out.svc <- svcPGBinom(formula = formula, 
+                      data = data.list, 
+                      inits = inits.list, 
+                      n.batch = n.batch, 
+                      batch.length = batch.length, 
+                      priors = priors.list, 
+                      svc.cols = svc.cols,
+                      cov.model = cov.model, 
+                      NNGP = TRUE, 
+                      n.neighbors = 5,
+                      tuning = tuning.list, 
+                      n.report = n.report, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = n.chains)
+# Compare to values used to generate the data
+summary(out.svc)
+# True values
+beta
+sigma.sq
+phi
+```
+
+Let's next extract the full SVC values using the `getSVCSamples()` function and then compare the estimated values to those used to generate the model. This time, we won't make a map of the predicted values, but rather will just look at a scatter plot of fitted values vs. true values. 
+
+```{r, fig.width = 5, fig.height = 5, units = 'in', fig.align = 'center'}
+# Intercept ---------------------------------------------------------------
+svc.samples <- getSVCSamples(out.svc)
+int.quants <- apply(svc.samples[["(Intercept)"]], 2, 
+                    quantile, probs = c(0.025, 0.5, 0.975))
+svc.true.fit <- beta + w.fit
+plot(svc.true.fit[, 1], int.quants[2, ], pch = 19, 
+     ylim = c(min(int.quants[1, ]), max(int.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Intercept')
+abline(0, 1)
+arrows(svc.true.fit[, 1], int.quants[2, ], svc.true.fit[, 1], 
+       col = 'gray', int.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 1], int.quants[1, ], svc.true.fit[, 1], 
+       col = 'gray', int.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 1], int.quants[2, ], pch = 19)
+
+# Covariate ---------------------------
+cov.quants <- apply(svc.samples[["cov.1"]], 2, quantile, 
+                    probs = c(0.025, 0.5, 0.975))
+svc.true.fit <- beta + w.fit
+plot(svc.true.fit[, 2], cov.quants[2, ], pch = 19, 
+     ylim = c(min(cov.quants[1, ]), max(cov.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Covariate')
+abline(0, 1)
+arrows(svc.true.fit[, 2], cov.quants[2, ], svc.true.fit[, 2], 
+       col = 'gray', cov.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 2], cov.quants[1, ], svc.true.fit[, 2], 
+       col = 'gray', cov.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 2], cov.quants[2, ], pch = 19)
+```
+
+Here we see our estimated values capture the patterns in the simulated values. Notice that the estimated values do not fall exactly on the one to one line, and rather the estimated values are all seemingly closer to zero than the true values, in particular for the sites that have a large magnitude of the effect. This is a common phenomenon in spatial models that use binary data in a GLM framework as a result of the lack of information in binary data as well as the link function (e.g., logit) that transforms binary data to the real scale. Generally, as the number of spatial locations increase and the spatial range increases (i.e., the spatial decay parameter $\phi$ gets smaller), we will tend to see the values be more closely approximated by the model. Regardless, we generally see good coverage of the 95% credible intervals for the true values (ideally we want 95% of the gray lines to overlap the black one to one line), and the estimated means capture the pattern in the effects across space. 
+
+## Model selection using WAIC
+
+We can do model selection using WAIC as we saw with `svcPGOcc()`. Below we fit a spatial GLM that assumes the covariate effect is stationary across the study area. We then compare the two models with WAIC.
+
+```{r}
+out.glm <- svcPGBinom(formula = formula, 
+                      data = data.list, 
+                      n.batch = n.batch, 
+                      batch.length = batch.length, 
+                      svc.cols = 1,
+                      cov.model = cov.model, 
+                      NNGP = TRUE, 
+                      n.neighbors = 5,
+                      tuning = tuning.list, 
+                      n.report = n.report, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = n.chains)
+# SVC model
+waicOcc(out.svc)
+# Spatially-varying intercept model
+waicOcc(out.glm)
+```
+
+As expected, the SVC GLM outperforms the spatial GLM that assumes a constant covariate effect.
+
+## Prediction
+
+Finally, we can use the `predict()` function just as we saw with `svcPGOcc()` to predict relative occurrence and the effects of the covariates at new (and old) locations.  
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+# Take a look at X.pred, the design matrix for the prediction locations
+head(X.pred)
+# Predict occupancy at the 400 new sites
+out.pred <- predict(out.svc, X.pred, coords.pred, weights.pred)
+# Use the getSVCSamples() function to extract the SVC values
+# at the prediction locations
+svc.pred.samples <- getSVCSamples(out.svc, pred.object = out.pred) 
+# True covariate effect values at new locations
+cov.effect.pred <- beta[2] + w.pred[, 2]
+# Get median and 95% CIs of the SVC for the covariate effect
+cov.pred.quants <- apply(svc.pred.samples[["cov.1"]], 2, 
+                         quantile, probs = c(0.025, 0.5, 0.975))
+plot(cov.effect.pred, cov.pred.quants[2, ], pch = 19, 
+     ylim = c(min(cov.pred.quants[1, ]), max(cov.pred.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Covariate')
+abline(0, 1)
+arrows(cov.effect.pred, cov.pred.quants[2, ], cov.effect.pred, 
+       col = 'gray', cov.pred.quants[1, ], 
+       length = 0.02, angle = 90)
+arrows(cov.effect.pred, cov.pred.quants[1, ], cov.effect.pred, 
+       col = 'gray', cov.pred.quants[3, ], 
+       length = 0.02, angle = 90)
+points(cov.effect.pred, cov.pred.quants[2, ], pch = 19)
+```
+
+As with the fitted values, we see the predicted values seem to capture the pattern in the true estimates. 
+
+# Spatially-varying coefficients multi-season occupancy model
+
+Consider the case where detection-nondetection data are collected across multiple seasons (e.g., years, breeding periods) during which the true occupancy status can change. Such spatio-temporal data can be used to understand occurrence trends over time (e.g., @isaac2014statistics), as well as the environmental variables that drive spatio-temporal shifts in species distributions (e.g., @rushing2020migratory). As an extension to the SVC occupancy model, here we present a SVC multi-season occupancy model that estimates spatially-varying effects (as described previously) of covariates and accounts for temporal autocorrelation using temporal random effects. This model is an extension of the multi-season spatial (`stPGOcc()`) and non-spatial (`tPGOcc()`) occupancy models introduced in `spOccupancy` v0.4.0. See the [vignette on multiseason models](https://www.jeffdoser.com/files/spoccupancy-web/articles/spacetimemodelshtml) for additional background information on modeling spatio-temporal patterns in occupancy. 
+
+## Basic model description
+
+Let $y_{k, t}(\bm{s}_j)$ denote the detection or nondetection of the species of interest at site $j$ during replicate survey $k$ during time period $t$, with $t = 1, \dots, T$. We model $y_{k, t}(\bm{s}_j)$ conditional on the true occupancy status, $z_t(\bm{s}_j)$ of the species at site $j$ during time $t$ according to
+
+\begin{equation}\label{zTime}
+    z_{t}(\bm{s}_j) \sim \text{Bernoulli}(\psi_t(\bm{s}_j)),
+\end{equation}
+
+where $\psi_t(\bm{s}_j)$ is the occurrence probability at site $j$ during primary time period $t$. We model $\psi_{t}(\bm{s}_j)$ following
+
+\begin{equation}\label{psiTime}
+  \text{logit}(\psi_t(\bm{s}_j)) = \textbf{x}_t(\bm{s}_j)\bm{\beta} + \tilde{\textbf{x}}_t(\bm{s}_j)\textbf{w}(\bm{s}_j) + \eta_t,
+\end{equation}
+
+where $\eta_t$ is a random temporal effect and the other parameters are defined as before. Note that the covariates can now vary across space and/or time period. Because we assume the non-spatial ($\bm{\beta})$ and spatially-varying ($\textbf{w}(\bm{s}_j)$) coefficients are constant over the $T$ primary time periods, they represent the average covariate effects across the temporal extent of the data. We model $\eta_t$ as either an unstructured random effect (i.e., $\eta_t \sim \text{Normal}(0, \sigma^2_{T})$) or using a first-order autoregressive (i.e., AR(1)) covariance structure in which we estimate a temporal variance parameter, $\sigma^2_T$, and a temporal correlation parameter, $\rho$.
+
+The data $y_{k, t}(\bm{s}_j)$ are modeled conditional on the true occupancy status $z_t(\bm{s}_j)$ analogous to the SVC occupancy model in Equations \ref{yDet} and \ref{pDet}, with detection probability now allowed to vary across site, replicates, and/or primary time periods.
+
+## Simulating data with `simTOcc()`
+
+The function `simTOcc()` simulates single-species multi-season detection-nondetection data. `simTOcc()` has the following arguments, which again closely resemble all other data simulation functions in `spOccupancy`. 
+
+```{r, eval = FALSE}
+simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
+        psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
+        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE,...)
+```
+
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.time` indicates the number of time periods over which data are collected. `n.rep` is a numeric matrix with rows corresponding to sites and columns corresponding to time periods where each element corresponds to the number of replicate surveys performed within a given time period at a given site (denoted as `K` in the previous model description). Note that throughout we will refer to "time period" as the additional temporal replication in multi-season models (often called primary time period) and will use the term "replicate" to refer to the multiple visits obtained at a given site during a given time period (often called secondary time periods). `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `sp.only` is a numeric vector specifying which occurrence covariates should only vary over space and not over time. `trend` is a logical value indicating whether or not a trend parameter is included in the model (the trend is assumed to be the second covariate listed in `beta`). `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively, which are analogous to previous data simulation functions. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially-varying effects. `cov.model` specifies the covariance function used to model the spatial dependence structure. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial range parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially-varying effects specified in `svc.cols`. Lastly, the `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). 
+
+For this simulation, we will attempt to estimate a spatially-varying trend parameter. Such an analysis can provide useful information for monitoring programs by allowing for prioritization of locations where occupancy trends are declining. Additionally, it can often help generate hypotheses as to what factors are driving the heterogenous trends across space. Below we simulate data across 400 sites and ten time periods with anywhere between 1-4 replicates at a given time-period, a spatially-varying intercept, a spatially-varying trend on occupancy, and a single covariate effect on detection. Note that we vary the number of time periods each site is sampled. We assume both the occupancy intercept and the trend vary across space, so we set `svc.cols = c(1, 2)`. We use an exponential correlation function. We do not include any unstructured random effects on occurrence or detection.
+
+```{r}
+set.seed(10)
+J.x <- 20
+J.y <- 20
+# Total number of sites
+(J <- J.x * J.y)
+# Total number of time periods at each site
+n.time <- sample(10, J, replace = TRUE)
+n.time.max <- max(n.time)
+# Number of replicates at each site/time period combination
+n.rep <- matrix(NA, J, max(n.time))
+for (j in 1:J) {
+  n.rep[j, 1:n.time[j]] <- sample(4, n.time[j], replace = TRUE)
+}
+sp.only <- 0
+# Simulate a trend parameter 
+trend <- TRUE
+# Intercept and trend on occurrence
+beta <- c(-0.5, -0.2)
+# Intercept and covariate effect on detection
+alpha <- c(0.9, -0.3)
+# No unstructured random intercept on occurrence
+psi.RE <- list() 
+# No unstructured random intercept on detection
+p.RE <- list()
+# Spatial range for intercept and trend 
+phi <- c(3 / .8, 3 / .7)
+# Spatial variance for intercept and trend
+sigma.sq <- c(1, 0.5)
+# Simulate data with an AR1 temporal process
+ar1 <- TRUE
+# Temporal variance of AR1 random effect
+sigma.sq.t <- 0.5
+# Temporal correlation of AR1 random effect
+rho <- 0.25
+# Simulate the occupancy covariate from a Normal(0, 1) distribution
+x.positive <- FALSE 
+# Spatially-varying coefficient columns
+svc.cols <- c(1, 2)
+# Simulate the data
+dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, beta = beta, 
+               alpha = alpha, sp.only = sp.only, trend = trend, 
+               psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, 
+	       sigma.sq = sigma.sq, phi = phi, 
+               cov.model = 'exponential', svc.cols = svc.cols, 
+               x.positive = x.positive, ar1 = ar1, sigma.sq.t = sigma.sq.t, 
+	       rho = rho)
+```
+
+First let's take a look at the true occupancy values averaged across all spatial locations to see if there appears to be an overall trend over time
+
+```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
+str(dat)
+# Plot average occupancy probability
+plot(apply(dat$psi, 2, mean), pch = 19, xlab = 'Time Period',
+     ylab = 'Average Occupancy Probability',
+     cex = 1.5, frame = FALSE, ylim = c(0, 1))
+```
+
+The simulated data object consists of the same objects as we saw previously with `simOcc()`. However, because of the additional time period dimension, all of the objects (except for spatial coordinates and spatially-varying effects) now have an additional dimension of time period. For example, the occurrence design matrix `X` is now a three-dimensional array with dimensions corresponding to site, time period, and covariate. We see on average occupancy is decreasing over the simulated ten year period, which makes sense given the average value we used to simulate the data (-0.2). 
+
+Below we extract the data we need to fit the model and create a plot of the spatially-varying trend across the study region
+
+```{r, fig.width = 7, fig.height = 4, fig.align = 'center', units = 'in'}
+# Detection-nondetection data
+y <- dat$y
+# Occurrence design matrix for fixed effects
+X <- dat$X
+# Detection design matrix for fixed effets
+X.p <- dat$X.p
+# Occurrence values
+psi <- dat$psi
+# Spatial coordinates
+coords <- dat$coords
+# Spatially-varying intercept and covariate effects
+w <- dat$w
+
+cov.effect <- beta[2] + w[, 2]
+plot.dat <- data.frame(x = coords[, 1], 
+		       y = coords[, 2], 
+		       cov.effect = cov.effect)
+ggplot(plot.dat, aes(x = x, y = y, fill = cov.effect)) + 
+  geom_raster() + 
+  scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
+		       high = '#2166AC', na.value = NA) + 
+  theme_bw()
+
+```
+
+We see heterogenous trends across the study area with some locations showing a large decrease in occurrence (red) and others showing a large increase (blue).
+
+We finally package up the data into the data list format for multi-season occupancy models. As before, we will fit the model with 75% of the spatial locations and then predict at the remaining 25% of the locations. With multi-season occupancy models, the occurrence covariates can now vary across both space and time, and so we specify `occ.covs` as a list rather than as a matrix/data frame as we saw with `svcPGOcc()`. See [the multi-season occupancy model vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/spacetimemodelshtml) for additional details. 
+
+```{r}
+# Subset data for prediction. 
+# Split into fitting and prediction data set
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y.fit <- y[-pred.indx, , ]
+y.pred <- y[pred.indx, , ]
+X.fit <- X[-pred.indx, , ]
+X.pred <- X[pred.indx, , ]
+X.p.fit <- X.p[-pred.indx, , , ]
+X.p.pred <- X.p[pred.indx, , , ]
+coords.fit <- coords[-pred.indx, ]
+coords.pred <- coords[pred.indx, ]
+psi.fit <- psi[-pred.indx, ]
+psi.pred <- psi[pred.indx, ]
+w.fit <- w[-pred.indx, ]
+w.pred <- w[pred.indx, ]
+
+# Package all data into a list
+# Occurrence covariates
+occ.covs <- list(trend = X.fit[, , 2])
+# Detection covariates
+det.covs <- list(det.cov.1 = X.p.fit[, , , 2])
+# Package into a list for spOccupancy
+data.list <- list(y = y.fit,
+                  occ.covs = occ.covs,
+                  det.covs = det.covs,
+                  coords = coords.fit)
+# Take a look at the data structure.
+str(data.list)
+```
+
+## Fitting spatially-varying coefficients multi-season occupancy models with `svcPGOcc()`
+
+The function `svcTPGOcc()` fits spatially-varyig coefficients multi-season occupancy models. It's arguments are exactly identical to `svcPGOcc()`, with the only addition being the `ar1` argument.  
+
+```{r, eval = FALSE}
+svcTPGOcc(occ.formula, det.formula, data, inits, priors, 
+          tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+          n.neighbors = 15, search.type = 'cb', n.batch, 
+          batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+          verbose = TRUE, ar1 = FALSE, n.report = 100, 
+          n.burn = round(.10 * n.batch * batch.length), 
+          n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+          k.fold.seed = 100, k.fold.only = FALSE, ...)
+```
+
+Given the similarity in the syntax for `svcTPGOcc()` and `svcPGOcc()`, we won't go into all that much detail on them here. For additional details on the input parameters related to the temporal parameters, see the [multi-season occupancy model vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/spacetimemodelshtml#introduction). 
+
+The `occ.formula` and `det.formula` are specified in the same manner as we saw previously. The `data` argument contains the list of the formatted data, which we discussed in the preceding section for multi-season models.
+
+```{r}
+data <- data.list
+str(data)
+occ.formula <- ~ trend
+det.formula <- ~ det.cov.1
+```
+
+Next we specify the initial values for all model parameters. We will fit the model with an AR(1) temporal covariance structure, which includes two additional parameters: `sigma.sq.t` (a temporal variance parameter) and `rho` (a temporal correlation parameter). We specifiy initial values for z to 1 if the species was ever observed at the given site/time period combination and 0 otherwise. 
+
+```{r}
+z.inits <- apply(data$y, c(1, 2), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
+inits <- list(beta = 0, alpha = 0, z = z.inits,
+              sigma.sq = 1, phi = 3 / 0.5,
+              sigma.sq.t = 1.5, rho = 0.2)
+```
+
+We specify priors in the `priors` argument just as we saw with `svcPGOcc()`. We use an inverse-Gamma prior for the temporal variance `sigma.sq.t` and a uniform prior for the temporal correlation parameter `rho`.
+
+```{r}
+priors <- list(beta.normal = list(mean = 0, var = 2.72),
+               alpha.normal = list(mean = 0, var = 2.72),
+               sigma.sq.t.ig = c(2, 0.5),
+               rho.unif = c(-1, 1),
+               sigma.sq.ig = list(a = 2, b = 1),
+               phi.unif = list(a = 3 / 1, b = 3 / .1))
+```
+
+Next we specify parameters associated with the spatial random effects. In particular, we set `cov.model = 'exponential'` to use an exponential spatial correlation function, `n.neighbors = 5` to use an NNGP with 5 nearest neighbors, and `svc.cols = c(1, 2)` to specify a spatially-varying intercept and trend. We also specify the `ar1` argument to indicate we will use an AR(1) temporal covariance structure.
+
+```{r}
+cov.model <- 'exponential'
+svc.cols <- c(1, 2)
+n.neighbors <- 5
+ar1 <- TRUE
+```
+
+Finally, we set the number of MCMC batches, batch length, the amount of burn-in, and our thinning rate. 
+
+```{r}
+n.batch <- 600
+batch.length <- 25
+# Total number of samples
+n.batch * batch.length
+n.burn <- 10000
+n.thin <- 20
+```
+
+We now run the model with `svcTPGOcc()` and take a look at a summary of the results using `summary()`.
+
+```{r}
+# Approx. run time: ~ 1.1 min
+out.svc.trend <- svcTPGOcc(occ.formula = occ.formula,
+                           det.formula = det.formula,
+                           data = data,
+                           inits = inits,
+                           priors = priors,
+                           cov.model = cov.model,
+                           svc.cols = svc.cols,
+                           n.neighbors = n.neighbors,
+                           n.batch = n.batch,
+                           batch.length = batch.length,
+                           verbose = TRUE,
+                           ar1 = ar1,
+                           n.report = 200,
+                           n.burn = n.burn,
+                           n.thin = n.thin,
+                           n.chains = 1)
+summary(out.svc.trend)
+# Compare estimates to true values
+beta
+alpha
+sigma.sq
+phi
+rho
+sigma.sq.t
+```
+
+Next, we extract the full SVC values using the `getSVCSamples()` function and then compare the estimated values to those used to generate the model. 
+
+```{r}
+# Intercept ---------------------------------------------------------------
+svc.samples <- getSVCSamples(out.svc.trend)
+int.quants <- apply(svc.samples[["(Intercept)"]], 2, quantile, 
+                    probs = c(0.025, 0.5, 0.975))
+svc.true.fit <- beta + w.fit
+plot(svc.true.fit[, 1], int.quants[2, ], pch = 19, 
+     ylim = c(min(int.quants[1, ]), max(int.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Intercept')
+abline(0, 1)
+arrows(svc.true.fit[, 1], int.quants[2, ], svc.true.fit[, 1], col = 'gray', 
+       int.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 1], int.quants[1, ], svc.true.fit[, 1], col = 'gray', 
+       int.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 1], int.quants[2, ], pch = 19)
+
+# Trend -------------------------------------------------------------------
+trend.quants <- apply(svc.samples[["trend"]], 2, quantile, 
+                      probs = c(0.025, 0.5, 0.975))
+plot(svc.true.fit[, 2], trend.quants[2, ], pch = 19, 
+     ylim = c(min(trend.quants[1, ]), max(trend.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Spatially-Varying Trends')
+abline(0, 1)
+arrows(svc.true.fit[, 2], trend.quants[2, ], svc.true.fit[, 2], col = 'gray', 
+       trend.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 2], trend.quants[1, ], svc.true.fit[, 2], col = 'gray', 
+       trend.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 2], trend.quants[2, ], pch = 19)
+```
+
+We see our model does a good job of recovering the true parameter values for both the spatially-varying intercept and spatially-varying trend. 
+
+## Posterior Predictive Checks
+
+Next we run a posterior predictive check using a Freeman-Tukey statistic and grouping by site. 
+
+```{r}
+ppc.out <- ppcOcc(out.svc.trend, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out)
+```
+
+As expected, we see all Bayesian p-values are quite close to the optimal 0.5. 
+
+## Model Comparison using WAIC
+
+Here we use WAIC to compare to a model that assumes the temporal trend is constant over space using the `stPGOcc()` function (or equivalently, we could use `svcTPGOcc()` with `svc.cols = 1`). 
+
+```{r}
+priors.stPGOcc <- list(beta.normal = priors$beta.normal, 
+                       alpha.normal = priors$alpha.normal, 
+                       sigma.sq.t.ig = priors$sigma.sq.t.ig,
+                       rho.unif = priors$rho.unif,
+                       phi.unif = c(3 / 1, 3 / 0.1), 
+                       sigma.sq.ig = c(2, 1))
+out.stPGOcc <- stPGOcc(occ.formula = occ.formula,
+                       det.formula = det.formula,
+                       data = data,
+                       inits = inits,
+                       priors = priors.stPGOcc,
+                       cov.model = cov.model,
+                       n.neighbors = n.neighbors,
+                       n.batch = n.batch,
+                       batch.length = batch.length,
+                       verbose = TRUE,
+                       ar1 = ar1,
+                       n.report = 200,
+                       n.burn = n.burn,
+                       n.thin = n.thin,
+                       n.chains = 1)
+# SVC multi-season occupancy model
+waicOcc(out.svc.trend)
+# Spatial multi-season occupancy model
+waicOcc(out.stPGOcc)
+```
+
+The lower WAIC value for lends support for the model with the spatially-varying trend compared to a model where the trend is assumed constant over space. 
+
+
+## Prediction
+
+Finally, we can use the `predict()` function to predict relative occurrence and the effects of the covariates at new (and old) locations. The `t.cols` argument specifies the time periods over which you want to generate predictions. Here we will predict occupancy at the hold out locations for all ten time periods.
+
+```{r}
+# Take a look at X.pred, the design matrix for the prediction locations
+head(X.pred)
+# Predict occupancy at the 400 new sites
+out.pred <- predict(out.svc.trend, X.pred, coords.pred, t.cols = 1:n.time.max)
+# Use the getSVCSamples() function to extract the SVC values
+# at the prediction locations
+svc.pred.samples <- getSVCSamples(out.svc.trend, pred.object = out.pred) 
+# True covariate effect values at new locations
+trend.pred <- beta[2] + w.pred[, 2]
+# Get meian and 95% CIs of the SVC for the trendariate effect
+trend.pred.quants <- apply(svc.pred.samples[["trend"]], 2, quantile, 
+                           probs = c(0.025, 0.5, 0.975))
+plot(trend.pred, trend.pred.quants[2, ], pch = 19, 
+     ylim = c(min(trend.pred.quants[1, ]), max(trend.pred.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Spatially-varying trend')
+abline(0, 1)
+arrows(trend.pred, trend.pred.quants[2, ], trend.pred, col = 'gray', 
+       trend.pred.quants[1, ], length = 0.02, angle = 90)
+arrows(trend.pred, trend.pred.quants[1, ], trend.pred, col = 'gray', 
+       trend.pred.quants[3, ], length = 0.02, angle = 90)
+points(trend.pred, trend.pred.quants[2, ], pch = 19)
+```
+
+# Spatially-varying coefficients multi-season generalized linear model 
+
+## Basic model description
+
+To model spatio-temporal patterns in occurrence when ignoring imperfect detection, we directly model the detection-nondetection data analogous to the SVC-GLM in Equation \ref{yNoDet}, with all data and parameters now varying over time. The occurrence status of the species at site $j$ during primary time period $t$ ($\psi_t(\bm{s}_j)$) follows Equation \ref{psiTime}.
+
+
+## Simulating data with `simTBinom()`
+
+The function `simTBinom()` simulates single-species multi-season detection-nondetection data assuming perfect detection. `simTBinom()` has the following arguments, which again closely resemble all other data simulation functions in `spOccupancy`. 
+
+```{r, eval = FALSE}
+simTBinom(J.x, J.y, n.time, weights, beta, sp.only = 0, 
+          trend = TRUE, psi.RE = list(), sp = FALSE, 
+          cov.model, sigma.sq, phi, nu, svc.cols = 1, 
+          ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE, ...) 
+```
+
+All parameters are the same as those described previously for `simTBinom()` and `simTOcc()`. Below we simulate data from 400 sites over 10 years, with uneven sampling over the 10 years across the sites. As with the SVC multi-season occupancy model, our goal for this simulation is to assess a spatially-varying trend. 
+
+```{r}
+set.seed(500)
+J.x <- 20
+J.y <- 20
+# Total number of sites
+(J <- J.x * J.y)
+# Total number of time periods at each site
+n.time <- sample(10, J, replace = TRUE)
+n.time.max <- max(n.time)
+# Number of Binomial replicates at each site/time period combination.
+weights <- matrix(NA, J, max(n.time))
+for (j in 1:J) {
+  weights[j, 1:n.time[j]] <- sample(4, n.time[j], replace = TRUE)
+}
+sp.only <- 0
+# Simulate a trend parameter 
+trend <- TRUE
+# Intercept and trend on relative occurrence
+beta <- c(-0.5, -0.2)
+# No unstructured random intercept on relative occurrence
+psi.RE <- list() 
+# Spatial range for intercept and trend 
+phi <- c(3 / .8, 3 / .7)
+# Spatial variance for intercept and trend
+sigma.sq <- c(1, 0.5)
+# Simulate data with an AR1 temporal process
+ar1 <- TRUE
+# Temporal variance of AR1 random effect
+sigma.sq.t <- 0.5
+# Temporal correlation of AR1 random effect
+rho <- 0.25
+# Spatially-varying coefficient columns
+svc.cols <- c(1, 2)
+# Simulate the data
+dat <- simTBinom(J.x = J.x, J.y = J.y, n.time = n.time, weights = weights, 
+                 beta = beta, sp.only = sp.only, trend = trend, psi.RE = psi.RE, 
+		 sp = TRUE, sigma.sq = sigma.sq, phi = phi, 
+                 cov.model = 'exponential', svc.cols = svc.cols, 
+                 ar1 = ar1, sigma.sq.t = sigma.sq.t, rho = rho)
+str(dat)
+# Plot average occupancy probability
+plot(apply(dat$psi, 2, mean), pch = 19, xlab = 'Time Period',
+     ylab = 'Average Occupancy Probability',
+     cex = 1.5, frame = FALSE, ylim = c(0, 1))
+```
+
+We see a small decline in relative occurrence probability over the simulated ten years. 
+
+Below we extract the data we need to fit the model and create a plot of the spatially-varying trend across the study region
+
+```{r, fig.width = 7, fig.height = 4, fig.align = 'center', units = 'in'}
+# Detection-nondetection data
+y <- dat$y
+# Design matrix for fixed effects
+X <- dat$X
+# Occurrence values
+psi <- dat$psi
+# Spatial coordinates
+coords <- dat$coords
+# Spatially-varying intercept and covariate effects
+w <- dat$w
+
+trend <- beta[2] + w[, 2]
+plot.dat <- data.frame(x = coords[, 1], 
+		       y = coords[, 2], 
+		       trend = trend)
+ggplot(plot.dat, aes(x = x, y = y, fill = trend)) + 
+  geom_raster() + 
+  scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', high = '#2166AC', 
+  	               na.value = NA) + 
+  theme_bw() + 
+  labs(x = 'Easting', y = 'Northing', fill = 'Trend')
+```
+
+Lastly, we package up the data in a list required for fitting the multi-season spatially-varying coefficient. We create a list with the following objects: `y` (the detection-nondetection data specified as a three-dimensional array), `covs` (the covariates specified as a list), `weights` (a matrix of binomial weights indicating the number of Bernoulli trials, and `coords` (a matrix of spatial coordinates). As before, we subset the data for prediction to only fit the model with 75% of the sites.
+
+```{r}
+# Subset data for prediction. 
+# Split into fitting and prediction data set
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y.fit <- y[-pred.indx, ]
+y.pred <- y[pred.indx, ]
+X.fit <- X[-pred.indx, , ]
+X.pred <- X[pred.indx, , ]
+coords.fit <- coords[-pred.indx, ]
+coords.pred <- coords[pred.indx, ]
+psi.fit <- psi[-pred.indx, ]
+psi.pred <- psi[pred.indx, ]
+w.fit <- w[-pred.indx, ]
+w.pred <- w[pred.indx, ]
+weights.fit <- weights[-pred.indx, ]
+weights.pred <- weights[pred.indx, ]
+
+# Package all data into a list
+# Occurrence covariates
+covs <- list(trend = X.fit[, , 2])
+# Package into a list for spOccupancy
+data.list <- list(y = y.fit,
+                  covs = covs,
+		  weights = weights.fit,
+                  coords = coords.fit)
+# Take a look at the data structure.
+str(data.list)
+```
+
+
+## Fitting spatially-varying coefficients generalized linear models with `svcTPGBinom()`
+
+The function `svcTPGBinom()` fits spatially-varyig coefficients multi-season generalized linear models.  
+
+```{r, eval = FALSE}
+svcTPGBinom(formula, data, inits, priors, 
+            tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+            n.neighbors = 15, search.type = 'cb', n.batch, 
+            batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+            verbose = TRUE, ar1 = FALSE, n.report = 100, 
+            n.burn = round(.10 * n.batch * batch.length), 
+            n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+            k.fold.seed = 100, k.fold.only = FALSE, ...)
+```
+
+There are no new arguments or details for fitting models with `svcTPGBinom()`, so we will go ahead and fit the model after specifying all the model arguments. 
+
+```{r}
+# Formatted data list
+data <- data.list
+str(data)
+# Model formula
+formula <- ~ trend
+# Initial values
+inits <- list(beta = 0, sigma.sq = 1, phi = 3 / 0.5,
+              sigma.sq.t = 1.5, rho = 0.2)
+# Priors
+priors <- list(beta.normal = list(mean = 0, var = 2.72),
+               sigma.sq.t.ig = c(2, 0.5),
+               rho.unif = c(-1, 1),
+               sigma.sq.ig = list(a = 2, b = 1),
+               phi.unif = list(a = 3 / 1, b = 3 / .1))
+# Exponential covariance function
+cov.model <- 'exponential'
+# Spatially-varying intercept and trend
+svc.cols <- c(1, 2)
+# Fit model with a NNGP with 5 neighbors
+n.neighbors <- 5
+# Include an AR(1) temporal covariance structure.
+ar1 <- TRUE
+# MCMC parameters
+n.batch <- 600
+batch.length <- 25
+# Total number of samples
+n.batch * batch.length
+n.burn <- 10000
+n.thin <- 20
+# Approx. run time: ~ 1.5 min
+out.svc.trend <- svcTPGBinom(formula = formula,
+                             data = data,
+                             inits = inits,
+                             priors = priors,
+                             cov.model = cov.model,
+                             svc.cols = svc.cols,
+                             n.neighbors = n.neighbors,
+                             n.batch = n.batch,
+                             batch.length = batch.length,
+                             verbose = TRUE,
+                             ar1 = ar1,
+                             n.report = 200,
+                             n.burn = n.burn,
+                             n.thin = n.thin,
+                             n.chains = 1)
+summary(out.svc.trend)
+# Compare estimates to true values
+beta
+alpha
+sigma.sq
+phi
+rho
+sigma.sq.t
+```
+
+Let's extract the spatially-varying intercept and spatially-varying trend estimates from our model using `getSVCSamples()` and compare them to the true values. 
+
+```{r}
+# Intercept ---------------------------------------------------------------
+svc.samples <- getSVCSamples(out.svc.trend)
+int.quants <- apply(svc.samples[["(Intercept)"]], 2, quantile, 
+                    probs = c(0.025, 0.5, 0.975))
+svc.true.fit <- beta + w.fit
+plot(svc.true.fit[, 1], int.quants[2, ], pch = 19, 
+     ylim = c(min(int.quants[1, ]), max(int.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Intercept')
+abline(0, 1)
+arrows(svc.true.fit[, 1], int.quants[2, ], svc.true.fit[, 1], col = 'gray', 
+       int.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 1], int.quants[1, ], svc.true.fit[, 1], col = 'gray', 
+       int.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 1], int.quants[2, ], pch = 19)
+
+# Trend -------------------------------------------------------------------
+trend.quants <- apply(svc.samples[["trend"]], 2, quantile, 
+                      probs = c(0.025, 0.5, 0.975))
+plot(svc.true.fit[, 2], trend.quants[2, ], pch = 19, 
+     ylim = c(min(trend.quants[1, ]), max(trend.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Spatially-Varying Trends')
+abline(0, 1)
+arrows(svc.true.fit[, 2], trend.quants[2, ], svc.true.fit[, 2], col = 'gray', 
+       trend.quants[1, ], length = 0.02, angle = 90)
+arrows(svc.true.fit[, 2], trend.quants[1, ], svc.true.fit[, 2], col = 'gray', 
+       trend.quants[3, ], length = 0.02, angle = 90)
+points(svc.true.fit[, 2], trend.quants[2, ], pch = 19)
+```
+
+We see our model does a good job of recovering the true parameter values for both the spatially-varying intercept and spatially-varying trend. 
+
+## Model Comparison using WAIC
+
+Here we use WAIC to compare our full SVC model to a model that assumes the temporal trend is constant over space by setting `svc.cols = 1`. 
+
+```{r}
+out.trend.const <- svcTPGBinom(formula = formula,
+                               data = data,
+                               inits = inits,
+                               priors = priors,
+                               svc.cols = 1,
+                               cov.model = cov.model,
+                               n.neighbors = n.neighbors,
+                               n.batch = n.batch,
+                               batch.length = batch.length,
+                               verbose = TRUE,
+                               ar1 = ar1,
+                               n.report = 200,
+                               n.burn = n.burn,
+                               n.thin = n.thin,
+                               n.chains = 1)
+# SVC multi-season GLM
+waicOcc(out.svc.trend)
+# Spatial multi-season GLM
+waicOcc(out.trend.const)
+```
+
+
+## Prediction
+
+Finally, we use the `predict()` function to predict relative occurrence and the effects of the covariates at new (and old) locations over the simulated ten tme periods. 
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Take a look at X.pred, the design matrix for the prediction locations
+head(X.pred)
+# Predict occupancy at the 400 new sites
+out.pred <- predict(out.svc.trend, X.pred, coords.pred, t.cols = 1:n.time.max, 
+                    weights = weights.pred)
+# Use the getSVCSamples() function to extract the SVC values
+# at the prediction locations
+svc.pred.samples <- getSVCSamples(out.svc.trend, pred.object = out.pred) 
+# True covariate effect values at new locations
+trend.pred <- beta[2] + w.pred[, 2]
+# Get meian and 95% CIs of the SVC for the trendariate effect
+trend.pred.quants <- apply(svc.pred.samples[["trend"]], 2, quantile, 
+                           probs = c(0.025, 0.5, 0.975))
+plot(trend.pred, trend.pred.quants[2, ], pch = 19, 
+     ylim = c(min(trend.pred.quants[1, ]), max(trend.pred.quants[3, ])),
+     xlab = "True", ylab = "Fit", main = 'Spatially-varying trend')
+abline(0, 1)
+arrows(trend.pred, trend.pred.quants[2, ], trend.pred, col = 'gray', 
+       trend.pred.quants[1, ], length = 0.02, angle = 90)
+arrows(trend.pred, trend.pred.quants[1, ], trend.pred, col = 'gray', 
+       trend.pred.quants[3, ], length = 0.02, angle = 90)
+points(trend.pred, trend.pred.quants[2, ], pch = 19)
+```
+
+# References {-}

@@ -334,18 +334,6 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       X.p.re[, j] <- X.p.re[, j] + max(X.p.re[, j - 1]) + 1
     }
   }
-  lambda.psi <- matrix(0, J * n.years.max, n.occ.re)
-  if (p.occ.re > 0) {
-    for (i in 1:n.occ.re) {
-      lambda.psi[which(X.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
-    }
-  }
-  lambda.p <- matrix(0, n.obs, n.det.re)
-  if (p.det.re > 0) {
-    for (i in 1:n.det.re) {
-      lambda.p[which(X.p.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
-    }
-  }
 
   # Priors --------------------------------------------------------------
   if (missing(priors)) {
@@ -459,7 +447,9 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   # phi -----------------------------
   # Get distance matrix which is used if priors are not specified
-  coords.D <- iDist(coords)
+  if (!NNGP) {
+    coords.D <- iDist(coords)
+  }
   if ("phi.unif" %in% names(priors)) {
     if (priors$phi.unif[1] == 'fixed') {
       fixed.params[which(all.params == 'phi')] <- TRUE 
@@ -478,6 +468,9 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   } else {
     if (verbose) {
       message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
+    }
+    if (NNGP) {
+      coords.D <- iDist(coords)
     }
     phi.a <- 3 / max(coords.D)
     phi.b <- 3 / sort(unique(c(coords.D)))[2]
@@ -776,7 +769,11 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       stop("error: initial values for sigma.sq must be of length 1")
     }
   } else {
-    sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+    if (sigma.sq.ig) {
+      sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+    } else {
+      sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+    }
     if (verbose) {
       message("sigma.sq is not specified in initial values.\nSetting initial value to random value from the prior distribution\n")
     }
@@ -1036,7 +1033,6 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, 
 		n.det.re, n.years.max)
     storage.mode(consts) <- "integer"
-    storage.mode(K) <- "double"
     storage.mode(coords) <- "double"
     storage.mode(beta.inits) <- "double"
     storage.mode(alpha.inits) <- "double"
@@ -1117,7 +1113,11 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if ((i > 1) & (!fix.inits)) {
           beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
           alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-          sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+	  } else {
+            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+	  }
           phi.inits <- runif(1, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(1, nu.a, nu.b)
@@ -1139,7 +1139,7 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         # Note that the upper limit on the number of arguments is 65, which 
         # you're getting close to. 
         out.tmp[[i]] <- .Call("stPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, 
-                              consts, K, n.occ.re.long, n.det.re.long,
+                              consts, n.occ.re.long, n.det.re.long,
                               n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
                               beta.inits, alpha.inits, sigma.sq.psi.inits, 
                               sigma.sq.p.inits, beta.star.inits, alpha.star.inits, 
@@ -1154,7 +1154,7 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			      ar1, ar1.vals,
                               tuning.c, cov.model.indx, n.batch, batch.length, accept.rate, 
                               n.omp.threads, verbose, n.report,  
-                              n.burn, n.thin, n.post.samples, curr.chain, n.chains)
+                              n.burn, n.thin, n.post.samples, curr.chain, n.chains, sigma.sq.ig)
         curr.chain <- curr.chain + 1
       }
       out <- list()
@@ -1262,11 +1262,6 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
       colnames(out$X.p.re) <- x.p.re.names
       tmp <- matrix(NA, J * K.max * n.years.max, n.det.re)
-      tmp[names.long, ] <- lambda.p
-      tmp <- array(tmp, dim = c(J, n.years.max, K.max, n.det.re))
-      tmp <- tmp[order(ord), , , , drop = FALSE]
-      out$lambda.p <- matrix(tmp, J * K.max * n.years.max, n.det.re)
-      out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
 
       if (p.occ.re > 0) {
         out$sigma.sq.psi.samples <- mcmc(
@@ -1358,8 +1353,6 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	n.obs.fit <- nrow(X.p.fit)
 	n.obs.0 <- nrow(X.p.0)
 	# Random Detection Effects
-        lambda.p.fit <- lambda.p[y.indx, , drop = FALSE]
-        lambda.p.0 <- lambda.p[!y.indx, , drop = FALSE]
         X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
         X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
         n.det.re.fit <- length(unique(c(X.p.re.fit)))
@@ -1369,14 +1362,17 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.level.indx.fit <- sort(unique(c(X.p.re.fit)))
           alpha.star.inits.fit <- rnorm(n.det.re.fit, 
           			      sqrt(sigma.sq.p.inits[alpha.star.indx.fit + 1]))
+          p.re.level.names.fit <- list()
+          for (t in 1:p.det.re) {
+            tmp.indx <- alpha.level.indx.fit[alpha.star.indx.fit == t - 1]
+            p.re.level.names.fit[[t]] <- unlist(p.re.level.names)[tmp.indx + 1]    
+          }
         } else {
           alpha.star.indx.fit <- alpha.star.indx
           alpha.level.indx.fit <- alpha.level.indx
           alpha.star.inits.fit <- alpha.star.inits
         }
 	# Random Occurrence Effects
-        lambda.psi.fit <- lambda.psi[year.indx, , drop = FALSE]
-        lambda.psi.0 <- lambda.psi[!year.indx, , drop = FALSE]
         X.re.fit <- X.re[year.indx, , drop = FALSE]
         X.re.0 <- X.re[!year.indx, , drop = FALSE]
         n.occ.re.fit <- length(unique(c(X.re.fit)))
@@ -1441,7 +1437,6 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         consts.fit <- c(J.fit, n.obs.fit, p.occ, p.occ.re, n.occ.re.fit, 
 			p.det, p.det.re, n.det.re.fit, n.years.max)
         storage.mode(consts.fit) <- "integer"
-        storage.mode(K.fit) <- "double"
         storage.mode(coords.fit) <- "double"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(z.year.indx.fit) <- "integer"
@@ -1471,7 +1466,7 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
         out.fit <- .Call("stPGOccNNGP", y.fit, X.fit, X.p.fit, coords.fit, 
 			 X.re.fit, X.p.re.fit, 
-                         consts.fit, K.fit, n.occ.re.long.fit, n.det.re.long.fit,
+                         consts.fit, n.occ.re.long.fit, n.det.re.long.fit,
                          n.neighbors, nn.indx.fit, nn.indx.lu.fit, u.indx.fit, 
 			 u.indx.lu.fit, ui.indx.fit,
                          beta.inits, alpha.inits, sigma.sq.psi.inits, 
@@ -1487,10 +1482,12 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			 ar1, ar1.vals,
                          tuning.c, cov.model.indx, n.batch, batch.length, accept.rate, 
                          n.omp.threads.fit, verbose.fit, n.report,  
-                         n.burn, n.thin, n.post.samples, curr.chain, n.chains)
+                         n.burn, n.thin, n.post.samples, curr.chain, n.chains, sigma.sq.ig)
 
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
+        out.fit$alpha.samples <- mcmc(t(out.fit$alpha.samples))
+        colnames(out.fit$alpha.samples) <- x.p.names
         out.fit$theta.samples <- mcmc(t(out.fit$theta.samples))
 	# colnames(out.fit$theta.samples) <- theta.names
         out.fit$w.samples <- mcmc(t(out.fit$w.samples))
@@ -1530,6 +1527,16 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           out.fit$X.re <- array(X.re.fit, dim = c(J.fit, n.years.max, p.occ.re))
 	  dimnames(out.fit$X.re)[[3]] <- x.re.names
         }
+        if (p.det.re > 0) {
+          out.fit$sigma.sq.p.samples <- mcmc(t(out.fit$sigma.sq.p.samples))
+          colnames(out.fit$sigma.sq.p.samples) <- x.p.re.names
+          out.fit$alpha.star.samples <- mcmc(t(out.fit$alpha.star.samples))
+          tmp.names <- unlist(p.re.level.names.fit)
+          alpha.star.names <- paste(rep(x.p.re.names, n.det.re.long.fit), tmp.names, sep = '-')
+          colnames(out.fit$alpha.star.samples) <- alpha.star.names
+          out.fit$p.re.level.names <- p.re.level.names.fit
+          out.fit$X.p.re <- X.p.re.fit
+        }
         if (p.occ.re > 0) {
           out.fit$psiRE <- TRUE
         } else {
@@ -1539,7 +1546,7 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
 	# Predict occurrence at new sites
         if (p.occ.re > 0) {
-	  X.0 <- cbind(X.0, X.re.0)
+	  X.0 <- cbind(X.0, X.re.0 + 1)
 	}
 	tmp.names <- colnames(X.0)
 	X.0 <- array(X.0, dim = c(J.0, n.years.max, ncol(X.0)))
@@ -1548,34 +1555,19 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 				     t.cols = 1:n.years.max, 
 				     verbose = FALSE)
 
-        # Get full random effects if certain levels aren't in the fitted values
-        if (p.det.re > 0) {
-          if (n.det.re.fit != n.det.re) {
-            tmp <- matrix(NA, n.det.re, n.post.samples)  
-            tmp[alpha.level.indx.fit + 1, ] <- out.fit$alpha.star.samples[1:n.det.re.fit, ]
-            out.fit$alpha.star.samples <- tmp
-          }
-          # Samples missing NA values
-          tmp.indx <- which(apply(out.fit$alpha.star.samples, 1, function(a) sum(is.na(a))) == n.post.samples)
-          for (l in tmp.indx) {
-            out.fit$alpha.star.samples[l, ] <- rnorm(n.post.samples, 0, 
-        					     sqrt(out.fit$sigma.sq.p.samples[alpha.star.indx[l] + 1, ]))
-          }
-        }
+        # Predict detection values 
+        if (p.det.re > 0) {X.p.0 <- cbind(X.p.0, X.p.re.0 + 1)}
+        tmp.names <- colnames(X.p.0)
+        X.p.0 <- array(X.p.0, dim = c(nrow(X.p.0), 1, ncol(X.p.0)))
+        dimnames(X.p.0)[[3]] <- tmp.names
+        out.p.pred <- predict.stPGOcc(out.fit, X.p.0, t.cols = 1, type = 'detection')
 
-	# Detection
-	if (p.det.re > 0) {
-	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples + 
-	      		     lambda.p.0 %*% out.fit$alpha.star.samples))
-	} else {
-	  p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples))
-	}
-	like.samples <- rep(NA, nrow(X.p.0))
-	out.pred$z.0.samples <- aperm(out.pred$z.0.samples, c(2, 3, 1))
-	out.pred$z.0.samples <- matrix(out.pred$z.0.samples, J.0 * n.years.max, n.post.samples)
-	for (j in 1:nrow(X.p.0)) {
+        like.samples <- rep(NA, nrow(X.p.0))
+        out.pred$z.0.samples <- aperm(out.pred$z.0.samples, c(2, 3, 1))
+        out.pred$z.0.samples <- matrix(out.pred$z.0.samples, J.0 * n.years.max, n.post.samples)
+        for (j in 1:nrow(X.p.0)) {
           like.samples[j] <- mean(dbinom(y.0[j], 1, 
-	      			   p.0.samples[, j] * out.pred$z.0.samples[z.0.long.indx[j], ]))
+              			   out.p.pred$p.0.samples[, j, 1] * out.pred$z.0.samples[z.0.long.indx[j], ]))
         }
         sum(log(like.samples), na.rm = TRUE)
       } # parallel loop

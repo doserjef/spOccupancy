@@ -13,7 +13,7 @@ ppcOcc(object, fit.stat, group, ...)
 \arguments{
 \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
 \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, 
-\code{tPGOcc}, or \code{stPGOcc}.}
+\code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
@@ -43,7 +43,7 @@ column (replicate).}
 
   \item{fit.y}{a numeric vector of posterior samples for the 
   fit statistic calculated on the observed data when \code{object} is 
-  of class \code{PGOcc} or \code{spPGOcc}. When \code{object} is of 
+  of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. When \code{object} is of 
   class \code{msPGOcc}, \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, 
   this is a numeric matrix with rows corresponding to posterior samples
   and columns corresponding to species. When \code{object} is of class
@@ -55,7 +55,7 @@ column (replicate).}
 
   \item{fit.y.rep}{a numeric vector of posterior samples for the 
   fit statistic calculated on a replicate data set generated from the 
-  model when \code{object} is of class \code{PGOcc} or \code{spPGOcc}. When \code{object} is of 
+  model when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. When \code{object} is of 
   class \code{msPGOcc}, \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, 
   this is a numeric matrix with rows corresponding to posterior samples
   and columns corresponding to species. When \code{object} is of class
@@ -68,7 +68,7 @@ column (replicate).}
   \item{fit.y.group.quants}{a matrix consisting of posterior quantiles
   for the fit statistic using the observed data for each unique element
   the fit statistic is calculated for (i.e., sites when group = 1, 
-  replicates when group = 2) when \code{object} is of class \code{PGOcc} or \code{spPGOcc}. 
+  replicates when group = 2) when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. 
   When \code{object} is of class \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, this is a three-dimensional
   array with the additional dimension corresponding to species. When \code{object} is 
@@ -80,7 +80,7 @@ column (replicate).}
   \item{fit.y.rep.group.quants}{a matrix consisting of posterior quantiles
   for the fit statistic using the model replicated data for each unique element
   the fit statistic is calculated for (i.e., sites when group = 1, 
-  replicates when group = 2) when \code{object} is of class \code{PGOcc} or \code{spPGOcc}. 
+  replicates when group = 2) when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, \code{svcPGOcc}. 
   When \code{object} is of class \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, this is a three-dimensional
   array with the additional dimension corresponding to species. When \code{object} is 

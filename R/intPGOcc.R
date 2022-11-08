@@ -2,7 +2,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		     n.samples, n.omp.threads = 1, verbose = TRUE, 
 		     n.report = 1000, n.burn = round(.10 * n.samples), 
 		     n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		     k.fold.seed = 100, k.fold.data, ...){
+		     k.fold.seed = 100, k.fold.data, k.fold.only = FALSE, ...){
 
     ptm <- proc.time()
 
@@ -240,7 +240,6 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     n.obs.long <- sapply(X.p, nrow)
     n.obs <- sum(n.obs.long)
-    # TODO: check this
     z.long.indx.r <- list()
     for (i in 1:n.data) {
       z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])
@@ -502,61 +501,63 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(n.post.samples) <- "integer"
 
     out.tmp <- list()
-    for (i in 1:n.chains) {
-      # Change initial values if i > 1
-      if ((i > 1) & (!fix.inits)) {
-        beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-        alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-      }
-      storage.mode(curr.chain) <- "integer" 
-      # Run the model in C
-      out.tmp[[i]] <- .Call("intPGOcc", y, X, X.p.all, p.occ, p.det, p.det.long, 
-		            J, J.long, K, n.obs, n.obs.long, n.data, 
-		            beta.inits, alpha.inits, z.inits,
-		            z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
-		            Sigma.beta, sigma.alpha, n.samples, 
-		            n.omp.threads, verbose, n.report, n.burn, n.thin, 
-		            n.post.samples, curr.chain, n.chains)
-      curr.chain <- curr.chain + 1
-    }
-
-    # Calculate R-Hat ---------------
     out <- list()
-    out$rhat <- list()
-    if (n.chains > 1) {
-      out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2]
-      out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$alpha.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
-    } else {
-      out$rhat$beta <- rep(NA, p.occ)
-      out$rhat$alpha <- rep(NA, p.det)
+    if (!k.fold.only) {
+      for (i in 1:n.chains) {
+        # Change initial values if i > 1
+        if ((i > 1) & (!fix.inits)) {
+          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+        }
+        storage.mode(curr.chain) <- "integer" 
+        # Run the model in C
+        out.tmp[[i]] <- .Call("intPGOcc", y, X, X.p.all, p.occ, p.det, p.det.long, 
+          	            J, J.long, K, n.obs, n.obs.long, n.data, 
+          	            beta.inits, alpha.inits, z.inits,
+          	            z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
+          	            Sigma.beta, sigma.alpha, n.samples, 
+          	            n.omp.threads, verbose, n.report, n.burn, n.thin, 
+          	            n.post.samples, curr.chain, n.chains)
+        curr.chain <- curr.chain + 1
+      }
+
+      # Calculate R-Hat ---------------
+      out <- list()
+      out$rhat <- list()
+      if (n.chains > 1) {
+        out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$beta.samples)))), 
+        			     autoburnin = FALSE)$psrf[, 2]
+        out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$alpha.samples)))), 
+        			      autoburnin = FALSE)$psrf[, 2]
+      } else {
+        out$rhat$beta <- rep(NA, p.occ)
+        out$rhat$alpha <- rep(NA, p.det)
+      }
+
+      out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(do.call(rbind, 
+        				lapply(out.tmp, function(a) t(a$alpha.samples))))
+      colnames(out$alpha.samples) <- x.p.names
+      out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
+      out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
+      # Calculate effective sample sizes
+      out$ESS <- list()
+      out$ESS$beta <- effectiveSize(out$beta.samples)
+      out$ESS$alpha <- effectiveSize(out$alpha.samples)
+      out$X <- X
+      out$X.p <- X.p
+      out$y <- y.big
+      out$n.samples <- n.samples
+      out$call <- cl
+      out$sites <- sites
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$n.chains <- n.chains
     }
-
-    out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
-    colnames(out$beta.samples) <- x.names
-    out$alpha.samples <- mcmc(do.call(rbind, 
-      				lapply(out.tmp, function(a) t(a$alpha.samples))))
-    colnames(out$alpha.samples) <- x.p.names
-    out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
-    out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
-    # Calculate effective sample sizes
-    out$ESS <- list()
-    out$ESS$beta <- effectiveSize(out$beta.samples)
-    out$ESS$alpha <- effectiveSize(out$alpha.samples)
-    out$X <- X
-    out$X.p <- X.p
-    out$y <- y.big
-    out$n.samples <- n.samples
-    out$call <- cl
-    out$sites <- sites
-    out$n.post <- n.post.samples
-    out$n.thin <- n.thin
-    out$n.burn <- n.burn
-    out$n.chains <- n.chains
-
     # K-fold cross-validation -------
     if (!missing(k.fold)) {
       if (verbose) {      

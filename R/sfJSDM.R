@@ -47,7 +47,6 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: data must be a list")
   }
   names(data) <- tolower(names(data))
-  # TODO: maybe a better way to do this
   data.orig <- data
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
@@ -265,6 +264,9 @@ sfJSDM <- function(formula, data, inits, priors,
     tau.sq.beta.b <- rep(0.1, p.occ)
   }
   # phi -----------------------------
+  if (!NNGP) {
+    coords.D <- iDist(coords)
+  }
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -290,7 +292,9 @@ sfJSDM <- function(formula, data, inits, priors,
     if (verbose) {
     message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
     }
-    coords.D <- iDist(coords)
+    if (NNGP) {
+      coords.D <- iDist(coords)
+    }
     phi.a <- rep(3 / max(coords.D), q)
     phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
   }
@@ -1097,7 +1101,7 @@ sfJSDM <- function(formula, data, inits, priors,
       	      " thread(s).", sep = ''))
       }
       # Currently implemented without parellization. 
-      # TODO: may need to look into this. 
+      # TODO: don't think this works when updating. 
       set.seed(k.fold.seed)
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
@@ -1113,6 +1117,7 @@ sfJSDM <- function(formula, data, inits, priors,
         y.big.0 <- y.big[, curr.set, drop = FALSE]
         X.fit <- X[-curr.set, , drop = FALSE]
         X.0 <- X[curr.set, , drop = FALSE]
+	w.inits.fit <- w.inits[, curr.set, drop = FALSE]
         coords.fit <- coords[-curr.set, , drop = FALSE]
         coords.0 <- coords[curr.set, , drop = FALSE]
         J.fit <- nrow(X.fit)
@@ -1193,7 +1198,7 @@ sfJSDM <- function(formula, data, inits, priors,
 		       u.indx.lu.fit, ui.indx.fit, beta.inits, 
         	       beta.comm.inits, tau.sq.beta.inits, phi.inits, 
         	       lambda.inits, nu.inits, sigma.sq.psi.inits,
-		       beta.star.inits.fit, beta.star.indx.fit, beta.level.indx.fit, 
+		       beta.star.inits.fit, w.inits.fit, beta.star.indx.fit, beta.level.indx.fit, 
 		       mu.beta.comm, Sigma.beta.comm,
         	       tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b,
         	       nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
@@ -1250,7 +1255,7 @@ sfJSDM <- function(formula, data, inits, priors,
         class(out.fit) <- "sfJSDM"
 
         # Predict occurrence at new sites. 
-	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
+	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0 + 1)}
         out.pred <- predict.sfJSDM(out.fit, X.0, 
 				      coords.0, verbose = FALSE, ignore.RE = FALSE)
 	like.samples <- matrix(NA, N, J.0)

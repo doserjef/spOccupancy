@@ -8,7 +8,8 @@
 
 \usage{
 simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
-       p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
+       p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
+       sigma.sq, phi, nu, x.positive = FALSE, ...)
 }
 
 \arguments{
@@ -28,6 +29,11 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process. By default set to \code{FALSE}.}
 
+\item{svc.cols}{a vector indicating the variables whose effects will be
+  estimated as spatially-varying coefficients. \code{svc.cols} is an
+  integer vector with values indicating the order of covariates specified
+  in the model formula (with 1 being the intercept if specified).}
+
 \item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
@@ -35,6 +41,8 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 \item{phi}{a numeric value indicating the spatial decay parameter. Ignored when \code{sp = FALSE}. }
 
 \item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
+
+\item{x.positive}{a logical value indicating whether the simulated covariates should be simulated as random standard normal covariates (\code{x.positive = FALSE}) or restricted to positive values using a uniform distribution with lower bound 0 and upper bound 1 (\code{x.positive = TRUE}).}
 
 \item{...}{currently no additional arguments}
 }
@@ -50,7 +58,7 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
   \item{X}{a \eqn{J \times p.occ}{J x p.occ} numeric design matrix for the occupancy portion of the model.}
   \item{X.p}{a three-dimensional numeric array with dimensions corresponding to sites, repeat visits, and number of detection regression coefficients. This is the design matrix used for the detection portion of the occupancy model.}
   \item{coords}{a \eqn{J \times 2}{J x 2} numeric matrix of coordinates of each occupancy site. Required for spatial models.}
-  \item{w}{a \eqn{J \times 1}{J x 1} matrix of the spatial random effects. Only used to simulate data when \code{sp = TRUE}.}
+  \item{w}{a matrix of the spatial random effect values for each site. The number of columns is determined by the \code{svc.cols} argument (the number of spatially-varying coefficients).}
   \item{psi}{a \eqn{J \times 1}{J x 1} matrix of the occupancy probabilities for each site.}
   \item{z}{a length \eqn{J}{J} vector of the latent occupancy states at each site.}
   \item{p}{a \code{J x max(n.rep)} matrix of the detection probabilities for each site and replicate combination. Sites with fewer than \code{max(n.rep)} replicates will contain \code{NA} values.}

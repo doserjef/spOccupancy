@@ -6,7 +6,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		       n.report = 100, 
 		       n.burn = round(.10 * n.batch * batch.length),
 		       n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		       k.fold.seed = 100, k.fold.data, ...){
+		       k.fold.seed = 100, k.fold.data, k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -263,7 +263,6 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     n.obs <- sum(n.obs.long)
     z.long.indx.r <- list()
     for (i in 1:n.data) {
-      # TODO: check this 
       z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])
       z.long.indx.r[[i]] <- z.long.indx.r[[i]][!is.na(c(y[[i]]))]
     }
@@ -390,9 +389,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
     # phi -----------------------------
     # Get distance matrix which is used if priors are not specified
-    coords.D <- iDist(coords)
-    lower.unif <- 3 / max(coords.D)
-    upper.unif <- 3 / sort(unique(c(coords.D)))[2]
+    if (!NNGP) {
+      coords.D <- iDist(coords)
+    }
     if ("phi.unif" %in% names(priors)) {
       if (!is.vector(priors$phi.unif) | !is.atomic(priors$phi.unif) | length(priors$phi.unif) != 2) {
         stop("error: phi.unif must be a vector of length 2 with elements corresponding to phi's lower and upper bounds")
@@ -402,6 +401,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     } else {
       if (verbose) {
         message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
+      }
+      if (NNGP) {
+        coords.D <- iDist(coords)
       }
       phi.a <- 3 / max(coords.D)
       phi.b <- 3 / sort(unique(c(coords.D)))[2]
@@ -735,95 +737,98 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(n.post.samples) <- "integer"
 
     out.tmp <- list()
-    for (i in 1:n.chains) {
-      # Change initial values if i > 1
-      if ((i > 1) & (!fix.inits)) {
-        beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-        alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-	if (!fixed.sigma.sq) {
-          if (sigma.sq.ig) {
-            sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
-	  } else {
-            sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
-	  }
-	}
-        phi.inits <- runif(1, phi.a, phi.b)
-	if (cov.model == 'matern') {
-          nu.inits <- runif(1, nu.a, nu.b)
-	}
-      }
-      storage.mode(curr.chain) <- "integer" 
-      # Run the model in C
-      out.tmp[[i]] <- .Call("spIntPGOcc", y, X, X.p.all, coords.D, p.occ, p.det, p.det.long, 
-		            J, J.long, K, n.obs, n.obs.long, n.data, 
-		            beta.inits, alpha.inits, z.inits, w.inits, 
-		            phi.inits, sigma.sq.inits, nu.inits, 
-		            z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
-		            Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
-		            nu.a, nu.b, tuning.c, cov.model.indx, 
-		            n.batch, batch.length, accept.rate,  
-		            n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples, 
-			    curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
-      curr.chain <- curr.chain + 1
-    }
-    # Calculate R-Hat ---------------
     out <- list()
-    out$rhat <- list()
-    if (n.chains > 1) {
-      out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2]
-      out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-      					      mcmc(t(a$alpha.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
-      if (fixed.sigma.sq) {
-        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					      mcmc(t(a$theta.samples)))), 
+    if (!k.fold.only) {
+      for (i in 1:n.chains) {
+        # Change initial values if i > 1
+        if ((i > 1) & (!fix.inits)) {
+          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+          if (!fixed.sigma.sq) {
+            if (sigma.sq.ig) {
+              sigma.sq.inits <- rigamma(1, sigma.sq.a, sigma.sq.b)
+            } else {
+              sigma.sq.inits <- runif(1, sigma.sq.a, sigma.sq.b)
+            }
+          }
+          phi.inits <- runif(1, phi.a, phi.b)
+          if (cov.model == 'matern') {
+            nu.inits <- runif(1, nu.a, nu.b)
+          }
+        }
+        storage.mode(curr.chain) <- "integer" 
+        # Run the model in C
+        out.tmp[[i]] <- .Call("spIntPGOcc", y, X, X.p.all, coords.D, p.occ, p.det, p.det.long, 
+          	            J, J.long, K, n.obs, n.obs.long, n.data, 
+          	            beta.inits, alpha.inits, z.inits, w.inits, 
+          	            phi.inits, sigma.sq.inits, nu.inits, 
+          	            z.long.indx.c, data.indx.c, alpha.indx.c, mu.beta, mu.alpha, 
+          	            Sigma.beta, sigma.alpha, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
+          	            nu.a, nu.b, tuning.c, cov.model.indx, 
+          	            n.batch, batch.length, accept.rate,  
+          	            n.omp.threads, verbose, n.report, n.burn, n.thin, n.post.samples, 
+          		    curr.chain, n.chains, fixed.sigma.sq, sigma.sq.ig)
+        curr.chain <- curr.chain + 1
+      }
+      # Calculate R-Hat ---------------
+      out <- list()
+      out$rhat <- list()
+      if (n.chains > 1) {
+        out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$beta.samples)))), 
+        			     autoburnin = FALSE)$psrf[, 2]
+        out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					      mcmc(t(a$alpha.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2]
+        if (fixed.sigma.sq) {
+          out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+          					      mcmc(t(a$theta.samples)))), 
+          			      autoburnin = FALSE)$psrf[, 2]
+        } else {
+          out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+          					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+          			      autoburnin = FALSE)$psrf[, 2])
+        }
+
       } else {
-        out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
-        			      autoburnin = FALSE)$psrf[, 2])
+        out$rhat$beta <- rep(NA, p.occ)
+        out$rhat$alpha <- rep(NA, p.det)
+        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
       }
 
-    } else {
-      out$rhat$beta <- rep(NA, p.occ)
-      out$rhat$alpha <- rep(NA, p.det)
-      out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
+      out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
+      colnames(out$beta.samples) <- x.names
+      out$alpha.samples <- mcmc(do.call(rbind, 
+        				lapply(out.tmp, function(a) t(a$alpha.samples))))
+      colnames(out$alpha.samples) <- x.p.names
+      out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
+      if (cov.model != 'matern') {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi')
+      } else {
+        colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
+      }
+      out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
+      out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
+      out$w.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$w.samples))))
+      # Calculate effective sample sizes
+      out$ESS <- list()
+      out$ESS$beta <- effectiveSize(out$beta.samples)
+      out$ESS$alpha <- effectiveSize(out$alpha.samples)
+      out$ESS$theta <- effectiveSize(out$theta.samples)
+      out$X <- X
+      out$X.p <- X.p
+      out$y <- y.big
+      out$call <- cl
+      out$n.samples <- n.samples
+      out$sites <- sites
+      out$cov.model.indx <- cov.model.indx
+      out$type <- "GP"
+      out$coords <- coords
+      out$n.post <- n.post.samples
+      out$n.thin <- n.thin
+      out$n.burn <- n.burn
+      out$n.chains <- n.chains
     }
-
-    out$beta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$beta.samples))))
-    colnames(out$beta.samples) <- x.names
-    out$alpha.samples <- mcmc(do.call(rbind, 
-      				lapply(out.tmp, function(a) t(a$alpha.samples))))
-    colnames(out$alpha.samples) <- x.p.names
-    out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
-    if (cov.model != 'matern') {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi')
-    } else {
-      colnames(out$theta.samples) <- c('sigma.sq', 'phi', 'nu')
-    }
-    out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
-    out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
-    out$w.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$w.samples))))
-    # Calculate effective sample sizes
-    out$ESS <- list()
-    out$ESS$beta <- effectiveSize(out$beta.samples)
-    out$ESS$alpha <- effectiveSize(out$alpha.samples)
-    out$ESS$theta <- effectiveSize(out$theta.samples)
-    out$X <- X
-    out$X.p <- X.p
-    out$y <- y.big
-    out$call <- cl
-    out$n.samples <- n.samples
-    out$sites <- sites
-    out$cov.model.indx <- cov.model.indx
-    out$type <- "GP"
-    out$coords <- coords
-    out$n.post <- n.post.samples
-    out$n.thin <- n.thin
-    out$n.burn <- n.burn
-    out$n.chains <- n.chains
 
     # K-fold cross-validation -------
     if (!missing(k.fold)) {

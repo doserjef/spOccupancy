@@ -105,7 +105,7 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
   \code{"gaussian"}.}
 
 \item{tuning}{a list with each tag corresponding to a parameter
-  name. Valid tags are \code{phi} and \code{nu}. The value portion of each
+  name. Valid tags are \code{phi}, \code{nu}, and \code{rho}. The value portion of each
   tag defines the initial variance of the Adaptive sampler. See
   Roberts and Rosenthal (2009) for details.}
 
@@ -234,7 +234,7 @@ of neighbors using WAIC or k-fold cross-validation.}
 }
 
 \value{
-  An object of class \code{tPGOcc} that is a list comprised of: 
+  An object of class \code{stPGOcc} that is a list comprised of: 
 
   \item{beta.samples}{a \code{coda} object of posterior samples
     for the occupancy regression coefficients.}

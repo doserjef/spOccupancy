@@ -63,7 +63,7 @@ void updateBFT(double *B, double *F, double *c, double *C, double *coords, int *
 extern "C" {
   SEXP stPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
 		   SEXP XpRE_r, SEXP consts_r, 
-	           SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
+	           SEXP nOccRELong_r, SEXP nDetRELong_r, 
 		   SEXP m_r, SEXP nnIndx_r, SEXP nnIndxLU_r, 
 		   SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r,
 		   SEXP betaStarting_r, SEXP alphaStarting_r, 
@@ -83,12 +83,12 @@ extern "C" {
 		   SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	           SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
-		   SEXP currChain_r, SEXP nChain_r){
+		   SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r){
    
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, r, ll, ii, t, info, nProtect=0, l;
+    int i, j, k, s, r, rr, ll, ii, t, info, nProtect=0, l;
     int status = 0; // For AMCMC. 
     const int inc = 1;
     const double one = 1.0;
@@ -179,6 +179,7 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
 
@@ -307,10 +308,13 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
+    int JnYearspOccRE = J * nYearsMax * pOccRE; 
     int nObspDet = nObs * pDet;
+    int nObspDetRE = nObs * pDetRE;
     int jj, kk;
     int nnYears = nYearsMax * nYearsMax;
     double tmp_0 = 0.0;
+    double tmp_02;
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_ppOcc2 = (double *) R_alloc(ppOcc, sizeof(double));
@@ -370,21 +374,26 @@ extern "C" {
     // Site/year-level sums of the occurrence random effects
     double *betaStarSites = (double *) R_alloc(JnYears, sizeof(double)); 
     zeros(betaStarSites, JnYears); 
+    int *betaStarLongIndx = (int *) R_alloc(JnYearspOccRE, sizeof(int));
     // Initial sums
     for (t = 0; t < nYearsMax; t++) {
       for (j = 0; j < J; j++) {
         for (l = 0; l < pOccRE; l++) {
-          betaStarSites[t * J + j] += betaStar[which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+          betaStarLongIndx[l * JnYears + t * J + j] = which(XRE[l * JnYears + t * J + j], 
+                                                            betaLevelIndx, nOccRE);
+          betaStarSites[t * J + j] += betaStar[betaStarLongIndx[l * JnYears + t * J + j]];
         } // l
       } // j
     } // t
     // Observation-level sums of the detection random effects
     double *alphaStarObs = (double *) R_alloc(nObs, sizeof(double)); 
     zeros(alphaStarObs, nObs); 
+    int *alphaStarLongIndx = (int *) R_alloc(nObspDetRE, sizeof(int));
     // Get sums of the current REs for each site/visit combo
     for (i = 0; i < nObs; i++) {
       for (l = 0; l < pDetRE; l++) {
-        alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)];
+        alphaStarLongIndx[l * nObs + i] = which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE);
+        alphaStarObs[i] += alphaStar[alphaStarLongIndx[l * nObs + i]];
       }
     }
     // Starting index for occurrence random effects
@@ -486,7 +495,7 @@ extern "C" {
     double *accept = (double *) R_alloc(nTheta, sizeof(double)); zeros(accept, nTheta); 
     double *accept2 = (double *) R_alloc(nTheta, sizeof(double)); 
     zeros(accept2, nTheta); 
-    double phiCand = 0.0, nuCand = 0.0, rhoCand = 0.0; 
+    double phiCand = 0.0, nuCand = 0.0, rhoCand = 0.0, sigmaSqCand = 0.0; 
     double logDet; 
 
     GetRNGstate();
@@ -671,8 +680,12 @@ extern "C" {
               for (j = 0; j < J; j++) {
                 if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
                   if (zDatIndx[t * J + j] == 1) {
+                    tmp_02 = 0.0;
+                    for (rr = 0; rr < pOccRE; rr++) {
+                      tmp_02 += betaStar[betaStarLongIndx[rr * JnYears + t * J + j]];
+	            } 
                     tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
-                    	    betaStarSites[t * J + j] - betaStar[l] + w[j] + eta[t]) * omegaOcc[t * J + j];
+                    	    tmp_02 - betaStar[l] + w[j] + eta[t]) * omegaOcc[t * J + j];
                     tmp_0 += omegaOcc[t * J + j];
 		  }
                 }
@@ -691,7 +704,7 @@ extern "C" {
 	  for (t = 0; t < nYearsMax; t++) {
             for (j = 0; j < J; j++) {
               for (l = 0; l < pOccRE; l++) {
-                betaStarSites[t * J + j] += betaStar[which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+                betaStarSites[t * J + j] += betaStar[betaStarLongIndx[l * JnYears + t * J + j]];
               }
             }
 	  }
@@ -711,7 +724,11 @@ extern "C" {
             tmp_0 = 0.0;
             for (i = 0; i < nObs; i++) {
               if ((z[zLongIndx[i]] == 1.0) && (XpRE[alphaStarIndx[l] * nObs + i] == alphaLevelIndx[l])) {
-                tmp_one[0] += kappaDet[i] - (F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc) + alphaStarObs[i] - alphaStar[l]) * omegaDet[i];
+                tmp_02 = 0.0;
+                for (rr = 0; rr < pDetRE; rr++) {
+                  tmp_02 += alphaStar[alphaStarLongIndx[rr * nObs + i]];
+	        } 
+                tmp_one[0] += kappaDet[i] - (F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc) + tmp_02 - alphaStar[l]) * omegaDet[i];
         	      tmp_0 += omegaDet[i];
               }
             }
@@ -726,7 +743,7 @@ extern "C" {
           // Update the RE sums for the current species
           for (i = 0; i < nObs; i++) {
             for (l = 0; l < pDetRE; l++) {
-              alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)]; 
+              alphaStarObs[i] += alphaStar[alphaStarLongIndx[l * nObs + i]]; 
             }
           }
         }
@@ -780,23 +797,24 @@ extern "C" {
         /********************************************************************
          *Update sigmaSq
          *******************************************************************/
+        if (sigmaSqIG) {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:a, logDet)
 #endif
-        for (j = 0; j < J; j++){
-          if(nnIndxLU[J+j] > 0){
-            e = 0;
-            for(ii = 0; ii < nnIndxLU[J+j]; ii++){
-              e += B[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii]];
-            }
-            b = w[j] - e;
-          }else{
-            b = w[j];
-          }	
-          a += b*b/F[j];
-        }
-
-	theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+          for (j = 0; j < J; j++){
+            if(nnIndxLU[J+j] > 0){
+              e = 0;
+              for(ii = 0; ii < nnIndxLU[J+j]; ii++){
+                e += B[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii]];
+              }
+              b = w[j] - e;
+            }else{
+              b = w[j];
+            }	
+            a += b*b/F[j];
+          }
+	  theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+	}
 
         /********************************************************************
          *Update phi (and nu if matern)
@@ -832,14 +850,25 @@ extern "C" {
         if(corName == "matern"){
         	logPostCurr += log(theta[nuIndx] - nuA) + log(nuB - theta[nuIndx]); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCurr += log(theta[sigmaSqIndx] - sigmaSqA) + log(sigmaSqB - theta[sigmaSqIndx]);
+	}
         
         // Candidate
         phiCand = logitInv(rnorm(logit(theta[phiIndx], phiA, phiB), exp(tuning[phiIndx])), phiA, phiB);
         if (corName == "matern"){
       	  nuCand = logitInv(rnorm(logit(theta[nuIndx], nuA, nuB), exp(tuning[nuIndx])), nuA, nuB);
         }
-        updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, 
-                  m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
+	if (sigmaSqIG == 0) {
+	  sigmaSqCand = logitInv(rnorm(logit(theta[sigmaSqIndx], sigmaSqA, sigmaSqB), 
+				 exp(tuning[sigmaSqIndx])), sigmaSqA, sigmaSqB); 
+	}
+	if (sigmaSqIG) { 
+          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
+	} else {
+          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, bk, nuB);
+	}
+
         a = 0;
         logDet = 0;
       
@@ -865,6 +894,9 @@ extern "C" {
         if (corName == "matern"){
           logPostCand += log(nuCand - nuA) + log(nuB - nuCand); 
         }
+	if (sigmaSqIG == 0) {
+          logPostCand += log(sigmaSqCand - sigmaSqA) + log(sigmaSqB - sigmaSqCand);
+	}
 
         if (runif(0.0,1.0) <= exp(logPostCand - logPostCurr)) {
 
@@ -876,6 +908,10 @@ extern "C" {
             theta[nuIndx] = nuCand; 
             accept[nuIndx]++; 
           }
+	  if (sigmaSqIG == 0) {
+            theta[sigmaSqIndx] = sigmaSqCand;
+	    accept[sigmaSqIndx]++;
+	  }
         }
 	if (ar1) {
           /********************************************************************
@@ -1103,6 +1139,9 @@ extern "C" {
 	  Rprintf("\tphi\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[phiIndx], exp(tuning[phiIndx]));
 	  if (corName == "matern") {
 	    Rprintf("\tnu\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[nuIndx], exp(tuning[nuIndx]));
+	  }
+	  if (sigmaSqIG == 0) {
+	    Rprintf("\tsigmaSq\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[sigmaSqIndx], exp(tuning[sigmaSqIndx]));
 	  }
 	  if (ar1) {
 	    Rprintf("\trho\t\t%3.1f\t\t%1.5f\n", 100.0*accept2[rhoIndx], exp(tuning[rhoIndx]));

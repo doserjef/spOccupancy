@@ -5,7 +5,7 @@
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
+[![](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -34,25 +34,32 @@ install.packages("spOccupancy")
 
 ## Functionality
 
-| `spOccupancy` Function | Description                                                          |
-| ---------------------- | -------------------------------------------------------------------- |
-| `PGOcc()`              | Single-species occupancy model                                       |
-| `spPGOcc()`            | Single-species spatial occupancy model                               |
-| `intPGOcc()`           | Single-species occupancy model with multiple data sources            |
-| `spIntPGOcc()`         | Single-species spatial occupancy model with multiple data sources    |
-| `msPGOcc()`            | Multi-species occupancy model                                        |
-| `spMsPGOcc()`          | Multi-species spatial occupancy model                                |
-| `lfJSDM()`             | Joint species distribution model without imperfect detection         |
-| `sfJSDM()`             | Spatial joint species distribution model without imperfect detection |
-| `lfMsPGOcc()`          | Multi-species occupancy model with species correlations              |
-| `sfMsPGOcc()`          | Multi-species spatial occupancy model with species correlations      |
-| `tPGOcc()`             | Single-species multi-season occupancy model                          |
-| `stPGOcc()`            | Single-species multi-season spatio-temporal occupancy model          |
-| `ppcOcc()`             | Posterior predictive check using Bayesian p-values                   |
-| `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)               |
-| `simOcc()`             | Simulate single-species occupancy data                               |
-| `simMsOcc()`           | Simulate multi-species occupancy data                                |
-| `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources    |
+| `spOccupancy` Function | Description                                                               |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `PGOcc()`              | Single-species occupancy model                                            |
+| `spPGOcc()`            | Single-species spatial occupancy model                                    |
+| `intPGOcc()`           | Single-species occupancy model with multiple data sources                 |
+| `spIntPGOcc()`         | Single-species spatial occupancy model with multiple data sources         |
+| `msPGOcc()`            | Multi-species occupancy model                                             |
+| `spMsPGOcc()`          | Multi-species spatial occupancy model                                     |
+| `lfJSDM()`             | Joint species distribution model without imperfect detection              |
+| `sfJSDM()`             | Spatial joint species distribution model without imperfect detection      |
+| `lfMsPGOcc()`          | Multi-species occupancy model with species correlations                   |
+| `sfMsPGOcc()`          | Multi-species spatial occupancy model with species correlations           |
+| `tPGOcc()`             | Single-species multi-season occupancy model                               |
+| `stPGOcc()`            | Single-species multi-season spatio-temporal occupancy model               |
+| `svcPGBinom()`         | Single-species spatially-varying coefficient GLM                          |
+| `svcPGOcc()`           | Single-species spatially-varying coefficient occupancy model              |
+| `svcTPGBinom()`        | Single-species spatially-varying coefficient multi-season GLM             |
+| `svcTPGOcc()`          | Single-sepcies spatially-varying coefficient multi-season occupancy model |
+| `ppcOcc()`             | Posterior predictive check using Bayesian p-values                        |
+| `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                    |
+| `simOcc()`             | Simulate single-species occupancy data                                    |
+| `simTOcc()`            | Simulate single-species multi-season occupancy data                       |
+| `simBinom()`           | Simulate detection-nondetection data with perfect detection               |
+| `simTBinom()`          | Simulate multi-season detection-nondetection data with perfect detection  |
+| `simMsOcc()`           | Simulate multi-species occupancy data                                     |
+| `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources         |
 
 ## Example usage
 
@@ -131,25 +138,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4284
+#> Run Time (min): 1.4622
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            3.9306 0.5843  2.9649  3.8718  5.3272 1.0703  278
-#> scale(Elevation)      -0.5134 0.2112 -0.9457 -0.5051 -0.1178 1.0070 1110
-#> I(scale(Elevation)^2) -1.1388 0.2044 -1.6050 -1.1181 -0.7881 1.0705  466
+#>                          Mean     SD    2.5%     50%   97.5%  Rhat ESS
+#> (Intercept)            3.9072 0.5531  2.9995  3.8480  5.1652 1.003 231
+#> scale(Elevation)      -0.5312 0.2288 -1.0389 -0.5169 -0.1242 1.066 197
+#> I(scale(Elevation)^2) -1.1421 0.2103 -1.6240 -1.1224 -0.7848 1.006 399
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6663 0.1136  0.4486  0.6656 0.8900 0.9999 5769
-#> scale(day)       0.2933 0.0704  0.1531  0.2929 0.4308 1.0000 6000
-#> scale(tod)      -0.0290 0.0702 -0.1638 -0.0293 0.1070 1.0024 6000
-#> I(scale(day)^2) -0.0763 0.0863 -0.2447 -0.0768 0.0910 1.0011 6000
+#> (Intercept)      0.6630 0.1135  0.4420  0.6631 0.8900 1.0001 5363
+#> scale(day)       0.2912 0.0707  0.1523  0.2913 0.4315 0.9998 6000
+#> scale(tod)      -0.0303 0.0695 -0.1674 -0.0300 0.1042 1.0036 6000
+#> I(scale(day)^2) -0.0752 0.0858 -0.2398 -0.0763 0.0980 1.0001 6305
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.0481 0.9929 0.2094 0.7385 3.8056 1.2883  86
-#> phi      0.0085 0.0078 0.0005 0.0053 0.0274 1.1606  53
+#> sigma.sq 0.9604 0.8349 0.2008 0.6658 3.3382 1.0317  71
+#> phi      0.0082 0.0080 0.0005 0.0047 0.0277 1.1469  50
 ```
 
 ### Posterior predictive check
@@ -175,7 +182,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4873 
+#> Bayesian p-value:  0.4852 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -188,7 +195,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -682.35028   20.86682 1406.43420
+#> -683.85572   19.42422 1406.55989
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -201,7 +208,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1496.56
+#> [1] 1495.816
 ```
 
 ### Prediction
@@ -231,9 +238,12 @@ package in more detail (Doser et al. 2022a). For a detailed description
 and tutorial of joint species distribution models in `spOccupancy` that
 account for residual species correlations, see
 `vignette("factorModels")`, as well as `vignette("mcmcFactorModels")`
-for full statistical details. For a description and tutoral of
+for full statistical details. For a description and tutorial of
 multi-season (spatio-temporal) occupancy models in `spOccupancy`, see
-`vignette("spaceTimeModels")`.
+`vignette("spaceTimeModels")`. For a tutorial on spatially-varying
+coefficient models in `spOccupancy`, see `vignette("svcUnivariate")` and
+keep your eyes out for an upcoming preprint providing recommendations
+and guidelins on using these models.
 
 ## References
 

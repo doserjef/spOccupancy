@@ -210,7 +210,8 @@ extern "C" {
     int JpOcc = J * pOcc; 
     int JJ = J * J;
     int jj, kk;
-    double tmp_0; 
+    int JpOccRE = J * pOccRE; 
+    double tmp_0, tmp_02; 
     double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_pOcc = (double *) R_alloc(pOcc, sizeof(double));
@@ -354,10 +355,13 @@ extern "C" {
     // Site-level sums of the occurrence random effects
     double *betaStarSites = (double *) R_alloc(JN, sizeof(double)); 
     zeros(betaStarSites, JN); 
-    for (i = 0; i < N; i++) {
-      for (j = 0; j < J; j++) {
-        for (l = 0; l < pOccRE; l++) {
-          betaStarSites[i * J + j] += betaStar[i * nOccRE + which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+    int *betaStarLongIndx = (int *) R_alloc(JpOccRE, sizeof(int));
+    // Initial sums (initiate with the first species)
+    for (j = 0; j < J; j++) {
+      for (l = 0; l < pOccRE; l++) {
+        betaStarLongIndx[l * J + j] = which(XRE[l * J + j], betaLevelIndx, nOccRE);
+        for (i = 0; i < N; i++) {
+          betaStarSites[i * J + j] += betaStar[i * nOccRE + betaStarLongIndx[l * J + j]];
         }
       }
     }
@@ -590,7 +594,11 @@ extern "C" {
 	      // of a random effect. 
               for (j = 0; j < J; j++) {
                 if (XRE[betaStarIndx[l] * J + j] == betaLevelIndx[l]) {
-                  tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + betaStarSites[i * J + j] - betaStar[i * nOccRE + l] + wStar[j * N + i]) * omegaOcc[j * N + i];
+                  tmp_02 = 0.0;
+                  for (ll = 0; ll < pOccRE; ll++) {
+                    tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[ll * J + j]];
+	          } 
+                  tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + tmp_02 - betaStar[i * nOccRE + l] + wStar[j * N + i]) * omegaOcc[j * N + i];
 	          tmp_0 += omegaOcc[j * N + i];
 	        }
               }
@@ -606,7 +614,7 @@ extern "C" {
             zeros(&betaStarSites[i * J], J);
             for (j = 0; j < J; j++) {
               for (l = 0; l < pOccRE; l++) {
-                betaStarSites[i * J + j] += betaStar[i * nOccRE + which(XRE[l * J + j], betaLevelIndx, nOccRE)];
+                betaStarSites[i * J + j] += betaStar[i * nOccRE + betaStarLongIndx[l * J + j]];
               }
             }
 	  }

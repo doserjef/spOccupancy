@@ -8,8 +8,8 @@
 
 \usage{
 simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
-        psi.RE = list(), p.RE = list(), sp = FALSE, cov.model, 
-        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, ...)
+        psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
+        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE,...)
 }
 
 \arguments{
@@ -35,6 +35,11 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process. By default set to \code{FALSE}.}
 
+\item{svc.cols}{a vector indicating the variables whose effects will be
+  estimated as spatially-varying coefficients. \code{svc.cols} is an
+  integer vector with values indicating the order of covariates specified
+  in the model formula (with 1 being the intercept if specified).}
+
 \item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
 
 \item{sigma.sq}{a numeric value indicating the spatial variance parameter. Ignored when \code{sp = FALSE}.}
@@ -48,6 +53,8 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 \item{rho}{a numeric value indicating the AR(1) temporal correlation parameter. Ignored when \code{ar1 = FALSE}.}
 
 \item{sigma.sq.t}{a numeric value indicating the AR(1) temporal variance parameter. Ignored when \code{ar1 = FALSE}.}
+
+\item{x.positive}{a logical value indicating whether the simulated covariates should be simulated as random standard normal covariates (\code{x.positive = FALSE}) or restricted to positive values (\code{x.positive = TRUE}). If \code{x.positive = TRUE}, covariates are simulated from a random normal and then the minimum value is added to each covariate value to ensure non-negative covariate values.}
 
 \item{...}{currently no additional arguments}
 }

@@ -296,18 +296,6 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       X.p.re[, j] <- X.p.re[, j] + max(X.p.re[, j - 1]) + 1
     }
   }
-  lambda.psi <- matrix(0, J * n.years.max, n.occ.re)
-  if (p.occ.re > 0) {
-    for (i in 1:n.occ.re) {
-      lambda.psi[which(X.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
-    }
-  }
-  lambda.p <- matrix(0, n.obs, n.det.re)
-  if (p.det.re > 0) {
-    for (i in 1:n.det.re) {
-      lambda.p[which(X.p.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
-    }
-  }
 
   # Priors --------------------------------------------------------------
   if (missing(priors)) {
@@ -920,7 +908,6 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     out$y <- y.big
     out$X.p <- X.p
     out$X.p.re <- X.p.re
-    out$lambda.p <- lambda.p
 
     if (p.occ.re > 0) {
       out$sigma.sq.psi.samples <- mcmc(
@@ -1011,8 +998,6 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       n.obs.fit <- nrow(X.p.fit)
       n.obs.0 <- nrow(X.p.0)
       # Random Detection Effects
-      lambda.p.fit <- lambda.p[y.indx, , drop = FALSE]
-      lambda.p.0 <- lambda.p[!y.indx, , drop = FALSE]
       X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
       X.p.re.0 <- X.p.re[!y.indx, , drop = FALSE]
       n.det.re.fit <- length(unique(c(X.p.re.fit)))
@@ -1022,14 +1007,17 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         alpha.level.indx.fit <- sort(unique(c(X.p.re.fit)))
         alpha.star.inits.fit <- rnorm(n.det.re.fit, 
         			      sqrt(sigma.sq.p.inits[alpha.star.indx.fit + 1]))
+        p.re.level.names.fit <- list()
+        for (t in 1:p.det.re) {
+          tmp.indx <- alpha.level.indx.fit[alpha.star.indx.fit == t - 1]
+          p.re.level.names.fit[[t]] <- unlist(p.re.level.names)[tmp.indx + 1]    
+        }
       } else {
         alpha.star.indx.fit <- alpha.star.indx
         alpha.level.indx.fit <- alpha.level.indx
         alpha.star.inits.fit <- alpha.star.inits
       }
       # Random Occurrence Effects
-      lambda.psi.fit <- lambda.psi[year.indx, , drop = FALSE]
-      lambda.psi.0 <- lambda.psi[!year.indx, , drop = FALSE]
       X.re.fit <- X.re[year.indx, , drop = FALSE]
       X.re.0 <- X.re[!year.indx, , drop = FALSE]
       n.occ.re.fit <- length(unique(c(X.re.fit)))
@@ -1118,6 +1106,8 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       colnames(out.fit$beta.samples) <- x.names
       out.fit$X <- array(X.fit, dim = c(J.fit, n.years.max, p.occ))
       dimnames(out.fit$X)[[3]] <- x.names
+      out.fit$alpha.samples <- mcmc(t(out.fit$alpha.samples))
+      colnames(out.fit$alpha.samples) <- x.p.names
       out.fit$y <- y.big.fit
       out.fit$X.p <- X.p.fit
       out.fit$call <- cl
@@ -1146,6 +1136,16 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         out.fit$X.re <- array(X.re.fit, dim = c(J.fit, n.years.max, p.occ.re))
         dimnames(out.fit$X.re)[[3]] <- x.re.names
       }
+      if (p.det.re > 0) {
+        out.fit$sigma.sq.p.samples <- mcmc(t(out.fit$sigma.sq.p.samples))
+        colnames(out.fit$sigma.sq.p.samples) <- x.p.re.names
+        out.fit$alpha.star.samples <- mcmc(t(out.fit$alpha.star.samples))
+        tmp.names <- unlist(p.re.level.names.fit)
+        alpha.star.names <- paste(rep(x.p.re.names, n.det.re.long.fit), tmp.names, sep = '-')
+        colnames(out.fit$alpha.star.samples) <- alpha.star.names
+        out.fit$p.re.level.names <- p.re.level.names.fit
+        out.fit$X.p.re <- X.p.re.fit
+      }
       if (p.occ.re > 0) {
         out.fit$psiRE <- TRUE
       } else {
@@ -1155,41 +1155,26 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 
       # Predict occurrence at new sites
       if (p.occ.re > 0) {
-        X.0 <- cbind(X.0, X.re.0)
+        X.0 <- cbind(X.0, X.re.0 + 1)
       }
       tmp.names <- colnames(X.0)
       X.0 <- array(X.0, dim = c(J.0, n.years.max, ncol(X.0)))
       dimnames(X.0)[[3]] <- tmp.names
       out.pred <- predict.tPGOcc(out.fit, X.0, t.cols = 1:n.years.max)
 
-      # Get full random effects if certain levels aren't in the fitted values
-      if (p.det.re > 0) {
-        if (n.det.re.fit != n.det.re) {
-          tmp <- matrix(NA, n.det.re, n.post.samples)  
-          tmp[alpha.level.indx.fit + 1, ] <- out.fit$alpha.star.samples[1:n.det.re.fit, ]
-          out.fit$alpha.star.samples <- tmp
-        }
-        # Samples missing NA values
-        tmp.indx <- which(apply(out.fit$alpha.star.samples, 1, function(a) sum(is.na(a))) == n.post.samples)
-        for (l in tmp.indx) {
-          out.fit$alpha.star.samples[l, ] <- rnorm(n.post.samples, 0, 
-      					     sqrt(out.fit$sigma.sq.p.samples[alpha.star.indx[l] + 1, ]))
-        }
-      }
+      # Predict detection values 
+      if (p.det.re > 0) {X.p.0 <- cbind(X.p.0, X.p.re.0 + 1)}
+      tmp.names <- colnames(X.p.0)
+      X.p.0 <- array(X.p.0, dim = c(nrow(X.p.0), 1, ncol(X.p.0)))
+      dimnames(X.p.0)[[3]] <- tmp.names
+      out.p.pred <- predict.tPGOcc(out.fit, X.p.0, t.cols = 1, type = 'detection')
 
-      # Detection
-      if (p.det.re > 0) {
-        p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples + 
-            		     lambda.p.0 %*% out.fit$alpha.star.samples))
-      } else {
-        p.0.samples <- logit.inv(t(X.p.0 %*% out.fit$alpha.samples))
-      }
       like.samples <- rep(NA, nrow(X.p.0))
       out.pred$z.0.samples <- aperm(out.pred$z.0.samples, c(2, 3, 1))
       out.pred$z.0.samples <- matrix(out.pred$z.0.samples, J.0 * n.years.max, n.post.samples)
       for (j in 1:nrow(X.p.0)) {
         like.samples[j] <- mean(dbinom(y.0[j], 1, 
-            			   p.0.samples[, j] * out.pred$z.0.samples[z.0.long.indx[j], ]))
+            			   out.p.pred$p.0.samples[, j, 1] * out.pred$z.0.samples[z.0.long.indx[j], ]))
       }
       sum(log(like.samples), na.rm = TRUE)
     } # parallel loop

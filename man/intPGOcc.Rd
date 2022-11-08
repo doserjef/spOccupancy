@@ -12,7 +12,7 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
          n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
          n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
          k.fold, k.fold.threads = 1, k.fold.seed, 
-         k.fold.data, ...)
+         k.fold.data, k.fold.only = FALSE, ...)
 }
 \arguments{
   \item{occ.formula}{a symbolic description of the model to be fit
@@ -118,7 +118,10 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     values from. If not specified, data from all data set locations will 
     be incorporated into the k-fold cross-validation.}
 
-  
+  \item{k.fold.only}{a logical value indicating whether to only perform 
+  cross-validation (\code{TRUE}) or perform cross-validation after fitting 
+  the full model (\code{FALSE}). Default value is \code{FALSE}.} 
+
   \item{...}{currently no additional arguments}
 }
 

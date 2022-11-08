@@ -5,6 +5,7 @@
 inst/doc
 docs
 compile
+compilePDF
 pkgdown
 _pkgdown.yml
 src/*.o
@@ -21,4 +22,6 @@ vignettes/spaceTimeModels_cache
 vignettes/spaceTimeModels_files
 vignettes/spaceTimeModelsHTML_cache
 vignettes/spaceTimeModelsHTML_files
+vignettes/svcUnivariate_cache
+vignettes/svcUnivariate_files
 *.swp

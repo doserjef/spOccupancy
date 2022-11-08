@@ -16,13 +16,14 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     stop("error: object must be specified")
   }
   # if (is(object, c('lfJSDM', 'sfJSDM'))) {
-  if (class(object) %in% c('lfJSDM', 'sfJSDM')) {
-    stop("error: ppcOcc is not implemented for lfJSDM and sfJSDM")
+  if (class(object) %in% c('lfJSDM', 'sfJSDM', 'svcPGBinom', 'svcTPGBinom')) {
+    stop("error: ppcOcc is not implemented for lfJSDM, sfJSDM, svcPGBinom, svcTPGBinom")
   }
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                             'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc\n")
+                             'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc', 
+			     'svcPGOcc', 'svcTPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -46,7 +47,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   out <- list()
   # Single-species models -------------------------------------------------
   #if (is(object, c('PGOcc', 'spPGOcc'))) {
-  if (class(object) %in% c('PGOcc', 'spPGOcc')) {
+  if (class(object) %in% c('PGOcc', 'spPGOcc', 'svcPGOcc')) {
     y <- object$y
     J <- nrow(y)
     if (is(object, 'PGOcc')) {
@@ -303,7 +304,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   }
   # Dynamic models --------------------------------------------------------
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
-  if (class(object) %in% c('tPGOcc', 'stPGOcc')) {
+  if (class(object) %in% c('tPGOcc', 'stPGOcc', 'svcTPGOcc')) {
     y <- object$y
     J <- dim(y)[1]
     n.years.max <- dim(y)[2]

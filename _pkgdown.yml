@@ -20,6 +20,10 @@ reference:
    - sfMsPGOcc
    - tPGOcc
    - stPGOcc
+   - svcPGOcc
+   - svcPGBinom
+   - svcTPGOcc
+   - svcTPGBinom
  - title: Goodness of Fit and Model Assessment
  - contents:
    - ppcOcc
@@ -30,6 +34,8 @@ reference:
    - simMsOcc
    - simIntOcc
    - simTOcc
+   - simBinom
+   - simTBinom
  - title: "Summary"
  - contents: 
    - summary.PGOcc
@@ -45,6 +51,10 @@ reference:
    - summary.tPGOcc
    - summary.stPGOcc
    - summary.ppcOcc
+   - summary.svcPGOcc
+   - summary.svcPGBinom
+   - summary.svcTPGOcc
+   - summary.svcTPGBinom
  - title: "Prediction"
  - contents:
    - predict.PGOcc
@@ -59,6 +69,10 @@ reference:
    - predict.sfMsPGOcc
    - predict.tPGOcc
    - predict.stPGOcc
+   - predict.svcPGOcc
+   - predict.svcPGBinom
+   - predict.svcTPGOcc
+   - predict.svcTPGBinom
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -73,6 +87,13 @@ reference:
    - fitted.sfMsPGOcc
    - fitted.tPGOcc
    - fitted.stPGOcc
+   - fitted.svcPGOcc
+   - fitted.svcPGBinom
+   - fitted.svcTPGOcc
+   - fitted.svcTPGBinom
+ - title: "Other"
+ - contents: 
+   - getSVCSamples
  - title: "Data"
  - contents: 
    - hbef2015

@@ -14,7 +14,7 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
            verbose = TRUE, n.report = 100, 
            n.burn = round(.10 * n.batch * batch.length), 
            n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-           k.fold.seed, k.fold.data, ...)
+           k.fold.seed, k.fold.data, k.fold.only = FALSE, ...)
 }
 
 \arguments{
@@ -181,6 +181,10 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   \item{k.fold.data}{an integer specifying the specific data set to hold out
     values from. If not specified, data from all data set locations will 
     be incorporated into the k-fold cross-validation.}
+
+  \item{k.fold.only}{a logical value indicating whether to only perform 
+    cross-validation (\code{TRUE}) or perform cross-validation after fitting 
+    the full model (\code{FALSE}). Default value is \code{FALSE}.} 
   
   \item{...}{currently no additional arguments}
 }

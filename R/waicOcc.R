@@ -18,8 +18,9 @@ waicOcc <- function(object, ...) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			     'tPGOcc', 'stPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc\n")
+			     'tPGOcc', 'stPGOcc', 'svcPGBinom', 'svcPGOcc', 
+			     'svcTPGBinom', 'svcTPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -28,7 +29,7 @@ waicOcc <- function(object, ...) {
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
   # if (is(object, c('PGOcc', 'spPGOcc'))) {
-  if (class(object) %in% c('PGOcc', 'spPGOcc')) {
+  if (class(object) %in% c('PGOcc', 'spPGOcc', 'svcPGBinom', 'svcPGOcc')) {
     elpd <- sum(apply(object$like.samples, 2, function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, 2, function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))
@@ -37,7 +38,7 @@ waicOcc <- function(object, ...) {
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM'))) {
   if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 
 			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			   'tPGOcc', 'stPGOcc')) {
+			   'tPGOcc', 'stPGOcc', 'svcTPGBinom', 'svcTPGOcc')) {
     elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))

@@ -39,7 +39,7 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, q, s, r, ll, ii, t, jt, info, nProtect=0, l;
+    int i, j, k, q, s, r, rr, ll, ii, t, jt, info, nProtect=0, l;
     const int inc = 1;
     const double one = 1.0;
     const double zero = 0.0;
@@ -233,10 +233,13 @@ extern "C" {
      * *******************************************************************/
     int JpOcc = J * pOcc; 
     int JJ = J * J; 
+    int JnYearspOccRE = J * nYearsMax * pOccRE; 
     int nObspDet = nObs * pDet;
+    int nObspDetRE = nObs * pDetRE;
     int nnYears = nYearsMax * nYearsMax;
     int jj, kk;
     double tmp_0 = 0.0;
+    double tmp_02;
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppDet2 = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
@@ -305,21 +308,26 @@ extern "C" {
     // Site/year-level sums of the occurrence random effects
     double *betaStarSites = (double *) R_alloc(JnYears, sizeof(double)); 
     zeros(betaStarSites, JnYears); 
+    int *betaStarLongIndx = (int *) R_alloc(JnYearspOccRE, sizeof(int));
     // Initial sums
     for (t = 0; t < nYearsMax; t++) {
       for (j = 0; j < J; j++) {
         for (l = 0; l < pOccRE; l++) {
-          betaStarSites[t * J + j] += betaStar[which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+          betaStarLongIndx[l * JnYears + t * J + j] = which(XRE[l * JnYears + t * J + j], 
+                                                            betaLevelIndx, nOccRE);
+          betaStarSites[t * J + j] += betaStar[betaStarLongIndx[l * JnYears + t * J + j]];
         } // l
       } // j
     } // t
     // Observation-level sums of the detection random effects
     double *alphaStarObs = (double *) R_alloc(nObs, sizeof(double)); 
     zeros(alphaStarObs, nObs); 
+    int *alphaStarLongIndx = (int *) R_alloc(nObspDetRE, sizeof(int));
     // Get sums of the current REs for each site/visit combo
     for (i = 0; i < nObs; i++) {
       for (l = 0; l < pDetRE; l++) {
-        alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)];
+        alphaStarLongIndx[l * nObs + i] = which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE);
+        alphaStarObs[i] += alphaStar[alphaStarLongIndx[l * nObs + i]];
       }
     }
     // Starting index for occurrence random effects
@@ -554,8 +562,12 @@ extern "C" {
               for (j = 0; j < J; j++) {
                 if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
                   if (zDatIndx[t * J + j] == 1) {
+                    tmp_02 = 0.0;
+                    for (rr = 0; rr < pOccRE; rr++) {
+                      tmp_02 += betaStar[betaStarLongIndx[rr * JnYears + t * J + j]];
+	            } 
                     tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
-                    	    betaStarSites[t * J + j] - betaStar[l] + eta[t]) * omegaOcc[t * J + j];
+                    	    tmp_02 - betaStar[l] + eta[t]) * omegaOcc[t * J + j];
                     tmp_0 += omegaOcc[t * J + j];
 		  }
                 }
@@ -574,7 +586,7 @@ extern "C" {
           for (t = 0; t < nYearsMax; t++) {
             for (j = 0; j < J; j++) {
               for (l = 0; l < pOccRE; l++) {
-                betaStarSites[t * J + j] += betaStar[which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+                betaStarSites[t * J + j] += betaStar[betaStarLongIndx[l * JnYears + t * J + j]];
               }
             }
           }
@@ -594,7 +606,11 @@ extern "C" {
             tmp_0 = 0.0;
             for (i = 0; i < nObs; i++) {
               if ((z[zLongIndx[i]] == 1.0) && (XpRE[alphaStarIndx[l] * nObs + i] == alphaLevelIndx[l])) {
-                tmp_one[0] += kappaDet[i] - (F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc) + alphaStarObs[i] - alphaStar[l]) * omegaDet[i];
+                tmp_02 = 0.0;
+                for (rr = 0; rr < pDetRE; rr++) {
+                  tmp_02 += alphaStar[alphaStarLongIndx[rr * nObs + i]];
+	        } 
+                tmp_one[0] += kappaDet[i] - (F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc) + tmp_02 - alphaStar[l]) * omegaDet[i];
         	      tmp_0 += omegaDet[i];
               }
             }
@@ -609,7 +625,7 @@ extern "C" {
           // Update the RE sums for the current species
           for (i = 0; i < nObs; i++) {
             for (l = 0; l < pDetRE; l++) {
-              alphaStarObs[i] += alphaStar[which(XpRE[l * nObs + i], alphaLevelIndx, nDetRE)]; 
+              alphaStarObs[i] += alphaStar[alphaStarLongIndx[l * nObs + i]]; 
             }
           }
         }

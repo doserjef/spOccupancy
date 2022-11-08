@@ -1,7 +1,7 @@
 ---
 title: "Multi-season occupancy models for assessing species trends and spatio-temporal occurrence patterns"
 author: "Jeffrey W. Doser and Marc K&eacute;ry"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: "July 13, 2022"
 fontsize: 11pt
 linestretch: 1.25
 output: 
