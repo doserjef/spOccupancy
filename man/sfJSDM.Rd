@@ -366,33 +366,9 @@ inits.list <- list(beta.comm = 0,
 tuning.list <- list(phi = 1, nu = 0.25)
 
 batch.length <- 25
-n.batch <- 40
+n.batch <- 5
 n.report <- 100
 formula <- ~ 1
-
-# For testing
-data <- data.list
-inits <- inits.list
-priors <- prior.list
-tuning <- tuning.list
-cov.model <- 'matern'
-NNGP <- TRUE
-n.neighbors <- 5
-search.type <- 'cb'
-n.factors <- n.factors
-accept.rate <- 0.43
-n.omp.threads <- 1
-verbose <- TRUE
-n.report <- 10
-n.burn <- 400
-n.thin <- 2
-n.chains <- 2
-k.fold <- 2
-k.fold.threads <- 1
-k.fold.seed <- 100
-monitors <- rep(1, 11)
-
-
 
 out <- sfJSDM(formula = formula,
               data = data.list,
@@ -410,8 +386,8 @@ out <- sfJSDM(formula = formula,
               n.neighbors = 5,
               search.type = 'cb',
               n.report = 10,
-              n.burn = 400,
-	      n.thin = 2,
+              n.burn = 0,
+	      n.thin = 1,
 	      n.chains = 2)
 summary(out)
 }
