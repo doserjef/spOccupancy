@@ -5,7 +5,7 @@
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
+[![](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -138,25 +138,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4622
+#> Run Time (min): 1.3664
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%  Rhat ESS
-#> (Intercept)            3.9072 0.5531  2.9995  3.8480  5.1652 1.003 231
-#> scale(Elevation)      -0.5312 0.2288 -1.0389 -0.5169 -0.1242 1.066 197
-#> I(scale(Elevation)^2) -1.1421 0.2103 -1.6240 -1.1224 -0.7848 1.006 399
+#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
+#> (Intercept)            4.0331 0.6006  3.0498  3.9614  5.4340 1.0170  227
+#> scale(Elevation)      -0.5268 0.2141 -0.9579 -0.5239 -0.1184 1.0065 1401
+#> I(scale(Elevation)^2) -1.1649 0.2200 -1.6432 -1.1429 -0.7969 1.0095  306
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6630 0.1135  0.4420  0.6631 0.8900 1.0001 5363
-#> scale(day)       0.2912 0.0707  0.1523  0.2913 0.4315 0.9998 6000
-#> scale(tod)      -0.0303 0.0695 -0.1674 -0.0300 0.1042 1.0036 6000
-#> I(scale(day)^2) -0.0752 0.0858 -0.2398 -0.0763 0.0980 1.0001 6305
+#> (Intercept)      0.6619 0.1161  0.4367  0.6614 0.8913 1.0003 6000
+#> scale(day)       0.2904 0.0706  0.1540  0.2901 0.4314 1.0016 5671
+#> scale(tod)      -0.0317 0.0701 -0.1712 -0.0308 0.1044 1.0037 6000
+#> I(scale(day)^2) -0.0761 0.0870 -0.2489 -0.0770 0.0966 1.0004 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 0.9604 0.8349 0.2008 0.6658 3.3382 1.0317  71
-#> phi      0.0082 0.0080 0.0005 0.0047 0.0277 1.1469  50
+#> sigma.sq 1.1733 1.1218 0.2066 0.8568 3.6028 1.1142 103
+#> phi      0.0093 0.0083 0.0010 0.0056 0.0283 1.1004  99
 ```
 
 ### Posterior predictive check
@@ -182,7 +182,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4852 
+#> Bayesian p-value:  0.4877 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -195,7 +195,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -683.85572   19.42422 1406.55989
+#> -681.17425   21.95552 1406.25954
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -208,7 +208,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1495.816
+#> [1] 1495.596
 ```
 
 ### Prediction
@@ -241,9 +241,9 @@ account for residual species correlations, see
 for full statistical details. For a description and tutorial of
 multi-season (spatio-temporal) occupancy models in `spOccupancy`, see
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
-coefficient models in `spOccupancy`, see `vignette("svcUnivariate")` and
+coefficient models in `spOccupancy`, see `vignette("svcUnivariateHTML")` and
 keep your eyes out for an upcoming preprint providing recommendations
-and guidelins on using these models.
+and guidelines on using these models.
 
 ## References
 

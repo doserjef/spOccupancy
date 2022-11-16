@@ -6,6 +6,9 @@ authors:
 template:
   bootstrap: 5
 reference:
+ - title: "Package overview"
+ - contents: 
+   - spOccupancy
  - title: "Fitting Models"
  - contents:
    - PGOcc
@@ -109,6 +112,7 @@ articles:
     - spaceTimeModels
     - spaceTimeModelsHTML
     - randomEffects
+    - svcUnivariateHTML
   - title: MCMC sampler details 
     contents:
     - mcmcSamplers 

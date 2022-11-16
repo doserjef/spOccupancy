@@ -24,4 +24,6 @@ vignettes/spaceTimeModelsHTML_cache
 vignettes/spaceTimeModelsHTML_files
 vignettes/svcUnivariate_cache
 vignettes/svcUnivariate_files
+vignettes/svcUnivariateHTML_cache
+vignettes/svcUnivariateHTML_files
 *.swp
