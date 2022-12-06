@@ -1486,15 +1486,24 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         class(out.fit) <- "svcPGOcc"
 
 	# Predict occurrence at new sites
+	if (p.occ.re > 0) {
+	  tmp <- unlist(re.level.names.fit)
+	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+	  colnames(X.re.0) <- x.re.names
+	}
         if (p.occ.re > 0) {
-	  X.0 <- cbind(X.0, X.re.0 + 1)
+	  X.0 <- cbind(X.0, X.re.0)
 	}
         out.pred <- predict.svcPGOcc(out.fit, X.0, coords.0, verbose = FALSE)
 
 	# Detection 
         # Generate detection values
-	# Need to add 1 to X.p.re.0
-        if (p.det.re > 0) {X.p.0 <- cbind(X.p.0, X.p.re.0 + 1)}
+	if (p.det.re > 0) {
+	  tmp <- unlist(p.re.level.names.fit)
+	  X.p.re.0 <- matrix(tmp[c(X.p.re.0 + 1)], nrow(X.p.re.0), ncol(X.p.re.0))
+	  colnames(X.p.re.0) <- x.p.re.names
+	}
+        if (p.det.re > 0) {X.p.0 <- cbind(X.p.0, X.p.re.0)}
         out.p.pred <- predict.PGOcc(out.fit, X.p.0, type = 'detection')
 
 	if (binom) {

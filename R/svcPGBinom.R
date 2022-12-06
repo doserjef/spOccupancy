@@ -1036,8 +1036,13 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
         class(out.fit) <- "svcPGBinom"
 
 	# Predict occurrence at new sites
+	if (p.re > 0) {
+	  tmp <- unlist(re.level.names.fit)
+	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+	  colnames(X.re.0) <- x.re.names
+	}
         if (p.re > 0) {
-	  X.0 <- cbind(X.0, X.re.0 + 1)
+	  X.0 <- cbind(X.0, X.re.0)
 	}
         out.pred <- predict.svcPGBinom(out.fit, X.0, coords.0, weights.0, verbose = FALSE)
 

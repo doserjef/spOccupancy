@@ -1255,7 +1255,12 @@ sfJSDM <- function(formula, data, inits, priors,
         class(out.fit) <- "sfJSDM"
 
         # Predict occurrence at new sites. 
-	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0 + 1)}
+	if (p.occ.re > 0) {
+	  tmp <- unlist(re.level.names.fit)
+	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+	  colnames(X.re.0) <- x.re.names
+	}
+	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
         out.pred <- predict.sfJSDM(out.fit, X.0, 
 				      coords.0, verbose = FALSE, ignore.RE = FALSE)
 	like.samples <- matrix(NA, N, J.0)

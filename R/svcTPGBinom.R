@@ -1188,8 +1188,11 @@ svcTPGBinom <- function(formula, data, inits, priors,
 
 	# Predict occurrence at new sites
         if (p.re > 0) {
-	  X.0 <- cbind(X.0, X.re.0 + 1)
-	}
+          tmp <- unlist(re.level.names.fit)
+          X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+          colnames(X.re.0) <- x.re.names
+          X.0 <- cbind(X.0, X.re.0)
+        }
 	tmp.names <- colnames(X.0)
 	X.0 <- array(X.0, dim = c(J.0, n.years.max, ncol(X.0)))
 	dimnames(X.0)[[3]] <- tmp.names

@@ -312,8 +312,8 @@ inits.list <- list(alpha.comm = 0,
                    lambda = lambda.inits,
                    z = apply(y, c(1, 2), max, na.rm = TRUE))
 
-n.samples <- 3000
-n.burn <- 2000
+n.samples <- 300
+n.burn <- 200
 n.thin <- 1
 
 out <- lfMsPGOcc(occ.formula = ~ occ.cov, 
@@ -325,7 +325,7 @@ out <- lfMsPGOcc(occ.formula = ~ occ.cov,
                  n.factors = n.factors,
                  n.omp.threads = 1, 
                  verbose = TRUE, 
-                 n.report = 1000, 
+                 n.report = 100, 
                  n.burn = n.burn, 
                  n.thin = n.thin, 
                  n.chains = 1)
