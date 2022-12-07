@@ -1256,7 +1256,7 @@ sfJSDM <- function(formula, data, inits, priors,
 
         # Predict occurrence at new sites. 
 	if (p.occ.re > 0) {
-	  tmp <- unlist(re.level.names.fit)
+	  tmp <- unlist(re.level.names)
 	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
 	  colnames(X.re.0) <- x.re.names
 	}

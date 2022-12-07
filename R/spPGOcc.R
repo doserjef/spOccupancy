@@ -1328,7 +1328,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
 	# Get RE levels correct for when they aren't supplied at values starting at 1.
 	if (p.occ.re > 0) {
-	  tmp <- unlist(re.level.names.fit)
+	  tmp <- unlist(re.level.names)
 	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
 	  colnames(X.re.0) <- x.re.names
 	}
@@ -1340,7 +1340,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         # Generate detection values
 	# Get RE levels correct for when they aren't supplied at values starting at 1.
 	if (p.det.re > 0) {
-	  tmp <- unlist(p.re.level.names.fit)
+	  tmp <- unlist(p.re.level.names)
 	  X.p.re.0 <- matrix(tmp[c(X.p.re.0 + 1)], nrow(X.p.re.0), ncol(X.p.re.0))
 	  colnames(X.p.re.0) <- x.p.re.names
 	}
@@ -1930,7 +1930,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
 	# Get RE levels correct for when they aren't supplied at values starting at 1.
 	if (p.occ.re > 0) {
-	  tmp <- unlist(re.level.names.fit)
+	  tmp <- unlist(re.level.names)
 	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
 	  colnames(X.re.0) <- x.re.names
 	}
@@ -1942,7 +1942,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         # Generate detection values
 	# Get RE levels correct for when they aren't supplied at values starting at 1.
 	if (p.det.re > 0) {
-	  tmp <- unlist(p.re.level.names.fit)
+	  tmp <- unlist(p.re.level.names)
 	  X.p.re.0 <- matrix(tmp[c(X.p.re.0 + 1)], nrow(X.p.re.0), ncol(X.p.re.0))
 	  colnames(X.p.re.0) <- x.p.re.names
 	}
