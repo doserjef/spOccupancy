@@ -1,7 +1,7 @@
 # spOccupancy 0.5.1
 
 + Fixed issues with unicode text in the manual for passing CRAN checks on Windows
-+ Fixed a bug in the k-fold cross-validation for models that include unstructured random intercepts on the occupancy portion of the model. This bug could have led to inacurrate cross-validation metrics when comparing a model with the unstructured random effect and without the unstructured random effect. We strongly encourage users who have performed cross-validation under such a scenario to rerun their analyses using v0.5.1.
++ Fixed a bug in the k-fold cross-validation for models that include unstructured random intercepts on the occupancy portion of the model. This bug could have led to inacurrate cross-validation metrics when comparing a model with the unstructured random effect and without the unstructured random effect. We strongly encourage users who have performed cross-validation under such a scenario to rerun their analyses using v0.5.1. 
 
 # spOccupancy 0.5.0
 
