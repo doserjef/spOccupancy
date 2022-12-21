@@ -140,9 +140,9 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     data$det.covs[[i]] <- data.frame(lapply(data$det.covs[[i]], function(a) unlist(c(a))))
     # Replicate det.covs if only covariates are at the site level. 
     if (nrow(data$det.covs[[i]]) == nrow(y[[i]])) {
-      binom[q] <- TRUE
+      binom[i] <- TRUE
       # Check if there are missing site-level covariates 
-      if (sum(is.na(data$det.covs[[q]])) != 0) {
+      if (sum(is.na(data$det.covs[[i]])) != 0) {
         stop("error: missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
       }
       data$det.covs[[i]] <- data.frame(sapply(data$det.covs[[i]], rep,
@@ -228,7 +228,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     p.det <- sum(p.det.long)
     n.rep <- lapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
     # Max number of repeat visits for each data set
-    K.long.max <- sapply(n.rep, max)
+    K.long.max <- sapply(y, function(a) dim(a)[2])
     # Number of repeat visits for each data set site. 
     K <- unlist(n.rep)
     n.samples <- n.batch * batch.length
@@ -891,18 +891,52 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           tmp[[k.fold.data]] <- sites[[k.fold.data]] %in% (1:J)[-curr.set]
         }
         K.fit <- K[unlist(tmp)]
-	z.long.indx.fit <- list()
-	tmp.indx <- 1
+
+        K.fit <- K[unlist(tmp)]
+	y.big.fit <- y.big
 	for (q in 1:n.data) {
-          z.long.indx.fit[[q]] <- matrix(NA, length(sites.fit[[q]]), K.long.max[q])
-          for (j in 1:length(sites.fit[[q]])) {
-            z.long.indx.fit[[q]][j, 1:K.fit[tmp.indx]] <- sites.fit[[q]][j]
-	    tmp.indx <- tmp.indx + 1
-          }
-          z.long.indx.fit[[q]] <- c(z.long.indx.fit[[q]])
-          z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(z.long.indx.fit[[q]])] - 1
-        }
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (sites[[q]][j] %in% curr.set) {
+                y.big.fit[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (sites[[q]][j] %in% curr.set) {
+                  y.big.fit[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.fit[[q]] <- y.big.fit[[q]][which(apply(y.big.fit[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+	y.big.0 <- y.big
+	for (q in 1:n.data) {
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (! sites[[q]][j] %in% curr.set) {
+                y.big.0[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (! sites[[q]][j] %in% curr.set) {
+                  y.big.0[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.0[[q]] <- y.big.0[[q]][which(apply(y.big.0[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+
+	z.long.indx.fit <- list()
+	for (q in 1:n.data) {
+          z.long.indx.fit[[q]] <- rep(sites.fit[[q]], K.long.max[q])
+	  z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(c(y.big.fit[[q]]))]
+	}
 	z.long.indx.fit <- unlist(z.long.indx.fit)
+	z.long.indx.fit <- z.long.indx.fit - 1
 	
 	# Site indices for hold out data
 	sites.0 <- sapply(sites, 
@@ -917,20 +951,17 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           }
         }
         K.0 <- K[unlist(tmp)]
-	z.long.indx.0 <- list()
-	tmp.indx <- 1
-	for (q in 1:n.data) {
-          if (!is.na(sites.0[[q]][1])) {
-            z.long.indx.0[[q]] <- matrix(NA, length(sites.0[[q]]), K.long.max[q])
-            for (j in 1:length(sites.0[[q]])) {
-              z.long.indx.0[[q]][j, 1:K.0[tmp.indx]] <- sites.0[[q]][j]
-	      tmp.indx <- tmp.indx + 1
-            }
-            z.long.indx.0[[q]] <- c(z.long.indx.0[[q]])
-            z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(z.long.indx.0[[q]])] - 1
+	if (is.null(k.fold.data)) {
+	  z.long.indx.0 <- list()
+	  for (q in 1:n.data) {
+            z.long.indx.0[[q]] <- rep(sites.0[[q]], K.long.max[q])
+	    z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(c(y.big.0[[q]]))]
 	  }
-        }
-	z.long.indx.0 <- unlist(z.long.indx.0)
+	  z.long.indx.0 <- unlist(z.long.indx.0) - 1
+	} else {
+          z.long.indx.0 <- rep(sites.0[[k.fold.data]], K.long.max[k.fold.data])
+	  z.long.indx.0 <- z.long.indx.0[!is.na(c(y.big.0[[k.fold.data]]))] - 1
+	}
         verbose.fit <- FALSE
         n.omp.threads.fit <- 1
 	n.obs.fit <- length(y.fit)
@@ -1301,18 +1332,50 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           tmp[[k.fold.data]] <- sites[[k.fold.data]] %in% (1:J)[-curr.set]
         }
         K.fit <- K[unlist(tmp)]
-	z.long.indx.fit <- list()
-	tmp.indx <- 1
+	y.big.fit <- y.big
 	for (q in 1:n.data) {
-          z.long.indx.fit[[q]] <- matrix(NA, length(sites.fit[[q]]), K.long.max[q])
-          for (j in 1:length(sites.fit[[q]])) {
-            z.long.indx.fit[[q]][j, 1:K.fit[tmp.indx]] <- sites.fit[[q]][j]
-	    tmp.indx <- tmp.indx + 1
-          }
-          z.long.indx.fit[[q]] <- c(z.long.indx.fit[[q]])
-          z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(z.long.indx.fit[[q]])] - 1
-        }
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (sites[[q]][j] %in% curr.set) {
+                y.big.fit[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (sites[[q]][j] %in% curr.set) {
+                  y.big.fit[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.fit[[q]] <- y.big.fit[[q]][which(apply(y.big.fit[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+	y.big.0 <- y.big
+	for (q in 1:n.data) {
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (! sites[[q]][j] %in% curr.set) {
+                y.big.0[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (! sites[[q]][j] %in% curr.set) {
+                  y.big.0[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.0[[q]] <- y.big.0[[q]][which(apply(y.big.0[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+
+	z.long.indx.fit <- list()
+	for (q in 1:n.data) {
+          z.long.indx.fit[[q]] <- rep(sites.fit[[q]], K.long.max[q])
+	  z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(c(y.big.fit[[q]]))]
+	}
 	z.long.indx.fit <- unlist(z.long.indx.fit)
+	z.long.indx.fit <- z.long.indx.fit - 1
 
 	# Site indices for hold out data
 	sites.0 <- sapply(sites, 
@@ -1327,19 +1390,17 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           }
         }
         K.0 <- K[unlist(tmp)]
-	z.long.indx.0 <- list()
-	tmp.indx <- 1
-	for (q in 1:n.data) {
-          if (!is.na(sites.0[[q]][1])) {
-            z.long.indx.0[[q]] <- matrix(NA, length(sites.0[[q]]), K.long.max[q])
-            for (j in 1:length(sites.0[[q]])) {
-              z.long.indx.0[[q]][j, 1:K.0[tmp.indx]] <- sites.0[[q]][j]
-	      tmp.indx <- tmp.indx + 1
-            }
-            z.long.indx.0[[q]] <- c(z.long.indx.0[[q]])
-            z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(z.long.indx.0[[q]])] - 1
+	if (is.null(k.fold.data)) {
+	  z.long.indx.0 <- list()
+	  for (q in 1:n.data) {
+            z.long.indx.0[[q]] <- rep(sites.0[[q]], K.long.max[q])
+	    z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(c(y.big.0[[q]]))]
 	  }
-        }
+	  z.long.indx.0 <- unlist(z.long.indx.0) - 1
+	} else {
+          z.long.indx.0 <- rep(sites.0[[k.fold.data]], K.long.max[k.fold.data])
+	  z.long.indx.0 <- z.long.indx.0[!is.na(c(y.big.0[[k.fold.data]]))] - 1
+	}
 	z.long.indx.0 <- unlist(z.long.indx.0)
         verbose.fit <- FALSE
         n.omp.threads.fit <- 1

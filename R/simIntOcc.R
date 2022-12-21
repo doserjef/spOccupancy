@@ -1,4 +1,4 @@
-simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha, 
+simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha, 
 		      sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
@@ -53,6 +53,9 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
     if (length(n.rep[[i]]) != J.obs[i]) {
       stop(paste("error: n.rep[[", i, "]] must be of length ", J.obs[i], sep = ''))
     }
+  }
+  if (missing(n.rep.max)) {
+    n.rep.max <- sapply(n.rep, max, na.rm = TRUE)
   }
   # beta ------------------------------
   if (missing(beta)) {
@@ -117,16 +120,21 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
 
   # Form detection covariates (if any) ------------------------------------
   X.p <- list()
+  rep.indx <- list()
   for (i in 1:n.data) {
+    rep.indx[[i]] <- list()
     n.alpha.curr <- length(alpha[[i]])
     K.curr <- n.rep[[i]]
     J.curr <- J.obs[[i]]
-    X.p[[i]] <- array(NA, dim = c(J.curr, max(K.curr), n.alpha.curr))
+    for (j in 1:J.curr) {
+      rep.indx[[i]][[j]] <- sample(1:n.rep.max[i], K.curr[j], replace = FALSE)
+    }
+    X.p[[i]] <- array(NA, dim = c(J.curr, n.rep.max[i], n.alpha.curr))
     X.p[[i]][, , 1] <- 1
     if (n.alpha.curr > 1) {
       for (q in 2:n.alpha.curr) {
         for (j in 1:J.curr) {
-          X.p[[i]][j, 1:K.curr[j], q] <- rnorm(K.curr[j])
+          X.p[[i]][j, rep.indx[[i]][[j]], q] <- rnorm(K.curr[j])
         } # j
       } # q
     }
@@ -164,14 +172,14 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
   for (i in 1:n.data) {
     K.curr <- n.rep[[i]]
     J.curr <- J.obs[[i]]
-    p[[i]] <- matrix(NA, nrow = J.curr, ncol = max(K.curr))
-    y[[i]] <- matrix(NA, nrow = J.curr, ncol = max(K.curr))
+    p[[i]] <- matrix(NA, nrow = J.curr, ncol = n.rep.max[i])
+    y[[i]] <- matrix(NA, nrow = J.curr, ncol = n.rep.max[i])
     sites.curr <- sites[[i]]
     X.p.curr <- X.p[[i]]
     alpha.curr <- as.matrix(alpha[[i]])
     for (j in 1:J.curr) {
-      p[[i]][j, 1:K.curr[j]] <- logit.inv(X.p.curr[j, 1:K.curr[j], ] %*% alpha.curr)
-      y[[i]][j, 1:K.curr[j]] <- rbinom(K.curr[j], 1, p[[i]][j, 1:K.curr[j]] * z[sites.curr[j]])
+      p[[i]][j, rep.indx[[i]][[j]]] <- logit.inv(X.p.curr[j, rep.indx[[i]][[j]], ] %*% alpha.curr)
+      y[[i]][j, rep.indx[[i]][[j]]] <- rbinom(K.curr[j], 1, p[[i]][j, rep.indx[[i]][[j]]] * z[sites.curr[j]])
     } # j
   } # i
 

@@ -227,7 +227,11 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   J <- nrow(X)
   # Number of repeat visits
   n.rep <- apply(y.big[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
-  K.max <- max(n.rep)
+  rep.indx <- list()
+  for (j in 1:J) {
+    rep.indx[[j]] <- which(!is.na(y.big[1, j, ]))
+  }
+  K.max <- dim(y.big)[3] 
   # Because I like K better than n.rep
   K <- n.rep
   if (missing(n.samples)) {
@@ -1133,6 +1137,8 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       J.0 <- nrow(X.0)
       K.fit <- K[-curr.set]
       K.0 <- K[curr.set]
+      rep.indx.fit <- rep.indx[-curr.set]
+      rep.indx.0 <- rep.indx[curr.set]
       n.obs.fit <- nrow(X.p.fit)
       n.obs.0 <- nrow(X.p.0)
       # Random detection effects
@@ -1178,23 +1184,17 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         beta.star.inits.fit <- beta.star.inits
         re.level.names.fit <- re.level.names
       }
-      # Gotta be a better way, but will do for now. 
-      if (binom) {
+      if (!binom) {
+        z.long.indx.fit <- rep(1:J.fit, dim(y.big.fit)[2])
+        z.long.indx.fit <- z.long.indx.fit[!is.na(c(y.big.fit))]
+        # Subtract 1 for indices in C
+        z.long.indx.fit <- z.long.indx.fit - 1
+        z.0.long.indx <- rep(1:J.0, dim(y.big.0)[2])
+        z.0.long.indx <- z.0.long.indx[!is.na(c(y.big.0))]
+        # Don't subtract 1 for z.0.long.indx since its used in R only 
+      } else {
         z.long.indx.fit <- 0:(J.fit - 1)
         z.0.long.indx <- 1:J.0
-      } else {
-        z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-        for (j in 1:J.fit) {
-          z.long.indx.fit[j, 1:K.fit[j]] <- j  
-        }
-        z.long.indx.fit <- c(z.long.indx.fit)
-        z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-        z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-        for (j in 1:nrow(X.0)) {
-          z.0.long.indx[j, 1:K.0[j]] <- j  
-        }
-        z.0.long.indx <- c(z.0.long.indx)
-        z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
       }
       verbose.fit <- FALSE
       n.omp.threads.fit <- 1
@@ -1320,7 +1320,7 @@ lfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         like.samples <- array(NA, c(N, nrow(X.p.0), dim(y.big.0)[3]))
         for (q in 1:N) {
           for (j in 1:nrow(X.p.0)) {
-            for (k in 1:K.0[j]) {
+            for (k in rep.indx.0[[j]]) {
               like.samples[q, j, k] <- mean(dbinom(y.big.0[q, j, k], 1,
               			         out.p.pred$p.0.samples[, q, j] * out.pred$z.0.samples[, q, z.0.long.indx[j]]))
             }

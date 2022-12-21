@@ -1,3 +1,7 @@
+# spOccupancy 0.5.2
+
+spOccupancy v0.5.2 contains an important bug fix in the cross-validation functionality for single-season occupancy models with unbalanced sampling across replicates in the data set. Specifically, the reported cross-validation deviance metrics may be inaccurate when one or more sites had a detection history where a missing value came before a non-missing value. For example, if one or more sites had a detection history of `c(NA, 1, 0, 0, 1)`, this would lead to the problem occurring, but this would not occur if all missing values were at the end of the detection history (e.g., `c(1, 0, 0, 1, NA)`). The affected functions include the following: `PGOcc()`, `spPGOcc()`, `msPGOcc()`, `spMsPGOcc()`, `lfMsPGOcc()`, `sfMsPGOcc()`, `intPGOcc()`, `spIntPGOcc()`. We strongly encourage users who have performed cross-validation with these models and unbalanced sampling across replicates in the manner described to rerun their analyses using v0.5.2. We apologize for any troubles this has caused.
+
 # spOccupancy 0.5.1
 
 + Fixed issues with unicode text in the manual for passing CRAN checks on Windows

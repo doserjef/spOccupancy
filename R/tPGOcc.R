@@ -237,7 +237,7 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # in which years. 
   n.rep <- apply(y.big, c(1, 2), function(a) sum(!is.na(a)))
   # Max number of repeat visits
-  K.max <- max(n.rep)
+  K.max <- dim(y.big)[3]
   # Because I like K better than n.rep
   K <- n.rep
   if (missing(n.batch)) {

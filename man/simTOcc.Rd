@@ -7,7 +7,7 @@
 }
 
 \usage{
-simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE, 
+simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TRUE, 
         psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
         sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE,...)
 }
@@ -20,6 +20,8 @@ simTOcc(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, trend = TRUE,
 \item{n.time}{a single numeric value indicating the number of primary time periods (denoted T) over which sampling occurs.} 
 
 \item{n.rep}{a numeric matrix indicating the number of replicates at each site during each primary time period. The matrix must have \eqn{J = J.x \times J.y}{J = J.x x J.y} rows and T columns, where T is the number of primary time periods (e.g., years or seasons) over which sampling occurs.} 
+
+\item{n.rep.max}{a single numeric value indicating the maximum number of replicate surveys. This is an optional argument, with its default value set to \code{max(n.rep)}. This can be used to generate data sets with different types of missingness (e.g., simulate data across 20 days (replicate surveys) but sites are only sampled a maximum of ten times each).}
 
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occupancy portion of the single-species occupancy model. Note that if \code{trend = TRUE}, the second value in the vector corresponds to the estimated occurrence trend.}
 

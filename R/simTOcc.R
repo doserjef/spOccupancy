@@ -1,4 +1,4 @@
-simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0, 
+simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, 
 		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
 		    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
                     rho, sigma.sq.t, x.positive = FALSE, ...) {
@@ -37,6 +37,9 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
   }
   if (!is.matrix(n.rep)) {
     stop(paste("error: n.rep must be a matrix with ", J, " rows and ", max(n.time), " columns", sep = ''))
+  }
+  if (missing(n.rep.max)) {
+    n.rep.max <- max(n.rep, na.rm = TRUE)
   }
   if (nrow(n.rep) != J | ncol(n.rep) != max(n.time)) {
     stop(paste("error: n.rep must be a matrix with ", J, " rows and ", max(n.time), " columns", sep = ''))
@@ -138,6 +141,10 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
   # Occurrence ------------------------------------------------------------
   p.occ <- length(beta)
   n.time.max <- max(n.time, na.rm = TRUE)
+  time.indx <- list()
+  for (j in 1:J) {
+    time.indx[[j]] <- sample(which(!is.na(n.rep[j, ])), n.time[j], replace = FALSE) 
+  }
   X <- array(NA, dim = c(J, n.time.max, p.occ))
   X[, , 1] <- 1
   if (p.occ > 1) {
@@ -175,14 +182,20 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
 
   # Detection -------------------------------------------------------------
   # Time dependent --------------------
+  rep.indx <- list()
+  for (j in 1:J) {
+    rep.indx[[j]] <- list()
+    for (t in time.indx[[j]]) {
+      rep.indx[[j]][[t]] <- sample(1:n.rep.max, n.rep[j, t], replace = FALSE)
+    }
+  }
   p.det <- length(alpha)
-  n.rep.max <- max(n.rep, na.rm = TRUE)
   X.p <- array(NA, dim = c(J, n.time.max, n.rep.max, p.det))
   X.p[, , , 1] <- 1
   if (p.det > 1) {
     for (j in 1:J) {
-      for (t in 1:n.time[j]) {
-        for (k in 1:n.rep[j, t]) {
+      for (t in time.indx[[j]]) {
+        for (k in rep.indx[[j]][[t]]) {
           X.p[j, t, k, 2:p.det] <- rnorm(p.det - 1)
         } # k
       } # t
@@ -306,14 +319,14 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, beta, alpha, sp.only = 0,
   p <- array(NA, dim = c(J, max(n.time), n.rep.max))
   y <- array(NA, dim = c(J, max(n.time), n.rep.max))
   for (j in 1:J) {
-    for (t in 1:n.time[j]) {
+    for (t in time.indx[[j]]) {
       if (length(p.RE) > 0) {
-        p[j, t, 1:n.rep[j, t]] <- logit.inv(X.p[j, t, 1:n.rep[j, t], ] %*% as.matrix(alpha) + 
-	                                    alpha.star.sites[j, t, 1:n.rep[j, t]])
+        p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
+	                                    alpha.star.sites[j, t, rep.indx[[j]][[t]]])
       } else {
-        p[j, t, 1:n.rep[j, t]] <- logit.inv(X.p[j, t, 1:n.rep[j, t], ] %*% as.matrix(alpha))
+        p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
       }
-      y[j, t, 1:n.rep[j, t]] <- rbinom(n.rep[j, t], 1, p[j, t, 1:n.rep[j, t]] * z[j, t]) 
+      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * z[j, t]) 
     } # t
   } # j
 

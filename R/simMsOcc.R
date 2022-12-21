@@ -1,4 +1,4 @@
-simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(), 
+simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(), 
 		     p.RE = list(), sp = FALSE, cov.model, 
 		     sigma.sq, phi, nu, factor.model = FALSE, n.factors, ...) {
 
@@ -31,6 +31,9 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   }
   if (length(n.rep) != J) {
     stop(paste("error: n.rep must be a vector of length ", J, sep = ''))
+  }
+  if (missing(n.rep.max)) {
+    n.rep.max <- max(n.rep)
   }
   # N ---------------------------------
   if (missing(N)) {
@@ -158,12 +161,17 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
 
   # Form detection covariate (if any) -------------------------------------
   p.det <- ncol(alpha)
-  X.p <- array(NA, dim = c(J, max(n.rep), p.det))
+  X.p <- array(NA, dim = c(J, n.rep.max, p.det))
+  # Get index of surveyed replicates for each site. 
+  rep.indx <- list()
+  for (j in 1:J) {
+    rep.indx[[j]] <- sample(1:n.rep.max, n.rep[j], replace = FALSE)
+  }
   X.p[, , 1] <- 1
   if (p.det > 1) {
     for (i in 2:p.det) {
       for (j in 1:J) {
-        X.p[j, 1:n.rep[j], i] <- rnorm(n.rep[j])
+        X.p[j, rep.indx[[j]], i] <- rnorm(n.rep[j])
       } # j
     } # i
   }
@@ -257,23 +265,23 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
     n.det.re <- sum(n.det.re.long)
     alpha.star.indx <- rep(1:p.det.re, n.det.re.long)
     alpha.star <- matrix(0, N, n.det.re)
-    X.p.re <- array(NA, dim = c(J, max(n.rep), p.det.re))
+    X.p.re <- array(NA, dim = c(J, n.rep.max, p.det.re))
     for (l in 1:p.det.re) {
-      X.p.re[, , l] <- matrix(sample(1:p.RE$levels[l], J * max(n.rep), replace = TRUE), 
-		              J, max(n.rep))	      
+      X.p.re[, , l] <- matrix(sample(1:p.RE$levels[l], J * n.rep.max, replace = TRUE), 
+		              J, n.rep.max)	      
       for (i in 1:N) {
         alpha.star[i, which(alpha.star.indx == l)] <- rnorm(p.RE$levels[l], 0, sqrt(p.RE$sigma.sq.p[l]))
       }
     }
     for (j in 1:J) {
-      X.p.re[j, -(1:n.rep[j]), ] <- NA
+      X.p.re[j, -rep.indx[[j]], ] <- NA
     }
     if (p.det.re > 1) {
       for (j in 2:p.det.re) {
         X.p.re[, , j] <- X.p.re[, , j] + max(X.p.re[, , j - 1], na.rm = TRUE) 
       }
     }
-    alpha.star.sites <- array(NA, c(N, J, max(n.rep)))
+    alpha.star.sites <- array(NA, c(N, J, n.rep.max))
     for (i in 1:N) {
       alpha.star.sites[i, , ] <- apply(X.p.re, c(1, 2), function(a) sum(alpha.star[i, a]))
     }
@@ -303,17 +311,17 @@ simMsOcc <- function(J.x, J.y, n.rep, N, beta, alpha, psi.RE = list(),
   }
 
   # Data Formation --------------------------------------------------------
-  p <- array(NA, dim = c(N, J, max(n.rep)))
-  y <- array(NA, dim = c(N, J, max(n.rep)))
+  p <- array(NA, dim = c(N, J, n.rep.max))
+  y <- array(NA, dim = c(N, J, n.rep.max))
   for (i in 1:N) {
     for (j in 1:J) {
       if (length(p.RE) > 0) {
-        p[i, j, 1:n.rep[j]] <- logit.inv(X.p[j, 1:n.rep[j], ] %*% as.matrix(alpha[i, ]) + alpha.star.sites[i, j, 1:n.rep[j]])
+        p[i, j, rep.indx[[j]]] <- logit.inv(X.p[j, rep.indx[[j]], ] %*% as.matrix(alpha[i, ]) + alpha.star.sites[i, j, rep.indx[[j]]])
       } else {
-        p[i, j, 1:n.rep[j]] <- logit.inv(X.p[j, 1:n.rep[j], ] %*% as.matrix(alpha[i, ]))
+        p[i, j, rep.indx[[j]]] <- logit.inv(X.p[j, rep.indx[[j]], ] %*% as.matrix(alpha[i, ]))
       }
  
-        y[i, j, 1:n.rep[j]] <- rbinom(n.rep[j], 1, p[i, j, 1:n.rep[j]] * z[i, j]) 
+        y[i, j, rep.indx[[j]]] <- rbinom(n.rep[j], 1, p[i, j, rep.indx[[j]]] * z[i, j]) 
     } # j
   } # i
   return(

@@ -22,8 +22,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc', 
-			     'svcPGOcc', 'svcTPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc\n")
+			     'svcPGOcc', 'svcTPGOcc', 'tMsPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc, tMsPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -214,7 +214,6 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     sites <- object$sites
     X.p <- object$X.p
     p.det.long <- sapply(X.p, function(a) dim(a)[2])
-    n.rep <- sapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
     J.long <- sapply(y, nrow)
     fitted.out <- fitted.intPGOcc(object)
     y.rep.all <- fitted.out$y.rep.samples
@@ -302,7 +301,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.post <- object$n.post
     out$n.chains <- object$n.chains
   }
-  # Dynamic models --------------------------------------------------------
+  # Multi-season models ---------------------------------------------------
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
   if (class(object) %in% c('tPGOcc', 'stPGOcc', 'svcTPGOcc')) {
     y <- object$y
@@ -382,6 +381,96 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.thin <- object$n.thin
     out$n.post <- object$n.post
     out$n.chains <- object$n.chains
+  }
+  # Multi-species, multi-season models ------------------------------------
+  # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
+  if (class(object) %in% c('tMsPGOcc')) {
+    y <- object$y
+    J <- dim(y)[2]
+    N <- dim(y)[1]
+    n.years.max <- dim(y)[3]
+    # Fitted function is the same for all multi-species, multi-season object types. 
+    fitted.out <- fitted.tMsPGOcc(object)
+    y.rep.samples <- fitted.out$y.rep.samples
+    det.prob <- fitted.out$p.samples
+    z.samples <- object$z.samples
+    n.samples <- object$n.post * object$n.chains
+    fit.y <- array(NA, dim = c(n.samples, N, n.years.max))
+    fit.y.rep <- array(NA, dim = c(n.samples, N, n.years.max))
+    e <- 0.0001
+    # Do the stuff 
+    if (group == 1) {
+      y.grouped <- apply(y, c(1, 2, 3), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2, 3, 4), sum, na.rm = TRUE)
+      fit.big.y.rep <- array(NA, dim = c(n.samples, N, J, n.years.max))
+      fit.big.y <- array(NA, dim = c(n.samples, N, J, n.years.max))
+      for (t in 1:n.years.max) {
+        for (i in 1:N) {
+          message(noquote(paste("Currently on species ", i, " out of ", N, 
+				" and time period ", t, " out of ", n.years.max, sep = '')))
+          if (fit.stat %in% c('chi-squared', 'chi-square')) {
+              for (j in 1:n.samples) {
+                E.grouped <- apply(det.prob[j, i, , t, , drop = FALSE] * z.samples[j, i, , t], 3, sum, na.rm = TRUE)
+                fit.big.y[j, i, , t] <- (y.grouped[i, , t] - E.grouped)^2 / (E.grouped + e)
+                fit.y[j, i, t] <- sum(fit.big.y[j, i, , t])
+                fit.big.y.rep[j, i, , t] <- (y.rep.grouped[j, i, , t] - E.grouped)^2 / (E.grouped + e)
+                fit.y.rep[j, i, t] <- sum(fit.big.y.rep[j, i, , t])
+              }
+          } else if (fit.stat == 'freeman-tukey') {
+            for (j in 1:n.samples) {
+              E.grouped <- apply(det.prob[j, i, , t, , drop = FALSE] * z.samples[j, i, , t], 3, sum, na.rm = TRUE)
+              fit.big.y[j, i, , t] <- (sqrt(y.grouped[i, , t]) - sqrt(E.grouped))^2 
+              fit.y[j, i, t] <- sum(fit.big.y[j, i, , t])
+              fit.big.y.rep[j, i, , t] <- (sqrt(y.rep.grouped[j, i, , t]) - sqrt(E.grouped))^2 
+              fit.y.rep[j, i, t] <- sum(fit.big.y.rep[j, i, , t])
+            }
+          }
+        }
+      }
+    } else if (group == 2) {
+      y.grouped <- apply(y, c(1, 3, 4), sum, na.rm = TRUE)
+      y.rep.grouped <- apply(y.rep.samples, c(1, 2, 4, 5), sum, na.rm = TRUE)
+      fit.big.y <- array(NA, dim = c(n.samples, N, n.years.max, dim(y)[4]))
+      fit.big.y.rep <- array(NA, dim = c(n.samples, N, n.years.max, dim(y)[4]))
+      for (t in 1:n.years.max) {
+        for (i in 1:N) {
+          message(noquote(paste("Currently on species ", i, " out of ", N, 
+				" and time period ", t, " out of ", n.years.max, sep = '')))
+          if (fit.stat %in% c('chi-squared', 'chi-square')) {
+            for (j in 1:n.samples) {
+              E.grouped <- apply(det.prob[j, i, , t, , drop = FALSE] * z.samples[j, i, , t], 5, sum, na.rm = TRUE)
+              fit.big.y[j, i, t, ] <- (y.grouped[i, t, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y[j, i, t] <- sum(fit.big.y[j, i, t, ])
+              fit.big.y.rep[j, i, t, ] <- (y.rep.grouped[j, i, t, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y.rep[j, i, t] <- sum(fit.big.y.rep[j, i, t, ])
+            }
+          } else if (fit.stat == 'freeman-tukey') {
+            for (j in 1:n.samples) {
+              E.grouped <- apply(det.prob[j, i, , t, , drop = FALSE] * z.samples[j, i, , t], 5, sum, na.rm = TRUE)
+              fit.big.y[j, i, t, ] <- (sqrt(y.grouped[i, t, ]) - sqrt(E.grouped))^2 
+              fit.y[j, i, t] <- sum(fit.big.y[j, i, t, ])
+              fit.big.y.rep[j, i, t, ] <- (sqrt(y.rep.grouped[j, i, t, ]) - sqrt(E.grouped))^2 
+              fit.y.rep[j, i, t] <- sum(fit.big.y.rep[j, i, t, ])
+            }
+          }
+        }
+      }
+    }
+    out$fit.y <- fit.y
+    out$fit.y.rep <- fit.y.rep
+    out$fit.y.group.quants <- apply(fit.big.y, c(2, 3, 4), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    out$fit.y.rep.group.quants <- apply(fit.big.y.rep, c(2, 3, 4), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    # For summaries
+    out$group <- group
+    out$fit.stat <- fit.stat
+    out$class <- class(object)
+    out$call <- cl
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
+    out$n.chains <- object$n.chains
+    out$sp.names <- object$sp.names
   }
 
   class(out) <- 'ppcOcc'

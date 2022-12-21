@@ -314,10 +314,10 @@ inits.list <- list(beta = 0, alpha = 0, z = z.init)
 # Tuning
 tuning.list <- list(rho = 0.5)
 
-n.batch <- 50
+n.batch <- 20
 batch.length <- 25
 n.samples <- n.batch * batch.length
-n.burn <- 1000
+n.burn <- 100
 n.thin <- 1
 
 # Run the model

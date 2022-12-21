@@ -211,9 +211,9 @@ fitted.PGOcc <- function(object, ...) {
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y, 1, function(a) sum(!is.na(a)))
-  K.max <- max(n.rep)
+  K.max <- dim(y)[2]
   J <- nrow(y)
-  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- rep(1:J, dim(y)[2])
   z.long.indx <- z.long.indx[!is.na(c(y))]
   if (nrow(X.p) == nrow(y)) {
     X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
@@ -425,6 +425,42 @@ summary.ppcOcc <- function(object, level = 'both',
       	  round(mean(object$fit.y.rep[, i] > object$fit.y[, i]), digits), "\n", sep = ''))
     }
     cat("Fit statistic: ", object$fit.stat, "\n")
+  }
+  
+  if (object$class %in% c('tMsPGOcc')) {
+    n.years.max <- dim(object$fit.y)[3]
+
+    if (tolower(level) == 'community' | tolower(level) == 'both') {
+      cat("----------------------------------------\n");
+      cat("\tCommunity Level\n");
+      cat("----------------------------------------\n");
+      for (i in 1:n.years.max) {
+        cat(paste('Time Period ', i, " Bayesian p-value: ", round(mean(object$fit.y.rep[, , i] > object$fit.y[, , i]), digits), "\n", sep = ''))
+      }
+      if (tolower(level) == 'community') {
+        cat("Fit statistic: ", object$fit.stat, "\n")
+      }
+    }
+
+    if (tolower(level) == 'species' | tolower(level) == 'both') {
+      cat("----------------------------------------\n");
+      cat("\tSpecies Level\n");
+      cat("----------------------------------------\n");
+      N <- ncol(object$fit.y)
+      for (i in 1:N) {
+        cat("----------------------------------------\n");
+        cat(paste('\tSpecies ', object$sp.names[i], '\n', sep = ''))
+        cat("----------------------------------------\n");
+        for (t in 1:n.years.max) {
+          cat(paste('Time Period ', t, " Bayesian p-value: ", 
+		    round(mean(object$fit.y.rep[, i, t] > object$fit.y[, i, t]), digits), "\n", sep = '')) 
+	}
+	cat(paste('Overall Bayesian p-value: ', 
+		  round(mean(object$fit.y.rep[, i, ] > object$fit.y[, i, ]), digits), '\n',
+		  sep = ''))
+      }
+      cat("Fit statistic: ", object$fit.stat, "\n")
+    }
   }
 
 }
@@ -1096,6 +1132,21 @@ summary.msPGOcc <- function(object,
     print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 
   }
+
+  if (is(object, 'tMsPGOcc')) {
+    if (object$ar1) {
+      cat("\n")
+      cat("Occurrence AR(1) Temporal Covariance: \n")
+      tmp.1 <- t(apply(object$theta.samples, 2, 
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$theta.samples, 2, 
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$theta, round(object$ESS$theta, 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    }
+  }
 }
 
 fitted.msPGOcc <- function(object, ...) {
@@ -1125,14 +1176,14 @@ fitted.msPGOcc <- function(object, ...) {
   X.p <- object$X.p
   y <- object$y
   n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
-  K.max <- max(n.rep)
+  K.max <- dim(y)[3]
   J <- dim(y)[2]
   N <- dim(y)[1]
   if (nrow(X.p) == dim(y)[2]) {
     X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
   }
-  z.long.indx <- rep(1:J, K.max)
+  z.long.indx <- rep(1:J, dim(y)[3])
   z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
   z.samples <- object$z.samples
   alpha.samples <- object$alpha.samples
@@ -1675,17 +1726,15 @@ fitted.intPGOcc <- function(object, ...) {
   sites <- object$sites
   X.p <- object$X.p
   p.det.long <- sapply(X.p, function(a) dim(a)[2])
-  n.rep <- sapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
   J.long <- sapply(y, nrow)
   det.prob <- list()
   y.rep.samples <- list()
   n.post <- object$n.post * object$n.chains
-  n.rep <- lapply(y, function(a1) apply(a1, 1, function(a2) sum(!is.na(a2))))
   # Max number of repeat visits for each data set
-  K.long.max <- sapply(n.rep, max)
+  K.long.max <- sapply(y, function(a) dim(a)[2])
   z.long.indx.r <- list()
   for (i in 1:n.data) {
-    z.long.indx.r[[i]] <- rep(sites[[i]], K.long.max[i])
+    z.long.indx.r[[i]] <- rep(sites[[i]], dim(y[[i]])[2])
     z.long.indx.r[[i]] <- z.long.indx.r[[i]][!is.na(c(y[[i]]))]
   }
 
@@ -2797,7 +2846,7 @@ fitted.stPGOcc <- function(object, ...) {
   n.years.max <- dim(y)[2]
   K.max <- dim(y)[3]
   J <- nrow(y)
-  z.long.indx <- rep(1:(J * n.years.max), K.max)
+  z.long.indx <- rep(1:(J * n.years.max), dim(y)[3])
   z.long.indx <- z.long.indx[!is.na(c(y))]
   y <- c(y)
   y <- y[!is.na(y)]
@@ -3974,4 +4023,92 @@ predict.svcTPGBinom <- function(object, X.0, coords.0, t.cols, weights.0, n.omp.
   predict.svcTPGOcc(object, X.0, coords.0, t.cols, weights.0, n.omp.threads = n.omp.threads, 
 		   verbose, n.report, ignore.RE, type = 'occupancy')
 
+}
+
+# tMsPGOcc ----------------------------------------------------------------
+print.tMsPGOcc <- function(x, ...) {
+  print.msPGOcc(x)
+}
+
+summary.tMsPGOcc <- function(object, level = 'both', quantiles = c(0.025, 0.5, 0.975),
+			     digits = max(3L, getOption("digits") - 3L), ...) {
+  summary.msPGOcc(object, level, quantiles, digits)
+}
+
+fitted.tMsPGOcc <- function(object, ...) {
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (!(class(object) %in% c('tMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc'))) {
+    stop("error: object must be of class tMsPGOcc, stMsPGOcc, svcTMsPGOcc\n")
+  }
+  n.post <- object$n.post * object$n.chains
+  X.p <- object$X.p
+  y <- object$y
+  n.years.max <- dim(y)[3]
+  K.max <- dim(y)[4]
+  J <- dim(y)[2]
+  N <- dim(y)[1]
+  z.long.indx <- rep(1:(J * n.years.max), K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y[1, , , ]))]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  n.obs <- nrow(X.p)
+  det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
+  sp.indx <- rep(1:N, ncol(X.p))
+  y <- matrix(y, N, J * n.years.max * K.max)
+  y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
+  for (i in 1:N) {
+    if (object$pRE) {
+      sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+      # Add 1 to get it to R indexing. 
+      X.p.re <- object$X.p.re + 1
+      tmp.samples <- matrix(0, n.post, n.obs)
+      tmp.alpha.star <- object$alpha.star.samples[, sp.re.indx == i]
+      for (j in 1:ncol(X.p.re)) {
+        tmp.samples <- tmp.samples + tmp.alpha.star[, X.p.re[, j]]
+      }
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + t(tmp.samples))
+    } else {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    }
+  }
+
+  out <- list()
+  # Get detection probability
+  # Need to be careful here that all arrays line up. 
+  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
+  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp[, , names.long] <- det.prob.samples
+  p.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  out$p.samples <- p.samples
+  # Get fitted values
+  z.samples <- array(z.samples, dim = c(n.post, N, J * n.years.max))
+  det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
+  y.rep.samples <- array(NA, dim = dim(det.prob.samples))
+  for (i in 1:N) {
+    y.rep.samples[, i, ] <- apply(det.prob.samples[, i, ], 2, function(a) rbinom(n.post, 1, a))
+  }
+  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
+  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp[, , names.long] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  out$y.rep.samples <- y.rep.samples
+  return(out)
 }

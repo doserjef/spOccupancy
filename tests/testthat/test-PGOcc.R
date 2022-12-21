@@ -418,6 +418,7 @@ test_that("summary works", {
 # Check missing values ----------------
 test_that("missing value error handling works", {
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs$det.cov.1[1, 1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula, 
 	       det.formula = det.formula, 
@@ -607,6 +608,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs$det.cov.1[1, 1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
@@ -797,6 +799,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1
   tmp.data$det.covs$det.cov.1[1, 1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
@@ -988,6 +991,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs$det.cov.1[1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
 	       det.formula = det.formula,
@@ -1904,6 +1908,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs$det.cov.1[1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -2135,6 +2140,7 @@ test_that("missing value error handling works", {
 # 	       n.omp.threads = 1,
 # 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -2367,6 +2373,7 @@ test_that("missing value error handling works", {
 # 	       n.omp.threads = 1,
 # 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -2600,6 +2607,7 @@ test_that("missing value error handling works", {
 # 	       n.omp.threads = 1,
 # 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -2833,6 +2841,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -3069,6 +3078,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -3306,6 +3316,7 @@ test_that("missing value error handling works", {
 	       n.omp.threads = 1,
 	       verbose = FALSE))
   tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1 
   tmp.data$det.covs[[1]][1] <- NA
   expect_error(PGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
@@ -3398,3 +3409,195 @@ test_that("posterior predictive checks work for PGOcc", {
   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, max(n.rep)))
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, max(n.rep)))
 })
+
+# Dimension of y is not equal to max(n.rep) -------------------------------
+J.x <- 15
+J.y <- 15
+J <- J.x * J.y
+n.rep <- sample(2:4, J, replace = TRUE)
+n.rep.max <- 7
+beta <- c(0.3, 0.2, -1.0)
+p.occ <- length(beta)
+alpha <- c(-0.5, 1)
+p.det <- length(alpha)
+psi.RE <- list()
+p.RE <- list()
+dat <- simOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, beta = beta, alpha = alpha,
+	      psi.RE = psi.RE, p.RE = p.RE, sp = FALSE, n.rep.max = n.rep.max)
+y <- dat$y
+X <- dat$X
+X.p <- dat$X.p
+
+colnames(X) <- c('int', 'occ.cov.1', 'occ.cov.2')
+data.list <- list(y = y, det.covs = list(det.cov.1 = X.p[, , 2]),
+                  occ.covs = X)
+# Priors
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
+		   alpha.normal = list(mean = 0, var = 2.72))
+# Starting values
+inits.list <- list(alpha = 0, beta = 0, z = apply(y, 1, max, na.rm = TRUE))
+
+n.samples <- 1000
+n.report <- 100
+occ.formula <- ~ occ.cov.1 + occ.cov.2
+det.formula <- ~ det.cov.1
+
+out <- PGOcc(occ.formula = occ.formula,
+	     det.formula = det.formula,
+	     data = data.list,
+	     inits = inits.list,
+	     n.samples = n.samples,
+	     priors = prior.list,
+	     n.omp.threads = 1,
+	     verbose = FALSE,
+	     n.report = n.report,
+	     n.burn = 400,
+	     n.thin = 6,
+	     n.chains = 2,
+	     k.fold = 2,
+	     k.fold.threads = 1)
+
+# Test to make sure it worked ---------
+test_that("out is of class PGOcc", {
+  expect_s3_class(out, "PGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), 1)
+  expect_type(out$k.fold.deviance, "double")
+  expect_gt(out$k.fold.deviance, 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are empty", {
+  expect_equal(out$pRE, FALSE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, dat$y)
+})
+
+# Check default priors ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- PGOcc(occ.formula = occ.formula,
+	       det.formula = det.formula,
+	       data = data.list,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE)
+  expect_s3_class(out, "PGOcc")
+})
+
+# Check summary -----------------------
+test_that("summary works", {
+  expect_output(summary(out))
+})
+
+# Check missing values ----------------
+test_that("missing value error handling works", {
+  tmp.data <- data.list
+  tmp.data$occ.covs[3, ] <- NA
+  expect_error(PGOcc(occ.formula = occ.formula,
+	       det.formula = det.formula,
+	       data = tmp.data,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+  tmp.data <- data.list
+  tmp.data$y[1, 1] <- 1
+  tmp.data$det.covs$det.cov.1[1, 1] <- NA
+  expect_error(PGOcc(occ.formula = occ.formula,
+	       det.formula = det.formula,
+	       data = tmp.data,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+  tmp.data <- data.list
+  tmp.data$y[1, 1] <- NA
+  out <- PGOcc(occ.formula = occ.formula,
+	       det.formula = det.formula,
+	       data = tmp.data,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE)
+  expect_s3_class(out, "PGOcc")
+})
+
+# Check verbose -----------------------
+test_that("verbose prints to the screen", {
+
+  expect_output(PGOcc(occ.formula = occ.formula,
+	       det.formula = det.formula,
+	       data = data.list,
+	       n.samples = 100,
+	       n.omp.threads = 1,
+	       verbose = TRUE,
+	       n.report = n.report,
+	       n.burn = 1,
+	       n.thin = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for PGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))
+})
+
+# Check fitted ------------------------
+test_that("fitted works for PGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+})
+
+# Check predictions -------------------
+test_that("predict works for PGOcc", {
+  X.0 <- dat$X
+  pred.out <- predict(out, X.0)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(out$n.post * out$n.chains, J))
+  expect_equal(dim(pred.out$z.0.samples), c(out$n.post * out$n.chains, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- dat$X.p[, 1, ]
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, J))
+})
+
+# Check PPCs --------------------------
+test_that("posterior predictive checks work for PGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(length(ppc.out$fit.y), n.post.samples)
+  expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, n.rep.max))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, n.rep.max))
+
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(length(ppc.out$fit.y), n.post.samples)
+  expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, J))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, J))
+
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(length(ppc.out$fit.y), n.post.samples)
+  expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, J))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, J))
+
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(length(ppc.out$fit.y), n.post.samples)
+  expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, n.rep.max))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, n.rep.max))
+})
+

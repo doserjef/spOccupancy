@@ -226,6 +226,10 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (p.det.re == 0) n.det.re.long <- 0
     # Number of replicates at each site
     n.rep <- apply(y.big, 1, function(a) sum(!is.na(a)))
+    rep.indx <- list()
+    for (j in 1:J) {
+      rep.indx[[j]] <- which(!is.na(y.big[j, ]))
+    }
     # Max number of repeat visits
     K.max <- max(n.rep)
     # Because I like K better than n.rep
@@ -789,6 +793,8 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	J.0 <- nrow(X.0)
 	K.fit <- K[-curr.set]
 	K.0 <- K[curr.set]
+	rep.indx.fit <- rep.indx[-curr.set]
+        rep.indx.0 <- rep.indx[curr.set]
 	n.obs.fit <- nrow(X.p.fit)
 	n.obs.0 <- nrow(X.p.0)
         X.p.re.fit <- X.p.re[y.indx, , drop = FALSE]
@@ -831,24 +837,19 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
           beta.star.inits.fit <- beta.star.inits
           re.level.names.fit <- re.level.names
       }
-	# Gotta be a better way, but will do for now. 
-	if (binom) {
-          z.long.indx.fit <- 0:(J.fit - 1)
-          z.0.long.indx <- 1:J.0
+        if (!binom) {
+          z.long.indx.fit <- rep(1:J.fit, dim(y.big.fit)[2])
+          z.long.indx.fit <- z.long.indx.fit[!is.na(c(y.big.fit))]
+          # Subtract 1 for indices in C
+          z.long.indx.fit <- z.long.indx.fit - 1
+          z.0.long.indx <- rep(1:J.0, dim(y.big.0)[2])
+          z.0.long.indx <- z.0.long.indx[!is.na(c(y.big.0))]
+	  # Don't subtract 1 for z.0.long.indx since its used in R only 
         } else {
-	  z.long.indx.fit <- matrix(NA, J.fit, max(K.fit))
-	  for (j in 1:J.fit) {
-            z.long.indx.fit[j, 1:K.fit[j]] <- j  
-          }
-	  z.long.indx.fit <- c(z.long.indx.fit)
-	  z.long.indx.fit <- z.long.indx.fit[!is.na(z.long.indx.fit)] - 1
-	  z.0.long.indx <- matrix(NA, nrow(X.0), max(K.0))
-	  for (j in 1:nrow(X.0)) {
-            z.0.long.indx[j, 1:K.0[j]] <- j  
-          }
-	  z.0.long.indx <- c(z.0.long.indx)
-	  z.0.long.indx <- z.0.long.indx[!is.na(z.0.long.indx)] 
-	}
+          z.long.indx.fit <- 0:(J.fit - 1)
+	  z.0.long.indx <- 1:J.0
+        }
+
 	verbose.fit <- FALSE
 	n.omp.threads.fit <- 1
         storage.mode(y.fit) <- "double"
@@ -955,7 +956,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	if (binom) {
           like.samples <- matrix(NA, nrow(y.big.0), ncol(y.big.0))
           for (j in 1:nrow(X.p.0)) {
-            for (k in 1:K.0[j]) {
+            for (k in rep.indx.0[[j]]) {
               like.samples[j, k] <- mean(dbinom(y.big.0[j, k], 1,
 	      			         out.p.pred$p.0.samples[, j] * out.pred$z.0.samples[, z.0.long.indx[j]]))
 	    }

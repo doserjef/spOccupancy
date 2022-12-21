@@ -19,8 +19,8 @@ waicOcc <- function(object, ...) {
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
 			     'tPGOcc', 'stPGOcc', 'svcPGBinom', 'svcPGOcc', 
-			     'svcTPGBinom', 'svcTPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc\n")
+			     'svcTPGBinom', 'svcTPGOcc', 'tMsPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -45,6 +45,13 @@ waicOcc <- function(object, ...) {
     names(out) <- c("elpd", "pD", "WAIC")
   }
 
+  if (class(object) %in% c('tMsPGOcc')) {
+    elpd <- sum(apply(object$like.samples, c(2, 3, 4), function(a) log(mean(a))), na.rm = TRUE)
+    pD <- sum(apply(object$like.samples, c(2, 3, 4), function(a) var(log(a))), na.rm = TRUE)
+    out <- c(elpd, pD, -2 * (elpd - pD))
+    names(out) <- c('elpd', 'pD', 'WAIC')
+  }
+
   # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     X.p <- object$X.p
@@ -64,9 +71,8 @@ waicOcc <- function(object, ...) {
     for (q in 1:n.data) {
 
       n.rep <- apply(y[[q]], 1, function(a) sum(!is.na(a)))
-      K.max <- max(n.rep)
       J <- nrow(y[[q]])
-      z.long.indx <- rep(sites[[q]], K.max)
+      z.long.indx <- rep(sites[[q]], dim(y[[q]])[2])
       z.long.indx <- z.long.indx[!is.na(c(y[[q]]))]
       y[[q]] <- c(y[[q]])
       y[[q]] <- y[[q]][!is.na(y[[q]])]

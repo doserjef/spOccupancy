@@ -7,7 +7,7 @@
 }
 
 \usage{
-simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
+simIntOcc(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
           sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
 }
 \arguments{
@@ -21,6 +21,8 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, beta, alpha,
 \item{J.obs}{a numeric vector of length \code{n.data} containing the number of sites to simulate each data source at. Data sources can be obtained at completely different sites, the same sites, or anywhere inbetween. Maximum number of sites a given data source is available at is equal to \eqn{J = J.x \times J.y}{J = J.x x J.y}.}
 
 \item{n.rep}{a list of length \code{n.data}. Each element is a numeric vector with length corresponding to the number of sites that given data source is observed at (in \code{J.obs}). Each vector indicates the number of repeat visits at each of the sites for a given data source.}
+
+\item{n.rep.max}{a vector of numeric values indicating the maximum number of replicate surveys for each data set. This is an optional argument, with its default value set to \code{max(n.rep)} for each data set. This can be used to generate data sets with different types of missingness (e.g., simulate data across 20 days (replicate surveys) but sites are only sampled a maximum of ten times each).}
 
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occurrence portion of the single-species occupancy model.}
 

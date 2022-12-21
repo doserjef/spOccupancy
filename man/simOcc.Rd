@@ -7,7 +7,7 @@
 }
 
 \usage{
-simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(), 
+simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), 
        p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
        sigma.sq, phi, nu, x.positive = FALSE, ...)
 }
@@ -18,6 +18,8 @@ simOcc(J.x, J.y, n.rep, beta, alpha, psi.RE = list(),
 \item{J.y}{a single numeric value indicating the number of sites to simulate detection-nondetection data along the vertical axis. Total number of sites with simulated data is \eqn{J.x \times J.y}{J.x x J.y}. }
 
 \item{n.rep}{a numeric vector of length \eqn{J = J.x \times J.y}{J = J.x x J.y} indicating the number of repeat visits at each of the \eqn{J}{J} sites.}
+
+\item{n.rep.max}{a single numeric value indicating the maximum number of replicate surveys. This is an optional argument, with its default value set to \code{max(n.rep)}. This can be used to generate data sets with different types of missingness (e.g., simulate data across 20 days (replicate surveys) but sites are only sampled a maximum of ten times each).}
 
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occupancy portion of the single-species occupancy model.}
 
