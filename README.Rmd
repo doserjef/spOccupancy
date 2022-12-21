@@ -145,7 +145,7 @@ The `vignette("modelFitting")` provides a more detailed description and tutorial
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2022a). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.13897.
+Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022a). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.13897.
 
 Doser, J. W., Finley, A. O., and Banerjee, S. (2022b) Joint species distribution models with imperfect detection for high-dimensional spatial data. [arXiv preprint arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
 

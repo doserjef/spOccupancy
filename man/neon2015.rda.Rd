@@ -35,7 +35,7 @@ data(neon2015)
 \references{
   Doser, J. W., Leuenberger, W., Sillett, T. S., Hallworth, M. T. & Zipkin, E. F. (2022). 
   Integrated community occupancy models: A framework to assess occurrence and biodiversity 
-  dynamics using multiple data sources. Methods in Ecology and Evolution, 00, 1– 14. \doi{10.1111/2041-210X.13811}
+  dynamics using multiple data sources. Methods in Ecology and Evolution, 00, 1-14. \doi{10.1111/2041-210X.13811}
 
   Barnett, D. T., Duffy, P. A., Schimel, D. S., Krauss, R. E., Irvine, K. M., 
   Davis, F. W.,Gross, J. E., Azuaje, E. I., Thorpe, A. S., Gudex-Cross, D., et al. (2019). 

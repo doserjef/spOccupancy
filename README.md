@@ -5,7 +5,7 @@
 
 [![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
+[![](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -138,25 +138,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.3664
+#> Run Time (min): 1.4542
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            4.0331 0.6006  3.0498  3.9614  5.4340 1.0170  227
-#> scale(Elevation)      -0.5268 0.2141 -0.9579 -0.5239 -0.1184 1.0065 1401
-#> I(scale(Elevation)^2) -1.1649 0.2200 -1.6432 -1.1429 -0.7969 1.0095  306
+#> (Intercept)            3.9665 0.5654  3.0288  3.8974  5.2823 1.0141  227
+#> scale(Elevation)      -0.5265 0.2105 -0.9688 -0.5212 -0.1247 1.0064 1160
+#> I(scale(Elevation)^2) -1.1461 0.2062 -1.6103 -1.1264 -0.7948 1.0112  334
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6619 0.1161  0.4367  0.6614 0.8913 1.0003 6000
-#> scale(day)       0.2904 0.0706  0.1540  0.2901 0.4314 1.0016 5671
-#> scale(tod)      -0.0317 0.0701 -0.1712 -0.0308 0.1044 1.0037 6000
-#> I(scale(day)^2) -0.0761 0.0870 -0.2489 -0.0770 0.0966 1.0004 6000
+#> (Intercept)      0.6622 0.1138  0.4430  0.6609 0.8847 1.0003 5747
+#> scale(day)       0.2905 0.0700  0.1545  0.2875 0.4279 1.0052 5758
+#> scale(tod)      -0.0310 0.0698 -0.1687 -0.0320 0.1047 1.0007 6000
+#> I(scale(day)^2) -0.0748 0.0863 -0.2443 -0.0748 0.0929 1.0003 6000
 #> 
 #> Spatial Covariance: 
-#>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.1733 1.1218 0.2066 0.8568 3.6028 1.1142 103
-#> phi      0.0093 0.0083 0.0010 0.0056 0.0283 1.1004  99
+#>            Mean    SD   2.5%    50%  97.5%   Rhat ESS
+#> sigma.sq 1.0404 0.881 0.1858 0.7833 3.4004 1.1125  73
+#> phi      0.0089 0.008 0.0008 0.0057 0.0281 1.3323  73
 ```
 
 ### Posterior predictive check
@@ -182,7 +182,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4877 
+#> Bayesian p-value:  0.4935 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -194,8 +194,8 @@ due to Monte Carlo error your results will differ slightly).
 
 ``` r
 waicOcc(out)
-#>       elpd         pD       WAIC 
-#> -681.17425   21.95552 1406.25954
+#>      elpd        pD      WAIC 
+#> -682.3281   20.9123 1406.4808
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -208,7 +208,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1495.596
+#> [1] 1414.17
 ```
 
 ### Prediction
@@ -241,13 +241,13 @@ account for residual species correlations, see
 for full statistical details. For a description and tutorial of
 multi-season (spatio-temporal) occupancy models in `spOccupancy`, see
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
-coefficient models in `spOccupancy`, see `vignette("svcUnivariateHTML")` and
-keep your eyes out for an upcoming preprint providing recommendations
-and guidelines on using these models.
+coefficient models in `spOccupancy`, see `vignette("svcUnivariateHTML")`
+and keep your eyes out for an upcoming preprint providing
+recommendations and guidelines on using these models.
 
 ## References
 
-Doser, J. W., Finley, A. O., Kéry, M., and Zipkin, E. F. (2022a).
+Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022a).
 spOccupancy: An R package for single-species, multi-species, and
 integrated spatial occupancy models. Methods in Ecology and Evolution.
 <https://doi.org/10.1111/2041-210X.13897>.

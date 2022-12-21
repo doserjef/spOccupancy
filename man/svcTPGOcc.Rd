@@ -228,7 +228,7 @@ of neighbors using WAIC or k-fold cross-validation.}
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
-  Kéry, M., & Royle, J. A. (2021). Applied hierarchical modeling in ecology: 
+  Kery, M., & Royle, J. A. (2021). Applied hierarchical modeling in ecology: 
   Analysis of distribution, abundance and species richness in R and BUGS: 
   Volume 2: Dynamic and advanced models. Academic Press. Section 4.6.
 

@@ -85,8 +85,8 @@ across an area of interest.
 
 \references{
 
-  Doser, J. W., Finley, A. O., Kéry, M., & Zipkin, E. F. (2022). 
-  spOccupancy: An R package for single‐species, multi‐species, and 
+  Doser, J. W., Finley, A. O., Kery, M., & Zipkin, E. F. (2022). 
+  spOccupancy: An R package for single-species, multi-species, and 
   integrated spatial occupancy models. Methods in Ecology and Evolution.
 
   Doser, J. W., Finley, A. O., & Banerjee, S. (2022). Joint species 
@@ -95,7 +95,7 @@ across an area of interest.
 }
 
 \author{
-  Jeffrey W. Doser, Andrew O. Finley, Marc Kéry
+  Jeffrey W. Doser, Andrew O. Finley, Marc Kery
 }
 
 \docType{package}
