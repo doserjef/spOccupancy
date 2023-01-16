@@ -112,7 +112,7 @@ extern "C" {
     F77_NAME(dcopy)(&pDet, REAL(muAlpha_r), &inc, muAlpha, &inc);
     double *SigmaBetaInv = (double *) R_alloc(ppOcc, sizeof(double));   
     F77_NAME(dcopy)(&ppOcc, REAL(SigmaBeta_r), &inc, SigmaBetaInv, &inc);
-    double sigmaAlpha = REAL(sigmaAlpha_r)[0]; 
+    double *sigmaAlpha = REAL(sigmaAlpha_r); 
     double phiA = REAL(phiA_r)[0];
     double phiB = REAL(phiB_r)[0]; 
     double nuA = REAL(nuA_r)[0]; 
@@ -291,9 +291,9 @@ extern "C" {
     double *SigmaAlphaInv = (double *) R_alloc(currSize, sizeof(double)); zeros(SigmaAlphaInv, currSize); 
     double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     // Fill SigmaAlpha
-    for (q = 0; q < nData; q++) {
-      for (i = 0; i < pDetLong[q]; i++) {
-        SigmaAlphaInv[alphaSigmaIndx[q] + i * pDetLong[q] + i] = sigmaAlpha; 
+    for (q = 0, j = 0; q < nData; q++) {
+      for (i = 0; i < pDetLong[q]; i++, j++) {
+        SigmaAlphaInv[alphaSigmaIndx[q] + i * pDetLong[q] + i] = sigmaAlpha[j]; 
 	// Rprintf("Index: %i\n", alphaSigmaIndx[q] + i * pDetLong[q] + i); 
       } // i
       F77_NAME(dpotrf)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 

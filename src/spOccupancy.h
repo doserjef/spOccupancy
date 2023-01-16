@@ -401,4 +401,22 @@ extern "C" {
 	             SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
 		     SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r);
 
+  SEXP intMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, 
+	       SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP pDetLong_r, 
+	       SEXP nObsLong_r, SEXP JLong_r, SEXP NLong_r,
+	       SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
+	       SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
+	       SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
+	       SEXP sigmaSqPsiStarting_r, SEXP betaStarStarting_r, 
+	       SEXP zLongIndx_r, SEXP alphaCommIndx_r, SEXP dataIndx_r, 
+	       SEXP alphaSpIndx_r, SEXP alphaDatIndx_r, SEXP alphaPDetIndx_r,
+	       SEXP spLongIndx_r, SEXP obsLongIndx_r, SEXP spSiteIndx_r,
+	       SEXP spDatLongIndx_r, SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+	       SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+	       SEXP SigmaBetaComm_r, SEXP sigmaAlphaComm_r, SEXP tauSqBetaA_r, 
+	       SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, 
+	       SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+	       SEXP samplesInfo_r, SEXP chainInfo_r);
+
 }

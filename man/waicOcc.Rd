@@ -15,7 +15,8 @@ waicOcc(object, ...)
   \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
   \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfJSDM}, 
   \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, \code{stPGOcc}, 
-  \code{svcPGBinom}, \code{svcPGOcc}, \code{svcTPGBinom}, or \code{svcTPGOcc}.}
+  \code{svcPGBinom}, \code{svcPGOcc}, \code{svcTPGBinom}, \code{svcTPGOcc}, or 
+  \code{intMsPGOcc}.}
 
 \item{...}{currently no additional arguments}
 

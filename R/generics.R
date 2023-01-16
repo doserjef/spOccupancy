@@ -841,7 +841,11 @@ predict.msPGOcc <- function(object, X.0, ignore.RE = FALSE,
       stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
     }
     # Composition sampling --------------------------------------------------
-    N <- dim(object$y)[1]
+    if (is(object, 'intMsPGOcc')) {
+      N <- object$N
+    } else {
+      N <- dim(object$y)[1]
+    } 
     sp.indx <- rep(1:N, p.occ)
     n.post <- object$n.post * object$n.chains
     beta.samples <- as.matrix(object$beta.samples)
@@ -4025,17 +4029,162 @@ predict.svcTPGBinom <- function(object, X.0, coords.0, t.cols, weights.0, n.omp.
 
 }
 
-# tMsPGOcc ----------------------------------------------------------------
-print.tMsPGOcc <- function(x, ...) {
+# intMsPGOcc --------------------------------------------------------------
+print.intMsPGOcc <- function(x, ...) {
   print.msPGOcc(x)
 }
 
-summary.tMsPGOcc <- function(object, level = 'both', quantiles = c(0.025, 0.5, 0.975),
-			     digits = max(3L, getOption("digits") - 3L), ...) {
-  summary.msPGOcc(object, level, quantiles, digits)
+summary.intMsPGOcc <- function(object,
+			    level = 'both',
+			    quantiles = c(0.025, 0.5, 0.975),
+			    digits = max(3L, getOption("digits") - 3L), ...) {
+
+  print(object)
+
+  n.post <- object$n.post
+  n.samples <- object$n.samples
+  n.burn <- object$n.burn
+  n.thin <- object$n.thin
+  n.chains <- object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
+
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
+  cat(paste("Burn-in: ", n.burn,"\n", sep=""))
+  cat(paste("Thinning Rate: ",n.thin,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post * n.chains,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
+
+  n.data <- length(object$y)
+  p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
+
+  if (tolower(level) %in% c('community', 'both')) {
+
+    cat("----------------------------------------\n");
+    cat("\tCommunity Level\n");
+    cat("----------------------------------------\n");
+
+    # Occurrence
+    cat("Occurrence Means (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.comm.samples, 2,
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.comm.samples, 2,
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta.comm, round(object$ESS$beta.comm, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
+    cat("\nOccurrence Variances (logit scale): \n")
+    tmp.1 <- t(apply(object$tau.sq.beta.samples, 2,
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$tau.sq.beta.samples, 2,
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$tau.sq.beta, round(object$ESS$tau.sq.beta, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    if (object$psiRE) {
+      cat("\n")
+      cat("Occurrence Random Effect Variances (logit scale): \n")
+      tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2,
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$sigma.sq.psi.samples, 2,
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.psi, round(object$ESS$sigma.sq.psi, 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    }
+    cat("\n")
+    # Detection
+    for (i in 1:n.data) {
+      indx <- object$alpha.comm.indx == i
+      cat("-----------------------------\n");
+      cat(paste("\tData source ", i, "\n", sep = ''));
+      cat("-----------------------------\n");
+      cat("Detection Means (logit scale): \n")
+      tmp.1 <- t(apply(object$alpha.comm.samples[, indx, drop = FALSE],
+		       2, function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$alpha.comm.samples[, indx, drop = FALSE], 
+		     2, function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$alpha.comm[indx], 
+			round(object$ESS$alpha.comm[indx], 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      cat("\n")
+      cat("Detection Variances (logit scale): \n")
+      tmp.1 <- t(apply(object$tau.sq.alpha.samples[, indx, drop = FALSE], 2,
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$tau.sq.alpha.samples[, indx, drop = FALSE], 2,
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$tau.sq.alpha[indx], round(object$ESS$tau.sq.alpha[indx], 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      # TODO: 
+      # if (object$pRE) {
+      #   cat("\n")
+      #   cat("Detection Random Effect Variances (logit scale): \n")
+      #   tmp.1 <- t(apply(object$sigma.sq.p.samples, 2,
+      #         	   function(x) c(mean(x), sd(x))))
+      #   colnames(tmp.1) <- c("Mean", "SD")
+      #   tmp <- t(apply(object$sigma.sq.p.samples, 2,
+      #         	 function(x) quantile(x, prob = quantiles)))
+      #   diags <- matrix(c(object$rhat$sigma.sq.p, round(object$ESS$sigma.sq.p, 0)), ncol = 2)
+      #   colnames(diags) <- c('Rhat', 'ESS')
+
+      #   print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      # }
+      cat("\n")
+    }
+  }
+
+  if (tolower(level) %in% c('species', 'both')) {
+    if (tolower(level) == 'both') cat("\n")
+    cat("----------------------------------------\n");
+    cat("\tSpecies Level\n");
+    cat("----------------------------------------\n");
+    cat("Occurrence (logit scale): \n")
+    tmp.1 <- t(apply(object$beta.samples, 2,
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$beta.samples, 2,
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$beta, round(object$ESS$beta, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+    cat("\n")
+    # Detection
+    for (i in 1:n.data) {
+      indx <- object$alpha.indx == i
+      cat("-----------------------------\n");
+      cat(paste("\tData source ", i, "\n", sep = ''));
+      cat("-----------------------------\n");
+      cat("Detection (logit scale): \n")
+      tmp.1 <- t(apply(object$alpha.samples[, indx, drop = FALSE], 2,
+            	   function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(object$alpha.samples[, indx, drop = FALSE], 2,
+            	 function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$alpha[indx], round(object$ESS$alpha[indx], 0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      cat("\n")
+    }
+  }
 }
 
-fitted.tMsPGOcc <- function(object, ...) {
+predict.intMsPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
+  predict.msPGOcc(object, X.0, ignore.RE, type = 'occupancy', ...)
+}
+
+fitted.intMsPGOcc <- function(object, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
@@ -4054,29 +4203,38 @@ fitted.tMsPGOcc <- function(object, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  if (!(class(object) %in% c('tMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc'))) {
-    stop("error: object must be of class tMsPGOcc, stMsPGOcc, svcTMsPGOcc\n")
+  # if (!is(object, c("msPGOcc", "spMsPGOcc", "lfMsPGOcc", "sfMsPGOcc"))) {
+  if (!(class(object) %in% c('intMsPGOcc', 'spIntMsPGOcc'))) {
+    stop("error: object must be of class intMsPGOcc, spIntMsPGOcc\n")
   }
   n.post <- object$n.post * object$n.chains
-  X.p <- object$X.p
   y <- object$y
-  n.years.max <- dim(y)[3]
-  K.max <- dim(y)[4]
+  n.data <- length(y)
+  sites <- object$sites
+  species <- object$species
+  # TODO: left off here. 
+  X.p <- object$X.p
+  n.rep <- apply(y[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
+  K.max <- dim(y)[3]
   J <- dim(y)[2]
   N <- dim(y)[1]
-  z.long.indx <- rep(1:(J * n.years.max), K.max)
-  z.long.indx <- z.long.indx[!is.na(c(y[1, , , ]))]
+  if (nrow(X.p) == dim(y)[2]) {
+    X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
+    X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
+  }
+  z.long.indx <- rep(1:J, dim(y)[3])
+  z.long.indx <- z.long.indx[!is.na(c(y[1, , ]))]
   z.samples <- object$z.samples
   alpha.samples <- object$alpha.samples
   n.obs <- nrow(X.p)
   det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
   sp.indx <- rep(1:N, ncol(X.p))
-  y <- matrix(y, N, J * n.years.max * K.max)
+  y <- matrix(y, N, J * K.max)
   y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
   for (i in 1:N) {
     if (object$pRE) {
       sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
-      # Add 1 to get it to R indexing. 
+      # Add 1 to get it to R indexing.
       X.p.re <- object$X.p.re + 1
       tmp.samples <- matrix(0, n.post, n.obs)
       tmp.alpha.star <- object$alpha.star.samples[, sp.re.indx == i]
@@ -4091,24 +4249,23 @@ fitted.tMsPGOcc <- function(object, ...) {
 
   out <- list()
   # Get detection probability
-  # Need to be careful here that all arrays line up. 
+  # Need to be careful here that all arrays line up.
   det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
-  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
-  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp <- array(NA, dim = c(n.post, N, J * K.max))
+  names.long <- which(!is.na(c(object$y[1, , ])))
   tmp[, , names.long] <- det.prob.samples
-  p.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  p.samples <- array(tmp, dim = c(n.post, N, J, K.max))
   out$p.samples <- p.samples
   # Get fitted values
-  z.samples <- array(z.samples, dim = c(n.post, N, J * n.years.max))
   det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
   y.rep.samples <- array(NA, dim = dim(det.prob.samples))
   for (i in 1:N) {
     y.rep.samples[, i, ] <- apply(det.prob.samples[, i, ], 2, function(a) rbinom(n.post, 1, a))
   }
-  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
-  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp <- array(NA, dim = c(n.post, N, J * K.max))
+  names.long <- which(!is.na(c(object$y[1, , ])))
   tmp[, , names.long] <- y.rep.samples
-  y.rep.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  y.rep.samples <- array(tmp, dim = c(n.post, N, J, K.max))
   out$y.rep.samples <- y.rep.samples
   return(out)
 }
