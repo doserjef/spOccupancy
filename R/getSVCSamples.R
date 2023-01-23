@@ -33,9 +33,9 @@ getSVCSamples <- function(object, pred.object, ...) {
   }
   svc.cols <- object$svc.cols
   if (!missing(pred.object)) {
-    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, a, ]))
+    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, which(svc.cols == a), ]))
   } else {
-    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + object$w.samples[, a, ]))
+    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + object$w.samples[, which(svc.cols == a), ]))
   }
   names(svc.samples) <- svc.names
   return(svc.samples)

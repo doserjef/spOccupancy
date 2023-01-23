@@ -253,7 +253,8 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Number of years for each site
   n.years <- rep(NA, J)
   for (j in 1:J) {
-    n.years[j] <- sum(apply(y.big[j, , ], 1, function(a) sum(!is.na(a))) != 0)
+    tmp <- y.big[j, , , drop = FALSE]
+    n.years[j] <- sum(apply(tmp, 2, function(a) sum(!is.na(a))) != 0)
   }
   # Number of occupancy effects
   p.occ <- ncol(X)
