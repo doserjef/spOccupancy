@@ -61,7 +61,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
-  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi}, 
+  \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{tau.beta.half.t}, 
+  \code{tau.alpha.half.t}, \code{sigma.sq.psi}, 
   \code{sigma.sq.p}, \code{phi.unif}, 
   and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
@@ -71,7 +72,7 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or of length one if priors are the same for 
   all coefficients. If not specified, prior means are set 
-  to 0 and prior variances set to 2.73. Community-level variance parameters 
+  to 0 and prior variances set to 2.73. By default, community-level variance parameters 
   for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
   assumed to follow an inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
@@ -79,7 +80,14 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or a single value if priors are the same for all 
   parameters. If not specified, prior shape and scale 
-  parameters are set to 0.1. The spatial factor model fits \code{n.factors} independent
+  parameters are set to 0.1. Alternatively, half-t priors can be specified for the 
+  community level occurrence/detection standard deviation parameters using the tags
+  \code{tau.beta.half.t} and \code{tau.alpha.half.t}. The hyperparameters of the half-t
+  distribution are passed as a list of length two with the first and second elements
+  corresponding to the degrees of freedom and scale parameters, which are each 
+  specified as vectors of length equal to the number of coefficients to be estimated
+  or a single value if priors are the same for all parameters.
+  The spatial factor model fits \code{n.factors} independent
   spatial processes. The spatial decay \code{phi} and smoothness \code{nu} parameters 
   for each latent factor are assumed to follow Uniform distributions. 
   The hyperparameters of the Uniform are passed as a list with two elements, 

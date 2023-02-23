@@ -49,4 +49,5 @@
   double spCor(double D, double *theta, std::string &covModel);
   void clearUT(double *m, int n);
   void AR1(int n, double rho, double sigmaSq, double *C);
+  void expCov(int n, double rho, double sigmaSq, double *C);
 

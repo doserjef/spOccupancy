@@ -362,14 +362,14 @@ where $r$ and $t$ index across the number of occurrence and detection regression
 The $\pg$ data augmentation induces a Gibbs update for all parameters in the multi-species occupancy model. For each iteration, we first sample all community-level parameters followed by species level parameters. We first sample the community-level regression coefficients $\bm{\mu_{\beta}}$ from 
 
 \begin{equation}
-\bm{\mu_{\beta}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\beta}\bm{\beta}_i) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu0}_{\beta}\Big], [\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}).
+\bm{\mu_{\beta}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\beta}^{-1}\bm{\beta}_i) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu0}_{\beta}\Big], [\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}).
 (\#eq:betaBar)
 \end{equation}
 
 Similarly, we next sample the community-level regression coefficients $\bm{\mu_{\alpha}}$ from 
 
 \begin{equation}
-\bm{\mu_{\alpha}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\alpha}\bm{\alpha}_i) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu0}_{\alpha}\Big], [\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}).
+\bm{\mu_{\alpha}} \mid \cdot \sim \text{Normal}([\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\alpha}^{-1}\bm{\alpha}_i) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu0}_{\alpha}\Big], [\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}).
 (\#eq:alphaBar)
 \end{equation}
 

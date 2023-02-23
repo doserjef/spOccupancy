@@ -90,15 +90,6 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
   }
 
   # Subroutines -----------------------------------------------------------
-  # MVN 
-  rmvn <- function(n, mu=0, V = matrix(1)) {
-    p <- length(mu)
-    if(any(is.na(match(dim(V),p))))
-      stop("Dimension problem!")
-    D <- chol(V)
-    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
-  }
-
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
 
@@ -153,7 +144,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
     }
     Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
     # Random spatial process
-    w <- rmvn(1, rep(0, J), Sigma)
+    w <- mvrnorm(1, rep(0, J), Sigma)
   } else {
     w <- NA
   }

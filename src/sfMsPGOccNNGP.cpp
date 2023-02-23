@@ -81,7 +81,7 @@ extern "C" {
 		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		     SEXP samplesInfo_r, SEXP chainInfo_r){
+		     SEXP samplesInfo_r, SEXP chainInfo_r, SEXP tauSqIG_r){
    
     /**********************************************************************
      * Initial constants
@@ -170,6 +170,9 @@ extern "C" {
     int status = 0; 
     int thinIndx = 0; 
     int sPost = 0; 
+    // Indicator denoting whether tauSqBeta and tauSqAlpha are IGs
+    int tauSqBetaIG = INTEGER(tauSqIG_r)[0];
+    int tauSqAlphaIG = INTEGER(tauSqIG_r)[1];
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -313,6 +316,11 @@ extern "C" {
     double *kappaOcc = (double *) R_alloc(JN, sizeof(double)); zeros(kappaOcc, JN);
     // Need this for all species
     double *zStar = (double *) R_alloc(JN, sizeof(double));
+    // For half-t priors, if they are specified
+    double *omegaTauBeta = (double *) R_alloc(pOcc, sizeof(double));
+    ones(omegaTauBeta, pOcc);
+    double *omegaTauAlpha = (double *) R_alloc(pDet, sizeof(double));
+    ones(omegaTauAlpha, pOcc);
 
     /**********************************************************************
      * Return Stuff
@@ -610,7 +618,13 @@ extern "C" {
             tmp_0 += (beta[h * N + i] - betaComm[h]) * (beta[h * N + i] - betaComm[h]);
           } // i
           tmp_0 *= 0.5;
-          tauSqBeta[h] = rigamma(tauSqBetaA[h] + N / 2.0, tauSqBetaB[h] + tmp_0); 
+	  if (tauSqBetaIG) {
+            tauSqBeta[h] = rigamma(tauSqBetaA[h] + N / 2.0, 
+                                   tauSqBetaB[h] + tmp_0); 
+	  } else {
+            tauSqBeta[h] = rigamma((tauSqBetaA[h] + N) / 2.0, 
+                                   tauSqBetaA[h] / omegaTauBeta[h] + tmp_0); 
+	  }
         } // h
         // This is correct, nothing wrong here. 
         for (h = 0; h < pOcc; h++) {
@@ -620,6 +634,16 @@ extern "C" {
         if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
         if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
+        /********************************
+         * Update additional parameter for half-t
+         * *****************************/
+	if (!tauSqBetaIG) {
+          for (h = 0; h < pOcc; h++) {
+            omegaTauBeta[h] = rigamma(0.5 * (tauSqBetaA[h] + 1.0), 
+                                      tauSqBetaA[h] / tauSqBeta[h] + 
+				      1.0 / pow(tauSqBetaB[h], 2));
+	  } // h
+	}
         /********************************************************************
          Update Community Detection Variance Parameter
         ********************************************************************/
@@ -629,7 +653,12 @@ extern "C" {
             tmp_0 += (alpha[h * N + i] - alphaComm[h]) * (alpha[h * N + i] - alphaComm[h]);
           } // i
           tmp_0 *= 0.5;
-          tauSqAlpha[h] = rigamma(tauSqAlphaA[h] + N / 2.0, tauSqAlphaB[h] + tmp_0); 
+	  if (tauSqAlphaIG) {
+            tauSqAlpha[h] = rigamma(tauSqAlphaA[h] + N / 2.0, tauSqAlphaB[h] + tmp_0); 
+	  } else {
+            tauSqAlpha[h] = rigamma((tauSqAlphaA[h] + N) / 2.0, 
+                                    tauSqAlphaA[h] / omegaTauAlpha[h] + tmp_0); 
+	  }
         } // h
         for (h = 0; h < pDet; h++) {
           TauAlphaInv[h * pDet + h] = tauSqAlpha[h]; 
@@ -638,7 +667,16 @@ extern "C" {
         if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
         F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
         if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
-
+        /********************************
+         * Update additional parameter for half-t
+         * *****************************/
+	if (!tauSqAlphaIG) {
+          for (h = 0; h < pDet; h++) {
+            omegaTauAlpha[h] = rigamma(0.5 * (tauSqAlphaA[h] + 1.0), 
+                                      tauSqAlphaA[h] / tauSqAlpha[h] + 
+				      1.0 / pow(tauSqAlphaB[h], 2));
+	  } // h
+	}
         /********************************************************************
          *Update Occupancy random effects variance
          *******************************************************************/

@@ -156,15 +156,6 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
   # }
 
   # Subroutines -----------------------------------------------------------
-  # MVN 
-  rmvn <- function(n, mu=0, V = matrix(1)) {
-    p <- length(mu)
-    if(any(is.na(match(dim(V),p))))
-      stop("Dimension problem!")
-    D <- chol(V)
-    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
-  }
-
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
   
@@ -224,7 +215,7 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
       for (ll in 1:n.factors) {
         Sigma <- mkSpCov(coords, as.matrix(1), as.matrix(0), 
             	     theta[ll, ], cov.model)
-        w[ll, ] <- rmvn(1, rep(0, J), Sigma)
+        w[ll, ] <- mvrnorm(1, rep(0, J), Sigma)
       }
 
     } else { # lsMsPGOcc
@@ -247,7 +238,7 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
       for (i in 1:N.max) {
         Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), 
             	     theta[i, ], cov.model)
-        w.star[i, ] <- rmvn(1, rep(0, J), Sigma)
+	w.star[i, ] <- mvrnorm(1, rep(0, J), Sigma)
       }
     }
     # For naming consistency

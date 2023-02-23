@@ -93,15 +93,6 @@ simBinom <- function(J.x, J.y, weights, beta, psi.RE = list(), sp = FALSE,
   }
 
   # Subroutines -----------------------------------------------------------
-  # MVN
-  rmvn <- function(n, mu=0, V = matrix(1)) {
-    p <- length(mu)
-    if(any(is.na(match(dim(V),p))))
-      stop("Dimension problem!")
-    D <- chol(V)
-    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
-  }
-
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
 
@@ -135,7 +126,7 @@ simBinom <- function(J.x, J.y, weights, beta, psi.RE = list(), sp = FALSE,
     for (i in 1:p.svc) {
       Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
       # Random spatial process
-      w.mat[, i] <- rmvn(1, rep(0, J), Sigma)
+      w.mat[, i] <- mvrnorm(1, rep(0, J), Sigma)
     }
     X.w <- X[, svc.cols, drop = FALSE]
     # Convert w to a J*ptilde x 1 vector, sorted so that the p.svc values for 

@@ -368,6 +368,7 @@ extern "C" {
     double *tmp_nnYears = (double *) R_alloc(nnYears, sizeof(double));
     if (ar1) {
       AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
+      // expCov(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
       clearUT(SigmaEta, nYearsMax);
       F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
       if(info != 0){error("c++ error: Cholesky failed in initial time covariance matrix\n");}
@@ -635,6 +636,7 @@ extern "C" {
            *******************************************************************/
 	  // Form correlation matrix. 
           AR1(nYearsMax, theta[rhoIndx], 1.0, SigmaEta);
+          // expCov(nYearsMax, theta[rhoIndx], 1.0, SigmaEta);
 	  clearUT(SigmaEta, nYearsMax);
 	  F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
 	  if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
@@ -661,6 +663,7 @@ extern "C" {
 
 	  // Construct proposal covariance matrix. 
           AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEtaCand);
+          // expCov(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEtaCand);
 	  clearUT(SigmaEtaCand, nYearsMax);
 
           /********************************
@@ -686,6 +689,7 @@ extern "C" {
            *******************************/
 	  theta[rhoIndx] = rho; 
           AR1(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
+          // expCov(nYearsMax, theta[rhoIndx], theta[sigmaSqTIndx], SigmaEta);
 	  clearUT(SigmaEta, nYearsMax);
           detCurr = 0.0;
 	  F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 

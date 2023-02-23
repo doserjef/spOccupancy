@@ -65,15 +65,11 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     
     
-    ## begin code block 'Heibl1'
-    ## assuming sites are in rows
     if (dim(y)[[1]] != dim(data$occ.covs)[[1]]){
       stop("number of sites in encounter history 'y' (J = ", dim(y)[[1]],
            ") does not match number of sites in site-specific covariates 'occ.covs' (J = ", 
            dim(data$occ.covs)[[1]], ").")
     }
-    ## end code block 'Heibl1'
-    
     
     if (sum(is.na(data$occ.covs)) > 0) {
       stop("missing covariate values in data$occ.covs. Remove these sites from all data or impute non-missing values.")
@@ -91,17 +87,6 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (!is.list(data$det.covs)) {
       stop("det.covs must be a list of matrices, data frames, and/or vectors")
     }
-    
-    
-    ## begin code block 'Heibl2'
-    ## assuming sites are in rows
-    if (dim(y)[[1]] != dim(data$det.covs)[[1]]){
-      stop("number of sites in encounter history 'y' (J = ", dim(y)[[1]],
-           ") does not match number of sites in site-specific covariates 'det.covs' (J = ", 
-           dim(data$occ.covs)[[1]], ").")
-    }
-    ## end code block 'Heibl2'
-    
     
     if (missing(n.samples)) {
       stop("n.samples must be specified")

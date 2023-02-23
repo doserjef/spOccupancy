@@ -1,0 +1,213 @@
+---
+title: "Integrated multi-species occupancy models in spOccupancy"
+author: "Jeffrey W. Doser"
+date: "February 20, 2023"
+description: Learn how to fit multi-species occupancy models with multiple data sources 
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+bibliography: [references.bib]
+biblio-style: apalike
+vignette: >
+  %\VignetteIndexEntry{integratedMultispecies}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+knitr::opts_chunk$set(
+  comment = "", cache = TRUE
+)
+```
+
+\newcommand{\bm}{\boldsymbol} 
+
+# Introduction
+
+This vignette presents new functionality in v0.6.0 to fit an integrated multi-species occupancy model (i.e., a multi-species occupancy model with multiple data sources) with the `intMsPGOcc()` function. This is a single-season version of the "integrated community occupancy model" developed by @doser2022integrated. Often, multiple detection-nondetection data sources are available to study the occurrence and distribution of multiple species of interest. Such data can arise from citizen science checklists, point count surveys, camera traps, and autonomous acoustic recording units. A model that combines multiple multi-species data sources together in a single modeling framework has the potential to provide improved ecological inference as a result of increased sample sizes, increased spatial extent, and/or increased ability to account for sampling biases in individual data sources [@miller2019recent]. Integrated multi-species occupancy models seek to combine multiple sources of multi-species detection-nondetection data in a single hierarchical modeling framework to provide improved inference on multiple species occurrence patterns. The data sources may more not be replicated, allowing for use of so-called "single-visit" data within the integrated modeilng approach. Further, data sources can be used in the modeling framework even if they do not all sample the entire species community. For a more thorough description of integrated multi-species occupancy models, see @doser2022integrated.
+
+Functionality for integrated multi-species occupancy models in `spOccupancy` is under active development, and the full suite of `spOccupancy` tools (e.g., cross-validation, posterior predictive checks) are not currently available for the `intMsPGOcc()` function, and currently only a single-season, non-spatial model is available. In this vignette, we will present a brief overview of how to fit integrated multi-species occupancy models using the current functionality in `spOccupancy`. We will update this vignette as we add in new functionality to fit spatial models, as well as perform cross-validation and do posterior predictive checks. 
+
+First we load `spOccupancy`. 
+
+```{r, message = FALSE, warning = FALSE}
+library(spOccupancy)
+```
+
+## Example data sets: Foliage-gleaning birds at Hubbard Brook and Bartlett Forests
+
+As an exmaple data set, we will use data from point count surveys on twelve foliage-gleaning bird species in the Hubbard Brook Experimental Forest (HBEF) and the National Ecological Observatory Network (NEON) at Bartlett Forest. These are two forest patches in the White Mountain National Forest in New Hampshire, USA (see Figure 1 in @doser2022integrated]. Both data sources are provided as part of the `spOccupancy` package in the objects `hbef2015` and `neon2015`. 
+
+In the Hubbard Brook data set, observers performed standard point count surveys at 373 sites over three replicates, each of 10 minutes in length and with a detection radius of 100m. In the data set provided here, we converted these data to detection-nondetection data. Some sites were not visited for all three replicates. The NEON data are collected at 80 point count sites in Bartlett Forest using a removal protocol with three time periods, resulting in replicated detection-nondetection data that can be used in an occupancy modeling framework (after reducing counts to binary detection indicators). In this case, the two data sources do not overlap spatially, but rather provide information on two areas within a larger forested region of interest (i.e., White Mountain National Forest).  
+
+```{r}
+data(hbef2015)
+data(neon2015)
+# Take a look at the two data sources
+str(hbef2015)
+str(neon2015)
+```
+
+The objects `hbef2015` and `neon2015` contain data formatted for fitting a multi-species occupancy model in `spOccupancy`. Briefly, the object `y` is a three-dimensional array of the detection-nondetection data, with dimensions corresponding to species, site, and replicate. `occ.covs` is a matrix or data frame with rows corresponding to sites and columns corresponding to the possible covariates for modeling occupancy probability. `det.covs` is a list where each element of the list consists of the possible covariates for modeling detection probability, where site-level covariates are specified as a one-dimensional vector while observation-level covariates are specified as a two-dimensional matrix with rows corresponding to sites and columns corresponding to replicates. Lastly, the `coords` object consists of the spatial coordinates for each site. These are only necessary for spatially-explicit models in `spOccupancy` (note there is no current implementation of spatially-explicit integrated multi-species occupancy models). 
+
+Next, let's take a look at the total observations for each species in each data source.
+
+```{r}
+# Species four-letter codes
+sp.names <- dimnames(hbef2015$y)[[1]]
+(sp.sums.hbef <- apply(hbef2015$y, 1, sum, na.rm = TRUE))
+# Assign species names to the NEON data.
+dimnames(neon2015$y)[[1]] <- sp.names
+(sp.sums.neon <- apply(neon2015$y, 1, sum, na.rm = TRUE))
+```
+
+We see that BLPW and NAWA do not have any observations in the NEON data. Additionally, AMRE is only detected a total of 12 times between the two data sources. Here we will remove BLPW and NAWA from the NEON data set and will remove AMRE from both data sources, and thus will model a total of 11 species across the two data sources. 
+
+```{r}
+neon.obs.sp.indx <- which(sp.sums.neon > 0 & sp.names != 'AMRE')
+hbef.obs.sp.indx <- which(sp.sums.hbef > 0 & sp.names != 'AMRE')
+hbef2015$y <- hbef2015$y[hbef.obs.sp.indx, , ]
+neon2015$y <- neon2015$y[neon.obs.sp.indx, , ]
+str(hbef2015)
+str(neon2015)
+```
+
+Notice that now the two data sources have a different number of species. 
+
+## Basic model description
+
+An integrated multi-species occupancy model takes the same form as a multi-species occupancy model, with separate sub-models to describe the ecological process (occupancy) from the observation process. The only difference is that now there are multiple observation sub-models for each data source included in the model. The ecological sub-model of an integrated multi-species occupancy model is identical to that of a regular multi-species occupancy model. Let $z_{i, j}$ be the true presence (1) or absence (0) of a species $i$ at site $j$, with $j = 1, \dots, J$ and $i = 1, \dots, N$. We model the latent occurrence of each species according to 
+
+\begin{equation}
+\begin{split}
+&z_{i, j} \sim \text{Bernoulli}(\psi_{i, j}), \\
+&\text{logit}(\psi_{i, j}) = \bm{x}^{\top}_{j}\bm{\beta}_i,
+\end{split}
+\end{equation}
+
+where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$, which is a function of site-specific covariates $\bm{X}$ and a vector of species-specific regression coefficients ($\bm{\beta}_i$). The regression coefficients in multi-species occupancy models are envisioned as random effects arising from a common community level distribution. Specifically, we have,
+
+\begin{equation}
+\bm{\beta}_i \sim \text{Normal}(\bm{\mu}_{\beta}, \bm{T}_{\beta}),
+\end{equation}
+
+where $\bm{\mu}_{\beta}$ is a vector of community level mean effects for each occurrence covariate effect (including the intercept) and $\bm{T}_{\beta}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\beta}$ that represent the variability of each occurrence covariate effect among species in the community.
+
+We do not directly observe $z_{i, j}$, but rather we observe an imperfect representation of the latent occurrence process. In integrated models, we have $r = 1, \dots, R$ distinct sources of data that are all imperfect representations of a single, shared occurrence process. Let $y_{r, i, a, k}$ be the observed detection (1) or nondetection (0) of species $i$ in data set $r$ at site $a$ during replicate $k$. Note that a data source may have data for all $i = 1, \dots, N$ species in the community, or only a subset of the species (of course, each species modeled must have data from at least one data source). Because different data sources have different variables influencing the observation process, we envision a separate detection model for each data source that is defined conditional on a single, shared ecological process described above. More specifically, for data source $r$ we have
+
+\begin{equation}
+\begin{split}
+&y_{r, i, a, k} \sim \text{Bernoulli}(p_{r, i, a,  k}z_{i, j[a]}), \\
+&\text{logit}(p_{r, i, a, k}) = \textbf{v}^{\top}_{r, i, a, k}\bm{\alpha}_{r, i},
+\end{split}
+\end{equation}
+
+where $p_{r,i, a, k}$ is the probability of detecting species $i$ at site $a$ during replicate $k$ (given it is present at site $a$) for data source $r$, which is a function of site, replicate, and data source specific covariates $\textbf{V}_r$, and a vector of regression coefficients specific to each data source and species ($\bm{\alpha}_{r, i}$). $z_{i, j[a]}$ is the true latent occurrence status of species $i$ at point count location $j$ that corresponds to the $a$th data set location in data set $r$. Note that species-specific coefficients are modeled as random effects arising from a common distribution with community-level mean and variance parameters, as we saw previously with the occurrence coefficients. 
+
+We assign normal priors for the occurrence and data-set specific detection regression coefficients, and inverse-Gamma priors for the community-level variance parameters to complete the Bayesian specification of the model. P&oacute;lya-Gamma data augmentation is implemented in an analogous manner to that of other `spOccupancy` functions to yield an efficient implementation of multi-species integrated occupancy models. 
+
+## Fitting integrated multi-species occupancy models with `intMsPGOcc()`
+
+The function `intMsPGOcc()` fits multi-species integrated occupancy models in `spOccupancy`. The function follows the standard `spOccupancy` syntax, and more details on this syntax are available in the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). 
+
+```{r, eval = FALSE}
+intMsPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
+           n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+           n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
+           k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
+```
+
+The `data` argument contains the list of data elements necessary for fitting an integrated multi-species occupancy model. `data` should be a list comprised of the following objects: `y` (list of detection-nondetection data matrices for each data source), `occ.covs` (data frame or matrix of covariates for occurrence model), `det.covs` (a list of lists where each element of the list corresponds to the detection-nondetection data for the given data source), `sites` (a list where each element consists of the site indices for the given data source), and `species` (a list where each element consists of the species indices for the given data source).
+
+The `hbef2015` and `neon2015` data sources are currently formatted for use in standard multi-species occupancy models. Perhaps the trickiest part of data integration is ensuring each location in each data source lines up with the correct geographical location where you want to determine the true presence/absence of each species of interest. In `spOccupancy`, most of this bookkeeping is done under the hood, but we will need to combine the two data sources together into a single list in which we are consistent about how the data sources are sorted. To accomplish this, we recommend first creating the occurrence covariates matrix for all data sources. Because our two data sources do not overlap spatially, this is relatively simple and here we can just use `rbind()`.
+
+```{r}
+occ.covs <- rbind(hbef2015$occ.covs, neon2015$occ.covs)
+str(occ.covs)
+```
+
+Notice the order in which we placed these covariates: all covariate values for HBEF come first, followed by all covariates for NEON. We need to ensure that we use this identical ordering for all objects in the `data` list. Next, we create the site indices stored in `sites`. `sites` should be a list with two elements (one for each data source), where each element consists of a vector that indicates the rows in `occ.covs` that correspond with the specific row of the detection-nondetection data for that data source. When the data sources stem from distinct points (like in our current case), this is again relatively straightforward as the indices simply correspond to how we ordered the points in `occ.covs`.
+
+```{r}
+sites.indx <- list(hbef = 1:nrow(hbef2015$occ.covs),
+                  neon = 1:nrow(neon2015$occ.covs) + nrow(hbef2015$occ.covs))
+str(sites.indx)
+```
+
+Next we create the combined detection-nondetection data `y`. For integrated multi-species models in `spOccupancy`, `y` is a list of three-dimensional arrays, with each array having dimensions corresponding to species, site, and replicate. Again, we must ensure that we place the data sources in the correct order. 
+
+```{r}
+y.full <- list(hbef = hbef2015$y,
+               neon = neon2015$y)
+str(y.full)
+```
+
+The last thing we need to specify in `data` for an integrated multi-species occupancy model is the `species` list, which is a list of vectors where each vector is a set of codes that indicates the specific species in the corresponding data source. In other words, each element of the `species` list should consist of some code to indicate the species that each row of the corresponding array in the `y` data list corresponds to. This is necessary to link data sources that may not sample exactly the same species, as is our case here where the NEON data only sample 9 of the 11 species we are modeling.
+
+```{r}
+sp.indx <- list(hbef = sp.names[hbef.obs.sp.indx], 
+                neon = sp.names[neon.obs.sp.indx])
+sp.indx
+```
+
+Lastly, we put the detection covariates for each data set in a single list, and then combine all the elements together in one data list that we will eventually supply to `intMsPGOcc()`. 
+
+```{r}
+det.covs <- list(hbef = hbef2015$det.covs,
+                 neon = neon2015$det.covs)
+data.list <- list(y = y.full,
+                 occ.covs = occ.covs,
+                 det.covs = det.covs,
+                 sites = sites.indx, 
+                 species = sp.indx)
+str(data.list)
+```
+
+We will now go ahead and run the integrated multi-species occupancy model. We will first fit a model with a linear and quadratic effect of elevation on occurrence, and effects of day (linear and quadratic) of the year and time of day (linear) on the detection process for each data source. Note that there is no requirement to have the same covariates on the detection models for each individual data source. The function `intMsPGOcc()` also allows the user to specify the priors and initial values, which follow the same format as other `spOccupancy` functions (see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for details), but here we will just use the default values, which we see below are printed to the screen. The last thing we need to do is specify the formulas for occurrence and detection (note we need a separate formula for each data source for the detection models in `det.formula`, which are supplied as a list). We also specify all the criteria of the MCMC sampler, where here we run three chains of the model for 20,000 iterations with a burn-in period of 12,000 and a thinning rate of 8, resulting in a total of 3000 posterior samples.
+
+```{r}
+# Approx. run time: 5.5 minutes
+out.1 <- intMsPGOcc(occ.formula = ~ scale(Elevation) + I(scale(Elevation)^2),
+                    det.formula = list(hbef = ~ scale(day) + I(scale(day)^2) + scale(tod),
+                                       neon = ~ scale(day) + I(scale(day)^2) + scale(tod)),
+                    data = data.list,
+                    n.samples = 20000,
+                    n.omp.threads = 1,
+                    verbose = TRUE,
+                    n.report = 4000,
+                    n.burn = 12000,
+                    n.thin = 8,
+                    n.chains = 3)
+summary(out.1)
+```
+
+From the summary output, we can see that most of the model parameters have converged. We can compare this model to a simpler model that assumes only a linear effect of elevation, and then compare the two models using WAIC with the `waicOcc()` function. 
+
+```{r}
+# Approx. run time: 5.5 minutes
+out.2 <- intMsPGOcc(occ.formula = ~ scale(Elevation),
+                    det.formula = list(hbef = ~ scale(day) + I(scale(day)^2) + scale(tod),
+				       neon = ~ scale(day) + I(scale(day)^2) + scale(tod)),
+                    data = data.list,
+                    n.samples = 20000,
+                    n.omp.threads = 1,
+                    verbose = TRUE,
+                    n.report = 4000,
+                    n.burn = 12000,
+                    n.thin = 8,
+                    n.chains = 3)
+
+# Model selection using WAIC
+waicOcc(out.1)
+waicOcc(out.2)
+```
+
+We see the model with both a linear and quadratic effect of elevation is preferred. We can also do prediction using the `predict()` function to generate species distribution maps across a region of interest (or generate estimates of community-level metrics), which follows exactly the format used for single data-source multi-species occupancy models. 
+
+## Active development
+
+The functionality for integrated multi-species occupancy models in `spOccupancy` is in active development, and currently some functionality that is common to all other `spOccupancy` model fitting functions is not available for `intMsPGOcc()` (i.e., posterior predictive checks, cross-validation, random effects on detection probability). I am actively working on incorporating these extensions into the model. Additionally, there will of course be spatially-explicit versions of these models available at some point in the future as well, with options to accommodate species correlations using the factor modeling approach detailed in @doser2022joint. 
+
+## References {-}

@@ -527,3 +527,14 @@ void AR1(int n, double rho, double sigmaSq, double *C){
     }
   }
 }
+
+void expCov(int n, double rho, double sigmaSq, double *C){
+
+  int i, j;
+
+  for(i = 0; i < n; i++){
+    for(j = 0; j < n; j++){
+      C[i*n+j] = sigmaSq*exp(-1.0 * pow(rho * abs(i-j), 2));
+    }
+  }
+}

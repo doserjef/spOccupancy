@@ -409,7 +409,44 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
 
   # tau.sq.beta -----------------------
+  if ("tau.sq.beta.ig" %in% names(priors) & "tau.beta.half.t" %in% names(priors)) {
+    stop("you must specify either an inverse gamma prior for tau.sq.beta or a half-t prior for tau.beta, not both.")
+  }
+  if ("tau.beta.half.t" %in% names(priors)) {
+    tau.sq.beta.ig <- FALSE
+    if (!is.list(priors$tau.beta.half.t) | length(priors$tau.beta.half.t) != 2) {
+      stop("error: tau.beta.half.t must be a list of length 2")
+    }
+    tau.sq.beta.a <- priors$tau.beta.half.t[[1]]
+    tau.sq.beta.b <- priors$tau.beta.half.t[[2]]
+    if (length(tau.sq.beta.a) != p.occ & length(tau.sq.beta.a) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: tau.beta.half.t[[1]] must be a vector of length ", 
+      	   p.occ, " with elements corresponding to tau.beta's df", sep = ""))
+      } else {
+        stop(paste("error: tau.beta.half.t[[1]] must be a vector of length ", 
+      	   p.occ, " or 1 with elements corresponding to tau.beta's df", sep = ""))
+      }
+    }
+    if (length(tau.sq.beta.b) != p.occ & length(tau.sq.beta.b) != 1) {
+      if (p.occ == 1) {
+        stop(paste("error: tau.beta.half.t[[2]] must be a vector of length ", 
+      	   p.occ, " with elements corresponding to tau.beta's scale", sep = ""))
+      } else {
+        stop(paste("error: tau.beta.half.t[[2]] must be a vector of length ", 
+      	   p.occ, " or 1 with elements corresponding to tau.beta's scale", sep = ""))
+      }
+    }
+    if (length(tau.sq.beta.a) != p.occ) {
+      tau.sq.beta.a <- rep(tau.sq.beta.a, p.occ)
+    }
+    if (length(tau.sq.beta.b) != p.occ) {
+      tau.sq.beta.b <- rep(tau.sq.beta.b, p.occ)
+    }
+  } 
+
   if ("tau.sq.beta.ig" %in% names(priors)) {
+    tau.sq.beta.ig <- TRUE
     if (!is.list(priors$tau.sq.beta.ig) | length(priors$tau.sq.beta.ig) != 2) {
       stop("error: tau.sq.beta.ig must be a list of length 2")
     }
@@ -439,16 +476,55 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (length(tau.sq.beta.b) != p.occ) {
       tau.sq.beta.b <- rep(tau.sq.beta.b, p.occ)
     }
-  } else {
+  } 
+  if (!("tau.sq.beta.ig" %in% names(priors) | "tau.beta.half.t" %in% names(priors))) {
     if (verbose) {	    
-      message("No prior specified for tau.sq.beta.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
+      message("No prior specified for tau.sq.beta.\nUsing an inverse-Gamma prior with prior shape 0.1 and prior scale 0.1\n")
     }
     tau.sq.beta.a <- rep(0.1, p.occ)
     tau.sq.beta.b <- rep(0.1, p.occ)
+    tau.sq.beta.ig <- TRUE
   }
-
+  
   # tau.sq.alpha -----------------------
+  if ("tau.sq.alpha.ig" %in% names(priors) & "tau.alpha.half.t" %in% names(priors)) {
+    stop("you must specify either an inverse gamma prior for tau.sq.alpha or a half-t prior for tau.alpha, not both.")
+  }
+  if ("tau.alpha.half.t" %in% names(priors)) {
+    tau.sq.alpha.ig <- FALSE
+    if (!is.list(priors$tau.alpha.half.t) | length(priors$tau.alpha.half.t) != 2) {
+      stop("error: tau.alpha.half.t must be a list of length 2")
+    }
+    tau.sq.alpha.a <- priors$tau.alpha.half.t[[1]]
+    tau.sq.alpha.b <- priors$tau.alpha.half.t[[2]]
+    if (length(tau.sq.alpha.a) != p.det & length(tau.sq.alpha.a) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: tau.alpha.half.t[[1]] must be a vector of length ", 
+      	   p.det, " with elements corresponding to tau.alpha's df", sep = ""))
+      } else {
+        stop(paste("error: tau.alpha.half.t[[1]] must be a vector of length ", 
+      	   p.det, " or 1 with elements corresponding to tau.alpha's df", sep = ""))
+      }
+    }
+    if (length(tau.sq.alpha.b) != p.det & length(tau.sq.alpha.b) != 1) {
+      if (p.det == 1) {
+        stop(paste("error: tau.alpha.half.t[[2]] must be a vector of length ", 
+      	   p.det, " with elements corresponding to tau.alpha's scale", sep = ""))
+      } else {
+        stop(paste("error: tau.alpha.half.t[[2]] must be a vector of length ", 
+      	   p.det, " or 1 with elements corresponding to tau.alpha's scale", sep = ""))
+      }
+    }
+    if (length(tau.sq.alpha.a) != p.det) {
+      tau.sq.alpha.a <- rep(tau.sq.alpha.a, p.det)
+    }
+    if (length(tau.sq.alpha.b) != p.det) {
+      tau.sq.alpha.b <- rep(tau.sq.alpha.b, p.det)
+    }
+  } 
+
   if ("tau.sq.alpha.ig" %in% names(priors)) {
+    tau.sq.alpha.ig <- TRUE
     if (!is.list(priors$tau.sq.alpha.ig) | length(priors$tau.sq.alpha.ig) != 2) {
       stop("error: tau.sq.alpha.ig must be a list of length 2")
     }
@@ -478,12 +554,14 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (length(tau.sq.alpha.b) != p.det) {
       tau.sq.alpha.b <- rep(tau.sq.alpha.b, p.det)
     }
-  } else {
+  } 
+  if (!("tau.sq.alpha.ig" %in% names(priors) | "tau.alpha.half.t" %in% names(priors))) {
     if (verbose) {	    
-      message("No prior specified for tau.sq.alpha.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
+      message("No prior specified for tau.sq.alpha.\nUsing an inverse-Gamma prior with prior shape 0.1 and prior scale 0.1\n")
     }
     tau.sq.alpha.a <- rep(0.1, p.det)
     tau.sq.alpha.b <- rep(0.1, p.det)
+    tau.sq.alpha.ig <- TRUE
   }
 
   # phi -----------------------------
@@ -1131,6 +1209,8 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(sigma.sq.psi.b) <- "double"
     storage.mode(beta.star.inits) <- "double"
     storage.mode(beta.star.indx) <- "integer"
+    tau.sq.ig <- c(tau.sq.beta.ig, tau.sq.alpha.ig)
+    storage.mode(tau.sq.ig) <- 'integer'
 
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
@@ -1190,7 +1270,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           		    sigma.sq.p.a, sigma.sq.p.b, 
           		    tuning.c, cov.model.indx, n.batch, 
           	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info)
+          	            samples.info, chain.info, tau.sq.ig)
         chain.info[1] <- chain.info[1] + 1
       }
       # Calculate R-Hat ---------------

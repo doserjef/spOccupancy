@@ -126,7 +126,7 @@ Here we describe the Gibbs sampler for fitting the spatial factor multi-species 
 We first sample all community-level parameters followed by species level parameters. First we sample the community-level occurrence coefficients. Let $\bm{\mu}_{\beta}$ denote the vector of all community-level occurrence means, and similarly let $\bm{T}_{\beta}$ denote the variance matrix of all community-level occurrence variance parameters. Note that $\bm{T}_{\beta}$ is a diagonal matrix. Let $\bm{\mu}_{\beta} \sim N(\bm{\mu}_{0, \beta}, \bm{\Sigma}_{\beta})$ denote our prior distribution, where $\bm{\Sigma}_{\beta}$ is a diagonal matrix. Note this is equivalent to assigning an independent normal prior for each coefficient. Our full conditional for the community-level regression coefficients $\bm{\mu_{\beta}}$ is then
 
 \begin{equation}
-\bm{\mu_{\beta}} \mid \cdot \sim N([\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\beta}\bm{\beta}_i) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu}_{0, \beta}\Big], [\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}).
+\bm{\mu_{\beta}} \mid \cdot \sim N([\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\beta}^{-1}\bm{\beta}_i) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu}_{0, \beta}\Big], [\bm{\Sigma}_{\beta}^{-1} + N\bm{T}_{\beta}^{-1}]^{-1}).
 (\#eq:muBeta)
 \end{equation}
 
@@ -136,7 +136,7 @@ We first sample all community-level parameters followed by species level paramet
 Next, we sample the community-level detection coefficients. Let $\bm{\mu}_{\alpha}$ denote the vector of all community-level detection means, and similarly let $\bm{T}_{\alpha}$ denote the diagonal variance matrix of all community-level detection variance parameters. Let $\bm{\mu}_{\alpha} \sim N(\bm{\mu}_{0, \alpha}, \bm{\Sigma}_{\alpha})$ denote the prior distribution, where $\bm{\Sigma}_{\alpha}$ is a diagonal matrix. Our full conditional then takes the form
 
 \begin{equation}
-\bm{\mu_{\alpha}} \mid \cdot \sim N([\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\alpha}\bm{\alpha}_i) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu}_{0, \alpha}\Big], [\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}).
+\bm{\mu_{\alpha}} \mid \cdot \sim N([\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}\Big[\sum_{i = 1}^N(\bm{T}_{\alpha}^{-1}\bm{\alpha}_i) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu}_{0, \alpha}\Big], [\bm{\Sigma}_{\alpha}^{-1} + N\bm{T}_{\alpha}^{-1}]^{-1}).
 (\#eq:muAlpha)
 \end{equation}
 

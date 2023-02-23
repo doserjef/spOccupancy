@@ -133,7 +133,7 @@ extern "C" {
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 
 	Rprintf("Number of Chains: %i \n", nChain);
-        Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
+        Rprintf("Total Posterior Samples: %i \n", nPost * nChain); 
 #ifdef _OPENMP
         Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
