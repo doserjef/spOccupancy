@@ -14,6 +14,6 @@ URL: https://www.jeffdoser.com/files/spoccupancy-web, https://github.com/doserje
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Depends: R (>= 3.5.0)
 Imports: 
-    stats, coda, abind, RANN, lme4, foreach, doParallel, methods
+    stats, coda, abind, RANN, lme4, foreach, doParallel, methods, MASS
 Suggests:
     testthat
