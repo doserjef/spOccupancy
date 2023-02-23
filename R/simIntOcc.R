@@ -144,7 +144,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
     }
     Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
     # Random spatial process
-    w <- mvrnorm(1, rep(0, J), Sigma)
+    w <- as.matrix(mvrnorm(1, rep(0, J), Sigma))
   } else {
     w <- NA
   }
