@@ -1642,7 +1642,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		       sigma.sq.p.a, sigma.sq.p.b, 
 		       tuning.c, cov.model.indx, n.batch, 
         	       batch.length, accept.rate, n.omp.threads.fit, verbose.fit, n.report, 
-        	       samples.info, chain.info)
+        	       samples.info, chain.info, tau.sq.ig)
 
         if (is.null(sp.names)) {
           sp.names <- paste('sp', 1:N, sep = '')
