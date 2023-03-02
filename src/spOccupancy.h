@@ -419,4 +419,15 @@ extern "C" {
 	       SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
 	       SEXP samplesInfo_r, SEXP chainInfo_r);
 
+  SEXP postHocLM(SEXP y_r, SEXP X_r, SEXP XRE_r, 
+                 SEXP consts_r, SEXP nRELong_r, 
+                 SEXP betaStarting_r, SEXP tauSqStarting_r,  
+                 SEXP sigmaSqStarting_r, SEXP betaStarStarting_r, 
+                 SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+	         SEXP muBeta_r, SEXP SigmaBeta_r, 
+		 SEXP tauSqA_r, SEXP tauSqB_r, 
+                 SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nSamples_r, 
+                 SEXP verbose_r, SEXP nReport_r, 
+	         SEXP chainInfo_r);
+
 }

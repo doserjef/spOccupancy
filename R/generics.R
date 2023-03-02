@@ -4183,3 +4183,76 @@ summary.intMsPGOcc <- function(object,
 predict.intMsPGOcc <- function(object, X.0, ignore.RE = FALSE, ...) {
   predict.msPGOcc(object, X.0, ignore.RE, type = 'occupancy', ...)
 }
+
+# postHocLM ---------------------------------------------------------------
+print.postHocLM <- function(x, ...) {
+  cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.75)),
+      "", sep = "\n")
+}
+summary.postHocLM <- function(object,
+			      quantiles = c(0.025, 0.5, 0.975),
+			      digits = max(3L, getOption("digits") - 3L), ...) {
+  print(object)
+
+  n.samples <- object$n.samples
+  n.chains <- object$n.chains
+  n.post <- object$n.samples * object$n.chains
+  run.time <- object$run.time[3] / 60 # minutes
+
+  cat(paste("Samples per Chain: ", n.samples,"\n", sep=""))
+  cat(paste("Number of Chains: ", n.chains, "\n", sep = ""))
+  cat(paste("Total Posterior Samples: ",n.post,"\n", sep=""))
+  cat(paste("Run Time (min): ", round(run.time, digits), "\n\n", sep = ""))
+
+  # Fixed Effects
+  cat("----------------------------------------\n");
+  cat("Fixed Effects: \n")
+  cat("----------------------------------------\n");
+  tmp.1 <- t(apply(object$beta.samples, 2,
+		   function(x) c(mean(x), sd(x))))
+  tmp.2 <- t(apply(object$tau.sq.samples, 2, function(x) c(mean(x), sd(x))))
+  rownames(tmp.2) <- "Residual Variance"
+  tmp.1 <- rbind(tmp.1, tmp.2)
+  colnames(tmp.1) <- c("Mean", "SD")
+  tmp <- t(apply(object$beta.samples, 2,
+		 function(x) quantile(x, prob = quantiles)))
+  tmp.2 <- t(apply(object$tau.sq.samples, 2,
+		   function(x) quantile(x, prob = quantiles)))
+  rownames(tmp.2) <- "Residual Variance"
+  tmp <- rbind(tmp, tmp.2)
+  diags <- matrix(c(object$rhat$beta, round(object$ESS$beta, 0)), ncol = 2)
+  diags.2 <- matrix(c(object$rhat$tau.sq, round(object$ESS$tau.sq, 0)), ncol = 2)
+  diags <- rbind(diags, diags.2)
+  colnames(diags) <- c('Rhat', 'ESS')
+  print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
+  if (object$RE) {
+    cat("\n")
+    cat("----------------------------------------\n");
+    cat("Random Effects: \n")
+    cat("----------------------------------------\n");
+    tmp.1 <- t(apply(object$sigma.sq.samples, 2,
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.samples, 2,
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq, round(object$ESS$sigma.sq, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+  }
+  cat("\n")
+
+  cat("----------------------------------------\n");
+  cat("Bayesian R2: \n")
+  cat("----------------------------------------\n");
+  tmp.1 <- t(apply(object$bayes.R2, 2,
+        	   function(x) c(mean(x), sd(x))))
+  colnames(tmp.1) <- c("Mean", "SD")
+  rownames(tmp.1) <- ""
+  tmp <- t(apply(object$bayes.R2, 2,
+        	 function(x) quantile(x, prob = quantiles)))
+  rownames(tmp) <- ""
+  print(noquote(round(cbind(tmp.1, tmp), digits)))
+}
+

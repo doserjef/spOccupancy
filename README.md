@@ -53,6 +53,7 @@ install.packages("spOccupancy")
 | `svcPGOcc()`           | Single-species spatially-varying coefficient occupancy model              |
 | `svcTPGBinom()`        | Single-species spatially-varying coefficient multi-season GLM             |
 | `svcTPGOcc()`          | Single-sepcies spatially-varying coefficient multi-season occupancy model |
+| `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit      |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                        |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                    |
 | `simOcc()`             | Simulate single-species occupancy data                                    |
@@ -140,25 +141,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.3181
+#> Run Time (min): 1.4416
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
-#> (Intercept)            3.8817 0.5702  2.9224  3.8296  5.1308 1.0095 212
-#> scale(Elevation)      -0.5278 0.2042 -0.9431 -0.5232 -0.1514 1.0288 886
-#> I(scale(Elevation)^2) -1.1256 0.2029 -1.5697 -1.1107 -0.7708 1.0277 372
+#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
+#> (Intercept)            3.9738 0.6010  3.0092  3.9023  5.3748 1.0144  164
+#> scale(Elevation)      -0.5209 0.2194 -0.9778 -0.5152 -0.0984 1.0003 1101
+#> I(scale(Elevation)^2) -1.1552 0.2118 -1.6305 -1.1370 -0.7892 1.0070  238
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6598 0.1141  0.4371  0.6609 0.8832 0.9999 5406
-#> scale(day)       0.2904 0.0703  0.1552  0.2896 0.4291 0.9999 6000
-#> scale(tod)      -0.0317 0.0705 -0.1696 -0.0330 0.1092 1.0027 6000
-#> I(scale(day)^2) -0.0735 0.0862 -0.2414 -0.0732 0.0985 1.0010 6059
+#> (Intercept)      0.6642 0.1146  0.4413  0.6634 0.8821 1.0014 5474
+#> scale(day)       0.2939 0.0712  0.1524  0.2939 0.4335 0.9999 6000
+#> scale(tod)      -0.0301 0.0697 -0.1698 -0.0302 0.1063 1.0010 6435
+#> I(scale(day)^2) -0.0747 0.0862 -0.2410 -0.0755 0.1033 1.0027 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 0.9156 0.8168 0.1809 0.6570 2.9549 1.1089 117
-#> phi      0.0099 0.0085 0.0005 0.0072 0.0285 1.3500  60
+#> sigma.sq 1.1194 1.0085 0.2165 0.7676 4.1197 1.0419  88
+#> phi      0.0072 0.0075 0.0007 0.0039 0.0270 1.1564  58
 ```
 
 ### Posterior predictive check
@@ -184,7 +185,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4867 
+#> Bayesian p-value:  0.4917 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -196,8 +197,8 @@ due to Monte Carlo error your results will differ slightly).
 
 ``` r
 waicOcc(out)
-#>      elpd        pD      WAIC 
-#> -684.1490   19.6893 1407.6766
+#>       elpd         pD       WAIC 
+#> -681.52155   21.21463 1405.47236
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -210,7 +211,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1414.675
+#> [1] 1412.951
 ```
 
 ### Prediction

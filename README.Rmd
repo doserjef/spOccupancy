@@ -54,6 +54,7 @@ install.packages("spOccupancy")
 | `svcPGOcc()`           | Single-species spatially-varying coefficient occupancy model             |
 | `svcTPGBinom()`        | Single-species spatially-varying coefficient multi-season GLM            |
 | `svcTPGOcc()`          | Single-sepcies spatially-varying coefficient multi-season occupancy model|
+| `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit     |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                       |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                   |
 | `simOcc()`             | Simulate single-species occupancy data                                   |

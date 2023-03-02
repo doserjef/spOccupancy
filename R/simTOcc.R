@@ -1,7 +1,8 @@
 simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, 
 		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
 		    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
-                    rho, sigma.sq.t, x.positive = FALSE, ...) {
+                    rho, sigma.sq.t, x.positive = FALSE, mis.spec.type = 'none', 
+		    scale.param = 1, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -125,6 +126,17 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
       stop("error: sigma.sq.t must be specified when ar1 = TRUE")
     }
   }
+
+
+  # Mis-specification -----------------
+  if (!(mis.spec.type %in% c("none", "scale", "line", "probit"))) {
+    stop("mis-specification type not allowed.")
+  }
+  
+  if (scale.param <= 0) {
+    stop("scale parameter must be greater than zero.")
+  }
+
   # Subroutines -----------------------------------------------------------
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
@@ -296,13 +308,54 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
   z <- matrix(NA, J, max(n.time))
   for (j in 1:J) {
     for (t in 1:n.time.max) {
+      if (mis.spec.type == "none") {
+      
       if (length(psi.RE) > 0) {
         psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + beta.star.sites[j, t] + 
-	                       eta[t])
+                                 eta[t])
       } else {
         psi[j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + eta[t])
       }
       z[j, t] <- rbinom(1, 1, psi[j, t])
+      
+      } else if (mis.spec.type == "scale") {
+        
+        if (length(psi.RE) > 0) {
+          psi[j, t] <- scale.param * logit.inv(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + beta.star.sites[j, t] + 
+                                   eta[t]) 
+          psi[j, t] <- pmax(psi[j, t], 0)
+          psi[j, t] <- pmin(psi[j, t], 1)
+        } else {
+          psi[j, t] <- scale.param * logit.inv(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + eta[t])
+          psi[j, t] <- pmax(psi[j, t], 0)
+          psi[j, t] <- pmin(psi[j, t], 1)
+        }
+        z[j, t] <- rbinom(1, 1, psi[j, t])
+        
+        
+      } else if (mis.spec.type == "line") {
+        if (length(psi.RE) > 0) {
+          psi[j, t] <- X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + beta.star.sites[j, t] + 
+                                   eta[t] 
+          psi[j, t] <- pmax(psi[j, t], 0)
+          psi[j, t] <- pmin(psi[j, t], 1)
+        } else {
+          psi[j, t] <- X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + eta[t]
+          psi[j, t] <- pmax(psi[j, t], 0)
+          psi[j, t] <- pmin(psi[j, t], 1)
+        }
+        z[j, t] <- rbinom(1, 1, psi[j, t])
+        
+      } else if (mis.spec.type == 'probit') {
+      
+        if (length(psi.RE) > 0) {
+          psi[j, t] <- pnorm(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + beta.star.sites[j, t] + 
+                                 eta[t])
+        } else {
+          psi[j, t] <- pnorm(X[j, t, ] %*% as.matrix(beta) + w.sites[j, t] + eta[t])
+        }
+        z[j, t] <- rbinom(1, 1, psi[j, t])
+      }
     } # t
   } # j
 
@@ -311,12 +364,49 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
   y <- array(NA, dim = c(J, max(n.time), n.rep.max))
   for (j in 1:J) {
     for (t in time.indx[[j]]) {
-      if (length(p.RE) > 0) {
-        p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
-	                                    alpha.star.sites[j, t, rep.indx[[j]][[t]]])
-      } else {
-        p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
+      
+      if (mis.spec.type == "none") {
+        if (length(p.RE) > 0) {
+          p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
+                                                     alpha.star.sites[j, t, rep.indx[[j]][[t]]])
+        } else {
+          p[j, t, rep.indx[[j]][[t]]] <- logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
+        }
+        
+      } else if (mis.spec.type == "scale") {
+        
+        if (length(p.RE) > 0) {
+          p[j, t, rep.indx[[j]][[t]]] <- (1/scale.param) * logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
+                                                     alpha.star.sites[j, t, rep.indx[[j]][[t]]]) 
+          p[j, t, rep.indx[[j]][[t]]] <- pmax(p[j, t, rep.indx[[j]][[t]]], 0)
+          p[j, t, rep.indx[[j]][[t]]] <- pmin(p[j, t, rep.indx[[j]][[t]]], 1)
+        } else {
+          p[j, t, rep.indx[[j]][[t]]] <- (1/scale.param) * logit.inv(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
+          
+          p[j, t, rep.indx[[j]][[t]]] <- pmax(p[j, t, rep.indx[[j]][[t]]], 0)
+          p[j, t, rep.indx[[j]][[t]]] <- pmin(p[j, t, rep.indx[[j]][[t]]], 1)
+        }
+        
+      } else if (mis.spec.type == "line"){
+        if (length(p.RE) > 0) {
+          p[j, t, rep.indx[[j]][[t]]] <- X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
+                                                     alpha.star.sites[j, t, rep.indx[[j]][[t]]]
+          p[j, t, rep.indx[[j]][[t]]] <- pmax(p[j, t, rep.indx[[j]][[t]]], 0)
+          p[j, t, rep.indx[[j]][[t]]] <- pmin(p[j, t, rep.indx[[j]][[t]]], 1)
+        } else {
+          p[j, t, rep.indx[[j]][[t]]] <- X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha)
+          p[j, t, rep.indx[[j]][[t]]] <- pmax(p[j, t, rep.indx[[j]][[t]]], 0)
+          p[j, t, rep.indx[[j]][[t]]] <- pmin(p[j, t, rep.indx[[j]][[t]]], 1)
+        }
+      } else if (mis.spec.type == 'probit') {
+        if (length(p.RE) > 0) {
+          p[j, t, rep.indx[[j]][[t]]] <- pnorm(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha) + 
+                                                     alpha.star.sites[j, t, rep.indx[[j]][[t]]]) 
+        } else {
+          p[j, t, rep.indx[[j]][[t]]] <- pnorm(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
+        }
       }
+      
       y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * z[j, t]) 
     } # t
   } # j

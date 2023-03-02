@@ -9,7 +9,8 @@
 \usage{
 simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TRUE, 
         psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
-        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE,...)
+        sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE, 
+	mis.spec.type = 'none', scale.param = 1, ...)
 }
 
 \arguments{
@@ -58,11 +59,19 @@ simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TR
 
 \item{x.positive}{a logical value indicating whether the simulated covariates should be simulated as random standard normal covariates (\code{x.positive = FALSE}) or restricted to positive values (\code{x.positive = TRUE}). If \code{x.positive = TRUE}, covariates are simulated from a random normal and then the minimum value is added to each covariate value to ensure non-negative covariate values.}
 
+\item{mis.spec.type}{a quoted keyword indicating the type of model mis-specification to use when simulating the data. These correspond to model mis-specification of the functional relationship between occupancy/detection probability and covariates. Valid keywords are: \code{"none"} (no model mis-specification, i.e., logit link), \code{"scale"} (scaled logistic link), \code{"line"} (linear link), and \code{"probit"} (probit link). Defaults to \code{"none"}.}
+
+\item{scale.param}{a positive number between 0 and 1 that indicates the scale parameter for the occupancy portion of the model when \code{mis.spec.type = 'scale'}. When specified, \code{scale.param} corresponds to the scale parameter for the occupancy portion of the model, while the reciprocal of \code{scale.param} is used for the detection portion of the model.}
+
 \item{...}{currently no additional arguments}
 }
 
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
+}
+
+\references{
+  Stoudt, S., P. de Valpine, and W. Fithian. (In review) Non-parametric identifiability in species distribution and abundance models: why it matters and how to diagnose a lack of fit using simulation.
 }
 
 \value{
