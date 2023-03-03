@@ -705,6 +705,10 @@ lfJSDM <- function(formula, data, inits, priors,
       coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
       out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
       colnames(out.fit$beta.samples) <- coef.names
+      loadings.names <- paste(rep(sp.names, times = n.factors), 
+      			rep(1:n.factors, each = N), sep = '-')
+      out.fit$lambda.samples <- mcmc(t(out.fit$lambda.samples))
+      colnames(out.fit$lambda.samples) <- loadings.names
       out.fit$w.samples <- array(out.fit$w.samples, dim = c(q, J, n.post.samples))
       out.fit$w.samples <- aperm(out.fit$w.samples, c(3, 1, 2))
       out.fit$X <- X.fit

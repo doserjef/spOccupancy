@@ -215,6 +215,17 @@ fitted.PGOcc <- function(object, ...) {
   J <- nrow(y)
   z.long.indx <- rep(1:J, dim(y)[2])
   z.long.indx <- z.long.indx[!is.na(c(y))]
+  if (object$pRE) {
+    if (nrow(object$X.p.re) == nrow(y)) {
+      X.p.re <- do.call(rbind, replicate(ncol(y), object$X.p.re, simplify = FALSE))
+      X.p.re <- X.p.re[!is.na(c(y)), , drop = FALSE]
+      # Add 1 to get it to R indexing. 
+      X.p.re <- X.p.re + 1
+    } else {
+      X.p.re <- object$X.p.re + 1
+    }
+  }
+
   if (nrow(X.p) == nrow(y)) {
     X.p <- do.call(rbind, replicate(ncol(y), X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y)), , drop = FALSE]
@@ -225,8 +236,6 @@ fitted.PGOcc <- function(object, ...) {
   alpha.samples <- object$alpha.samples
   tmp.samples <- matrix(0, n.post, length(y))
   if (object$pRE) {
-    # Add 1 to get it to R indexing. 
-    X.p.re <- object$X.p.re + 1
     for (i in 1:ncol(X.p.re)) {
       tmp.samples <- tmp.samples + object$alpha.star.samples[, X.p.re[, i]]
     }
@@ -1183,6 +1192,17 @@ fitted.msPGOcc <- function(object, ...) {
   K.max <- dim(y)[3]
   J <- dim(y)[2]
   N <- dim(y)[1]
+  if (object$pRE) {
+    if (nrow(object$X.p.re) == dim(y)[2]) {
+      X.p.re <- do.call(rbind, replicate(dim(y)[3], object$X.p.re, simplify = FALSE))
+      X.p.re <- X.p.re[!is.na(c(y[1, , ])), , drop = FALSE]
+      # Add 1 to get it to R indexing. 
+      X.p.re <- X.p.re + 1
+    } else {
+      # Add 1 to get it to R indexing.
+      X.p.re <- object$X.p.re + 1
+    }
+  }
   if (nrow(X.p) == dim(y)[2]) {
     X.p <- do.call(rbind, replicate(dim(y)[3], X.p, simplify = FALSE))
     X.p <- X.p[!is.na(c(y[1, , ])), , drop = FALSE]
@@ -1199,8 +1219,6 @@ fitted.msPGOcc <- function(object, ...) {
   for (i in 1:N) {
     if (object$pRE) {
       sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
-      # Add 1 to get it to R indexing. 
-      X.p.re <- object$X.p.re + 1
       tmp.samples <- matrix(0, n.post, n.obs)
       tmp.alpha.star <- object$alpha.star.samples[, sp.re.indx == i]
       for (j in 1:ncol(X.p.re)) {

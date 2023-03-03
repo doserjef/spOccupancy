@@ -1023,8 +1023,8 @@ msPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
-          y.fit <- y[rep(y.indx, N), drop = FALSE]
-          y.0 <- y[rep(y.indx, N), drop = FALSE]
+          y.fit <- y[rep(y.indx, each = N), drop = FALSE]
+          y.0 <- y[rep(y.indx, each = N), drop = FALSE]
         } else {
           y.indx <- !((z.long.indx + 1) %in% curr.set)
           y.fit <- c(y.big[, -curr.set, , drop = FALSE])
@@ -1103,7 +1103,7 @@ msPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           z.long.indx.fit <- 0:(J.fit - 1)
 	  z.0.long.indx <- 1:J.0
         }
-        verbose.fit <- FALSE
+        verbose.fit <- FALSE 
         n.omp.threads.fit <- 1
 
         storage.mode(y.fit) <- "double"

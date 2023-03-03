@@ -1486,8 +1486,8 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
-          y.fit <- y[rep(y.indx, N), drop = FALSE]
-          y.0 <- y[rep(y.indx, N), drop = FALSE]
+          y.fit <- y[rep(y.indx, each = N), drop = FALSE]
+          y.0 <- y[rep(y.indx, each = N), drop = FALSE]
         } else {
           y.indx <- !((z.long.indx + 1) %in% curr.set)
           y.fit <- c(y.big[, -curr.set, , drop = FALSE])
@@ -1654,6 +1654,10 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         colnames(out.fit$alpha.samples) <- coef.names.det
         out.fit$theta.samples <- mcmc(t(out.fit$theta.samples))
         colnames(out.fit$theta.samples) <- theta.names
+        loadings.names <- paste(rep(sp.names, times = n.factors), 
+				rep(1:n.factors, each = N), sep = '-')
+        out.fit$lambda.samples <- mcmc(t(out.fit$lambda.samples))
+        colnames(out.fit$lambda.samples) <- loadings.names
         out.fit$w.samples <- array(out.fit$w.samples, dim = c(q, J, n.post.samples))
         out.fit$w.samples <- aperm(out.fit$w.samples, c(3, 1, 2))
         out.fit$X <- X.fit

@@ -5,9 +5,9 @@ citHeader("To cite package", sQuote(meta$Package), "in publications, please cite
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
 vers <- paste("R package version", meta$Version)
 
-citEntry(entry = "Article",
+bibentry(bibtype = "Article",
   title        = "{spOccupancy}: An R package for single-species, multi-species, and integrated spatial occupancy models",
-  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Marc Kéry"), as.person("Elise F. Zipkin")),
+  author       = c(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Marc Kéry"), as.person("Elise F. Zipkin")),
   journal      = "Methods in Ecology and Evolution",
   year         = "2022",
   volume       = "",
@@ -23,9 +23,9 @@ citEntry(entry = "Article",
 
 citHeader("")
 
-citEntry(entry = "Article",
+bibentry(bibtype = "Article",
   title        = "Joint species distribution models with imperfect detection for high-dimensional spatial data",
-  author       = personList(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Sudipto Banerjee")),
+  author       = c(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Sudipto Banerjee")),
   journal      = "arXiv preprint arXiv:2204.02707",
   year         = "2022",
   volume       = "",

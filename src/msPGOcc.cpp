@@ -455,7 +455,6 @@ extern "C" {
         tmp_0 *= 0.5; 
         sigmaSqP[l] = rigamma(sigmaSqPA[l] + nDetRELong[l] * N / 2.0, sigmaSqPB[l] + tmp_0);
       }
-
        
       for (i = 0; i < N; i++) {  
         /********************************************************************

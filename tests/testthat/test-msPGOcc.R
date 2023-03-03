@@ -4008,3 +4008,189 @@ test_that("posterior predictive checks work for msPGOcc", {
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, n.rep.max))
 })
 
+# Random site-level intercept on detection --------------------------------
+J.x <- 6
+J.y <- 6
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+# n.rep <- rep(3, J)
+N <- 8
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list(levels = c(5), 
+               sigma.sq.psi = c(0.3))
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+	        psi.RE = psi.RE, p.RE = p.RE, sp = FALSE)
+y <- dat$y
+X <- dat$X
+X.re <- dat$X.re + 10
+X.p <- dat$X.p
+
+occ.covs <- cbind(X)
+colnames(occ.covs) <- c('int')
+det.covs <- list(det.factor.1 = X.re[, 1]) 
+data.list <- list(y = y, occ.covs = occ.covs, det.covs = det.covs)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+		   alpha.comm.normal = list(mean = 0, var = 2.72), 
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+# Starting values
+inits.list <- list(alpha.comm = 0, 
+		      beta.comm = 0, 
+		      beta = 0, 
+		      alpha = 0,
+		      tau.sq.beta = 1, 
+		      tau.sq.alpha = 1, 
+		      z = apply(y, c(1, 2), max, na.rm = TRUE))
+occ.formula <- ~ 1 
+det.formula <- ~ (1 | det.factor.1) 
+
+out <- msPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+	       inits = inits.list, 
+	       n.samples = n.samples, 
+	       priors = prior.list, 
+               n.omp.threads = 1, 
+	       verbose = TRUE, 
+	       n.report = n.report, 
+	       n.burn = 400,
+	       n.thin = 2, 
+	       n.chains = 2,
+	       k.fold = 3,
+               k.fold.threads = 1)
+
+# To make sure it worked --------------
+test_that("out is of class msPGOcc", {
+  expect_s3_class(out, "msPGOcc")
+})
+
+# Check cross-validation --------------
+test_that("cross-validation works", {
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
+# Check random effects ----------------
+test_that("random effects are empty", {
+  expect_equal(out$pRE, TRUE)
+  expect_equal(out$psiRE, FALSE)
+})
+
+# Check RE levels ---------------------
+test_that("random effect levels are correct", {
+  expect_equal(sort(unique(unlist(out$p.re.level.names))),
+	       sort(unique(c(X.re))))
+})
+
+# Check output data output is correct -
+test_that("out$y == y", {
+  expect_equal(out$y, dat$y)
+})
+
+# Check default priors ----------------
+test_that("default priors, inits, burn, thin work", {
+  out <- msPGOcc(occ.formula = occ.formula, 
+	         det.formula = det.formula, 
+	         data = data.list, 
+	         n.samples = n.samples,
+	         n.omp.threads = 1,
+	         verbose = FALSE)
+  expect_s3_class(out, "msPGOcc")
+})
+
+test_that("verbose prints to the screen", {
+  expect_output(msPGOcc(occ.formula = occ.formula, 
+	                det.formula = det.formula, 
+	                data = data.list, 
+	                n.samples = 100,
+	                n.omp.threads = 1,
+	                verbose = TRUE,
+	                n.report = 100, 
+	                n.burn = 1, 
+	                n.thin = 1))
+})
+
+# Check waicOcc -----------------------
+test_that("waicOCC works for msPGOcc", {
+  # as.vector gets rid of names
+  waic.out <- as.vector(waicOcc(out))
+  expect_equal(length(waic.out), 3)
+  expect_equal(waic.out[3], -2 * (waic.out[1] - waic.out[2]))  
+})
+
+test_that("fitted works for msPGOcc", {
+  fitted.out <- fitted(out)
+  expect_equal(length(fitted.out), 2)
+  expect_equal(class(fitted.out$y.rep.samples), "array")
+  expect_equal(class(fitted.out$p.samples), "array")
+  expect_equal(dim(fitted.out$y.rep.samples), dim(fitted.out$p.samples))
+})
+
+test_that("predict works for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  pred.out <- predict(out, occ.covs)
+  expect_type(pred.out, "list")
+  expect_equal(dim(pred.out$psi.0.samples), c(n.post.samples, N, J))
+  expect_equal(dim(pred.out$z.0.samples), c(n.post.samples, N, J))
+})
+test_that("detection prediction works", {
+  X.p.0 <- cbind(dat$X.p[, 1, ], dat$X.re[, 1])
+  colnames(X.p.0) <- c('(Intercept)', 'det.factor.1')
+  pred.out <- predict(out, X.p.0, type = 'detection')
+  expect_type(pred.out, 'list')
+  expect_equal(dim(pred.out$p.0.samples), c(out$n.post * out$n.chains, N, J))
+})
+
+test_that("posterior predictive checks work for msPGOcc", {
+  n.post.samples <- out$n.post * out$n.chains
+  ppc.out <- ppcOcc(out, 'chi-square', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+  
+  ppc.out <- ppcOcc(out, 'chi-square', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 1)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, J))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, J))
+  
+  ppc.out <- ppcOcc(out, 'freeman-tukey', 2)
+  expect_type(ppc.out, "list")
+  expect_equal(dim(ppc.out$fit.y), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.rep), c(n.post.samples, N))
+  expect_equal(dim(ppc.out$fit.y.group.quants), c(5, N, max(n.rep)))
+  expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, max(n.rep)))
+})

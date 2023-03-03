@@ -5,8 +5,9 @@
 + Updated `intPGOcc()` and `spIntPGOcc()` to remove an error that may occur if a data set only has site level detection covariates.
 + Updated `getSVCSamples()` to eliminate errors that prevented the function from working under certain circumstances depending on which covariates in the design matrix were modelled as spatially-varying coefficients.
 + Updated `tPGOcc()` and `stPGOcc()` to eliminate an error that occurred when trying to run these models with single-visit data sets.
-+ Added in the `mis.spec.type` and `scale.param` arguments to the `simTOcc()` function to simulate multi-season detection-nondetection data under varying forms of model mis-specification. See `simTOcc()` documentation for detials. Thanks to [Sara Stoudt](https://sastoudt.github.io/) for her help with this. 
++ Added in the `mis.spec.type` and `scale.param` arguments to the `simTOcc()` function to simulate multi-season detection-nondetection data under varying forms of model mis-specification. See `simTOcc()` documentation for detials. Thanks to Sara Stoudt for her help with this. 
 + Updated a typo in the MCMC sampler documentation for multi-species occupancy models. Specifically, the **T** in the mean component of Equations 23 and 24 from the [MCMC samplers vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/mcmcSamplers.pdf) was incorrect, and instead is now correctly **T**$^{-1}$. Similarly, Equations 9 and 10 were updated in the [MCMC samplers for factor models vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/mcmcFactorModels.pdf). Note that these were just typos in the vignettes, the underlying models are correct.
++ Fixed a bug that prevented `ppcOcc()` from working when there were only site-level random effects on detection. This also sometimes caused problems with cross-validation functionality as well. Thanks to Jose Luis Mena for bringing this to my attention. 
 
 # spOccupancy 0.5.2
 

@@ -1220,6 +1220,10 @@ sfJSDM <- function(formula, data, inits, priors,
           theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
         } 
         colnames(out.fit$theta.samples) <- theta.names
+        loadings.names <- paste(rep(sp.names, times = n.factors), 
+				rep(1:n.factors, each = N), sep = '-')
+        out.fit$lambda.samples <- mcmc(t(out.fit$lambda.samples))
+        colnames(out.fit$lambda.samples) <- loadings.names
         out.fit$w.samples <- array(out.fit$w.samples, dim = c(q, J, n.post.samples))
         out.fit$w.samples <- aperm(out.fit$w.samples, c(3, 1, 2))
         out.fit$X <- X.fit
