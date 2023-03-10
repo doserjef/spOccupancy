@@ -230,7 +230,6 @@ extern "C" {
     int Nq = N * q;
     int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
-    int JJ = J * J;
     int jj, kk;
     int JpOccRE = J * pOccRE; 
     int nObspDetRE = nObs * pDetRE;

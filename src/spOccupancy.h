@@ -222,7 +222,7 @@ extern "C" {
 		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		     SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		     SEXP samplesInfo_r, SEXP chainInfo_r);
+		     SEXP samplesInfo_r, SEXP chainInfo_r, SEXP tauSqIG_r);
 
   SEXP sfMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, SEXP q_r,
 		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
@@ -258,12 +258,12 @@ extern "C" {
 		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r);
 
   SEXP tPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, 
-	      SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
+	      SEXP nOccRELong_r, SEXP nDetRELong_r, 
 	      SEXP betaStarting_r, SEXP alphaStarting_r, 
 	      SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r,
 	      SEXP betaStarStarting_r, SEXP alphaStarStarting_r, SEXP zStarting_r, 
 	      SEXP zLongIndx_r, SEXP zYearIndx_r, SEXP zDatIndx_r, 
-	      SEXP zLongSiteIndx_r, SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+	      SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
 	      SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
 	      SEXP muBeta_r, SEXP SigmaBeta_r, 
 	      SEXP muAlpha_r, SEXP SigmaAlpha_r, 
@@ -402,8 +402,8 @@ extern "C" {
 		     SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r);
 
   SEXP intMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, 
-	       SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP pDetLong_r, 
-	       SEXP nObsLong_r, SEXP JLong_r, SEXP NLong_r,
+	       SEXP consts_r, SEXP nOccRELong_r, SEXP pDetLong_r, 
+	       SEXP nObsLong_r, SEXP NLong_r,
 	       SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
 	       SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
 	       SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 

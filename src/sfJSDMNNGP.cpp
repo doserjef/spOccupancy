@@ -78,7 +78,7 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, s, g, t, h, r, l, info, nProtect=0, ii, ll;    
+    int i, j, k, s, g, t, h, l, info, nProtect=0, ii, ll;    
 
     const int inc = 1;
     const double one = 1.0;
@@ -208,7 +208,6 @@ extern "C" {
     int JN = J * N;
     int Nq = N * q;
     int JpOcc = J * pOcc; 
-    int JJ = J * J;
     int jj, kk;
     int JpOccRE = J * pOccRE; 
     double tmp_0, tmp_02; 

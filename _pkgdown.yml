@@ -27,6 +27,8 @@ reference:
    - svcPGBinom
    - svcTPGOcc
    - svcTPGBinom
+   - intMsPGOcc
+   - postHocLM
  - title: Goodness of Fit and Model Assessment
  - contents:
    - ppcOcc
@@ -39,6 +41,7 @@ reference:
    - simTOcc
    - simBinom
    - simTBinom
+   - simIntMsOcc
  - title: "Summary"
  - contents: 
    - summary.PGOcc
@@ -58,6 +61,8 @@ reference:
    - summary.svcPGBinom
    - summary.svcTPGOcc
    - summary.svcTPGBinom
+   - summary.intMsPGOcc
+   - summary.postHocLM
  - title: "Prediction"
  - contents:
    - predict.PGOcc
@@ -76,6 +81,7 @@ reference:
    - predict.svcPGBinom
    - predict.svcTPGOcc
    - predict.svcTPGBinom
+   - predict.intMsPGOcc
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -113,6 +119,7 @@ articles:
     - spaceTimeModelsHTML
     - randomEffects
     - svcUnivariateHTML
+    - integratedMultispecies
   - title: MCMC sampler details 
     contents:
     - mcmcSamplers 

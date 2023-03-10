@@ -19,12 +19,12 @@
 
 extern "C" {
   SEXP tPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, 
-	      SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
+	      SEXP nOccRELong_r, SEXP nDetRELong_r, 
 	      SEXP betaStarting_r, SEXP alphaStarting_r, 
 	      SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r,
 	      SEXP betaStarStarting_r, SEXP alphaStarStarting_r, SEXP zStarting_r, 
 	      SEXP zLongIndx_r, SEXP zYearIndx_r, SEXP zDatIndx_r, 
-	      SEXP zLongSiteIndx_r, SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+	      SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
 	      SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
 	      SEXP muBeta_r, SEXP SigmaBeta_r, 
 	      SEXP muAlpha_r, SEXP SigmaAlpha_r, 
@@ -39,7 +39,7 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, k, q, s, r, rr, ll, ii, t, jt, info, nProtect=0, l;
+    int i, j, k, s, r, rr, ll,  t, info, nProtect=0, l;
     const int inc = 1;
     const double one = 1.0;
     const double zero = 0.0;
@@ -85,11 +85,9 @@ extern "C" {
     double *sigmaSqPB = REAL(sigmaSqPB_r); 
     int *nDetRELong = INTEGER(nDetRELong_r); 
     int *nOccRELong = INTEGER(nOccRELong_r); 
-    double *K = REAL(K_r); 
     int *zLongIndx = INTEGER(zLongIndx_r); 
     int *zYearIndx = INTEGER(zYearIndx_r); 
     int *zDatIndx = INTEGER(zDatIndx_r); 
-    int *zLongSiteIndx = INTEGER(zLongSiteIndx_r);
     int *alphaStarIndx = INTEGER(alphaStarIndx_r); 
     int *alphaLevelIndx = INTEGER(alphaLevelIndx_r);
     int *betaStarIndx = INTEGER(betaStarIndx_r); 
@@ -120,8 +118,6 @@ extern "C" {
     int status = 0;
 
     // Some constants
-    int pOccnYears = pOcc * nYearsMax;
-    int pDetnYears = pDet * nYearsMax;
     int JnYears = J * nYearsMax;
 
 #ifdef _OPENMP
@@ -231,35 +227,26 @@ extern "C" {
     /**********************************************************************
      * Other initial starting stuff
      * *******************************************************************/
-    int JpOcc = J * pOcc; 
-    int JJ = J * J; 
     int JnYearspOccRE = J * nYearsMax * pOccRE; 
     int nObspDet = nObs * pDet;
     int nObspDetRE = nObs * pDetRE;
     int nnYears = nYearsMax * nYearsMax;
-    int jj, kk;
     double tmp_0 = 0.0;
     double tmp_02;
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
-    double *tmp_ppDet2 = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
     double *tmp_ppOcc2 = (double *) R_alloc(ppOcc, sizeof(double));
     zeros(tmp_ppOcc2, ppOcc);
     double *tmp_pDet = (double *) R_alloc(pDet, sizeof(double));
     double *tmp_pOcc = (double *) R_alloc(pOcc, sizeof(double));
     double *tmp_pDet2 = (double *) R_alloc(pDet, sizeof(double));
-    double *tmp_pDet3 = (double *) R_alloc(pDet, sizeof(double));
     double *tmp_pOcc2 = (double *) R_alloc(pOcc, sizeof(double));
-    double *tmp_pOcc3 = (double *) R_alloc(pOcc, sizeof(double));
     double *tmp_one = (double *) R_alloc(1, sizeof(double)); 
     int *tmp_JnYearsInt = (int *) R_alloc(JnYears, sizeof(int));
     for (j = 0; j < JnYears; j++) {
       tmp_JnYearsInt[j] = zero; 
     }
-    double *tmp_JpOcc = (double *) R_alloc(JpOcc, sizeof(double));
-    double *tmp_JpOcc2 = (double *) R_alloc(JpOcc, sizeof(double));
     double *tmp_nObspDet = (double *) R_alloc(nObspDet, sizeof(double));
-    double *tmp_nObspDet2 = (double *) R_alloc(nObspDet, sizeof(double));
     double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
     zeros(tmp_J1, J);
     double *tmp_nObs = (double *) R_alloc(nObs, sizeof(double));
@@ -268,12 +255,9 @@ extern "C" {
     zeros(tmp_JnYears, JnYears);
     double *tmp_JnYearspOcc = (double *) R_alloc(JnYears * pOcc, sizeof(double));
     zeros(tmp_JnYearspOcc, JnYears * pOcc);
-    double *tmp_JnYears1 = (double *) R_alloc(JnYears, sizeof(double));
-    int indx = 0;
 
     // For latent occupancy
     double psiNum; 
-    double psiNew; 
     double *detProb = (double *) R_alloc(nObs, sizeof(double)); 
     double *psi = (double *) R_alloc(JnYears, sizeof(double)); 
     zeros(psi, JnYears); 
@@ -359,7 +343,6 @@ extern "C" {
     // Initiate values
     theta[sigmaSqTIndx] = REAL(ar1Vals_r)[5];
     theta[rhoIndx] = REAL(ar1Vals_r)[4];
-    double sigmaSqT = theta[sigmaSqTIndx];
     double rho = theta[rhoIndx];
     double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
     double *SigmaEtaCand = (double *) R_alloc(nnYears, sizeof(double));
@@ -657,7 +640,6 @@ extern "C" {
            *Update rho
            *******************************************************************/
 	  rho = theta[rhoIndx];
-	  sigmaSqT = theta[sigmaSqTIndx];
 	  rhoCand = logitInv(rnorm(logit(rho, rhoA, rhoB), exp(tuning[rhoIndx])), rhoA, rhoB); 
 	  theta[rhoIndx] = rhoCand; 
 

@@ -136,7 +136,6 @@ extern "C" {
     int *uiIndx = INTEGER(uiIndx_r);
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
-    int *zYearIndx = INTEGER(zYearIndx_r); 
     int *zDatIndx = INTEGER(zDatIndx_r); 
     int *betaStarIndx = INTEGER(betaStarIndx_r); 
     int *betaLevelIndx = INTEGER(betaLevelIndx_r);
@@ -415,11 +414,10 @@ extern "C" {
     /**********************************************************************
      * Set up AR1 stuff
      *********************************************************************/
-    double rho, sigmaSqT; 
+    double rho; 
     if (ar1) {
       theta[sigmaSqTIndx] = REAL(ar1Vals_r)[5];
       theta[rhoIndx] = REAL(ar1Vals_r)[4];
-      sigmaSqT = theta[sigmaSqTIndx];
       rho = theta[rhoIndx];
     }
     double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
@@ -814,7 +812,6 @@ extern "C" {
            *Update rho
            *******************************************************************/
 	  rho = theta[rhoIndx];
-	  sigmaSqT = theta[sigmaSqTIndx];
 	  rhoCand = logitInv(rnorm(logit(rho, rhoA, rhoB), exp(tuning[rhoIndx])), rhoA, rhoB); 
 	  theta[rhoIndx] = rhoCand; 
 

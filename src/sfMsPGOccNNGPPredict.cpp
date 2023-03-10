@@ -39,7 +39,6 @@ extern "C" {
     int q = INTEGER(q_r)[0]; 
     int pOcc = INTEGER(pOcc_r)[0];
     int pOccN = pOcc * N;
-    int JN = J * N; 
     int Jq = J * q;
     int Nq = N * q;
 

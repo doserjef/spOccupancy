@@ -497,11 +497,10 @@ extern "C" {
     /**********************************************************************
      * Set up AR1 stuff
      *********************************************************************/
-    double rho, sigmaSqT; 
+    double rho; 
     if (ar1) {
       theta[sigmaSqTIndx] = REAL(ar1Vals_r)[5];
       theta[rhoIndx] = REAL(ar1Vals_r)[4];
-      sigmaSqT = theta[sigmaSqTIndx];
       rho = theta[rhoIndx];
     }
     double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
@@ -1010,7 +1009,6 @@ extern "C" {
            *Update rho
            *******************************************************************/
 	  rho = theta[rhoIndx];
-	  sigmaSqT = theta[sigmaSqTIndx];
 	  rhoCand = logitInv(rnorm(logit(rho, rhoA, rhoB), exp(tuning[rhoIndx])), rhoA, rhoB); 
 	  theta[rhoIndx] = rhoCand; 
 

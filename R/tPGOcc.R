@@ -826,11 +826,11 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
       storage.mode(curr.chain) <- "integer"
       out.tmp[[i]] <- .Call("tPGOcc", y, X, X.p, X.re, X.p.re, 
-                            consts, K, n.occ.re.long, n.det.re.long,
+                            consts, n.occ.re.long, n.det.re.long,
                             beta.inits, alpha.inits, sigma.sq.psi.inits, 
                             sigma.sq.p.inits, beta.star.inits, alpha.star.inits, 
                             z.inits, z.long.indx, z.year.indx,
-                            z.dat.indx, z.long.site.indx, 
+                            z.dat.indx, 
                             beta.star.indx, beta.level.indx,
                             alpha.star.indx, alpha.level.indx,
                             mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 

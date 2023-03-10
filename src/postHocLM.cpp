@@ -27,7 +27,7 @@ extern "C" {
     /**********************************************************************
      * Initial constants
      * *******************************************************************/
-    int i, j, s, r, l, ll, info, nProtect=0;
+    int i, j, s, l, ll, info, nProtect=0;
     const int inc = 1;
     const double one = 1.0;
     const double zero = 0.0;
@@ -43,10 +43,9 @@ extern "C" {
     int *XRE = INTEGER(XRE_r); 
     // Load constants
     int N = INTEGER(consts_r)[0];
-    int nObs = INTEGER(consts_r)[1]; 
-    int p = INTEGER(consts_r)[2];
-    int pRE = INTEGER(consts_r)[3];
-    int nRE = INTEGER(consts_r)[4];
+    int p = INTEGER(consts_r)[1];
+    int pRE = INTEGER(consts_r)[2];
+    int nRE = INTEGER(consts_r)[3];
     int pp = p * p; 
     double *muBeta = (double *) R_alloc(p, sizeof(double));   
     F77_NAME(dcopy)(&p, REAL(muBeta_r), &inc, muBeta, &inc);
@@ -121,7 +120,6 @@ extern "C" {
     /********************************************************************
       Some constants and temporary variables to be used later
     ********************************************************************/
-    int Np = N * p; 
     int NpRE = N * pRE;
     double tmp_0, tmp_02; 
     double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
@@ -132,7 +130,6 @@ extern "C" {
     for (j = 0; j < N; j++) {
       tmp_N[j] = 0; 
     }
-    double *tmp_Np = (double *) R_alloc(Np, sizeof(double));
     double *tmp_N1 = (double *) R_alloc(N, sizeof(double));
    
     double *yHat = (double *) R_alloc(N, sizeof(double));

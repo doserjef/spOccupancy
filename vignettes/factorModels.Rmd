@@ -1,7 +1,7 @@
 ---
 title: "Joint species distribution models with imperfect detection in spOccupancy"
 author: "Jeffrey W. Doser"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: "2022"
 description: Learn how to account for species correlations within multi-species occupancy models 
 output: 
   rmarkdown::html_vignette:
@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette provides worked examples for fitting joint species distribution models in the `spOccupancy` R package [@doser2021spoccupancy]. Joint species distribution models (JSDMs) are a series of regression-based approaches that explicitly accommodate residual species correlations [@latimer2009hierarchical; @ovaskainen2010modeling]. `spOccupancy` provides a series of functions that account for various combinations of the three major complexities often encountered in multi-species detection-nondetection data: (1) residual species correlations [@ovaskainen2010modeling], (2) imperfect detection [@mackenzie2002], and (3) spatial autocorrelation [@finley2009aoas]. In this vignette, we will provide step by step examples on how to fit the following models: 
+This vignette provides worked examples for fitting joint species distribution models in the `spOccupancy` R package [@doser2021spoccupancy]. Joint species distribution models (JSDMs) are a series of regression-based approaches that explicitly accommodate residual species correlations [@latimer2009hierarchical; @ovaskainen2010modeling]. `spOccupancy` provides a series of functions that account for various combinations of the three major complexities often encountered in multi-species detection-nondetection data: (1) residual species correlations [@ovaskainen2010modeling], (2) imperfect detection [@mackenzie2002], and (3) spatial autocorrelation [@finley2009aoas]. For full details on these models, please see [our recent preprint](https://arxiv.org/abs/2204.02707) where we introduce this functionality [@doser2022joint]. In this vignette, we will provide step by step examples on how to fit the following models: 
 
 1. A latent factor multi-species occupancy model using `lfMsPGOcc()` that accommodates residual species correlations and imperfect detection. 
 2. A spatial latent factor multi-species occupancy model using `sfMsPGOcc()` that accommodates residual species correlations, imperfect detection, and spatial autocorrelation. 

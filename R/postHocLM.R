@@ -307,7 +307,7 @@ postHocLM <- function(formula, data, inits, priors, verbose = FALSE,
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
     storage.mode(X) <- "double"
-    consts <- c(N, n.obs, p, p.re, n.re)
+    consts <- c(N, p, p.re, n.re)
     storage.mode(consts) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(tau.sq.inits) <- "double"

@@ -2,7 +2,7 @@
 title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 description: Learn how to get started with the core spOccupancy functionality
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: "2022"
 output: 
   rmarkdown::html_vignette:
     toc: true

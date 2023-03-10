@@ -927,7 +927,7 @@ intMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
         storage.mode(chain.info) <- "integer"
         out.tmp[[i]] <- .Call("intMsPGOcc", y, X, X.p.all, X.re, consts, 
-        	              K, n.occ.re.long, p.det.long, n.obs.long, J.long, N.long,
+        	              n.occ.re.long, p.det.long, n.obs.long, N.long,
 			      beta.inits, alpha.inits, z.inits, beta.comm.inits, 
           	              alpha.comm.inits, tau.sq.beta.inits, tau.sq.alpha.inits, 
           		      sigma.sq.psi.inits, 

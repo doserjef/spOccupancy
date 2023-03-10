@@ -1,7 +1,7 @@
 ---
 title: "Fitting occupancy models with random intercepts in spOccupancy"
 author: "Jeffrey W. Doser"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: "2022"
 description: Learn how to include random effects in spOccupancy 
 output: 
   rmarkdown::html_vignette:

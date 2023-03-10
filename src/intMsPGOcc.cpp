@@ -19,8 +19,8 @@
 
 extern "C" {
   SEXP intMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, 
-	       SEXP consts_r, SEXP K_r, SEXP nOccRELong_r, SEXP pDetLong_r, 
-	       SEXP nObsLong_r, SEXP JLong_r, SEXP NLong_r,
+	       SEXP consts_r, SEXP nOccRELong_r, SEXP pDetLong_r, 
+	       SEXP nObsLong_r, SEXP NLong_r,
 	       SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
 	       SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
 	       SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
@@ -80,9 +80,7 @@ extern "C" {
     double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
     double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
     int *nOccRELong = INTEGER(nOccRELong_r); 
-    double *K = REAL(K_r); 
     int *pDetLong = INTEGER(pDetLong_r);
-    int *JLong = INTEGER(JLong_r);
     int *NLong = INTEGER(NLong_r);
     int *nObsLong = INTEGER(nObsLong_r);
     int *zLongIndx = INTEGER(zLongIndx_r); 

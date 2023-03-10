@@ -247,7 +247,6 @@ extern "C" {
      * *******************************************************************/
     int Jp = J * p; 
     int JpRE = J * pRE; 
-    int JJ = J * J; 
     int jj, kk;
     double tmp_0, tmp_02; 
     double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); 
@@ -264,7 +263,6 @@ extern "C" {
     double * tmp_ppTilde = (double *) R_alloc(ppTilde, sizeof(double));
    
     // For latent occupancy
-    double psiNum; 
     double *psi = (double *) R_alloc(J, sizeof(double)); 
     zeros(psi, J); 
     double *like = (double *) R_alloc(J, sizeof(double)); zeros(like, J);

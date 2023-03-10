@@ -272,7 +272,6 @@ extern "C" {
      * Other initial starting stuff
      * *******************************************************************/
     int JpOcc = J * pOcc; 
-    int JJ = J * J; 
     int JpOccRE = J * pOccRE; 
     int nObspDet = nObs * pDet;
     int nObspDetRE = nObs * pDetRE;
