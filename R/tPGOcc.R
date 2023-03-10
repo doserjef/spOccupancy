@@ -1089,11 +1089,11 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       storage.mode(beta.star.indx.fit) <- "integer"
 
       out.fit <- .Call("tPGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.fit, 
-                       consts.fit, K.fit, n.occ.re.long.fit, n.det.re.long.fit,
+                       consts.fit, n.occ.re.long.fit, n.det.re.long.fit,
                        beta.inits, alpha.inits, sigma.sq.psi.inits, 
                        sigma.sq.p.inits, beta.star.inits.fit, alpha.star.inits.fit, 
                        z.inits.fit, z.long.indx.fit, z.year.indx.fit,
-                       z.dat.indx.fit, z.long.site.indx.fit, 
+                       z.dat.indx.fit,
                        beta.star.indx.fit, beta.level.indx.fit,
                        alpha.star.indx.fit, alpha.level.indx.fit,
                        mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 
