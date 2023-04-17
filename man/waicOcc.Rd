@@ -16,7 +16,7 @@ waicOcc(object, ...)
   \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfJSDM}, 
   \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, \code{stPGOcc}, 
   \code{svcPGBinom}, \code{svcPGOcc}, \code{svcTPGBinom}, \code{svcTPGOcc}, or 
-  \code{intMsPGOcc}.}
+  \code{intMsPGOcc}, \code{svcMsPGOcc}.}
 
 \item{...}{currently no additional arguments}
 

@@ -28,6 +28,7 @@ export(getSVCSamples)
 export(simIntMsOcc)
 export(intMsPGOcc)
 export(postHocLM)
+export(svcMsPGOcc)
 
 S3method("predict", "PGOcc")
 S3method("print", "PGOcc")
@@ -123,6 +124,11 @@ S3method("summary", "intMsPGOcc")
 
 S3method("summary", "postHocLM")
 S3method("print", "postHocLM")
+
+S3method("predict", "svcMsPGOcc")
+S3method("print", "svcMsPGOcc")
+S3method("fitted", "svcMsPGOcc")
+S3method("summary", "svcMsPGOcc")
 
 importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", "is.empty.model", "model.matrix", "model.response", "terms", "runif", "quantile", "dbinom", "var", "rgamma", "sd", "pnorm")
 importFrom("coda", "mcmc", "gelman.diag", "mcmc.list", "effectiveSize")

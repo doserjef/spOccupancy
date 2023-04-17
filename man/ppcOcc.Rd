@@ -13,7 +13,7 @@ ppcOcc(object, fit.stat, group, ...)
 \arguments{
 \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
 \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, 
-\code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}.}
+\code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}, \code{svcMsPGOcc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
@@ -44,7 +44,8 @@ column (replicate).}
   \item{fit.y}{a numeric vector of posterior samples for the 
   fit statistic calculated on the observed data when \code{object} is 
   of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. When \code{object} is of 
-  class \code{msPGOcc}, \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, 
+  class \code{msPGOcc}, \code{spMsPGOcc}, \code{lfMsPGOcc}, 
+  \code{sfMsPGOcc}, or \code{svcMsPGOcc} 
   this is a numeric matrix with rows corresponding to posterior samples
   and columns corresponding to species. When \code{object} is of class
   \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
@@ -55,8 +56,9 @@ column (replicate).}
 
   \item{fit.y.rep}{a numeric vector of posterior samples for the 
   fit statistic calculated on a replicate data set generated from the 
-  model when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. When \code{object} is of 
-  class \code{msPGOcc}, \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, 
+  model when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. 
+  When \code{object} is of class \code{msPGOcc}, \code{spMsPGOcc}, 
+  \code{lfMsPGOcc}, \code{sfMsPGOcc}, or \code{svcMsPGOcc}
   this is a numeric matrix with rows corresponding to posterior samples
   and columns corresponding to species. When \code{object} is of class
   \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
@@ -69,8 +71,8 @@ column (replicate).}
   for the fit statistic using the observed data for each unique element
   the fit statistic is calculated for (i.e., sites when group = 1, 
   replicates when group = 2) when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, or \code{svcPGOcc}. 
-  When \code{object} is of class \code{msPGOcc}, 
-  \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, this is a three-dimensional
+  When \code{object} is of class \code{msPGOcc}, \code{spMsPGOcc}, 
+  \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{svcMsPGOcc}, this is a three-dimensional
   array with the additional dimension corresponding to species. When \code{object} is 
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 
@@ -82,7 +84,8 @@ column (replicate).}
   the fit statistic is calculated for (i.e., sites when group = 1, 
   replicates when group = 2) when \code{object} is of class \code{PGOcc}, \code{spPGOcc}, \code{svcPGOcc}. 
   When \code{object} is of class \code{msPGOcc}, 
-  \code{spMsPGOcc}, \code{lfMsPGOcc}, or \code{sfMsPGOcc}, this is a three-dimensional
+  \code{spMsPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, or \code{svcMsPGOcc}, 
+  this is a three-dimensional
   array with the additional dimension corresponding to species. When \code{object} is 
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 

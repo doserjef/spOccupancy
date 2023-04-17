@@ -1,7 +1,7 @@
 Package: spOccupancy
 Type: Package
 Title: Single-Species, Multi-Species, and Integrated Spatial Occupancy Models
-Version: 0.6.1
+Version: 0.7.0
 Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")), person("Marc", "Kery", role = c('ctb')))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut], Marc Kery [ctb]
 Maintainer: Jeffrey Doser <doserjef@msu.edu>
