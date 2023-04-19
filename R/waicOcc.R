@@ -1,4 +1,4 @@
-waicOcc <- function(object, ...) {
+waicOcc <- function(object, by.sp = FALSE, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -40,10 +40,20 @@ waicOcc <- function(object, ...) {
 			   'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
 			   'tPGOcc', 'stPGOcc', 'svcTPGBinom', 'svcTPGOcc', 'intMsPGOcc', 
 			   'svcMsPGOcc')) {
+    if (!by.sp) {
     elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))
     names(out) <- c("elpd", "pD", "WAIC")
+    } else {
+      elpd <- apply(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), 
+                    1, sum, na.rm = TRUE) 
+      pD <- apply(apply(object$like.samples, c(2, 3), function(a) var(log(a))), 
+                  1, sum, na.rm = TRUE)
+      out <- data.frame(elpd = elpd, 
+			pD = pD, 
+			WAIC = -2 * (elpd - pD))
+    }
   }
 
   if (class(object) %in% c('tMsPGOcc')) {

@@ -3,7 +3,7 @@
 \title{Compute Widely Applicable Information Criterion for spOccupancy Model Objects}
 
 \usage{
-waicOcc(object, ...)
+waicOcc(object, by.sp = FALSE, ...)
 }
 
 \description{
@@ -17,6 +17,10 @@ waicOcc(object, ...)
   \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, \code{stPGOcc}, 
   \code{svcPGBinom}, \code{svcPGOcc}, \code{svcTPGBinom}, \code{svcTPGOcc}, or 
   \code{intMsPGOcc}, \code{svcMsPGOcc}.}
+
+  \item{by.sp}{a logical value indicating whether to return a separate WAIC
+               value for each species in a multi-species occupancy model or 
+	       a single value for all species.}
 
 \item{...}{currently no additional arguments}
 
