@@ -1414,7 +1414,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         tmp <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
           						      dim = c(q, J, n.post.samples))))
         tmp <- tmp[, order(ord), , drop = FALSE]
-        out$w.samples <- array(NA, dim = c(q, J, p.svc, n.post.samples))
+        out$w.samples <- array(NA, dim = c(q, J, p.svc, n.post.samples * n.chains))
         out$w.samples[, , 1, ] <- tmp
       } else {
         out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
