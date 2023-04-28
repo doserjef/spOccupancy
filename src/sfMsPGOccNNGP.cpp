@@ -319,7 +319,7 @@ extern "C" {
     double *omegaTauBeta = (double *) R_alloc(pOcc, sizeof(double));
     ones(omegaTauBeta, pOcc);
     double *omegaTauAlpha = (double *) R_alloc(pDet, sizeof(double));
-    ones(omegaTauAlpha, pOcc);
+    ones(omegaTauAlpha, pDet);
 
     /**********************************************************************
      * Return Stuff
