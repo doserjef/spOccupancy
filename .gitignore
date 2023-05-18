@@ -29,3 +29,6 @@ vignettes/svcUnivariateHTML_files
 vignettes/integratedMultispecies_cache
 vignettes/integratedMultispecies_files
 *.swp
+vignettes/modelConsiderations_cache
+vignettes/modelConsiderations_files
+vignettes/modelConsiderations.Rmd

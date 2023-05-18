@@ -1,4 +1,3 @@
-# Spatial factor NNGP model for multi-species Polya-Gamma occupancy model. 
 sfJSDM <- function(formula, data, inits, priors, 
 		   tuning, cov.model = 'exponential', NNGP = TRUE, 
 		   n.neighbors = 15, search.type = "cb", n.factors, 

@@ -1,11 +1,12 @@
-svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		      tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-		      n.neighbors = 15, search.type = "cb", scale.by.sp = FALSE, n.factors, 
-		      n.batch, batch.length, accept.rate = 0.43,
-		      n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-		      n.burn = round(.10 * n.batch * batch.length), 
-		      n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		      k.fold.seed = 100, k.fold.only = FALSE, ...){
+svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
+		        tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+		        n.neighbors = 15, search.type = "cb", 
+			scale.by.sp = FALSE, n.factors, 
+		        n.batch, batch.length, accept.rate = 0.43,
+		        n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+		        n.burn = round(.10 * n.batch * batch.length), 
+		        n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+		        k.fold.seed = 100, k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -48,8 +49,8 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
   }
-  if (length(dim(data$y)) != 3) {
-    stop("error: detection-nondetection data y must be a three-dimensional array with dimensions corresponding to species, sites, and replicates.")
+  if (length(dim(data$y)) != 4) {
+    stop("error: detection-nondetection data y must be a four-dimensional array with dimensions corresponding to species, sites, primary time periods, and replicates.")
   }
   y <- data$y
   sp.names <- attr(y, 'dimnames')[[1]]
@@ -58,7 +59,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (verbose) {
         message("occupancy covariates (occ.covs) not specified in data.\nAssuming intercept only occupancy model.\n")
       }
-      data$occ.covs <- matrix(1, dim(y)[2], 1)
+      data$occ.covs <- list(int = array(1, dim = c(dim(y)[2], dim(y)[3])))
     } else {
       stop("error: occ.covs must be specified in data for an occupancy model with covariates")
     }
@@ -68,7 +69,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (verbose) {
         message("detection covariates (det.covs) not specified in data.\nAssuming interept only detection model.\n")
       }
-      data$det.covs <- list(int = matrix(1, dim(y)[2], dim(y)[3]))
+      data$det.covs <- list(int = array(1, dim = dim(y)[-1]))
     } else {
       stop("error: det.covs must be specified in data for a detection model with covariates")
     }
@@ -85,7 +86,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (missing(n.factors)) {
     stop("error: n.factors must be specified for a spatial factor occupancy model")
   }
-
   if (scale.by.sp != FALSE & scale.by.sp != TRUE) {
     stop("error: scale.by.sp must be either TRUE or FALSE")
   }
@@ -109,39 +109,63 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     ## Order by x column. Could potentially allow this to be user defined. 
     ord <- order(coords[,1]) 
     # Reorder everything to align with NN ordering
-    y <- y[, ord, , drop = FALSE]
+    y <- y[, ord, , , drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
     range.ind <- range.ind[, ord, drop = FALSE]
     # Occupancy covariates
-    data$occ.covs <- data$occ.covs[ord, , drop = FALSE]
+    for (i in 1:length(data$occ.covs)) {
+      if (!is.null(dim(data$occ.covs[[i]]))) { # Time/space varying
+        data$occ.covs[[i]] <- data$occ.covs[[i]][ord, , drop = FALSE]
+      } else { # Space-varying
+        data$occ.covs[[i]] <- data$occ.covs[[i]][ord]
+      }
+    } 
     for (i in 1:length(data$det.covs)) {
-      if (!is.null(dim(data$det.covs[[i]]))) {
-        data$det.covs[[i]] <- data$det.covs[[i]][ord, , drop = FALSE]
-      } else {
+      if (!is.null(dim(data$det.covs[[i]]))) { 
+        if (length(dim(data$det.covs[[i]])) == 2) { # Time/space varying
+          data$det.covs[[i]] <- data$det.covs[[i]][ord, , drop = FALSE]
+	}
+        if (length(dim(data$det.covs[[i]])) == 3) { # Time/space/rep varying
+          data$det.covs[[i]] <- data$det.covs[[i]][ord, , , drop = FALSE]
+	}	
+      } else { # Space-varying
         data$det.covs[[i]] <- data$det.covs[[i]][ord]
       }
     }
   }
 
-  # First subset detection covariates to only use those that are included in the analysis. 
+  # Reformat covariates ---------------------------------------------------
+  # Get detection covariates in proper format
+  # First subset detection covariates to only use those that are included in the analysis.
   data$det.covs <- data$det.covs[names(data$det.covs) %in% all.vars(det.formula)]
   # Null model support
   if (length(data$det.covs) == 0) {
-    data$det.covs <- list(int = rep(1, dim(y)[2]))
+    data$det.covs <- list(int = array(1, dim = dim(y)[-1]))
   }
   # Make both covariates a data frame. Unlist is necessary for when factors
   # are supplied. 
+  # Ordered by visit, year, then site. 
   data$det.covs <- data.frame(lapply(data$det.covs, function(a) unlist(c(a))))
-  binom <- FALSE
-  # Check if all detection covariates are at site level, and simplify the data
-  # if necessary
-  y.big <- y
-  if (nrow(data$det.covs) == dim(y)[2]) {
-   # Convert data to binomial form
-   y <- apply(y, c(1, 2), sum, na.rm = TRUE) 
-   binom <- TRUE
+  # Get detection covariates in site x year x replicate format
+  if (nrow(data$det.covs) == dim(y)[2]) { # if only site-level covariates. 
+    data$det.covs <- as.data.frame(mapply(rep, data$det.covs, dim(y)[3] * dim(y)[4]))
+  } else if (nrow(data$det.covs) == dim(y)[2] * dim(y)[3]) { # if only site/year level covariates
+    data$det.covs <- as.data.frame(mapply(rep, data$det.covs, dim(y)[4]))
   }
-  data$occ.covs <- as.data.frame(data$occ.covs)
+  y.big <- y
+  # Get occurrence covariates in proper format
+  # Subset covariates to only use those that are included in the analysis
+  data$occ.covs <- data$occ.covs[names(data$occ.covs) %in% all.vars(occ.formula)]
+  # Null model support
+  if (length(data$occ.covs) == 0) {
+    data$occ.covs <- list(int = matrix(1, nrow = dim(y)[2], ncol = dim(y)[3]))
+  }
+  # Ordered by year, then site within year. 
+  data$occ.covs <- data.frame(lapply(data$occ.covs, function(a) unlist(c(a))))
+  # Check if only site-level covariates are included
+  if (nrow(data$occ.covs) == dim(y)[2]) {
+    data$occ.covs <- as.data.frame(mapply(rep, data$occ.covs, dim(y)[3]))
+  }
 
   # Checking missing values ---------------------------------------------
   # y -------------------------------
@@ -150,34 +174,32 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
   }
   # occ.covs ------------------------
+  # TODO: you may also want to eventually consider the situation where people 
+  #       don't care about occurrence at unsampled year/sites, and may not have those 
+  #       covariates. I think in this case, you can just set them to 0 without any problems, 
+  #       but would need to think about that some more. 
   if (sum(is.na(data$occ.covs)) != 0) {
     stop("error: missing values in occ.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
   }
   # det.covs ------------------------
-  if (!binom) {
-    for (i in 1:ncol(data$det.covs)) {
-      # Note that this assumes the same detection history for each species.  
-      if (sum(is.na(data$det.covs[, i])) > sum(is.na(y.big[1, , ]))) {
-        stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
-      }
+  # det.covs ------------------------
+  for (i in 1:ncol(data$det.covs)) {
+    if (sum(is.na(data$det.covs[, i])) > sum(is.na(y.big[1, , , ]))) {
+      stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
     }
+  }
+  if (det.formula != ~ 1) {
     # Misalignment between y and det.covs
-    y.missing <- which(is.na(y[1, , ]))
+    y.missing <- which(is.na(y[1, , , ]))
     det.covs.missing <- lapply(data$det.covs, function(a) which(is.na(a)))
     for (i in 1:length(det.covs.missing)) {
       tmp.indx <- !(y.missing %in% det.covs.missing[[i]])
       if (sum(tmp.indx) > 0) {
         if (i == 1 & verbose) {
-          message("There are missing values in data$y with corresponding non-missing values in data$det.covs.\nRemoving these site/replicate combinations for fitting the model.")
+          message("There are missing values in data$y with corresponding non-missing values in data$det.covs.\nRemoving these site/time/replicate combinations for fitting the model.")
         }
         data$det.covs[y.missing, i] <- NA
       }
-    }
-  }
-  # det.covs when binom == TRUE -----
-  if (binom) {
-    if (sum(is.na(data$det.covs)) != 0) {
-      stop("error: missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
     }
   }
 
@@ -229,18 +251,18 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   # Get a separate X for each species for standardization within species
   # if desired.
-  X.big <- array(NA, dim = c(nrow(X), ncol(X), dim(y)[1]))
+  X.big <- array(NA, dim = c(dim(y)[2], dim(y)[3], ncol(X), dim(y)[1]))
   species.sds <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
   species.means <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
   for (i in 1:nrow(y)) {
     curr.indx <- which(range.ind[i, ] == 1)
-    X.big[curr.indx, , i] <- X[curr.indx, , drop = FALSE]
+    X.big[curr.indx, , , i] <- array(X, dim = c(dim(y)[2], dim(y)[3], ncol(X)))[curr.indx, , , drop = FALSE]
     if (scale.by.sp) {
       for (r in 1:ncol(X)) {
         if (sd(X[, r], na.rm = TRUE) != 0) {
-          species.sds[i, r] <- sd(c(X.big[curr.indx, r, i]), na.rm = TRUE)
-          species.means[i, r] <- mean(c(X.big[curr.indx, r, i]), na.rm = TRUE)
-          X.big[curr.indx, r, i] <- c(X.big[curr.indx, r, i]) / species.sds[i, r]
+          species.sds[i, r] <- sd(c(X.big[curr.indx, , r, i]), na.rm = TRUE)
+          species.means[i, r] <- mean(c(X.big[curr.indx, , r, i]), na.rm = TRUE)
+          X.big[curr.indx, , r, i] <- c(X.big[curr.indx, , r, i]) / species.sds[i, r]
 	}
       }
     }
@@ -267,8 +289,18 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 			     function (a) sort(unique(a)))
 
   # Extract data from inputs --------------------------------------------
+  # Number of sites
+  J <- nrow(coords)
   # Number of species 
   N <- dim(y)[1]
+  # Total number of years
+  n.years.max <- dim(y.big)[3]
+  # Number of years for each site
+  n.years <- rep(NA, J)
+  # NOTE: assuming the same primary replicate history for each species. 
+  for (j in 1:J) {
+    n.years[j] <- sum(apply(y.big[1, j, , ], 1, function(a) sum(!is.na(a))) != 0)
+  }
   # Number of latent factors
   q <- n.factors
   # Number of occupancy parameters 
@@ -286,15 +318,9 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   n.det.re <- length(unlist(apply(X.p.re, 2, unique)))
   n.det.re.long <- apply(X.p.re, 2, function(a) length(unique(a)))
   if (p.det.re == 0) n.det.re.long <- 0
-  # Number of sites
-  J <- nrow(X)
   # Number of repeat visits
-  n.rep <- apply(y.big[1, , , drop = FALSE], 2, function(a) sum(!is.na(a)))
-  rep.indx <- list()
-  for (j in 1:J) {
-    rep.indx[[j]] <- which(!is.na(y.big[1, j, ]))
-  }
-  K.max <- dim(y.big)[3]
+  n.rep <- apply(y.big[1, , , , drop = FALSE], c(2, 3), function(a) sum(!is.na(a)))
+  K.max <- max(n.rep)
   # Because I like K better than n.rep
   K <- n.rep
   if (missing(n.batch)) {
@@ -336,32 +362,41 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   p.svc <- length(svc.cols)
   q.p.svc <- q * p.svc
 
+  # Get indices for mapping different values in Z. 
+  z.site.indx <- rep(1:J, n.years.max) - 1
+  z.year.indx <- rep(1:n.years.max, each = J) - 1
+  z.dat.indx <- c(ifelse(K > 0, 1, 0))
+
   # Get indices to map z to y -------------------------------------------
-  if (!binom) {
-    z.long.indx <- rep(1:J, dim(y.big)[3])
-    z.long.indx <- z.long.indx[!is.na(c(y.big[1, , ]))]
-    # Subtract 1 for indices in C
-    z.long.indx <- z.long.indx - 1
-  } else {
-    z.long.indx <- 0:(J - 1)
-  }
-  # y is order as follows: sorted by visit, site within visit, species within site
-  # This will match up with z, which is sorted by site, then species within site. 
+  # This corresponds to the specific value in the n.years.max * J length 
+  # vector of latent occurrence values, and corresponds with the z.site.indx
+  # and z.year.indx
+  z.long.indx <- rep(1:(J * n.years.max), K.max)
+  # Order of c(y.big): visit, year within visit, site within year. 
+  z.long.indx <- z.long.indx[!is.na(c(y.big[1, , , ]))]
+  # Subtract 1 for indices in C
+  z.long.indx <- z.long.indx - 1
+  # Index that links observations to sites. 
+  z.long.site.indx <- rep(rep(1:J, n.years.max), K.max)
+  z.long.site.indx <- z.long.site.indx[!is.na(c(y.big[1, , , ]))]
+  # Subtract 1 for indices in C
+  z.long.site.indx <- z.long.site.indx - 1
+
+  # y is order as follows: sorted by visit, year within visit, site within year, species within site
+  # This will match up with z, which is sorted by year, then site within year, then species within site. 
   # This matches up with spMsPGOcc.
   y <- c(y)
   # Assumes the missing data are constant across species, which seems likely, 
   # but may eventually need some updating. 
   # Removing missing observations when covariate data are available but 
   # there are missing detection-nondetection data. 
-  names.long <- which(!is.na(c(y.big[1, , ])))
-  if (nrow(X.p) == length(y) / N) {
-    if (!binom) {
-      X.p <- X.p[!is.na(c(y.big[1, , ])), , drop = FALSE]
-    }
+  names.long <- which(!is.na(c(y.big[1, , , ])))
+  if (nrow(X.p) != length(names.long)) {
+    X.p <- X.p[which(!is.na(c(y.big[1, , , ]))), , drop = FALSE]
   }
-  if (nrow(X.p.re) == length(y) / N & p.det.re > 0) {
-    if (!binom) {
-      X.p.re <- X.p.re[!is.na(c(y.big[1, , ])), , drop = FALSE]
+  if (p.det.re > 0) {
+    if (nrow(X.p.re) != length(names.long)) {
+      X.p.re <- X.p.re[which(!is.na(c(y.big[1, , , ]))), , drop = FALSE]
     }
   }
   y <- y[!is.na(y)]
@@ -377,6 +412,12 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (p.det.re > 1) {
     for (j in 2:p.det.re) {
       X.p.re[, j] <- X.p.re[, j] + max(X.p.re[, j - 1]) + 1
+    }
+  }
+  lambda.p <- matrix(0, n.obs, n.det.re)
+  if (p.det.re > 0) {
+    for (i in 1:n.det.re) {
+      lambda.p[which(X.p.re == (i - 1), arr.ind = TRUE)[, 1], i] <- 1
     }
   }
 
@@ -547,9 +588,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
 
   # phi -----------------------------
-  if (!NNGP) {
-    coords.D <- iDist(coords)
-  }
+  coords.D <- iDist(coords)
   # Get distance matrix which is used if priors are not specified
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
@@ -577,11 +616,8 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (verbose) {
     message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
     }
-    if (NNGP) {
-      coords.D <- iDist(coords)
-    }
-    phi.a <- rep(3 / max(coords.D), q)
-    phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
+    phi.a <- rep(3 / max(coords.D), q.p.svc)
+    phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q.p.svc)
   }
 
   # nu -----------------------------
@@ -709,35 +745,34 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   names(inits) <- tolower(names(inits))
   # z -------------------------------
-  # ORDER: an N x J matrix sent in as a column-major vector ordered by site, then species
-  #        within site. 
+  # ORDER: an N x J x n.years array with values sorted by year, then site within year, 
+  #        then species within site. 
   if ("z" %in% names(inits)) {
     z.inits <- inits$z
-    if (!is.matrix(z.inits)) {
-      stop(paste("error: initial values for z must be a matrix with dimensions ", 
-      	   N, " x ", J, sep = ""))
+    if (length(dim(z.inits)) != 3) {
+      stop(paste("error: initial values for z must be a 3-dimensional array with dimensions ", 
+      	   N, " (species) x ", J, " (sites) x ", n.years.max, " (time periods)", sep = ""))
     }
-    if (nrow(z.inits) != N | ncol(z.inits) != J) {
-      stop(paste("error: initial values for z must be a matrix with dimensions ", 
-      	   N, " x ", J, sep = ""))
+    if (nrow(z.inits) != N | ncol(z.inits) != J | dim(z.inits)[3] != n.years.max) {
+      stop(paste("error: initial values for z must be a 3-dimensional array with dimensions ", 
+      	   N, " (species) x ", J, " (sites) x ", n.years.max, " (time periods)", sep = ""))
     }
     # Reorder the user supplied inits values for NNGP models
     if (NNGP) {
-      z.inits <- z.inits[, ord]
+      z.inits <- z.inits[, ord, ]
     }
-    z.test <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+    z.test <- apply(y.big, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
     init.test <- sum(z.inits < z.test)
     if (init.test > 0) {
       stop("error: initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
     }
   } else {
     # In correct order since you reordered y for NNGP. 
-    z.inits <- apply(y.big, c(1, 2), max, na.rm = TRUE)
+    z.inits <- apply(y.big, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
     if (verbose) {
       message("z is not specified in initial values.\nSetting initial values based on observed data\n")
     }
   }
-  # z.inits is ordered by site then species within site
   # beta.comm -----------------------
   # ORDER: a p.occ vector ordered by the effects in the formula.
   if ("beta.comm" %in% names(inits)) {
@@ -928,10 +963,10 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     for (i in 1:p.svc) {
       lambda.inits[[i]] <- matrix(0, N, q)
       diag(lambda.inits[[i]]) <- 1
-      lambda.inits[[i]][lower.tri(lambda.inits[[i]])] <- rnorm(sum(lower.tri(lambda.inits[[i]])))
+      # lambda.inits[[i]][lower.tri(lambda.inits[[i]])] <- rnorm(sum(lower.tri(lambda.inits[[i]])))
     }
     if (verbose) {
-      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
+      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0\n")
     }
     lambda.inits <- unlist(lambda.inits)
   }
@@ -1019,68 +1054,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     alpha.star.indx <- 0
     alpha.star.inits <- 0
   }
-  if ("lambda" %in% names(inits)) {
-    lambda.inits <- inits[["lambda"]]
-    if (!is.list(lambda.inits)) {
-      stop(paste("error: initial values for lambda must be a list comprised of ", 
-		 p.svc, " matrices, each with dimensions ", N, " x ", q, sep = ""))
-    }
-    for (i in 1:p.svc) {
-      if (nrow(lambda.inits[[i]]) != N | ncol(lambda.inits[[i]]) != q) {
-        stop(paste("error: initial values for lambda[[", i, 
-		   "]] must be a matrix with dimensions ", N, " x ", q, sep = ""))
-      }
-      if (!all.equal(diag(lambda.inits[[i]]), rep(1, q))) {
-        stop("error: diagonal of inits$lambda[[", i, "]] matrix must be all 1s")
-      }
-      if (sum(lambda.inits[[i]][upper.tri(lambda.inits[[i]])]) != 0) {
-        stop("error: upper triangle of inits$lambda[[", i, "]] must be all 0s")
-      }
-    }
-    lambda.inits <- unlist(lambda.inits)
-  } else {
-    lambda.inits <- list()
-    for (i in 1:p.svc) {
-      lambda.inits[[i]] <- matrix(0, N, q)
-      diag(lambda.inits[[i]]) <- 1
-      lambda.inits[[i]][lower.tri(lambda.inits[[i]])] <- rnorm(sum(lower.tri(lambda.inits[[i]])))
-    }
-    if (verbose) {
-      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
-    }
-    lambda.inits <- unlist(lambda.inits)
-  }
-  # w -----------------------------
-  if ("w" %in% names(inits)) {
-    w.inits <- inits[["w"]]
-    if (!is.list(w.inits)) {
-      stop(paste("error: initial values for w must be a list comprised of ", 
-		 p.svc, " matrices, each with dimensions ", q, " x ", J, sep = ""))
-    }
-    for (i in 1:p.svc) {
-      if (!is.matrix(w.inits[[i]])) {
-        stop(paste("error: initial values for w must be a matrix with dimensions ",
-        	   q, " x ", J, sep = ""))
-      }
-      if (nrow(w.inits[[i]]) != q | ncol(w.inits[[i]]) != J) {
-        stop(paste("error: initial values for w must be a matrix with dimensions ",
-        	   q, " x ", J, sep = ""))
-      }
-      if (NNGP) {
-        w.inits[[i]] <- w.inits[[i]][, ord]
-      }
-    }
-    w.inits <- unlist(w.inits)
-  } else {
-    w.inits <- list()
-    for (i in 1:p.svc) {
-      w.inits[[i]] <- matrix(0, q, J)
-    }
-    if (verbose) {
-      message("w is not specified in initial values.\nSetting initial value to 0\n")
-    }
-    w.inits <- unlist(w.inits)
-  }
 
   # Should initial values be fixed --
   if ("fix" %in% names(inits)) {
@@ -1106,7 +1079,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Prep for SVCs ---------------------------------------------------------
   X.w <- X[, svc.cols, drop = FALSE]
   x.w.names <- colnames(X.w)
-  X.w.big <- X.big[, svc.cols, , drop = FALSE]
+  X.w.big <- X.big[, , svc.cols, , drop = FALSE]
 
   # Get tuning values ---------------------------------------------------
   # Not accessed, but necessary to keep things in line with the underlying functions. 
@@ -1163,7 +1136,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
   if (!NNGP) {
 
-    stop("error: svcMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
+    stop("error: svcTMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
 
   } else {
 
@@ -1213,12 +1186,9 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(X.big) <- "double"
     storage.mode(X.w.big) <- "double"
     storage.mode(coords) <- "double"
-    storage.mode(K) <- "double"
     storage.mode(range.ind) <- "double"
-    # consts order: N, J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re,
-    #               q, p.svc
     consts <- c(N, J, n.obs, p.occ, p.occ.re, n.occ.re, 
-		p.det, p.det.re, n.det.re, q, p.svc)
+		p.det, p.det.re, n.det.re, q, p.svc, n.years.max)
     storage.mode(consts) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(alpha.inits) <- "double"
@@ -1228,9 +1198,11 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(tau.sq.alpha.inits) <- "double"
     storage.mode(phi.inits) <- "double"
     storage.mode(lambda.inits) <- "double"
-    storage.mode(w.inits) <- "double"
     storage.mode(nu.inits) <- "double"
     storage.mode(z.long.indx) <- "integer"
+    storage.mode(z.year.indx) <- "integer"
+    storage.mode(z.dat.indx) <- "integer"
+    storage.mode(z.site.indx) <- "integer"
     storage.mode(mu.beta.comm) <- "double"
     storage.mode(Sigma.beta.comm) <- "double"
     storage.mode(mu.alpha.comm) <- "double"
@@ -1328,17 +1300,17 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
         storage.mode(chain.info) <- "integer"
         # Run the model in C
-        # Getting real close to 65 arguments....
-        out.tmp[[i]] <- .Call("svcMsPGOccNNGP", y, X.big, X.w.big, X.p, coords, X.re, X.p.re, 
-			      range.ind, consts, K, n.occ.re.long, n.det.re.long, 
+        out.tmp[[i]] <- .Call("svcTMsPGOccNNGP", y, X.big, X.w.big, X.p, 
+			      coords, X.re, X.p.re, range.ind, consts, 
+          		    n.occ.re.long, n.det.re.long, 
           	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
           	            beta.inits, alpha.inits, z.inits,
           	            beta.comm.inits, 
           	            alpha.comm.inits, tau.sq.beta.inits, 
           	            tau.sq.alpha.inits, phi.inits, 
-          	            lambda.inits, w.inits, nu.inits, 
-			    sigma.sq.psi.inits, sigma.sq.p.inits, 
-          		    beta.star.inits, alpha.star.inits, z.long.indx, 
+          	            lambda.inits, nu.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
+          		    beta.star.inits, alpha.star.inits, z.long.indx, z.year.indx, 
+			    z.dat.indx, z.site.indx,
           		    beta.star.indx, beta.level.indx, alpha.star.indx, 
           		    alpha.level.indx, mu.beta.comm, 
           	            mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
@@ -1376,14 +1348,10 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$theta.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2]
-	out$rhat$lambda.lower.tri <- list()
-	for (j in 1:p.svc) {
-          lambda.mat <- matrix(0, N, q)
-          indx <- (((j - 1) * N * q + 1):(j * N * q))[c(lower.tri(lambda.mat))]
-          out$rhat$lambda.lower.tri[[j]] <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-            					       mcmc(t(a$lambda.samples[indx, ])))), 
-            					       autoburnin = FALSE)$psrf[, 2])
-	}
+        lambda.mat <- matrix(lambda.inits, N, q)
+        out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+          					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+          					       autoburnin = FALSE)$psrf[, 2])
         if (p.det.re > 0) {
           out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.p.samples)))), 
@@ -1466,16 +1434,16 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
       # Return things back in the original order. 
       out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
-        								dim = c(N, J, n.post.samples))))
-      out$z.samples <- out$z.samples[, order(ord), ]
-      out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
+        								dim = c(N, J, n.years.max, n.post.samples))))
+      out$z.samples <- out$z.samples[, order(ord), , ]
+      out$z.samples <- aperm(out$z.samples, c(4, 1, 2, 3))
 
       # Account for case when there is only 1 svc. 
       if (p.svc == 1) {
         tmp <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
           						      dim = c(q, J, n.post.samples))))
         tmp <- tmp[, order(ord), , drop = FALSE]
-        out$w.samples <- array(NA, dim = c(q, J, p.svc, n.post.samples * n.chains))
+        out$w.samples <- array(NA, dim = c(q, J, p.svc, n.post.samples))
         out$w.samples[, , 1, ] <- tmp
       } else {
         out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
@@ -1484,34 +1452,40 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       out$w.samples <- aperm(out$w.samples, c(4, 1, 2, 3))
       out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
-        								dim = c(N, J, n.post.samples))))
-      out$psi.samples <- out$psi.samples[, order(ord), ]
-      out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
+        								dim = c(N, J, n.years.max, n.post.samples))))
+      out$psi.samples <- out$psi.samples[, order(ord), , ]
+      out$psi.samples <- aperm(out$psi.samples, c(4, 1, 2, 3))
       out$like.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$like.samples, 
-        								dim = c(N, J, n.post.samples))))
-      out$like.samples <- out$like.samples[, order(ord), ]
-      out$like.samples <- aperm(out$like.samples, c(3, 1, 2))
-      if (!binom) {
-       tmp <- matrix(NA, J * K.max, p.det)
-       tmp[names.long, ] <- X.p
-       tmp <- array(tmp, dim = c(J, K.max, p.det))
-       tmp <- tmp[order(ord), , ]
-       out$X.p <- matrix(tmp, J * K.max, p.det)
-       out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
-       colnames(out$X.p) <- x.p.names
-       tmp <- matrix(NA, J * K.max, p.det.re)
-       tmp[names.long, ] <- X.p.re
-       tmp <- array(tmp, dim = c(J, K.max, p.det.re))
-       tmp <- tmp[order(ord), , ]
-       out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
-       out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
-       colnames(out$X.p.re) <- x.p.re.names
-       tmp <- matrix(NA, J * K.max, n.det.re)
-        out$X.p <- X.p[order(ord), , drop = FALSE]
-        out$X.p.re <- X.p.re[order(ord), , drop = FALSE]
-      }
-      out$X.re <- X.re[order(ord), , drop = FALSE]
-      out$X.w <- X.w[order(ord), , drop = FALSE]
+        								dim = c(N, J, n.years.max, n.post.samples))))
+      out$like.samples <- out$like.samples[, order(ord), , ]
+      out$like.samples <- aperm(out$like.samples, c(4, 1, 2, 3))
+      # TODO: some of this stuff is definitely wrong. 
+      # tmp <- matrix(NA, J * K.max, p.det)
+      # tmp[names.long, ] <- X.p
+      # tmp <- array(tmp, dim = c(J, K.max, p.det))
+      # tmp <- tmp[order(ord), , ]
+      # out$X.p <- matrix(tmp, J * K.max, p.det)
+      # out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+      # colnames(out$X.p) <- x.p.names
+      # tmp <- matrix(NA, J * K.max, p.det.re)
+      # tmp[names.long, ] <- X.p.re
+      # tmp <- array(tmp, dim = c(J, K.max, p.det.re))
+      # tmp <- tmp[order(ord), , ]
+      # out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
+      # out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+      # colnames(out$X.p.re) <- x.p.re.names
+      # tmp <- matrix(NA, J * K.max, n.det.re)
+      # tmp[names.long, ] <- lambda.p
+      # tmp <- array(tmp, dim = c(J, K.max, n.det.re))
+      # tmp <- tmp[order(ord), , ]
+      # out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
+      # out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+      out$X.re <- array(X.re, dim = c(J, n.years.max, p.occ.re))
+      out$X.re <- out$X.re[order(ord), , , drop = FALSE]
+      dimnames(out$X.re)[[3]] <- x.re.names
+      # TODO: 
+      out$X.w <- array(X.w, dim = c(J, n.years.max, p.svc))
+      out$X.w <- out$X.w[order(ord), , , drop = FALSE]
       # Calculate effective sample sizes
       out$ESS <- list()
       out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
@@ -1528,9 +1502,11 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (p.occ.re > 0) {
         out$ESS$sigma.sq.psi <- effectiveSize(out$sigma.sq.psi.samples)
       }
-      out$X <- X[order(ord), , drop = FALSE]
-      out$X.big <- X.big[order(ord), , , drop = FALSE]
-      out$y <- y.big[, order(ord), , drop = FALSE]
+      out$X <- array(X, dim = c(J, n.years.max, p.occ))
+      out$X <- out$X[order(ord), , , drop = FALSE]
+      out$X.big <- X.big
+      dimnames(out$X)[[3]] <- x.names
+      out$y <- y.big[, order(ord), , , drop = FALSE]
       out$call <- cl
       out$n.samples <- n.samples
       out$x.names <- x.names
@@ -1538,6 +1514,9 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$x.p.names <- x.p.names
       out$theta.names <- theta.names
       out$type <- "NNGP"
+      out$species.sds <- species.sds
+      out$species.means <- species.means
+      out$scale.by.sp <- scale.by.sp
       out$coords <- coords[order(ord), ]
       out$cov.model.indx <- cov.model.indx
       out$svc.cols <- svc.cols
@@ -1547,10 +1526,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$n.thin <- n.thin
       out$n.burn <- n.burn
       out$n.chains <- n.chains
-      out$species.sds <- species.sds
-      out$species.means <- species.means
-      out$scale.by.sp <- scale.by.sp
-      out$range.ind <- range.ind[, order(ord)]
       if (p.det.re > 0) {
         out$pRE <- TRUE
       } else {
@@ -1562,7 +1537,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         out$psiRE <- FALSE
       }
     }
-    # TODO: need to update, which won't be negligible with the range.ind stuff.
+    # TODO: not updated
     # K-fold cross-validation -------
     # if (!missing(k.fold)) {
     #   if (verbose) {      
@@ -1627,8 +1602,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     #       alpha.star.inits.fit <- alpha.star.inits
     #     }
     #     # Random occurrence effects
-    #     lambda.psi.fit <- lambda.psi[-curr.set, , drop = FALSE]
-    #     lambda.psi.0 <- lambda.psi[curr.set, , drop = FALSE]
     #     X.re.fit <- X.re[-curr.set, , drop = FALSE]
     #     X.re.0 <- X.re[curr.set, , drop = FALSE]
     #     n.occ.re.fit <- length(unique(c(X.re.fit)))
@@ -1800,7 +1773,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     #     } else {
     #       out.fit$psiRE <- FALSE	
     #     }
-    #     class(out.fit) <- "svcMsPGOcc"
+    #     class(out.fit) <- "svcTMsPGOcc"
 
     #     # Predict occurrence at new sites. 
     #     if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
@@ -1871,9 +1844,11 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     #   stopImplicitCluster()
     # }
    
-    class(out) <- "svcMsPGOcc"
+    class(out) <- "svcTMsPGOcc"
   }
 
+  # TODO: temporary until adding in AR(1) structure. 
+  out$ar1 <- FALSE
   out$run.time <- proc.time() - ptm
   return(out)
 }
