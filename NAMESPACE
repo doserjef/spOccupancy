@@ -29,7 +29,6 @@ export(simIntMsOcc)
 export(intMsPGOcc)
 export(postHocLM)
 export(svcMsPGOcc)
-export(svcTMsPGOcc)
 
 S3method("predict", "PGOcc")
 S3method("print", "PGOcc")

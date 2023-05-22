@@ -1,6 +1,6 @@
 svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		      tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-		      n.neighbors = 15, search.type = "cb", scale.by.sp = FALSE, n.factors, 
+		      n.neighbors = 15, search.type = "cb", std.by.sp = FALSE, n.factors, 
 		      n.batch, batch.length, accept.rate = 0.43,
 		      n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 		      n.burn = round(.10 * n.batch * batch.length), 
@@ -86,8 +86,8 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: n.factors must be specified for a spatial factor occupancy model")
   }
 
-  if (scale.by.sp != FALSE & scale.by.sp != TRUE) {
-    stop("error: scale.by.sp must be either TRUE or FALSE")
+  if (std.by.sp != FALSE & std.by.sp != TRUE) {
+    stop("error: std.by.sp must be either TRUE or FALSE")
   }
   if ('range.ind' %in% names(data)) {
     range.ind <- data$range.ind
@@ -235,12 +235,12 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   for (i in 1:nrow(y)) {
     curr.indx <- which(range.ind[i, ] == 1)
     X.big[curr.indx, , i] <- X[curr.indx, , drop = FALSE]
-    if (scale.by.sp) {
+    if (std.by.sp) {
       for (r in 1:ncol(X)) {
         if (sd(X[, r], na.rm = TRUE) != 0) {
           species.sds[i, r] <- sd(c(X.big[curr.indx, r, i]), na.rm = TRUE)
           species.means[i, r] <- mean(c(X.big[curr.indx, r, i]), na.rm = TRUE)
-          X.big[curr.indx, r, i] <- c(X.big[curr.indx, r, i]) / species.sds[i, r]
+          X.big[curr.indx, r, i] <- c((X.big[curr.indx, r, i] - species.means[i, r])) / species.sds[i, r]
 	}
       }
     }
@@ -1549,7 +1549,7 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$n.chains <- n.chains
       out$species.sds <- species.sds
       out$species.means <- species.means
-      out$scale.by.sp <- scale.by.sp
+      out$std.by.sp <- std.by.sp
       out$range.ind <- range.ind[, order(ord)]
       if (p.det.re > 0) {
         out$pRE <- TRUE
