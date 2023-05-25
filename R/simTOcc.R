@@ -2,7 +2,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
 		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
 		    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
                     rho, sigma.sq.t, x.positive = FALSE, mis.spec.type = 'none', 
-		    scale.param = 1, ...) {
+		    scale.param = 1, avail, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -135,6 +135,18 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
   
   if (scale.param <= 0) {
     stop("scale parameter must be greater than zero.")
+  }
+
+  # Random emigration as closure violation -----
+  if (missing(avail)) {
+    avail <- matrix(0, J, max(n.time))  
+  } else {
+    if (!is.matrix(avail)) {
+      stop(paste0("avail must be a matrix with ", J, " rows and ", max(n.time), " columns."))
+    }
+    if (nrow(avail) != J | ncol(avail) != max(n.time)) {
+      stop(paste0("avail must be a matrix with ", J, " rows and ", max(n.time), " columns."))
+    }
   }
 
   # Subroutines -----------------------------------------------------------
@@ -406,8 +418,9 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
           p[j, t, rep.indx[[j]][[t]]] <- pnorm(X.p[j, t, rep.indx[[j]][[t]], ] %*% as.matrix(alpha))
         }
       }
-      
-      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * z[j, t]) 
+      # Allow for closure to be violated if specified
+      curr.z <- rep(z[j, t], n.rep[j, t]) * ifelse(rep(avail[j, t], n.rep[j, t]) > runif(n.rep[j, t]), 1, 0)
+      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * curr.z) 
     } # t
   } # j
 

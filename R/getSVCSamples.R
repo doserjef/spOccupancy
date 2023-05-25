@@ -16,8 +16,9 @@ getSVCSamples <- function(object, pred.object, ...) {
     stop("error: object must be specified")
   }
   if (!(class(object) %in% c('svcPGOcc', 'svcPGBinom', 
-			     'svcTPGOcc', 'svcTPGBinom'))) {
-    stop("error: object must be of class svcPGOcc, svcPGBinom, svcTPGOcc, svcTPGBinom\n")
+			     'svcTPGOcc', 'svcTPGBinom', 
+			     'svcMsPGOcc'))) {
+    stop("error: object must be of class svcPGOcc, svcPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -32,10 +33,35 @@ getSVCSamples <- function(object, pred.object, ...) {
     svc.names <- colnames(object$X)[object$svc.cols]
   }
   svc.cols <- object$svc.cols
-  if (!missing(pred.object)) {
-    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, which(svc.cols == a), ]))
-  } else {
-    svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + object$w.samples[, which(svc.cols == a), ]))
+  p.svc <- length(svc.cols)
+  # Single-species models -------------------------------------------------
+  if (class(object) %in% c('svcPGOcc', 'svcPGBinom', 
+			   'svcTPGOcc', 'svcTPGBinom')) {
+    if (!missing(pred.object)) {
+      svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, which(svc.cols == a), ]))
+    } else {
+      svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + object$w.samples[, which(svc.cols == a), ]))
+    }
+  }
+  # Multi-species models --------------------------------------------------
+  if (class(object) %in% c('svcMsPGOcc')) {
+    N <- nrow(object$y)
+    J <- ncol(object$y)
+    q <- object$q
+    svc.samples <- list()
+    for (i in 1:p.svc) {
+      svc.samples[[i]] <- array(NA, dim = c(N, J, n.post)) 
+    }
+    lambda.samples <- array(object$lambda.samples, dim = c(n.samples, N, q, p.svc))
+    beta.samples <- array(object$beta.samples, dim = c(n.samples, N, ncol(out$X)))
+    for (i in 1:n.post) {
+        for (j in 1:p.svc) {
+          tmp <- matrix(lambda.samples[i, , , j], N, q)
+          tmp.2 <- matrix(object$w.samples[i, , , j], q, J)
+          svc.samples[[j]][, , i] <- tmp %*% tmp.2 + beta.samples[i, , svc.cols[j]]
+        }
+    }
+    svc.samples <- lapply(svc.samples, aperm, c(3, 1, 2))
   }
   names(svc.samples) <- svc.names
   return(svc.samples)
