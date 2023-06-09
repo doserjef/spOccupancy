@@ -80,7 +80,7 @@ where $\bm{x}_j$ is a $p_{\psi} \times 1$ vector of an intercept and environment
 
 where $\bm{\lambda}_i$ is the $i$th row of factor loadings from an $N \times q$ matrix $\bm{\Lambda}$, and $\textbf{w}(\bm{s}_j)$ is a $q \times 1$ vector of independent spatial factors at site $j$. We achieve computational improvements and dimension reduction by setting $q << N$. We account for residual species correlations via their individual responses (i.e., loadings) to the $q$ latent spatial factors.
 
-Following @taylor2019spatial and [@tikhonov2020computationally], we model each $r = 1, \dots, q$ independent spatial process $\text{w}_r(\bm{s}_j)$ using an NNGP [@datta2016hierarchical] to achieve computational efficiency when modeling over a large number of spatial locations. More specifically, we have
+Following @taylor2019spatial and @tikhonov2020computationally, we model each $r = 1, \dots, q$ independent spatial process $\text{w}_r(\bm{s}_j)$ using an NNGP [@datta2016hierarchical] to achieve computational efficiency when modeling over a large number of spatial locations. More specifically, we have
 
 \begin{equation}
     \text{w}_r(\bm{s}_j) \sim N(\bm{0}, \tilde{\bm{C}}_r(\bm{\theta}_r)),
@@ -115,7 +115,7 @@ where $\pi_{i, j, k}$ is the probability of detecting species $i$ at site $j$ du
 
 where $\bm{\mu_{\alpha}}$ is a vector of community-level mean effects for each detection covariate effect (including the intercept) and $\bm{T}_{\alpha}$ is a diagonal matrix with diagonal elements $\bm{\tau}^2_{\alpha}$ that represent the variability of each detection covariate effect among species in the community.
 
-We assume normal priors for community-level mean parameters and inverse-Gamma priors for community-level variance parameters. Identifiability of the latent spatial factors requires additional constraints [@hogan2004bayesian]. Following [@taylor2019spatial], we set all elements in the upper triangle of the factor loadings matrix $\bm{\Lambda}$ equal to 0 and its diagonal elements equal to 1. We additionally fix the spatial variance parameters $\sigma^2_{r}$ of each latent spatial processes to 1. We assign standard normal priors for all lower triangular elements in $\bm{\Lambda}$ and assign each spatial range parameter $\phi_{r}$ an independent uniform prior.
+We assume normal priors for community-level mean parameters and inverse-Gamma priors for community-level variance parameters. Identifiability of the latent spatial factors requires additional constraints [@hogan2004bayesian]. Following @taylor2019spatial, we set all elements in the upper triangle of the factor loadings matrix $\bm{\Lambda}$ equal to 0 and its diagonal elements equal to 1. We additionally fix the spatial variance parameters $\sigma^2_{r}$ of each latent spatial processes to 1. We assign standard normal priors for all lower triangular elements in $\bm{\Lambda}$ and assign each spatial range parameter $\phi_{r}$ an independent uniform prior.
 
 ## Gibbs sampler {#sfMsPGOccSampler}
 
@@ -170,7 +170,7 @@ We next sample the occurrence auxiliary variable ($\omega_{i, \beta}(\bm{s}_j)$ 
 
 ### Update detection auxiliary variables ($\omega_{i, k, \alpha}(\bm{s}_j)$)
 
-We next update the latent $\pg$ auxiliary variable for the detection process, $\omega_{i, k, \alpha}(\bm{s}_j)$, for each replicate $k$ at each site $j$ for each species $i$. Note that we only need to sample $\omega_{i, k, \alpha}(\bm{s}_j)$ when $\sum_{k = 1}^{K_j}y_{i, j, k} = 0$. Following [@polson2013], we have
+We next update the latent $\pg$ auxiliary variable for the detection process, $\omega_{i, k, \alpha}(\bm{s}_j)$, for each replicate $k$ at each site $j$ for each species $i$. Note that we only need to sample $\omega_{i, k, \alpha}(\bm{s}_j)$ when $z_i(\bm{s}_j) = 1$, which can change across different MCMC iterations. Following @polson2013, we have
 
 \begin{equation}
   \omega_{i, k, \alpha}(\bm{s}_j) \mid \cdot \sim \text{PG}(1, \bm{v}(\bm{s}_j)^\top\bm{\alpha}_i).
@@ -181,7 +181,7 @@ We next update the latent $\pg$ auxiliary variable for the detection process, $\
 We update the species-level occurrence regression coefficients ($\bm{\beta}_i$), including the intercept, from the following multivariate normal full conditional
 
 \begin{equation}
-\bm{\beta}_i \mid \cdot \sim \text{Normal}\Big([\bm{T}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}[\bm{X}^{\top}(\bm{z}_i - 0.5 \bm{1}_J - \bm{S}_{\beta}\text{\textbf{w}}^*_i(\bm{s}_j)) + \bm{T}_{\beta}^{-1}\bm{\mu_{\beta}}], [\bm{T}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}\Big),
+\bm{\beta}_i \mid \cdot \sim \text{Normal}\Big([\bm{T}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}[\bm{X}^{\top}(\bm{z}_i - 0.5 \bm{1}_J - \bm{S}_{\beta}\text{\textbf{w}}^*_i) + \bm{T}_{\beta}^{-1}\bm{\mu_{\beta}}], [\bm{T}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}\Big),
 (\#eq:beta)
 \end{equation}
 

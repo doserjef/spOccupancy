@@ -411,21 +411,12 @@ extern "C" {
     // Put community level occurrence variances in a pOcc x pOcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
-      TauBetaInv[i * pOcc + i] = tauSqBeta[i]; 
+      TauBetaInv[i * pOcc + i] = 1.0 / tauSqBeta[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
-    // Put community level detection variances in a pDet x pDet matrix. 
     double *TauAlphaInv = (double *) R_alloc(ppDet, sizeof(double)); zeros(TauAlphaInv, ppDet); 
     for (i = 0; i < pDet; i++) {
-      TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
+      TauAlphaInv[i * pDet + i] = 1.0 / tauSqAlpha[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
     /**********************************************************************
      * Prep for random effects (if they exist)
@@ -562,7 +553,6 @@ extern "C" {
 
     GetRNGstate();
 
-
     /**********************************************************************
      Start sampling
      * *******************************************************************/
@@ -645,12 +635,8 @@ extern "C" {
           tauSqBeta[h] = rigamma(tauSqBetaA[h] + N / 2.0, tauSqBetaB[h] + tmp_0); 
         } // h
         for (h = 0; h < pOcc; h++) {
-          TauBetaInv[h * pOcc + h] = tauSqBeta[h]; 
+          TauBetaInv[h * pOcc + h] = 1.0 / tauSqBeta[h]; 
         } // i
-        F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
         /********************************************************************
          Update Community Detection Variance Parameter
         ********************************************************************/
@@ -663,12 +649,8 @@ extern "C" {
           tauSqAlpha[h] = rigamma(tauSqAlphaA[h] + N / 2.0, tauSqAlphaB[h] + tmp_0); 
         } // h
         for (h = 0; h < pDet; h++) {
-          TauAlphaInv[h * pDet + h] = tauSqAlpha[h]; 
+          TauAlphaInv[h * pDet + h] = 1.0 / tauSqAlpha[h]; 
         } // i
-        F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
         /********************************************************************
          *Update Occupancy random effects variance
@@ -861,7 +843,7 @@ extern "C" {
                     for (ll = 0; ll < pOccRE; ll++) {
                       tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[ll * J + j]];
 	            } 
-                    tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) + tmp_02 - betaStar[i * nOccRE + l] + wStar[j * N + i]) * omegaOcc[j * N + i];
+                    tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) + tmp_02 - betaStar[i * nOccRE + l] + wSites[j * N + i]) * omegaOcc[j * N + i];
 	            tmp_0 += omegaOcc[j * N + i];
 	          }
 		}
@@ -922,7 +904,7 @@ extern "C" {
               }
             }
           }
-	}
+	} // i (species)
 
         /********************************************************************
          *Update Spatial Random Effects (w)
@@ -930,6 +912,7 @@ extern "C" {
 
         for (rr = 0; rr < pTilde; rr++) { // svc
 
+          // Update B and F for current SVC
 	  for (ll = 0; ll < q; ll++) {
             // Current
             if (corName == "matern"){ 
@@ -1029,12 +1012,12 @@ extern "C" {
             mu[ll] += gg[ll] + a[ll];
 	  } // ll
 
-	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc FCONE);
+	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_q, &inc FCONE);
 
 	  F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
 
-	  mvrnorm(&w[rr * Jq + ii * q], tmp_N, var, q);
+	  mvrnorm(&w[rr * Jq + ii * q], tmp_q, var, q);
 	  } // ii (site)
 
   	  // Update wStar to make sure updated w values are used in lambda update.  
@@ -1051,7 +1034,7 @@ extern "C" {
             zeros(tmp_q, q);
 	    zeros(tmp_qq2, qq);
 	    zeros(tmp_Jq, Jq);
-	    // Compute W %*% Xtilde for the current svc. 
+	    // Compute Xtilde %*% Z* %*% W for the current svc. 
 	    for (ll = 0; ll < q; ll++) {
 	      for (j = 0; j < J; j++) {
                 if (rangeInd[j * N + i] == 1.0) {
@@ -1084,7 +1067,7 @@ extern "C" {
 	    // zStar - X %*% beta
 	    for (j = 0; j < J; j++) {
               tmp_J[j] = 0.0;
-              // //Get Z*Lambda*w for all columns except for the kth column for the current location.
+              // //Get X*Lambda*w for all columns except for the kth column for the current location.
 	      tmp_0 = 0.0;
 	      if (rangeInd[j * N + i] == 1.0) {
                 for (rrr = 0; rrr < pTilde; rrr++) {

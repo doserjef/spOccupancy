@@ -303,21 +303,12 @@ extern "C" {
     // Put community level variances in a pOcc x POcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
-      TauBetaInv[i * pOcc + i] = tauSqBeta[i]; 
+      TauBetaInv[i * pOcc + i] = 1.0 / tauSqBeta[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
-    // Put community level variances in a pDet x pDet matrix. 
     double *TauAlphaInv = (double *) R_alloc(ppDet, sizeof(double)); zeros(TauAlphaInv, ppDet); 
     for (i = 0; i < pDet; i++) {
-      TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
+      TauAlphaInv[i * pDet + i] = 1.0 / tauSqAlpha[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
     // Get starting location for each data set in Xp
     int *startXP = (int *) R_alloc(nData, sizeof(int));

@@ -139,7 +139,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
 
   # Random emigration as closure violation -----
   if (missing(avail)) {
-    avail <- matrix(0, J, max(n.time))  
+    avail <- matrix(1, J, max(n.time))  
   } else {
     if (!is.matrix(avail)) {
       stop(paste0("avail must be a matrix with ", J, " rows and ", max(n.time), " columns."))
@@ -419,8 +419,11 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
         }
       }
       # Allow for closure to be violated if specified
-      curr.z <- rep(z[j, t], n.rep[j, t]) * ifelse(rep(avail[j, t], n.rep[j, t]) > runif(n.rep[j, t]), 1, 0)
-      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * curr.z) 
+      # curr.z <- rep(z[j, t], n.rep[j, t]) * rbinom(n.rep[j, t], 1, avail[j, t])
+      # curr.z <- rep(z[j, t], n.rep[j, t]) * rbinom(1, 1, avail[j, t])
+      # y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * curr.z) 
+      # curr.z <- rep(z[j, t], n.rep[j, t]) * ifelse(rep(avail[j, t], n.rep[j, t]) > runif(n.rep[j, t]), 1, 0)
+      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * avail[j, t] * z[j, t]) 
     } # t
   } # j
 

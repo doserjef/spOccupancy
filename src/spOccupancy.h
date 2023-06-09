@@ -303,9 +303,10 @@ extern "C" {
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			  SEXP thetaSamples_r, SEXP wSamples_r, 
-			  SEXP betaStarSiteSamples_r, SEXP etaSamples_r, SEXP nSamples_r, 
-			  SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			  SEXP nReport_r);
+			  SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+                          SEXP sitesLink_r, SEXP sites0Sampled_r, 
+			  SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+			  SEXP verbose_r, SEXP nReport_r);
 
   SEXP svcPGBinomNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP coords_r, SEXP XRE_r, 
 	            SEXP consts_r, SEXP weights_r, SEXP nRELong_r, SEXP m_r, SEXP nnIndx_r, 
@@ -373,9 +374,10 @@ extern "C" {
 			    SEXP coords0_r, SEXP weights0_r, 
 			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, SEXP nSamples_r, 
-			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r);
+			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+                            SEXP sitesLink_r, SEXP sites0Sampled_r, 
+			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+			    SEXP verbose_r, SEXP nReport_r);
 
   SEXP svcTPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
 		     SEXP XpRE_r, SEXP consts_r, 

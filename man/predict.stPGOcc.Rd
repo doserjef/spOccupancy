@@ -9,7 +9,8 @@
 \usage{
 \method{predict}{stPGOcc}(object, X.0, coords.0, t.cols, n.omp.threads = 1, 
                           verbose = TRUE, n.report = 100, 
-                          ignore.RE = FALSE, type = 'occupancy', ...)
+                          ignore.RE = FALSE, type = 'occupancy', 
+                          forecast = FALSE, ...)
 }
 
 \arguments{
@@ -21,7 +22,7 @@
   \item{coords.0}{the spatial coordinates corresponding to \code{X.0}. Note that \code{spOccupancy} assumes coordinates are specified 
   in a projected coordinate system.}
 
-  \item{t.cols}{an indexing vector used to denote which primary time periods are contained in the design matrix of covariates at the prediction locations (\code{X.0}). The values should denote the specific primary time periods used to fit the model. The values should indicate the columns in \code{data$y} used to fit the model for which prediction is desired. See example below.} 
+  \item{t.cols}{an indexing vector used to denote which primary time periods are contained in the design matrix of covariates at the prediction locations (\code{X.0}). The values should denote the specific primary time periods used to fit the model. The values should indicate the columns in \code{data$y} used to fit the model for which prediction is desired. See example below. Not required when \code{forecast = TRUE}.} 
 
    \item{n.omp.threads}{a positive integer indicating
     the number of threads to use for SMP parallel processing. The package must
@@ -38,6 +39,8 @@
   \item{n.report}{the interval to report sampling progress.}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
+
+  \item{forecast}{a logical value indicating whether prediction is occurring at non-sampled primary time periods (e.g., forecasting).}
 
   \item{...}{currently no additional arguments}
 }

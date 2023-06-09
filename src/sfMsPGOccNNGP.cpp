@@ -400,21 +400,12 @@ extern "C" {
     // Put community level occurrence variances in a pOcc x pOcc matrix.
     double *TauBetaInv = (double *) R_alloc(ppOcc, sizeof(double)); zeros(TauBetaInv, ppOcc); 
     for (i = 0; i < pOcc; i++) {
-      TauBetaInv[i * pOcc + i] = tauSqBeta[i]; 
+      TauBetaInv[i * pOcc + i] = 1.0 / tauSqBeta[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
-    // Put community level detection variances in a pDet x pDet matrix. 
     double *TauAlphaInv = (double *) R_alloc(ppDet, sizeof(double)); zeros(TauAlphaInv, ppDet); 
     for (i = 0; i < pDet; i++) {
-      TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
+      TauAlphaInv[i * pDet + i] = 1.0 / tauSqAlpha[i]; 
     } // i
-    F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-    F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
 
     /**********************************************************************
      * Prep for random effects (if they exist)
@@ -981,12 +972,12 @@ extern "C" {
             mu[k] += gg[k] + a[k];
 	  } // k
 
-	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc FCONE);
+	  F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_q, &inc FCONE);
 
 	  F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
 
-	  mvrnorm(&w[ii * q], tmp_N, var, q);
+	  mvrnorm(&w[ii * q], tmp_q, var, q);
 
         } // ii
         /********************************************************************

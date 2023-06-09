@@ -23,9 +23,10 @@ extern "C" {
 			    SEXP coords0_r, SEXP weights0_r, 
 			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
 			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, SEXP nSamples_r, 
-			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r){
+			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+                            SEXP sitesLink_r, SEXP sites0Sampled_r, 
+			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+			    SEXP verbose_r, SEXP nReport_r){
 
     int i, j, k, l, ll, s, t, info, nProtect=0;
     const int inc = 1;
@@ -49,6 +50,8 @@ extern "C" {
     int qnYears = q * nYears;
     int JpTilde = J * pTilde;
     int qpTilde = q * pTilde;
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
 
     int *nnIndx0 = INTEGER(nnIndx0_r);        
     double *beta = REAL(betaSamples_r);
@@ -174,40 +177,44 @@ extern "C" {
 #ifdef _OPENMP
 	  threadID = omp_get_thread_num();
 #endif 	
-	  phi = theta[s * nThetapTilde + phiIndx * pTilde + ll];
-	  if(corName == "matern"){
-	    nu = theta[s * nThetapTilde + nuIndx * pTilde + ll];
-	  }
-	  sigmaSq = theta[s * nThetapTilde + sigmaSqIndx * pTilde + ll];
-	  // sigmaSq = 1.0;
-
-	  for(k = 0; k < m; k++){
-	    d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords0[j], coords0[q+j]);
-	    c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
-	    for(l = 0; l < m; l++){
-	      d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords[nnIndx0[j+q*l]], coords[J+nnIndx0[j+q*l]]);
-	      C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
+          if (sites0Sampled[j] == 1) {
+            w0[s * qpTilde + j * pTilde + ll] = w[s * JpTilde + sitesLink[j] * pTilde + ll];
+	  } else { 
+	    phi = theta[s * nThetapTilde + phiIndx * pTilde + ll];
+	    if(corName == "matern"){
+	      nu = theta[s * nThetapTilde + nuIndx * pTilde + ll];
 	    }
+	    sigmaSq = theta[s * nThetapTilde + sigmaSqIndx * pTilde + ll];
+	    // sigmaSq = 1.0;
+
+	    for(k = 0; k < m; k++){
+	      d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords0[j], coords0[q+j]);
+	      c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
+	      for(l = 0; l < m; l++){
+	        d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords[nnIndx0[j+q*l]], coords[J+nnIndx0[j+q*l]]);
+	        C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
+	      }
+	    }
+
+	    F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	    if(info != 0){error("c++ error: dpotrf failed\n");}
+	    F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	    if(info != 0){error("c++ error: dpotri failed\n");}
+
+	    F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
+
+	    d = 0;
+	    for(k = 0; k < m; k++){
+	      d += tmp_m[threadID*m+k]*w[s*JpTilde+nnIndx0[j+q*k] * pTilde + ll];
+	    }
+
+	    #ifdef _OPENMP
+            #pragma omp atomic
+            #endif   
+	    vIndx++;
+
+	    w0[s * qpTilde + j * pTilde + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 	  }
-
-	  F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotrf failed\n");}
-	  F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotri failed\n");}
-
-	  F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
-
-	  d = 0;
-	  for(k = 0; k < m; k++){
-	    d += tmp_m[threadID*m+k]*w[s*JpTilde+nnIndx0[j+q*k] * pTilde + ll];
-	  }
-
-	  #ifdef _OPENMP
-          #pragma omp atomic
-          #endif   
-	  vIndx++;
-
-	  w0[s * qpTilde + j * pTilde + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 
         } // sample
       } // covariate
