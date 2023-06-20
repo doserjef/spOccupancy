@@ -247,8 +247,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   X.big <- ifelse(is.na(X.big), 0, X.big)
 
-  # TODO: may need to think about allowing for scaling by species for
-  #       the detection covariates as well.
   # Detection -----------------------
   if (missing(det.formula)) {
     stop("error: det.formula must be specified")

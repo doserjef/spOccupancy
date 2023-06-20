@@ -137,15 +137,15 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
     stop("scale parameter must be greater than zero.")
   }
 
-  # Random emigration as closure violation -----
+  # Availability process --------------------------------------------------
   if (missing(avail)) {
-    avail <- matrix(1, J, max(n.time))  
+    avail <- array(1, dim = c(J, max(n.time), max(n.rep)))  
   } else {
-    if (!is.matrix(avail)) {
-      stop(paste0("avail must be a matrix with ", J, " rows and ", max(n.time), " columns."))
+    if (length(dim(avail)) != 3) {
+      stop(paste0("avail must be an array with dimensions of ", J, " x ", max(n.time), " x ", max(n.rep), "."))
     }
-    if (nrow(avail) != J | ncol(avail) != max(n.time)) {
-      stop(paste0("avail must be a matrix with ", J, " rows and ", max(n.time), " columns."))
+    if (dim(avail)[1] != J | dim(avail)[2] != max(n.time) | dim(avail)[3] != max(n.rep)) {
+      stop(paste0("avail must be an array with dimensions of ", J, " x ", max(n.time), " x ", max(n.rep), "."))
     }
   }
 
@@ -419,11 +419,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
         }
       }
       # Allow for closure to be violated if specified
-      # curr.z <- rep(z[j, t], n.rep[j, t]) * rbinom(n.rep[j, t], 1, avail[j, t])
-      # curr.z <- rep(z[j, t], n.rep[j, t]) * rbinom(1, 1, avail[j, t])
-      # y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * curr.z) 
-      # curr.z <- rep(z[j, t], n.rep[j, t]) * ifelse(rep(avail[j, t], n.rep[j, t]) > runif(n.rep[j, t]), 1, 0)
-      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * avail[j, t] * z[j, t]) 
+      y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * avail[j, t, rep.indx[[j]][[t]]] * z[j, t]) 
     } # t
   } # j
 

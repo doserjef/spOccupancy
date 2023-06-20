@@ -44,25 +44,25 @@ getSVCSamples <- function(object, pred.object, ...) {
     }
   }
   # Multi-species models --------------------------------------------------
-  if (class(object) %in% c('svcMsPGOcc')) {
-    N <- nrow(object$y)
-    J <- ncol(object$y)
-    q <- object$q
-    svc.samples <- list()
-    for (i in 1:p.svc) {
-      svc.samples[[i]] <- array(NA, dim = c(N, J, n.post)) 
-    }
-    lambda.samples <- array(object$lambda.samples, dim = c(n.samples, N, q, p.svc))
-    beta.samples <- array(object$beta.samples, dim = c(n.samples, N, ncol(out$X)))
-    for (i in 1:n.post) {
-        for (j in 1:p.svc) {
-          tmp <- matrix(lambda.samples[i, , , j], N, q)
-          tmp.2 <- matrix(object$w.samples[i, , , j], q, J)
-          svc.samples[[j]][, , i] <- tmp %*% tmp.2 + beta.samples[i, , svc.cols[j]]
-        }
-    }
-    svc.samples <- lapply(svc.samples, aperm, c(3, 1, 2))
-  }
+  # if (class(object) %in% c('svcMsPGOcc')) {
+  #   N <- nrow(object$y)
+  #   J <- ncol(object$y)
+  #   q <- object$q
+  #   svc.samples <- list()
+  #   for (i in 1:p.svc) {
+  #     svc.samples[[i]] <- array(NA, dim = c(N, J, n.post)) 
+  #   }
+  #   lambda.samples <- array(object$lambda.samples, dim = c(n.samples, N, q, p.svc))
+  #   beta.samples <- array(object$beta.samples, dim = c(n.samples, N, ncol(out$X)))
+  #   for (i in 1:n.post) {
+  #       for (j in 1:p.svc) {
+  #         tmp <- matrix(lambda.samples[i, , , j], N, q)
+  #         tmp.2 <- matrix(object$w.samples[i, , , j], q, J)
+  #         svc.samples[[j]][, , i] <- tmp %*% tmp.2 + beta.samples[i, , svc.cols[j]]
+  #       }
+  #   }
+  #   svc.samples <- lapply(svc.samples, aperm, c(3, 1, 2))
+  # }
   names(svc.samples) <- svc.names
   return(svc.samples)
 }

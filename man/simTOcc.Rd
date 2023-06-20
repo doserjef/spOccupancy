@@ -63,7 +63,7 @@ simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TR
 
 \item{scale.param}{a positive number between 0 and 1 that indicates the scale parameter for the occupancy portion of the model when \code{mis.spec.type = 'scale'}. When specified, \code{scale.param} corresponds to the scale parameter for the occupancy portion of the model, while the reciprocal of \code{scale.param} is used for the detection portion of the model.}
 
-\item{avail}{a site x primary time period matrix indicating the availability probability of the species during each survey simulated at the given site/primary time period combination. This can be used to assess impacts of non-constant availability across replicate surveys in simulation studies. Values should fall between 0 and 1. When not specified, availability is set to 1 for all surveys.}
+\item{avail}{a site x primary time period x visit array indicating the availability probability of the species during each survey simulated at the given site/primary time period/visit combination. This can be used to assess impacts of non-constant availability across replicate surveys in simulation studies. Values should fall between 0 and 1. When not specified, availability is set to 1 for all surveys.}
 
 \item{...}{currently no additional arguments}
 }
