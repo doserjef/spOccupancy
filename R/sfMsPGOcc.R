@@ -599,6 +599,8 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     phi.a <- rep(3 / max(coords.D), q)
     phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
   }
+  # Check if any phi is fixed based on the prior
+  phi.fix <- ifelse(sum(phi.a == phi.b) > 0, TRUE, FALSE)
 
   # nu -----------------------------
   if (cov.model == "matern") {
@@ -1295,9 +1297,13 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2])
+	if (!phi.fix) {
         out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$theta.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2]
+	} else {
+          out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q, q))
+	}
         lambda.mat <- matrix(lambda.inits, N, q)
         out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 

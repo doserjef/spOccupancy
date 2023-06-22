@@ -139,7 +139,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
 
   # Availability process --------------------------------------------------
   if (missing(avail)) {
-    avail <- array(1, dim = c(J, max(n.time), max(n.rep)))  
+    avail <- array(1, dim = c(J, max(n.time, na.rm = TRUE), n.rep.max))  
   } else {
     if (length(dim(avail)) != 3) {
       stop(paste0("avail must be an array with dimensions of ", J, " x ", max(n.time), " x ", max(n.rep), "."))
@@ -419,6 +419,8 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
         }
       }
       # Allow for closure to be violated if specified
+      # tmp <- rbinom(n.rep[j, t], 1, avail[j, t, rep.indx[[j]][[t]]]) 
+      # y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * tmp * z[j, t]) 
       y[j, t, rep.indx[[j]][[t]]] <- rbinom(n.rep[j, t], 1, p[j, t, rep.indx[[j]][[t]]] * avail[j, t, rep.indx[[j]][[t]]] * z[j, t]) 
     } # t
   } # j
