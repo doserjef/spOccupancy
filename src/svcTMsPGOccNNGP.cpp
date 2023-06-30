@@ -1129,7 +1129,7 @@ extern "C" {
               // //Get Z*Lambda*w for all columns except for the kth column for the current location.
 	      for (t = 0; t < nYearsMax; t++) {
 	        tmp_0 = 0.0;
-                tmp_JnYears[t * J + j] == 0.0; 
+                tmp_JnYears[t * J + j] = 0.0; 
                 if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
                   for (rrr = 0; rrr < pTilde; rrr++) {
                     if (rrr != rr) { // if not on the current svc
