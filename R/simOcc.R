@@ -1,6 +1,6 @@
 simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.RE = list(), 
-		   sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu, 
-                   x.positive = FALSE, ...) {
+		   sp = FALSE, svc.cols = 1, svc.joint = FALSE, Sigma, 
+		   cov.model, sigma.sq, phi, nu, x.positive = FALSE, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -8,6 +8,14 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   for(i in elip.args){
       if(! i %in% formal.args)
           warning("'",i, "' is not an argument")
+  }
+
+  # Subroutines -----------------------------------------------------------
+  rmvn <- function(n, mu=0, V = matrix(1)){
+    p <- length(mu)
+    if(any(is.na(match(dim(V),p)))){stop("Dimension problem!")}
+    D <- chol(V)
+    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
   }
 
   # Check function inputs -------------------------------------------------
@@ -116,6 +124,20 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
         stop("error: nu must have the same number of elements as svc.cols")
       }
     }
+    if (p.svc > 1 & svc.joint) {
+      if (!missing(sigma.sq)) {
+        message("sigma.sq is ignored when svc.joint = TRUE")
+      }
+      if (missing(Sigma)) {
+        stop("Sigma must be specified when svc.joint = TRUE")
+      }
+      if (!is.matrix(Sigma)) {
+        stop(paste0("Sigma must be a matrix with ", p.svc, " columns and ", p.svc, " rows."))
+      }
+      if (nrow(Sigma) != p.svc | ncol(Sigma) != p.svc) {
+        stop(paste0("Sigma must be a matrix with ", p.svc, " columns and ", p.svc, " rows."))
+      }
+    }
   }
 
   # Subroutines -----------------------------------------------------------
@@ -168,10 +190,26 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     } else {
       theta <- as.matrix(phi)
     }
-    for (i in 1:p.svc) {
-      Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
-      # Random spatial process
-      w.mat[, i] <- mvrnorm(1, rep(0, J), Sigma)
+    if (svc.joint) {
+      w.tmp <- matrix(NA, J, p.svc)
+      lambda <- t(chol(Sigma))
+      for (i in 1:p.svc) {
+        Sigma.full <- mkSpCov(coords, as.matrix(1), as.matrix(0), theta[i, ], cov.model)
+        w.tmp[, i] <- mvrnorm(1, rep(0, j), Sigma.full)
+      }
+      w.mat <- t(lambda %*% t(w.tmp))
+      # Sigma.full <- mkSpCov(coords, Sigma, matrix(0, p.svc, p.svc), theta, cov.model)
+      # w <- rmvn(1, rep(0,nrow(Sigma.full)), Sigma.full)
+      # for (i in 1:p.svc) {
+      #   w.mat[, i] <- w[seq(i, length(w), p.svc)]
+      # }
+    } else {
+      for (i in 1:p.svc) {
+        Sigma.full <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+        # Random spatial process
+        w.mat[, i] <- mvrnorm(1, rep(0, J), Sigma.full)
+      }
+      w.tmp <- NA
     }
     X.w <- X[, svc.cols, drop = FALSE]
     # Convert w to a J*ptilde x 1 vector, sorted so that the p.svc values for 
@@ -183,11 +221,17 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     for (j in 1:J) {
       X.tilde[j, ((j - 1) * p.svc + 1):(j * p.svc)] <- X.w[j, ]
     }
+    if (svc.joint) {
+      lambda <- t(chol(Sigma))
+    } else {
+      lambda <- NA
+    }
   } else {
     w.mat <- NA
     X.w <- NA
+    lambda <- NA
+    w.tmp <- NA
   }
-
 
   # Random effects --------------------------------------------------------
   if (length(psi.RE) > 0) {
@@ -297,8 +341,9 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
 
   return(
     list(X = X, X.p = X.p, coords = coords,
-         w = w.mat, psi = psi, z = z, p = p, y = y, 
+         w = w.mat, w.factor = w.tmp, psi = psi, z = z, p = p, y = y, 
 	 X.p.re = X.p.re, X.re = X.re, X.w = X.w, 
-	 alpha.star = alpha.star, beta.star = beta.star)
+	 alpha.star = alpha.star, beta.star = beta.star, 
+         lambda = lambda)
   )
 }

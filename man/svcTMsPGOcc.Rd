@@ -1,13 +1,13 @@
-\name{svcMsPGOcc}
-\alias{svcMsPGOcc}
-\title{Function for Fitting Multi-Species Spatially-Varying Coefficient Occupancy Models}
+\name{svcTMsPGOcc}
+\alias{svcTMsPGOcc}
+\title{Function for Fitting Multi-Species Multi-Season Spatially-Varying Coefficient Occupancy Models}
 
 \description{
-  The function \code{svcMsPGOcc} fits multi-species spatially-varying coefficient occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Models are implemented using a Nearest Neighbor Gaussian Process. 
+  **Experimental** The function \code{svcTMsPGOcc} fits multi-species multi-season spatially-varying coefficient occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Models are implemented using a Nearest Neighbor Gaussian Process. This function is in active development and should be used with caution.
 }
 
 \usage{
-svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
+svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
           svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
           n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
 	  n.factors, n.batch, batch.length, 
@@ -33,18 +33,22 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{data}{a list containing data necessary for model fitting.
     Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, 
     \code{coords}, and \code{range.ind}. 
-    \code{y} is a three-dimensional array with first dimension equal to the 
-    number of species, second dimension equal to the number of sites, and 
-    third dimension equal to the maximum number of replicates at a given site. 
-    \code{occ.covs} is a matrix or data frame containing the variables 
-    used in the occurrence portion of the model, with \eqn{J}{J} rows for 
-    each column (variable). \code{det.covs} is a list of variables included 
-    in the detection portion of the model. Each list element is a different 
-    detection covariate, which can be site-level or observational-level. 
-    Site-level covariates are specified as a vector of length \eqn{J}{J} while 
-    observation-level covariates are specified as a matrix or data frame 
-    with the number of rows equal to \eqn{J}{J} and number of columns equal 
-    to the maximum number of replicates at a given site. \code{coords} is a 
+    \code{y} is a four-dimensional array with first dimension equal to the 
+    number of species, second dimension equal to the number of sites, third
+    dimension equal to the number of primary time periods, and 
+    fourth dimension equal to the maximum number of secondary replicates at a given site. 
+    \code{occ.covs} is a list of variables included in the occurrence portion of the model. Each
+    list element is a different occurrence covariate, which can be site level
+    or site/primary time period level. Site-level covariates are specified as a vector of 
+    length \eqn{J}{J} while site/primary time period level covariates are specified as a matrix
+    with rows corresponding to sites and columns correspond to primary time periods.
+    Similarly, \code{det.covs} is a list of variables included in the detection
+    portion of the model, with each list element corresponding to an individual variable.    
+    In addition to site-level and/or site/primary time period-level, 
+    detection covariates can also be observational-level. Observation-level covariates
+    are specified as a three-dimensional array with first dimension corresponding to 
+    sites, second dimension corresponding to primary time period, and third 
+    dimension corresponding to replicate. \code{coords} is a 
     \eqn{J \times 2}{J x 2} matrix of the observation coordinates. Note that 
     \code{spOccupancy} assumes coordinates are specified in a projected coordinate system.
     \code{range.ind} is a matrix with rows corresponding to species and columns
@@ -209,7 +213,7 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{n.chains}{the number of chains to run in sequence.}
 
-  \item{k.fold}{specifies the number of \emph{k} folds for cross-validation. 
+  \item{k.fold}{not currently supported. specifies the number of \emph{k} folds for cross-validation. 
     If not specified as an argument, then cross-validation is not performed
     and \code{k.fold.threads} and \code{k.fold.seed} are ignored. In \emph{k}-fold
     cross-validation, the data specified in \code{data} is randomly
@@ -221,15 +225,15 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     after the full model is fit using all the data. Cross-validation results
     are reported in the \code{k.fold.deviance} object in the return list.}
   
-  \item{k.fold.threads}{number of threads to use for cross-validation. If 
+  \item{k.fold.threads}{not currently supported. number of threads to use for cross-validation. If 
     \code{k.fold.threads > 1} parallel processing is accomplished using the 
     \pkg{foreach} and \pkg{doParallel} packages. Ignored if \code{k.fold}
     is not specified.} 
   
-  \item{k.fold.seed}{seed used to split data set into \code{k.fold} parts
+  \item{k.fold.seed}{not currently supported. seed used to split data set into \code{k.fold} parts
     for k-fold cross-validation. Ignored if \code{k.fold} is not specified.}
 
-  \item{k.fold.only}{a logical value indicating whether to only perform 
+  \item{k.fold.only}{not currently supported. a logical value indicating whether to only perform 
     cross-validation (\code{TRUE}) or perform cross-validation after fitting 
     the full model (\code{FALSE}). Default value is \code{FALSE}.} 
   
@@ -283,7 +287,7 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \value{
-  An object of class \code{svcMsPGOcc} that is a list comprised of: 
+  An object of class \code{svcTMsPGOcc} that is a list comprised of: 
 
   \item{beta.comm.samples}{a \code{coda} object of posterior samples
     for the community level occurrence regression coefficients.}
@@ -309,11 +313,13 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{lambda.samples}{a \code{coda} object of posterior samples
     for the latent spatial factor loadings for each spatially-varying coefficient.}
 
-  \item{z.samples}{a three-dimensional array of posterior samples for
-    the latent occurrence values for each species.}
+  \item{z.samples}{a four-dimensional array of posterior samples for
+    the latent occurrence values for each species. Dimensions corresopnd to 
+    MCMC sample, species, site, and primary time period.}
 
-  \item{psi.samples}{a three-dimensional array of posterior samples for
-    the latent occupancy probability values for each species.}
+  \item{psi.samples}{a four-dimensional array of posterior samples for
+    the latent occupancy probability values for each species. Dimensions correspond
+    to MCMC sample, species, site, and primary time period.}
 
   \item{w.samples}{a four-dimensional array of posterior samples for 
     the latent spatial random effects for each spatial factor within each 
@@ -360,28 +366,36 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \examples{
-set.seed(400)
-
 # Simulate Data -----------------------------------------------------------
-J.x <- 10
-J.y <- 10 
+set.seed(500)
+J.x <- 8
+J.y <- 8
 J <- J.x * J.y
-n.rep <- sample(5, size = J, replace = TRUE)
-N <- 6
+# Years sampled
+n.time <- sample(3:10, J, replace = TRUE)
+# n.time <- rep(10, J)
+n.time.max <- max(n.time)
+# Replicates
+n.rep <- matrix(NA, J, max(n.time))
+for (j in 1:J) {
+  n.rep[j, 1:n.time[j]] <- sample(2:4, n.time[j], replace = TRUE)
+  # n.rep[j, 1:n.time[j]] <- rep(4, n.time[j])
+}
+N <- 7
 # Community-level covariate effects
 # Occurrence
-beta.mean <- c(0.2, -0.2, 0.3, -0.1, 0.4)
+beta.mean <- c(-3, -0.2, 0.5)
+trend <- FALSE
+sp.only <- 0
 p.occ <- length(beta.mean)
-tau.sq.beta <- c(0.6, 1.5, 0.4, 0.5, 0.3)
+tau.sq.beta <- c(0.6, 1.5, 1.4)
 # Detection
-alpha.mean <- c(0, 1.2, -0.5)
-tau.sq.alpha <- c(1, 0.5, 1.3)
+alpha.mean <- c(0, 1.2, -1.5)
+tau.sq.alpha <- c(1, 0.5, 2.3)
 p.det <- length(alpha.mean)
 # Random effects
-psi.RE <- list(levels = 15, 
-	       sigma.sq.psi = 0.7)
-p.RE <- list(levels = 20, 
-             sigma.sq.p = 0.5)
+psi.RE <- list()
+p.RE <- list()
 # Draw species-level effects from community means.
 beta <- matrix(NA, nrow = N, ncol = p.occ)
 alpha <- matrix(NA, nrow = N, ncol = p.det)
@@ -391,93 +405,76 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
-# Number of spatial factors for each SVC
-n.factors <- 2
-# The intercept and first two covariates have spatially-varying effects
-svc.cols <- c(1, 2, 3)
-p.svc <- length(svc.cols)
-q.p.svc <- n.factors * p.svc
-# Spatial decay parameters
-phi <- runif(q.p.svc, 3 / 0.9, 3 / 0.1)
-# A length N vector indicating the proportion of simulated locations
-# that are within the range for a given species.
-range.probs <- runif(N, 0.4, 1)
-factor.model <- TRUE
-cov.model <- 'spherical'
 sp <- TRUE
+svc.cols <- c(1, 2)
+p.svc <- length(svc.cols)
+n.factors <- 3
+phi <- runif(p.svc * n.factors, 3 / .9, 3 / .3)
+factor.model <- TRUE
+cov.model <- 'exponential'
 
-dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		psi.RE = psi.RE, p.RE = p.RE, phi = phi, sp = sp, svc.cols = svc.cols,
-		cov.model = cov.model, n.factors = n.factors, 
-		factor.model = factor.model, range.probs = range.probs)
+dat <- simTMsOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, N = N,
+		 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
+		 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
+                 svc.cols = svc.cols, n.factors = n.factors, phi = phi, sp = sp,
+                 cov.model = cov.model)
 
 y <- dat$y
 X <- dat$X
-X.re <- dat$X.re
 X.p <- dat$X.p
-X.p.re <- dat$X.p.re
 coords <- dat$coords
-range.ind <- dat$range.ind
+X.re <- dat$X.re
+X.p.re <- dat$X.p.re
 
-# Prep data for spOccupancy -----------------------------------------------
-# Occurrence covariates
-occ.covs <- cbind(X, X.re)
-colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.cov.3', 
-			'occ.cov.4', 'occ.factor.1')
-# Detection covariates
-det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3], 
-                 det.factor.1 = X.p.re[, , 1]) 
-# Data list
-data.list <- list(y = y, coords = coords, occ.covs = occ.covs, 
-                  det.covs = det.covs, range.ind = range.ind)
+occ.covs <- list(occ.cov.1 = X[, , 2],
+		 occ.cov.2 = X[, , 3])
+det.covs <- list(det.cov.1 = X.p[, , , 2],
+		 det.cov.2 = X.p[, , , 3])
+
+data.list <- list(y = y, occ.covs = occ.covs,
+                  det.covs = det.covs,
+                  coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
-                   phi.unif = list(a = 3 / 1, b = 3 / .1)) 
-inits.list <- list(alpha.comm = 0, 
-		   beta.comm = 0, 
-		   beta = 0, 
-		   alpha = 0,
-		   tau.sq.beta = 1, 
-		   tau.sq.alpha = 1, 
-		   z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+		   alpha.comm.normal = list(mean = 0, var = 2.72),
+		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   phi.unif = list(a = 3 / .9, b = 3 / .1))
+z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
+inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
+		   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
+		   phi = 3 / .5, z = z.init)
 # Tuning
 tuning.list <- list(phi = 1)
 
 # Number of batches
-n.batch <- 2
+n.batch <- 5
 # Batch length
 batch.length <- 25
-n.burn <- 0
+n.burn <- 25
 n.thin <- 1
 n.samples <- n.batch * batch.length
 
-out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 + 
-                                  occ.cov.4 + (1 | occ.factor.1),
-                  det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.factor.1),
-                  data = data.list,
-                  inits = inits.list,
-                  n.batch = n.batch,
-		  n.factors = n.factors,
-                  batch.length = batch.length,
-		  std.by.sp = TRUE,
-                  accept.rate = 0.43,
-                  priors = prior.list,
-		  svc.cols = svc.cols,
-                  cov.model = "spherical",
-                  tuning = tuning.list,
-                  n.omp.threads = 1,
-                  verbose = TRUE,
-                  NNGP = TRUE,
-                  n.neighbors = 5,
-                  search.type = 'cb',
-                  n.report = 10,
-                  n.burn = n.burn,
-		  n.thin = n.thin,
-		  n.chains = 1) 
+out <- svcTMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
+                det.formula = ~ det.cov.1 + det.cov.2,
+                data = data.list,
+                inits = inits.list,
+                n.batch = n.batch,
+                batch.length = batch.length,
+                accept.rate = 0.43,
+		NNGP = TRUE,
+		n.neighbors = 5,
+		n.factors = n.factors,
+		svc.cols = svc.cols,
+		cov.model = 'exponential',
+                priors = prior.list,
+                tuning = tuning.list,
+                n.omp.threads = 1,
+                verbose = TRUE,
+                n.report = 1,
+                n.burn = n.burn,
+		n.thin = n.thin,
+		n.chains = 1)
 
 summary(out)
 }

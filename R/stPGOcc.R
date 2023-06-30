@@ -216,7 +216,7 @@ stPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (!(ar1 %in% c(TRUE, FALSE))) {
     stop("error: ar1 must be either TRUE or FALSE")
   }
-
+ 
   # Formula -------------------------------------------------------------
   # Occupancy -----------------------
   if (is(occ.formula, 'formula')) {
