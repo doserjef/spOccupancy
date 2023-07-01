@@ -20,8 +20,8 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
                              'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
 			     'tPGOcc', 'stPGOcc', 'svcPGBinom', 'svcPGOcc', 
 			     'svcTPGBinom', 'svcTPGOcc', 'tMsPGOcc', 'intMsPGOcc', 
-			     'svcMsPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc\n")
+			     'svcMsPGOcc', 'svcTMsPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc, svcTMsPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -56,11 +56,21 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
     }
   }
 
-  if (class(object) %in% c('tMsPGOcc')) {
-    elpd <- sum(apply(object$like.samples, c(2, 3, 4), function(a) log(mean(a))), na.rm = TRUE)
-    pD <- sum(apply(object$like.samples, c(2, 3, 4), function(a) var(log(a))), na.rm = TRUE)
-    out <- c(elpd, pD, -2 * (elpd - pD))
-    names(out) <- c('elpd', 'pD', 'WAIC')
+  if (class(object) %in% c('tMsPGOcc', 'svcTMsPGOcc')) {
+    if (!by.sp) {
+      elpd <- sum(apply(object$like.samples, c(2, 3, 4), function(a) log(mean(a))), na.rm = TRUE)
+      pD <- sum(apply(object$like.samples, c(2, 3, 4), function(a) var(log(a))), na.rm = TRUE)
+      out <- c(elpd, pD, -2 * (elpd - pD))
+      names(out) <- c('elpd', 'pD', 'WAIC')
+    } else {
+      elpd <- apply(apply(object$like.samples, c(2, 3, 4), function(a) log(mean(a))), 
+                    1, sum, na.rm = TRUE) 
+      pD <- apply(apply(object$like.samples, c(2, 3, 4), function(a) var(log(a))), 
+                  1, sum, na.rm = TRUE)
+      out <- data.frame(elpd = elpd, 
+			pD = pD, 
+			WAIC = -2 * (elpd - pD))
+    }
   }
 
   # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {

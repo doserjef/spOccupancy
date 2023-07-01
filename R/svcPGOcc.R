@@ -326,6 +326,13 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     priors <- list()
   }
   names(priors) <- tolower(names(priors))
+  # Logical vector indicating what parameters are estimated and what 
+  # parameters are fixed. 6 is the total number of parameter types that 
+  # can be estimated here. Note that phi and nu are both fixed if phi.unif = 'fixed' 
+  all.params <- c('beta', 'alpha', 'phi', 'sigma.sq', 
+		  'sigma.sq.psi', 'sigma.sq.p')
+  n.params <- length(all.params)
+  fixed.params <- rep(FALSE, n.params)
   # beta -----------------------
   if ("beta.normal" %in% names(priors)) {
     if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
@@ -410,27 +417,36 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # Get distance matrix which is used if priors are not specified
   coords.D <- iDist(coords)
   if ("phi.unif" %in% names(priors)) {
-    if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
-      stop("error: phi.unif must be a list of length 2")
-    }
-    phi.a <- priors$phi.unif[[1]]
-    phi.b <- priors$phi.unif[[2]]
-    if (length(phi.a) != p.svc & length(phi.a) != 1) {
-      stop(paste("error: phi.unif[[1]] must be a vector of length ", 
-      	   p.svc, 
-           " or 1 with elements corresponding to phis' lower bound for each covariate with spatially-varying coefficients",
-           sep = ""))
-    }
-    if (length(phi.b) != p.svc & length(phi.b) != 1) {
-      stop(paste("error: phi.unif[[2]] must be a vector of length ", 
-      	   p.svc, 
-           " or 1 with elements corresponding to phis' upper bound for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(phi.a) != p.svc) {
-      phi.a <- rep(phi.a, p.svc)
-    }
-    if (length(phi.b) != p.svc) {
-      phi.b <- rep(phi.b, p.svc)
+    if (priors$phi.unif[1] == 'fixed') {
+      fixed.params[which(all.params == 'phi')] <- TRUE 
+      phi.a <- rep(1, p.svc)
+      phi.b <- rep(1, p.svc)
+      if (cov.model == 'matern') {
+        message("phi is specified as fixed in priors$phi.unif. This will also fix nu at its initial value. Fixing phi without nu (or vice versa) is not supported.")
+      }
+    } else {
+      if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
+        stop("error: phi.unif must be a list of length 2")
+      }
+      phi.a <- priors$phi.unif[[1]]
+      phi.b <- priors$phi.unif[[2]]
+      if (length(phi.a) != p.svc & length(phi.a) != 1) {
+        stop(paste("error: phi.unif[[1]] must be a vector of length ", 
+        	   p.svc, 
+             " or 1 with elements corresponding to phis' lower bound for each covariate with spatially-varying coefficients",
+             sep = ""))
+      }
+      if (length(phi.b) != p.svc & length(phi.b) != 1) {
+        stop(paste("error: phi.unif[[2]] must be a vector of length ", 
+        	   p.svc, 
+             " or 1 with elements corresponding to phis' upper bound for each covariate with spatially-varying coefficients", sep = ""))
+      }
+      if (length(phi.a) != p.svc) {
+        phi.a <- rep(phi.a, p.svc)
+      }
+      if (length(phi.b) != p.svc) {
+        phi.b <- rep(phi.b, p.svc)
+      }
     }
   } else {
     if (verbose) {
@@ -439,139 +455,67 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     phi.a <- rep(3 / max(coords.D), p.svc)
     phi.b <- rep(3 / sort(unique(c(coords.D)))[2], p.svc)
   }
-  # lambda (Cholesky of SVC cross-covariance matrix) ------
-  joint.svc <- FALSE
-  n.lower.tri <- p.svc * (p.svc - 1) / 2
-  if (("lambda.lower.tri.normal" %in% names(priors))) {
-    joint.svc <- TRUE
-    if (!is.list(priors$lambda.lower.tri.normal) | length(priors$lambda.lower.tri.normal) != 2) {
-      stop("error: lambda.lower.tri.normal must be a list of length 2")
-    }
-    mu.lambda <- priors$lambda.lower.tri.normal[[1]]
-    sigma.lambda <- priors$lambda.lower.tri.normal[[2]]
-    if (length(mu.lambda) != n.lower.tri & length(mu.lambda) != 1) {
-      if (n.lower.tri == 1) {
-        stop(paste("error: lambda.lower.tri.normal[[1]] must be a vector of length ",
-        	     n.lower.tri, " with elements corresponding to lambda.lower.tri's mean", sep = ""))
-      } else {
-        stop(paste("error: lambda.lower.tri.normal[[1]] must be a vector of length ",
-        	     n.lower.tri, " or 1 with elements corresponding to lambda.lower.tri's mean", sep = ""))
-      }
-    }
-    if (length(sigma.lambda) != n.lower.tri & length(sigma.lambda) != 1) {
-      if (n.lower.tri == 1) {
-        stop(paste("error: lambda.lower.tri.normal[[2]] must be a vector of length ",
-      	   n.lower.tri, " with elements corresponding to lambda.lower.tri's variance", sep = ""))
-      } else {
-        stop(paste("error: lambda.lower.tri.normal[[2]] must be a vector of length ",
-      	   n.lower.tri, " or 1 with elements corresponding to lambda.lower.tri's variance", sep = ""))
-      }
-    }
-    if (length(sigma.lambda) != n.lower.tri) {
-      sigma.lambda <- rep(sigma.lambda, n.lower.tri)
-    }
-    if (length(mu.lambda) != n.lower.tri) {
-      mu.lambda <- rep(mu.lambda, n.lower.tri)
-    }
-  }
-  if (!("sigma.sq.ig" %in% names(priors)) & !("sigma.sq.unif" %in% names(priors)) & 
-      !("lambda.lower.tri.normal" %in% names(priors))) {
-    joint.svc <- TRUE
-    if (verbose) {
-      message("No prior specified for the SVC (co)variances.\nAssuming SVCs are correlated, and seeting prior mean of lower.tri(lambda) to standard normal\n")
-    }
-    mu.lambda <- rep(0, n.lower.tri)
-    sigma.lambda <- rep(1, n.lower.tri)
-  }
-  if (!joint.svc) {
-    mu.lambda <- NA
-    sigma.lambda <- NA
-  }
-  
-  # lambda.diag --------------------------
-  if ("lambda.diag.ig" %in% names(priors)) {
-    if (!is.list(priors$lambda.diag.ig) | length(priors$lambda.diag.ig) != 2) {
-      stop("error: lambda.diag.ig must be a list of length 2")
-    }
-    lambda.diag.a <- priors$lambda.diag.ig[[1]]
-    lambda.diag.b <- priors$lambda.diag.ig[[2]]
-    if (length(lambda.diag.a) != p.svc & length(lambda.diag.a) != 1) {
-      stop(paste("error: lambda.diag.ig[[1]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to lambda.diags' shape for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(lambda.diag.b) != p.svc & length(lambda.diag.b) != 1) {
-      stop(paste("error: lambda.diag.ig[[2]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to lambda.diags' scale for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(lambda.diag.a) != p.svc) {
-      lambda.diag.a <- rep(lambda.diag.a, p.svc)
-    }
-    if (length(lambda.diag.b) != p.svc) {
-      lambda.diag.b <- rep(lambda.diag.b, p.svc)
-    }
-  } else if (joint.svc) {
-    if (verbose) {
-      message("No prior specified for lambda.diag.\nUsing an inverse-Gamma prior with the shape parameter set to 2 and scale parameter to 1.\n")
-    }
-    lambda.diag.a <- rep(2, p.svc)
-    lambda.diag.b <- rep(1, p.svc)
-  }
-  if (!joint.svc) {
-    lambda.diag.a <- NA
-    lambda.diag.b <- NA
-  }
-
   # sigma.sq --------------------------
   if (("sigma.sq.ig" %in% names(priors)) & ("sigma.sq.unif" %in% names(priors))) {
-    stop("cannot specify both an IG and a uniform prior for sigma.sq")
-  }
-  if (joint.svc & ("sigma.sq.ig" %in% names(priors) | "sigma.sq.unif" %in% names(priors))) {
-    stop("cannot specify prior for sigma.sq when assuming correlations between SVCs. Please assign priors to lambda.lower.tri.normal and lambda.diag instead.")
+    stop("error: cannot specify both an IG and a uniform prior for sigma.sq")
   }
   if ("sigma.sq.ig" %in% names(priors)) {
     sigma.sq.ig <- TRUE
-    if (!is.list(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-      stop("error: sigma.sq.ig must be a list of length 2")
-    }
-    sigma.sq.a <- priors$sigma.sq.ig[[1]]
-    sigma.sq.b <- priors$sigma.sq.ig[[2]]
-    if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
-      stop(paste("error: sigma.sq.ig[[1]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
-      stop(paste("error: sigma.sq.ig[[2]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(sigma.sq.a) != p.svc) {
-      sigma.sq.a <- rep(sigma.sq.a, p.svc)
-    }
-    if (length(sigma.sq.b) != p.svc) {
-      sigma.sq.b <- rep(sigma.sq.b, p.svc)
+    if (priors$sigma.sq.ig[1] == 'fixed') { # inverse-Gamma
+      fixed.params[which(all.params == 'sigma.sq')] <- TRUE 
+      sigma.sq.a <- rep(1, p.svc)
+      sigma.sq.b <- rep(1, p.svc)
+    } else {
+      if (!is.list(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+        stop("error: sigma.sq.ig must be a list of length 2")
+      }
+      sigma.sq.a <- priors$sigma.sq.ig[[1]]
+      sigma.sq.b <- priors$sigma.sq.ig[[2]]
+      if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
+        stop(paste("error: sigma.sq.ig[[1]] must be a vector of length ", 
+        	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
+      }
+      if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
+        stop(paste("error: sigma.sq.ig[[2]] must be a vector of length ", 
+        	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
+      }
+      if (length(sigma.sq.a) != p.svc) {
+        sigma.sq.a <- rep(sigma.sq.a, p.svc)
+      }
+      if (length(sigma.sq.b) != p.svc) {
+        sigma.sq.b <- rep(sigma.sq.b, p.svc)
+      }
     }
   } else if ("sigma.sq.unif" %in% names(priors)) { # uniform prior
-    sigma.sq.ig <- FALSE
-    if (!is.list(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
-      stop("error: sigma.sq.unif must be a list of length 2")
-    }
-    sigma.sq.a <- priors$sigma.sq.unif[[1]]
-    sigma.sq.b <- priors$sigma.sq.unif[[2]]
-    if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
-      stop(paste("error: sigma.sq.unif[[1]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
-      stop(paste("error: sigma.sq.unif[[2]] must be a vector of length ", 
-      	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
-    }
-    if (length(sigma.sq.a) != p.svc) {
-      sigma.sq.a <- rep(sigma.sq.a, p.svc)
-    }
-    if (length(sigma.sq.b) != p.svc) {
-      sigma.sq.b <- rep(sigma.sq.b, p.svc)
+    if (priors$sigma.sq.unif[1] == 'fixed') {
+      sigma.sq.ig <- TRUE # This just makes the C++ side a bit easier
+      fixed.params[which(all.params == 'sigma.sq')] <- TRUE
+      sigma.sq.a <- 1
+      sigma.sq.b <- 1
+    } else {
+      sigma.sq.ig <- FALSE
+      if (!is.list(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
+        stop("error: sigma.sq.unif must be a list of length 2")
+      }
+      sigma.sq.a <- priors$sigma.sq.unif[[1]]
+      sigma.sq.b <- priors$sigma.sq.unif[[2]]
+      if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
+        stop(paste("error: sigma.sq.unif[[1]] must be a vector of length ", 
+        	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
+      }
+      if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
+        stop(paste("error: sigma.sq.unif[[2]] must be a vector of length ", 
+        	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
+      }
+      if (length(sigma.sq.a) != p.svc) {
+        sigma.sq.a <- rep(sigma.sq.a, p.svc)
+      }
+      if (length(sigma.sq.b) != p.svc) {
+        sigma.sq.b <- rep(sigma.sq.b, p.svc)
+      }
     }
   } else {
-    if (verbose & !joint.svc) {
+    if (verbose) {
       message("No prior specified for sigma.sq.\nUsing an inverse-Gamma prior with the shape parameter set to 2 and scale parameter to 1.\n")
     }
     sigma.sq.ig <- TRUE
@@ -786,39 +730,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       message("phi is not specified in initial values.\nSetting initial value to random values from the prior distribution\n")
     }
   }
-  # lambda ----------------------------
-  if (joint.svc) {
-    if ("lambda" %in% names(inits)) {
-      lambda.inits <- inits[["lambda"]]
-      if (!is.matrix(lambda.inits)) {
-        stop(paste("error: initial values for lambda must be a matrix with dimensions ",
-          	 p.svc, " x ", p.svc, sep = ""))
-      }
-      if (nrow(lambda.inits) != p.svc | ncol(lambda.inits) != p.svc) {
-        stop(paste("error: initial values for lambda must be a matrix with dimensions ",
-          	 p.svc, " x ", p.svc, sep = ""))
-      }
-      if (sum(diag(lambda.inits) > 0) != p.svc) {
-        stop("error: diagonal of inits$lambda matrix must be all greater than 0")
-      }
-      if (sum(lambda.inits[upper.tri(lambda.inits)]) != 0) {
-        stop("error: upper triangle of inits$lambda must be all 0s")
-      }
-    } else {
-      lambda.inits <- matrix(0, p.svc, p.svc)
-      diag(lambda.inits) <- 1
-      lambda.inits[lower.tri(lambda.inits)] <- 0
-      if (verbose) {
-        message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0 and diagonals to 1\n")
-      }
-      # Remember, ordered by column, then row within column
-      lambda.inits <- c(lambda.inits)
-    }
-  } else {
-    lambda.inits <- matrix(0, p.svc, p.svc)
-  }
   # sigma.sq ------------------------
-  if (!joint.svc) {
   if ("sigma.sq" %in% names(inits)) {
     sigma.sq.inits <- inits[["sigma.sq"]]
     if (length(sigma.sq.inits) != p.svc & length(sigma.sq.inits) != 1) {
@@ -837,10 +749,6 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     if (verbose) {
       message("sigma.sq is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
     }
-  }
-  } else {
-    # Set to 1 for the "factor model" approach
-    sigma.sq.inits <- rep(1, p.svc)
   }
   # w -----------------------------
   if ("w" %in% names(inits)) {
@@ -967,10 +875,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   X.w <- X[, svc.cols, drop = FALSE]
 
   # Get tuning values ---------------------------------------------------
+  # Not accessed, but necessary to keep things in line. 
   sigma.sq.tuning <- rep(0, p.svc)
   phi.tuning <- rep(0, p.svc)
   nu.tuning <- rep(0, p.svc)
-  lambda.tuning <- rep(0, p.svc * p.svc)
   if (missing(tuning)) {
     phi.tuning <- rep(1, p.svc)
     if (cov.model == 'matern') {
@@ -1005,7 +913,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         	   p.svc, sep = ""))
       }
     }
-    if (!sigma.sq.ig & !joint.svc) {
+    if (!sigma.sq.ig) {
       # sigma.sq --------------------------
       if(!"sigma.sq" %in% names(tuning)) {
         stop("error: sigma.sq must be specified in tuning value list")
@@ -1018,22 +926,8 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 		   p.svc, sep = ""))
       }
     }
-    if (joint.svc) {
-      # lambda --------------------------
-      if(!"lambda" %in% names(tuning)) {
-        stop("error: lambda must be specified in tuning value list")
-      }
-      lambda.tuning <- tuning$lambda
-      if (length(lambda.tuning) == 1) {
-        lambda.tuning <- rep(tuning$lambda, p.svc * p.svc)
-      } else if (length(lambda.tuning) != (p.svc * p.svc)) {
-        stop(paste("error: lambda tuning must be either a single value or a vector of length ",
-		   p.svc * p.svc, sep = ""))
-      }
-    }
   }
   tuning.c <- log(c(sigma.sq.tuning, phi.tuning, nu.tuning))
-  lambda.tuning.c <- log(c(lambda.tuning))
   # Set model.deviance to NA for returning when no cross-validation
   model.deviance <- NA
   curr.chain <- 1
@@ -1095,8 +989,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(X.p) <- "double"
     storage.mode(X) <- "double"
     storage.mode(X.w) <- "double"
-    consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, p.svc, 
-                sigma.sq.ig, joint.svc)
+    consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, p.svc)
     storage.mode(consts) <- "integer"
     storage.mode(K) <- "double"
     storage.mode(coords) <- "double"
@@ -1104,7 +997,6 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(alpha.inits) <- "double"
     storage.mode(phi.inits) <- "double"
     storage.mode(sigma.sq.inits) <- "double"
-    storage.mode(lambda.inits) <- 'double'
     storage.mode(nu.inits) <- "double"
     storage.mode(w.inits) <- "double"
     storage.mode(z.long.indx) <- "integer"
@@ -1118,12 +1010,8 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(nu.b) <- "double"
     storage.mode(sigma.sq.a) <- "double"
     storage.mode(sigma.sq.b) <- "double"
-    storage.mode(lambda.diag.a) <- 'double'
-    storage.mode(lambda.diag.b) <- 'double'
-    storage.mode(mu.lambda) <- 'double'
-    storage.mode(sigma.lambda) <- 'double'
+    storage.mode(sigma.sq.ig) <- "integer"
     storage.mode(tuning.c) <- "double"
-    storage.mode(lambda.tuning.c) <- 'double'
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
     storage.mode(accept.rate) <- "double"
@@ -1139,6 +1027,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(cov.model.indx) <- "integer"
     chain.info <- c(curr.chain, n.chains)
     storage.mode(chain.info) <- "integer"
+    storage.mode(fixed.params) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
 				 to = n.samples, 
 				 by = as.integer(n.thin)))
@@ -1174,18 +1063,13 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         if ((i > 1) & (!fix.inits)) {
           beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
           alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-	  if (joint.svc) {
-            lambda.inits <- matrix(0, p.svc, p.svc)
-            diag(lambda.inits) <- runif(p.svc, 0.01, 2)
-            lambda.inits[lower.tri(lambda.inits)] <- rnorm(n.lower.tri)
-	    lambda.inits <- c(lambda.inits)
-	  } else {
+          if (!fixed.params[which(all.params == 'sigma.sq')]) {
 	    if (sigma.sq.ig) {
               sigma.sq.inits <- rigamma(p.svc, sigma.sq.a, sigma.sq.b)
 	    } else {
               sigma.sq.inits <- runif(p.svc, sigma.sq.a, sigma.sq.b)
 	    }
-	  }
+          }
           phi.inits <- runif(p.svc, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(p.svc, nu.a, nu.b)
@@ -1202,22 +1086,20 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         storage.mode(chain.info) <- "integer"
         # Run the model in C    
         out.tmp[[i]] <- .Call("svcPGOccNNGP", y, X, X.w, X.p, coords, X.re, X.p.re, consts, 
-                              K, n.occ.re.long, n.det.re.long, 
-                              n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
+        	                    K, n.occ.re.long, n.det.re.long, 
+            	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
                               beta.inits, alpha.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
-                              beta.star.inits, alpha.star.inits, z.inits,
-                              w.inits, phi.inits, sigma.sq.inits, lambda.inits, 
-			      nu.inits, z.long.indx, 
+        	                    beta.star.inits, alpha.star.inits, z.inits,
+                              w.inits, phi.inits, sigma.sq.inits, nu.inits, z.long.indx, 
                               beta.star.indx, beta.level.indx, alpha.star.indx, 
-                              alpha.level.indx, mu.beta, mu.alpha, 
+          		    alpha.level.indx, mu.beta, mu.alpha, 
                               Sigma.beta, Sigma.alpha, phi.a, phi.b, 
-                              sigma.sq.a, sigma.sq.b, lambda.diag.a, lambda.diag.b, 
-			      mu.lambda, sigma.lambda, nu.a, nu.b, 
-          		      sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b, 
-        	              tuning.c, lambda.tuning.c, cov.model.indx,
+                              sigma.sq.a, sigma.sq.b, nu.a, nu.b, 
+          		    sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b, 
+        	                    tuning.c, cov.model.indx,
                               n.batch, batch.length, 
                               accept.rate, n.omp.threads, verbose, n.report, 
-                              samples.info, chain.info)
+                              samples.info, chain.info, fixed.params, sigma.sq.ig)
         chain.info[1] <- chain.info[1] + 1
       }
       # Calculate R-Hat ---------------
@@ -1230,9 +1112,25 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2])
-        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        if (!fixed.params[which(all.params == 'sigma.sq')] & 
+            !fixed.params[which(all.params == 'phi')]) { # none are fixed
+          out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					        mcmc(t(a$theta.samples)))), 
         			      autoburnin = FALSE)$psrf[, 2]
+        } else if (fixed.params[which(all.params == 'sigma.sq')] & 
+          	 !fixed.params[which(all.params == 'phi')]) { # sigma.sq is fixed
+          out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					        mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2])
+        } else if (!fixed.params[which(all.params == 'sigma.sq')] & 
+          	 fixed.params[which(all.params == 'phi')]) { # phi/nu is fixed
+          tmp <- ifelse(cov.model == 'matern', NA, c(NA, NA))
+          out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					        mcmc(t(a$theta.samples[1, , drop = FALSE])))), 
+        			      autoburnin = FALSE)$psrf[, 2], tmp)
+        } else { # both are fixed
+          out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
+        } 
         if (p.det.re > 0) {
           out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.p.samples)))), 
@@ -1289,11 +1187,6 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       out$psi.samples <- mcmc(out$psi.samples[, order(ord), drop = FALSE])
       out$like.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$like.samples))))
       out$like.samples <- mcmc(out$like.samples[, order(ord), drop = FALSE])
-      # TODO: need to add names and update this 
-      if (joint.svc) {
-        out$lambda.samples <- mcmc(do.call(rbind, 
-					   lapply(out.tmp, function(a) t(a$lambda.samples))))
-      }
       # Get detection covariate stuff in right order. Method of doing this
       # depends on if there are observation level covariates or not. 
       if (!binom) {
@@ -1531,7 +1424,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 			 sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 			 sigma.sq.p.a, sigma.sq.p.b, tuning.c, cov.model.indx, 
 			 n.batch, batch.length, accept.rate, n.omp.threads.fit, verbose.fit, 
-			 n.report, samples.info, chain.info, sigma.sq.ig)
+			 n.report, samples.info, chain.info, fixed.params, sigma.sq.ig)
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
         out.fit$alpha.samples <- mcmc(t(out.fit$alpha.samples))
@@ -1640,4 +1533,5 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   out$run.time <- proc.time() - ptm
   return(out)
 }
+
 
