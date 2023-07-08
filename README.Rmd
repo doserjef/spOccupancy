@@ -13,17 +13,11 @@ knitr::opts_chunk$set(
 
 # spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
-```{r, echo=FALSE, results='asis', message=FALSE}
-library(badger)
-cat(
-	badger::badge_cran_release("spOccupancy", "green"),
-	#badger::badge_custom("Cite spOccupancy", "in arXiv", "yellow", "https://jeffdoser.com"),
-	badger::badge_cran_download("spOccupancy", "grand-total", "blue"),
-	badger::badge_codecov()
-)
-```
+[![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
+[![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://cran.r-project.org/web/packages/spOccupancy/index.html)
+[![Codecov test coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
-spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;ly-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. As of v0.4.0, `spOccupancy` provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
+spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;lya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. As of v0.4.0, `spOccupancy` provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
 
 ## Installation
 
@@ -53,7 +47,10 @@ install.packages("spOccupancy")
 | `svcPGBinom()`         | Single-species spatially-varying coefficient GLM                         |
 | `svcPGOcc()`           | Single-species spatially-varying coefficient occupancy model             |
 | `svcTPGBinom()`        | Single-species spatially-varying coefficient multi-season GLM            |
-| `svcTPGOcc()`          | Single-sepcies spatially-varying coefficient multi-season occupancy model|
+| `svcTPGOcc()`          | Single-species spatially-varying coefficient multi-season occupancy model|
+| `svcMsPGOcc()`         | Multi-species spatially-varying coefficient occupancy model              |
+| `tMsPGOcc()`           | Multi-species, multi-season occupancy model                              |
+| `svcTMsPGOcc()`        | Multi-species, multi-season spatially-varying coefficient occupancy model|
 | `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit     |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                       |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                   |
@@ -62,6 +59,7 @@ install.packages("spOccupancy")
 | `simBinom()`           | Simulate detection-nondetection data with perfect detection              |
 | `simTBinom()`          | Simulate multi-season detection-nondetection data with perfect detection |
 | `simMsOcc()`           | Simulate multi-species occupancy data                                    |
+| `simTMsOcc()`          | Simulate multi-species, multi-season occupancy data                      |
 | `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources        |
 | `simIntMsOcc()`        | Simulate multi-species occupancy data from multiple data sources         |
 

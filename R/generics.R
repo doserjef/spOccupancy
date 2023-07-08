@@ -369,7 +369,8 @@ summary.ppcOcc <- function(object, level = 'both',
     cat("Fit statistic: ", object$fit.stat, "\n")
   }
 
-  if (object$class %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc')) {
+  if (object$class %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 
+			  'svcMsPGOcc')) {
 
     if (tolower(level) == 'community') {
       cat("----------------------------------------\n");
@@ -4353,8 +4354,6 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   if (!any(is.data.frame(X.0), is.matrix(X.0))) {
     stop("error: X.0 must be a data.frame or matrix\n")
   }
-  # TODO: emphasize in the documentation the order of X.0 must match the order
-  #       in which covariates are placed in the formula.
 
   ptm <- proc.time()
 
@@ -4432,11 +4431,13 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
       indx <- which(colnames(X.0.new) %in% x.re.names)
+      if (length(indx) == 0) {
+        stop("error: column names in X.0 must match variable names in data$occ.covs")
+      }
       X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
       X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
       X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
-      # TODO: need to double check this works with multiple random effects.
       if (!ignore.RE) {
         for (i in 1:p.occ.re) {
           for (j in 1:nrow(X.re)) {
@@ -4506,7 +4507,7 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     } else {
       # Get nearest neighbors
       # nn2 is a function from RANN.
-      nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
+      nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1
 
       storage.mode(coords) <- "double"
       storage.mode(N) <- "integer"
@@ -4546,7 +4547,6 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
 
     # If some of the sites are sampled
-    # TODO: I don't believe this is correct. Need to check with svcTMsPGOcc
     if (nrow(X.0) != J.str) {
       tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
       tmp[, , coords.0.indx] <- out$z.0.samples
@@ -4558,90 +4558,13 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       out$psi.0.samples <- tmp
       tmp <- array(NA, dim = c(n.post, q, nrow(X.0), p.svc))
       tmp[, , coords.0.indx, ] <- out$w.0.samples
-      tmp[, , coords.place.indx, ] <- object$w.samples[, , coords.indx, ]
+      tmp[, , coords.place.indx, ] <- object$w.samples[, , coords.indx, , drop = FALSE]
       out$w.0.samples <- tmp
     }
   } # occurrence predictions
   # Detection predictions -------------------------------------------------
   if (tolower(type) == 'detection') {
-    p.det <- ncol(object$X.p)
-    p.design <- p.det
-    if (object$pRE) {
-      p.design <- p.det + ncol(object$sigma.sq.p.samples)
-    }
-    if (ncol(X.0) != p.design) {
-      stop(paste("error: X.0 must have ", p.design, " columns\n", sep = ''))
-    }
-    # Composition sampling --------------------------------------------------
-    N <- dim(object$y)[1]
-    sp.indx <- rep(1:N, p.det)
-    n.post <- object$n.post * object$n.chains
-    alpha.samples <- as.matrix(object$alpha.samples)
-    out <- list()
-    out$p.0.samples <- array(NA, dim = c(n.post, N, nrow(X.0)))
-    if (object$pRE) {
-      p.det.re <- length(object$p.re.level.names)
-    } else {
-      p.det.re <- 0
-    }
-    if (object$pRE & !ignore.RE) {
-      alpha.star.samples <- object$alpha.star.samples
-      p.re.level.names <- object$p.re.level.names
-      # Get columns in design matrix with random effects
-      x.p.re.names <- colnames(object$X.p.re)
-      indx <- which(colnames(X.0) %in% x.p.re.names)
-      if (length(indx) == 0) {
-        stop("error: column names in X.0 must match variable names in data$det.covs")
-      }
-      X.re <- as.matrix(X.0[, indx, drop = FALSE])
-      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
-      n.det.re <- length(unlist(p.re.level.names))
-      X.re.ind <- matrix(NA, nrow(X.re), p.det.re)
-      for (i in 1:p.det.re) {
-        for (j in 1:nrow(X.re)) {
-          tmp <- which(p.re.level.names[[i]] == X.re[j, i])
-          if (length(tmp) > 0) {
-            if (i > 1) {
-              X.re.ind[j, i] <- tmp + length(p.re.level.names[[i - 1]])
-            } else {
-              X.re.ind[j, i] <- tmp
-            }
-          }
-        }
-      }
-      # Create the random effects corresponding to each
-      # new location
-      # ORDER: ordered by site, then species within site.
-      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.re))
-      for (i in 1:N) {
-        for (t in 1:p.det.re) {
-          for (j in 1:nrow(X.re)) {
-            if (!is.na(X.re.ind[j, t])) {
-              alpha.star.sites.0.samples[, (j - 1) * N + i] <-
-                alpha.star.samples[, (i - 1) * n.det.re + X.re.ind[j, t]] +
-                alpha.star.sites.0.samples[, (j - 1) * N + i]
-            } else {
-              alpha.star.sites.0.samples[, (j - 1) * N + i] <-
-                rnorm(n.post, 0, sqrt(object$sigma.sq.p.samples[, t])) +
-                alpha.star.sites.0.samples[, (j - 1) * N + i]
-            }
-          } # j
-        } # t
-      } # i
-    } else {
-      X.fix <- X.0
-      alpha.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
-      p.det.re <- 0
-    }
-    J.str <- nrow(X.0)
-    # Make predictions
-    for (i in 1:N) {
-      for (j in 1:J.str) {
-        out$p.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*%
-          				     t(alpha.samples[, sp.indx == i]) +
-                                               alpha.star.sites.0.samples[, (j - 1) * N + i])
-      } # j
-    } # i
+    out <- predict.msPGOcc(object, X.0, ignore.RE, type)
   }
 
   out$run.time <- proc.time() - ptm
@@ -4666,11 +4589,7 @@ summary.svcTMsPGOcc <- function(object,
   summary.sfMsPGOcc(object, level, quantiles, digits)
 }
 
-# fitted.svcMsPGOcc <- function(object, ...) {
-#   fitted.msPGOcc(object)
-# }
-
-# TODO: need to check this thoroughly
+# TODO: need to check
 predict.svcTMsPGOcc <- function(object, X.0, coords.0,
 				t.cols, n.omp.threads = 1,
 			        verbose = TRUE, n.report = 100,
@@ -4712,8 +4631,6 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
   if (missing(t.cols)) {
     stop("error: t.cols must be specified\n")
   }
-  # TODO: emphasize in the documentation the order of X.0 must match the order
-  #       in which covariates are placed in the formula.
 
   ptm <- proc.time()
 
@@ -4858,7 +4775,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
 
     J.str <- nrow(X.fix) / n.years.max
 
-    # TODO: this is not correct. Something is wrong here.
+    # TODO: check this.
     X.big <- array(NA, dim = c(J.str, n.years.max, ncol(X.fix), N))
     for (i in 1:N) {
       X.big[, , , i] <- array(X.fix, dim = c(J.str, n.years.max, ncol(X.fix)))[, , , drop = FALSE]
@@ -4921,7 +4838,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
       out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, J.str, n.years.max, n.post))
       out$psi.0.samples <- aperm(out$psi.0.samples, c(4, 1, 2, 3))
     } else { # If some new and some old sites
-      # TODO: need to do testing for this.
+      # TODO: needs testing
       tmp <- array(NA, dim = c(N, J.str, n.years.max, n.post))
       tmp[, coords.0.indx, , ] <- out$z.0.samples[, , , t.cols]
       tmp[, coords.place.indx, , ] <- aperm(object$z.samples[, , coords.indx, ], c(2, 3, 4, 1))
@@ -4930,6 +4847,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
       tmp[, coords.0.indx, , ] <- out$psi.0.samples[, , , t.cols]
       tmp[, coords.place.indx, , ] <- aperm(object$psi.samples[, , coords.indx, ], c(2, 3, 4, 1))
       out$psi.0.samples <- aperm(tmp, c(4, 1, 2, 3))
+      # TODO: this is wrong for sure.
       tmp <- array(NA, dim = c(q, J.str, p.svc, n.post))
       tmp[, coords.0.indx, , ] <- out$w.0.samples
       tmp[, coords.place.indx, , ] <- aperm(object$w.samples[, , coords.indx, ], c(2, 3, 4, 1))
@@ -4937,7 +4855,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
     }
   } # occurrence predictions
   # Detection predictions -------------------------------------------------
-  # TODO: needs to be updated.
+  # TODO: needs update
   if (tolower(type) == 'detection') {
     p.det <- ncol(object$X.p)
     p.design <- p.det
@@ -5027,5 +4945,93 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
 
   out
 
+}
+
+# tMsPGOcc ----------------------------------------------------------------
+print.tMsPGOcc <- function(x, ...) {
+  print.msPGOcc(x)
+}
+
+summary.tMsPGOcc <- function(object, level = 'both', quantiles = c(0.025, 0.5, 0.975),
+			     digits = max(3L, getOption("digits") - 3L), ...) {
+  summary.msPGOcc(object, level, quantiles, digits)
+}
+
+fitted.tMsPGOcc <- function(object, ...) {
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+  # Functions -------------------------------------------------------------
+  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
+  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
+
+  # Some initial checks -------------------------------------------------
+  # Object ----------------------------
+  if (missing(object)) {
+    stop("error: object must be specified")
+  }
+  if (!(class(object) %in% c('tMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc'))) {
+    stop("error: object must be of class tMsPGOcc, stMsPGOcc, svcTMsPGOcc\n")
+  }
+  n.post <- object$n.post * object$n.chains
+  X.p <- object$X.p
+  y <- object$y
+  n.years.max <- dim(y)[3]
+  K.max <- dim(y)[4]
+  J <- dim(y)[2]
+  N <- dim(y)[1]
+  z.long.indx <- rep(1:(J * n.years.max), K.max)
+  z.long.indx <- z.long.indx[!is.na(c(y[1, , , ]))]
+  z.samples <- object$z.samples
+  alpha.samples <- object$alpha.samples
+  n.obs <- nrow(X.p)
+  det.prob.samples <- array(NA, dim = c(n.obs, N, n.post))
+  sp.indx <- rep(1:N, ncol(X.p))
+  y <- matrix(y, N, J * n.years.max * K.max)
+  y <- y[, apply(y, 2, function(a) !sum(is.na(a)) > 0)]
+  for (i in 1:N) {
+    if (object$pRE) {
+      sp.re.indx <- rep(1:N, each = ncol(object$alpha.star.samples) / N)
+      # Add 1 to get it to R indexing.
+      X.p.re <- object$X.p.re + 1
+      tmp.samples <- matrix(0, n.post, n.obs)
+      tmp.alpha.star <- object$alpha.star.samples[, sp.re.indx == i]
+      for (j in 1:ncol(X.p.re)) {
+        tmp.samples <- tmp.samples + tmp.alpha.star[, X.p.re[, j]]
+      }
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]) + t(tmp.samples))
+    } else {
+      det.prob.samples[, i, ] <- logit.inv(X.p %*% t(alpha.samples[, sp.indx == i]))
+    }
+  }
+
+  out <- list()
+  # Get detection probability
+  # Need to be careful here that all arrays line up.
+  det.prob.samples <- aperm(det.prob.samples, c(3, 2, 1))
+  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
+  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp[, , names.long] <- det.prob.samples
+  p.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  out$p.samples <- p.samples
+  # Get fitted values
+  z.samples <- array(z.samples, dim = c(n.post, N, J * n.years.max))
+  det.prob.samples <- det.prob.samples * z.samples[, , z.long.indx]
+  y.rep.samples <- array(NA, dim = dim(det.prob.samples))
+  for (i in 1:N) {
+    y.rep.samples[, i, ] <- apply(det.prob.samples[, i, ], 2, function(a) rbinom(n.post, 1, a))
+  }
+  tmp <- array(NA, dim = c(n.post, N, J * n.years.max * K.max))
+  names.long <- which(!is.na(c(object$y[1, , , ])))
+  tmp[, , names.long] <- y.rep.samples
+  y.rep.samples <- array(tmp, dim = c(n.post, N, J, n.years.max, K.max))
+  out$y.rep.samples <- y.rep.samples
+  return(out)
 }
 

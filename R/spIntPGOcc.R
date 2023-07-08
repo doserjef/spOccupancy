@@ -105,6 +105,11 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
   coords <- as.matrix(data$coords)
+  # Check if all spatial coordinates are unique. 
+  unique.coords <- unique(data$coords)
+  if (nrow(unique.coords) < nrow(data$coords)) {
+    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement.") 
+  }
   if (!missing(k.fold)) {
     if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
       stop("error: k.fold must be a single integer value >= 2")  

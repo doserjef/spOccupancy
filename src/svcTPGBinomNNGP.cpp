@@ -246,26 +246,34 @@ extern "C" {
      * *******************************************************************/
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, p, nPost)); nProtect++;
+    zeros(REAL(betaSamples_r), p * nPost);
     SEXP yRepSamples_r; 
     PROTECT(yRepSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++; 
+    zeros(REAL(yRepSamples_r), JnYears * nPost);
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, JpTilde, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), JpTilde * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++; 
+    zeros(REAL(psiSamples_r), JnYears * nPost);
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pRE > 0) {
       PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPsiSamples_r), pRE * nPost);
       PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nRE, nPost)); nProtect++;
+      zeros(REAL(betaStarSamples_r), nRE * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
     PROTECT(likeSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++;
+    zeros(REAL(likeSamples_r), JnYears * nPost);
     // AR(1) stuff. 
     SEXP etaSamples_r; 
     if (ar1) {
       PROTECT(etaSamples_r = allocMatrix(REALSXP, nYearsMax, nPost)); nProtect++; 
+      zeros(REAL(etaSamples_r), nYearsMax * nPost);
     }
     
     /**********************************************************************
@@ -361,10 +369,13 @@ extern "C" {
     double phiCand = 0.0, nuCand = 0.0, rhoCand = 0.0, sigmaSqCand = 0.0;  
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nThetaAll, nBatch)); nProtect++; 
+    zeros(REAL(acceptSamples_r), nThetaAll * nBatch);
     SEXP tuningSamples_r; 
     PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaAll, nBatch)); nProtect++; 
+    zeros(REAL(tuningSamples_r), nThetaAll * nBatch);
     SEXP thetaSamples_r; 
     PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaAll, nPost)); nProtect++; 
+    zeros(REAL(thetaSamples_r), nThetaAll * nPost);
     double b, e, aij, aa; 
     double *a = (double *) R_alloc(pTilde, sizeof(double));
     double *v = (double *) R_alloc(pTilde, sizeof(double));

@@ -186,32 +186,42 @@ extern "C" {
     // Community level
     SEXP betaCommSamples_r; 
     PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    zeros(REAL(betaCommSamples_r), pOcc * nPost);
     SEXP tauSqBetaSamples_r; 
     PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
     // Species level
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    zeros(REAL(betaSamples_r), pOccN * nPost);
     SEXP psiSamples_r; 
+    PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     // Factor model parameters
     SEXP lambdaSamples_r; 
     PROTECT(lambdaSamples_r = allocMatrix(REALSXP, Nq, nPost)); nProtect++;
+    zeros(REAL(lambdaSamples_r), Nq * nPost);
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), Jq * nPost);
     // Fitted values
     double *z = (double *) R_alloc(JN, sizeof(double)); zeros(z, JN);
     SEXP zSamples_r; 
     PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    zeros(REAL(zSamples_r), JN * nPost);
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
       PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
       PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+      zeros(REAL(betaStarSamples_r), nOccREN * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
     PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    zeros(REAL(likeSamples_r), JN * nPost);
     
     /**********************************************************************
      * Additional Sampler Prep

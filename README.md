@@ -3,13 +3,14 @@
 
 # spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
-[![](https://www.r-pkg.org/badges/version/spOccupancy?color=green)](https://cran.r-project.org/package=spOccupancy)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy)
+[![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://cran.r-project.org/web/packages/spOccupancy/index.html)
+[![Codecov test
+coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
-using Póly-Gamma data augmentation. Spatial models are fit using either
+using Pólya-Gamma data augmentation. Spatial models are fit using either
 Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for
 large spatial datasets. The package provides functionality for data
 integration of multiple single-species occupancy data sets using a joint
@@ -52,7 +53,10 @@ install.packages("spOccupancy")
 | `svcPGBinom()`         | Single-species spatially-varying coefficient GLM                          |
 | `svcPGOcc()`           | Single-species spatially-varying coefficient occupancy model              |
 | `svcTPGBinom()`        | Single-species spatially-varying coefficient multi-season GLM             |
-| `svcTPGOcc()`          | Single-sepcies spatially-varying coefficient multi-season occupancy model |
+| `svcTPGOcc()`          | Single-species spatially-varying coefficient multi-season occupancy model |
+| `svcMsPGOcc()`         | Multi-species spatially-varying coefficient occupancy model               |
+| `tMsPGOcc()`           | Multi-species, multi-season occupancy model                               |
+| `svcTMsPGOcc()`        | Multi-species, multi-season spatially-varying coefficient occupancy model |
 | `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit      |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                        |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                    |
@@ -61,6 +65,7 @@ install.packages("spOccupancy")
 | `simBinom()`           | Simulate detection-nondetection data with perfect detection               |
 | `simTBinom()`          | Simulate multi-season detection-nondetection data with perfect detection  |
 | `simMsOcc()`           | Simulate multi-species occupancy data                                     |
+| `simTMsOcc()`          | Simulate multi-species, multi-season occupancy data                       |
 | `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources         |
 | `simIntMsOcc()`        | Simulate multi-species occupancy data from multiple data sources          |
 
@@ -141,25 +146,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4416
+#> Run Time (min): 1.6211
 #> 
 #> Occurrence (logit scale): 
-#>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            3.9738 0.6010  3.0092  3.9023  5.3748 1.0144  164
-#> scale(Elevation)      -0.5209 0.2194 -0.9778 -0.5152 -0.0984 1.0003 1101
-#> I(scale(Elevation)^2) -1.1552 0.2118 -1.6305 -1.1370 -0.7892 1.0070  238
+#>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
+#> (Intercept)            3.9383 0.5645  3.0046  3.8869  5.1902 1.0719 360
+#> scale(Elevation)      -0.5392 0.2205 -1.0162 -0.5234 -0.1469 1.0986 629
+#> I(scale(Elevation)^2) -1.1506 0.2169 -1.6481 -1.1307 -0.7910 1.2049 282
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6642 0.1146  0.4413  0.6634 0.8821 1.0014 5474
-#> scale(day)       0.2939 0.0712  0.1524  0.2939 0.4335 0.9999 6000
-#> scale(tod)      -0.0301 0.0697 -0.1698 -0.0302 0.1063 1.0010 6435
-#> I(scale(day)^2) -0.0747 0.0862 -0.2410 -0.0755 0.1033 1.0027 6000
+#> (Intercept)      0.6622 0.1138  0.4416  0.6612 0.8918 0.9999 5534
+#> scale(day)       0.2919 0.0697  0.1586  0.2914 0.4297 1.0000 6000
+#> scale(tod)      -0.0315 0.0695 -0.1716 -0.0318 0.1020 1.0003 6000
+#> I(scale(day)^2) -0.0750 0.0854 -0.2424 -0.0744 0.0909 1.0002 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.1194 1.0085 0.2165 0.7676 4.1197 1.0419  88
-#> phi      0.0072 0.0075 0.0007 0.0039 0.0270 1.1564  58
+#> sigma.sq 1.1460 1.2237 0.2082 0.7812 4.8462 2.1613  70
+#> phi      0.0103 0.0084 0.0005 0.0079 0.0285 1.6601  60
 ```
 
 ### Posterior predictive check
@@ -185,7 +190,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4917 
+#> Bayesian p-value:  0.4817 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -198,7 +203,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -681.52155   21.21463 1405.47236
+#> -682.06701   21.50518 1407.14437
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -211,7 +216,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1412.951
+#> [1] 1414.102
 ```
 
 ### Prediction

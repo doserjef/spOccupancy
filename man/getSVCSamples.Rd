@@ -13,11 +13,12 @@ getSVCSamples(object, pred.object, ...)
 
 \arguments{
   \item{object}{an object of class \code{svcPGOcc}, \code{svcPGBinom}, 
-    \code{svcTPGOcc}, \code{svcTPGBinom}.}
+    \code{svcTPGOcc}, \code{svcTPGBinom}, \code{svcMsPGOcc}, \code{svcTMsPGOcc}.}
 
   \item{pred.object}{a prediction object from a spatially-varying coefficient 
     model fit using spOccupancy. Should be of class \code{predict.svcPGOcc}, 
-    \code{predict.svcPGBinom}, \code{predict.svcTPGOcc}, or \code{predict.svcTPGBinom}. 
+    \code{predict.svcPGBinom}, \code{predict.svcTPGOcc}, \code{predict.svcTPGBinom}, 
+    \code{predict.svcMsPGOcc}, or \code{predict.svcTMsPGOcc}. 
     If specified, SVC samples are extracted at the prediction locations.}
 
   \item{...}{currently no additional arguments}
@@ -26,6 +27,15 @@ getSVCSamples(object, pred.object, ...)
 
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
+}
+
+\note{
+  For multi-species models, the value of the SVC will be returned at all 
+  spatial locations for each species even when \code{range.ind} is specified
+  in the data list when fitting the model. This may not be desirable for complete
+  summaries of the SVC for each species, so if specifying \code{range.ind} in 
+  the data list, you may want to subsequently process the SVC samples for each species
+  to be restricted to each species range.
 }
 
 \value{

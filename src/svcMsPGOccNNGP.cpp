@@ -338,43 +338,58 @@ extern "C" {
     // Community level
     SEXP betaCommSamples_r; 
     PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    zeros(REAL(betaCommSamples_r), pOcc * nPost);
     SEXP alphaCommSamples_r;
     PROTECT(alphaCommSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    zeros(REAL(alphaCommSamples_r), pDet * nPost);
     SEXP tauSqBetaSamples_r; 
     PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
     SEXP tauSqAlphaSamples_r; 
     PROTECT(tauSqAlphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
+    zeros(REAL(tauSqAlphaSamples_r), pDet * nPost);
     // Species level
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    zeros(REAL(betaSamples_r), pOccN * nPost);
     SEXP alphaSamples_r; 
     PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDetN, nPost)); nProtect++;
+    zeros(REAL(alphaSamples_r), pDetN * nPost);
     SEXP zSamples_r; 
     PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    zeros(REAL(zSamples_r), JN * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    zeros(REAL(psiSamples_r), JN * nPost);
     // Spatial parameters
     SEXP lambdaSamples_r; 
     PROTECT(lambdaSamples_r = allocMatrix(REALSXP, NqpTilde, nPost)); nProtect++;
+    zeros(REAL(lambdaSamples_r), NqpTilde * nPost);
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, JqpTilde, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), JqpTilde * nPost);
     // Detection random effects
     SEXP sigmaSqPSamples_r; 
     SEXP alphaStarSamples_r; 
     if (pDetRE > 0) {
       PROTECT(sigmaSqPSamples_r = allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPSamples_r), pDetRE * nPost);
       PROTECT(alphaStarSamples_r = allocMatrix(REALSXP, nDetREN, nPost)); nProtect++;
+      zeros(REAL(alphaStarSamples_r), nDetREN * nPost);
     }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
       PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
       PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+      zeros(REAL(betaStarSamples_r), nOccREN * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
     PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    zeros(REAL(likeSamples_r), JN * nPost);
     
     /**********************************************************************
      * Additional Sampler Prep
@@ -489,6 +504,7 @@ extern "C" {
     SEXP thetaSamples_r; 
     // Note you don't save any of the sigma.sqs which are fixed at 1. 
     PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaqpTildeSave, nPost)); nProtect++; 
+    zeros(REAL(thetaSamples_r), nThetaqpTildeSave * nPost);
     // Species-level spatial random effects for each SVC. 
     double *wStar = (double *) R_alloc(JNpTilde, sizeof(double)); zeros(wStar, JNpTilde);
     // Multiply Lambda %*% w[j] to get wStar for each SVC. 
@@ -548,8 +564,10 @@ extern "C" {
     // MCMC info if desired
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nThetaqpTilde, nBatch)); nProtect++; 
+    zeros(REAL(acceptSamples_r), nThetaqpTilde * nBatch);
     SEXP tuningSamples_r; 
     PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaqpTilde, nBatch)); nProtect++; 
+    zeros(REAL(tuningSamples_r), nThetaqpTilde * nBatch);
 
     GetRNGstate();
 

@@ -144,12 +144,16 @@ extern "C" {
      * *******************************************************************/
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    zeros(REAL(betaSamples_r), pOcc * nPost);
     SEXP alphaSamples_r; 
     PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    zeros(REAL(alphaSamples_r), pDet * nPost);
     SEXP zSamples_r; 
     PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    zeros(REAL(zSamples_r), J * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    zeros(REAL(psiSamples_r), J * nPost);
     
     /**********************************************************************
      * Other initial starting stuff

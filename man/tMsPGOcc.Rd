@@ -1,21 +1,20 @@
-\name{svcTMsPGOcc}
-\alias{svcTMsPGOcc}
-\title{Function for Fitting Multi-Species Multi-Season Spatially-Varying Coefficient Occupancy Models}
-
-\description{
-  The function \code{svcTMsPGOcc} fits multi-species multi-season spatially-varying coefficient occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Models are implemented using a Nearest Neighbor Gaussian Process.
-}
+\name{tMsPGOcc}
+\alias{tMsPGOcc}
+\title{Function for Fitting Multi-Species Multi-Season Occupancy Models}
 
 \usage{
-svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-          svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-          n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
-	  n.factors, n.batch, batch.length, 
-	  accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, n.report = 100, 
-          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, ...)
+tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
+	 n.batch, batch.length, 
+	 accept.rate = 0.43, n.omp.threads = 1, 
+         verbose = TRUE, ar1 = FALSE, n.report = 100, 
+         n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+         n.chains = 1, ...)
 }
+
+\description{
+  The function \code{tMsPGOcc} fits multi-species multi-season occupancy models using Polya-Gamma data augmentation.
+}
+
 
 \arguments{
 
@@ -30,8 +29,7 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     intercepts are allowed using lme4 syntax (Bates et al. 2015).}
 
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, 
-    \code{coords}, and \code{range.ind}. 
+    Valid tags are \code{y}, \code{occ.covs}, and \code{det.covs}. 
     \code{y} is a four-dimensional array with first dimension equal to the 
     number of species, second dimension equal to the number of sites, third
     dimension equal to the number of primary time periods, and 
@@ -47,24 +45,14 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     detection covariates can also be observational-level. Observation-level covariates
     are specified as a three-dimensional array with first dimension corresponding to 
     sites, second dimension corresponding to primary time period, and third 
-    dimension corresponding to replicate. \code{coords} is a 
-    \eqn{J \times 2}{J x 2} matrix of the observation coordinates. Note that 
-    \code{spOccupancy} assumes coordinates are specified in a projected coordinate system.
-    \code{range.ind} is a matrix with rows corresponding to species and columns
-    corresponding to sites, with each element taking value 1 if that site is 
-    within the range of the corresponding species and 0 if it is outside of the 
-    range. This matrix is not required, but it can be helpful to restrict the 
-    modeled area for each individual species to be within the realistic range
-    of locations for that species when estimating the model parameters. This is
-    applicable when auxiliary data sources are available on the realistic range
-    of the species.}
+    dimension corresponding to replicate.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
     \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, 
     \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{z}, 
-    \code{phi}, \code{lambda}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}, and \code{sigma.sq.psi} and \code{sigma.sq.p} are
+    \code{sigma.sq.t}, and \code{rho}. \code{sigma.sq.t} and \code{rho} are only
+    relevant when \code{ar1 = TRUE}, and \code{sigma.sq.psi} and \code{sigma.sq.p} are
     only specified if random effects are included in \code{occ.formula} or 
     \code{det.formula}, respectively. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
@@ -75,8 +63,8 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi}, 
-  \code{sigma.sq.p}, \code{phi.unif}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
+  \code{sigma.sq.p}, \code{sigma.sq.t.ig}, and \code{rho.unif}. 
+  Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
@@ -92,23 +80,16 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or a single value if priors are the same for all 
   parameters. If not specified, prior shape and scale 
-  parameters are set to 0.1. 
-  The spatial factor model fits \code{n.factors} independent
-  spatial processes for each spatially-varying coefficient specified in \code{svc.cols}. 
-  The spatial decay \code{phi} and smoothness \code{nu} parameters 
-  for each latent factor are assumed to follow Uniform distributions. 
-  The hyperparameters of the Uniform are passed as a list with two elements, 
-  with both elements being vectors of length \code{n.factors * length(svc.cols)} 
-  corresponding to the lower and 
-  upper support, respectively, or as a single value if the same value is assigned
-  for all factor/SVC combinations. The priors for the factor loadings 
-  matrix \code{lambda} for each SVC are fixed
-  following the standard spatial factor model to ensure parameter 
-  identifiability (Christensen and Amemlya 2002). The
-  upper triangular elements of the \code{N x n.factors} matrix are fixed at 0 and the 
-  diagonal elements are fixed at 1 for each SVC. The lower triangular elements are assigned a 
-  standard normal prior (i.e., mean 0 and variance 1).
-  \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
+  parameters are set to 0.1. \code{sigma.sq.t} and 
+  \code{rho} are the AR(1) variance and correlation parameters for the AR(1) zero-mean
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow an inverse-Gamma
+  distribution, where the hyperparameters are specified as a list of length two with the 
+  first and second elements corresponding to the shape and scale parameters, respectively, 
+  which can each be specified as vector equal to the number of species in the model or a single value
+  if the same prior is used for all species. \code{rho} is assumed to follow a 
+  uniform distribution, where the hyperparameters are specified similarly as a list of length two
+  with the first and second elements corresponding to the lower and upper bounds of the 
+  uniform prior. \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
   effect variances for any occurrence or
   detection random effects, respectively, and are assumed to follow an inverse
   Gamma distribution. The hyperparameters of the inverse-Gamma distribution
@@ -117,67 +98,10 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   vectors of length equal to the number of random intercepts or of length one 
   if priors are the same for all random effect variances.}
 
-  \item{tuning}{a list with each tag corresponding to a parameter
-    name. Valid tags are \code{phi} and \code{nu}. The value portion of each
-    tag defines the initial variance of the adaptive sampler. We assume the 
-    initial variance of the adaptive sampler is the same for each species, 
-    although the adaptive sampler will adjust the tuning variances separately
-    for each species. See Roberts and Rosenthal (2009) for details.}
-
-  \item{svc.cols}{a vector indicating the variables whose effects will be 
-    estimated as spatially-varying coefficients. \code{svc.cols} can be an 
-    integer vector with values indicating the order of covariates specified 
-    in the model formula (with 1 being the intercept if specified), or it can 
-    be specified as a character vector with names corresponding to variable 
-    names in \code{occ.covs} (for the intercept, use '(Intercept)'). \code{svc.cols}
-    default argument of 1 results in a spatial occupancy model analogous to 
-    \code{sfMsPGOcc} (assuming an intercept is included in the model).} 
-
-  \item{cov.model}{a quoted keyword that specifies the covariance
-    function used to model the spatial dependence structure among the
-    observations.  Supported covariance model key words are:
-    \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and
-    \code{"gaussian"}.}
-  
-  \item{NNGP}{if \code{TRUE}, model is fit with an NNGP. If \code{FALSE}, 
-    a full Gaussian process is used. See Datta et al. (2016) and 
-    Finley et al. (2019) for more information. Only 
-    \code{NNGP = TRUE} is currently supported.}
-  
-  \item{n.neighbors}{number of neighbors used in the NNGP. Only used if 
-  \code{NNGP = TRUE}. Datta et al. (2016) showed that 15 neighbors is usually 
-  sufficient, but that as few as 5 neighbors can be adequate for certain data
-  sets, which can lead to even greater decreases in run time. We recommend
-  starting with 15 neighbors (the default) and if additional gains in computation
-  time are desired, subsequently compare the results with a smaller number
-  of neighbors using WAIC.}
-  
-  \item{search.type}{a quoted keyword that specifies the type of nearest
-    neighbor search algorithm. Supported method key words are: \code{"cb"} and
-    \code{"brute"}. The \code{"cb"} should generally be much
-    faster. If locations do not have identical coordinate values on
-    the axis used for the nearest neighbor ordering then \code{"cb"} 
-    and \code{"brute"} should produce identical neighbor sets. 
-    However, if there are identical coordinate values on the axis used 
-    for nearest neighbor ordering, then \code{"cb"} and \code{"brute"} 
-    might produce different, but equally valid, neighbor sets, 
-    e.g., if data are on a grid. }
-
-  \item{std.by.sp}{a logical value indicating whether the covariates are standardized
-    separately for each species within the corresponding range for each species (\code{TRUE}) 
-    or not (\code{FALSE}). Note that if \code{range.ind} is specified in \code{data.list}, 
-    this will result in the covariates being standardized differently for each species
-    based on the sites where \code{range.ind == 1} for that given species. If \code{range.ind} is not specified 
-    and \code{std.by.sp = TRUE}, this will simply be equivalent to standardizing 
-    the covariates across all locations prior to fitting the model.}
-
-  \item{n.factors}{the number of factors to use in the spatial factor model approach. 
-    Note this corresponds to the number of factors used for each spatially-varying
-    coefficient that is estimated in the model.
-    Typically, the number of factors is set to be small (e.g., 4-5) relative to the 
-    total number of species in the community, which will lead to substantial 
-    decreases in computation time. However, the value can be anywhere 
-    between 1 and N (the number of species in the community).}
+\item{tuning}{a list with each tag corresponding to a parameter
+  name. Valid tags are \code{rho}. The value portion of each
+  tag defines the initial tuning variance of the Adaptive sampler. See
+  Roberts and Rosenthal (2009) for details.}
 
   \item{n.batch}{the number of MCMC batches  in each chain to run for the Adaptive MCMC 
     sampler. See Roberts and Rosenthal (2009) for details.}
@@ -198,6 +122,12 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{verbose}{if \code{TRUE}, messages about data preparation, 
     model specification, and progress of the sampler are printed to the screen. 
     Otherwise, no messages are printed.}
+
+  \item{ar1}{logical value indicating whether to include an AR(1) zero-mean 
+    temporal random effect in the model for eac species. If \code{FALSE}, the model is
+    fit without an AR(1) temporal autocovariance structure. If \code{TRUE},
+    a species-specific AR(1) random effect is included in the model to account for temporal 
+    autocorrelation across the primary time periods.}
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress. Note this is specified in terms of batches and not overall
@@ -223,18 +153,6 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \references{
-  Datta, A., S. Banerjee, A.O. Finley, and A.E. Gelfand. (2016)
-  Hierarchical Nearest-Neighbor Gaussian process models for large
-  geostatistical datasets. \emph{Journal of the American Statistical
-    Association}, \doi{10.1080/01621459.2015.1044091}.
-
-  Finley, A.O., A. Datta, B.D. Cook, D.C. Morton, H.E. Andersen, and
-  S. Banerjee. (2019) Efficient algorithms for Bayesian Nearest Neighbor
-  Gaussian Processes. \emph{Journal of Computational and Graphical
-    Statistics}, \doi{10.1080/10618600.2018.1537924}.
-
-  Finley, A. O., Datta, A., and Banerjee, S. (2020). spNNGP R package 
-  for nearest neighbor Gaussian process models. \emph{arXiv} preprint arXiv:2001.09111.
 
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables.
@@ -247,12 +165,9 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
-  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
-  selection for ecologists. \emph{Ecological Monographs}, 85(1), 3-28.
-
-  Christensen, W. F., and Amemiya, Y. (2002). Latent variable analysis 
-  of multivariate spatial data. \emph{Journal of the American Statistical Association}, 
-  97(457), 302-317.
+  Kery, M., & Royle, J. A. (2021). Applied hierarchical modeling in ecology: 
+  Analysis of distribution, abundance and species richness in R and BUGS: 
+  Volume 2: Dynamic and advanced models. Academic Press. Section 4.6.
 
 }
 
@@ -262,7 +177,7 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 }
 
 \value{
-  An object of class \code{svcTMsPGOcc} that is a list comprised of: 
+  An object of class \code{tMsPGOcc} that is a list comprised of: 
 
   \item{beta.comm.samples}{a \code{coda} object of posterior samples
     for the community level occurrence regression coefficients.}
@@ -283,10 +198,12 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the species level detection regression coefficients.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
-    for the species level correlation parameters for each spatially-varying coefficient.}
+    for the species level AR(1) variance (\code{sigma.sq.t}) and 
+    correlation (\code{rho}) parameters. Only included if \code{ar1 = TRUE}.}
 
-  \item{lambda.samples}{a \code{coda} object of posterior samples
-    for the latent spatial factor loadings for each spatially-varying coefficient.}
+  \item{eta.samples}{a three-dimensional array of posterior samples for 
+    the species-specific AR(1) random effects for each primary time period.
+    Dimensions correspond to MCMC sample, species, and primary time period.}
 
   \item{z.samples}{a four-dimensional array of posterior samples for
     the latent occurrence values for each species. Dimensions corresopnd to 
@@ -295,11 +212,6 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{psi.samples}{a four-dimensional array of posterior samples for
     the latent occupancy probability values for each species. Dimensions correspond
     to MCMC sample, species, site, and primary time period.}
-
-  \item{w.samples}{a four-dimensional array of posterior samples for 
-    the latent spatial random effects for each spatial factor within each 
-    spatially-varying coefficient. Dimensions correspond to MCMC sample, 
-    factor, site, and spatially-varying coefficient.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occurrence portion
@@ -376,24 +288,15 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
-sp <- TRUE
-svc.cols <- c(1, 2)
-p.svc <- length(svc.cols)
-n.factors <- 3
-phi <- runif(p.svc * n.factors, 3 / .9, 3 / .3)
-factor.model <- TRUE
-cov.model <- 'exponential'
+sp <- FALSE
 
 dat <- simTMsOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, N = N,
 		 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
-		 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
-                 svc.cols = svc.cols, n.factors = n.factors, phi = phi, sp = sp,
-                 cov.model = cov.model)
+		 psi.RE = psi.RE, p.RE = p.RE, sp = sp)
 
 y <- dat$y
 X <- dat$X
 X.p <- dat$X.p
-coords <- dat$coords
 X.re <- dat$X.re
 X.p.re <- dat$X.p.re
 
@@ -403,18 +306,16 @@ det.covs <- list(det.cov.1 = X.p[, , , 2],
 		 det.cov.2 = X.p[, , , 3])
 
 data.list <- list(y = y, occ.covs = occ.covs,
-                  det.covs = det.covs,
-                  coords = coords)
+                  det.covs = det.covs)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 		   alpha.comm.normal = list(mean = 0, var = 2.72),
 		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-                   phi.unif = list(a = 3 / .9, b = 3 / .1))
+		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
 		   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
-		   phi = 3 / .5, z = z.init)
+		   z = z.init)
 # Tuning
 tuning.list <- list(phi = 1)
 
@@ -426,20 +327,14 @@ n.burn <- 25
 n.thin <- 1
 n.samples <- n.batch * batch.length
 
-out <- svcTMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
+out <- tMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
                 det.formula = ~ det.cov.1 + det.cov.2,
                 data = data.list,
                 inits = inits.list,
                 n.batch = n.batch,
                 batch.length = batch.length,
                 accept.rate = 0.43,
-		NNGP = TRUE,
-		n.neighbors = 5,
-		n.factors = n.factors,
-		svc.cols = svc.cols,
-		cov.model = 'exponential',
                 priors = prior.list,
-                tuning = tuning.list,
                 n.omp.threads = 1,
                 verbose = TRUE,
                 n.report = 1,

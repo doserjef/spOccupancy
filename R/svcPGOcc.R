@@ -84,6 +84,11 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     stop("error: coords must be a matrix or data frame")
   }
   coords <- as.matrix(data$coords)
+  # Check if all spatial coordinates are unique. 
+  unique.coords <- unique(data$coords)
+  if (nrow(unique.coords) < nrow(data$coords)) {
+    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement.") 
+  }
   if (!is.list(data$det.covs)) {
     stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
   }

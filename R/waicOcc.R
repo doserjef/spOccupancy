@@ -29,7 +29,6 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
   logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
-  # if (is(object, c('PGOcc', 'spPGOcc'))) {
   if (class(object) %in% c('PGOcc', 'spPGOcc', 'svcPGBinom', 'svcPGOcc')) {
     elpd <- sum(apply(object$like.samples, 2, function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, 2, function(a) var(log(a))), na.rm = TRUE)
@@ -73,7 +72,6 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
     }
   }
 
-  # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     X.p <- object$X.p
     y <- object$y

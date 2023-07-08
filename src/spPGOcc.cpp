@@ -190,31 +190,41 @@ extern "C" {
      * *******************************************************************/
     SEXP betaSamples_r;
     PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    zeros(REAL(betaSamples_r), pOcc * nPost);
     SEXP alphaSamples_r; 
     PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    zeros(REAL(alphaSamples_r), pDet * nPost);
     SEXP zSamples_r; 
     PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    zeros(REAL(zSamples_r), J * nPost);
     SEXP wSamples_r; 
     PROTECT(wSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), J * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    zeros(REAL(psiSamples_r), J * nPost);
     // Detection random effects
     SEXP sigmaSqPSamples_r; 
     SEXP alphaStarSamples_r; 
     if (pDetRE > 0) {
       PROTECT(sigmaSqPSamples_r = allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPSamples_r), pDetRE * nPost);
       PROTECT(alphaStarSamples_r = allocMatrix(REALSXP, nDetRE, nPost)); nProtect++;
+      zeros(REAL(alphaStarSamples_r), nDetRE * nPost);
     }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
       PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
       PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccRE, nPost)); nProtect++;
+      zeros(REAL(betaStarSamples_r), nOccRE * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
     PROTECT(likeSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++;
+    zeros(REAL(likeSamples_r), J * nPost);
     
     /**********************************************************************
      * Other initial starting stuff
@@ -325,10 +335,13 @@ extern "C" {
     double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0;  
     SEXP acceptSamples_r; 
     PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
+    zeros(REAL(acceptSamples_r), nTheta * nBatch);
     SEXP tuningSamples_r; 
     PROTECT(tuningSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
+    zeros(REAL(tuningSamples_r), nTheta * nBatch);
     SEXP thetaSamples_r; 
     PROTECT(thetaSamples_r = allocMatrix(REALSXP, nTheta, nPost)); nProtect++; 
+    zeros(REAL(thetaSamples_r), nTheta * nPost);
     // Initiate spatial values
     theta[sigmaSqIndx] = REAL(sigmaSqStarting_r)[0]; 
     double phi = REAL(phiStarting_r)[0]; 

@@ -275,34 +275,41 @@ extern "C" {
     SEXP betaCommSamples_r; 
     if (monitors[betaCommMonitor]) {
       PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+      zeros(REAL(betaCommSamples_r), pOcc * nPost);
     }
     SEXP tauSqBetaSamples_r;
     if (monitors[tauSqBetaMonitor]) {
       PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+      zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
     }
     // Species level
     SEXP betaSamples_r;
     if (monitors[betaMonitor]) {
       PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+      zeros(REAL(betaSamples_r), pOccN * nPost);
     }
     // Fitted values
     double *z = (double *) R_alloc(JN, sizeof(double)); zeros(z, JN);
     SEXP zSamples_r; 
     if (monitors[zMonitor]) {
       PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+      zeros(REAL(zSamples_r), JN * nPost);
     }
     SEXP psiSamples_r; 
     if (monitors[psiMonitor]) {
       PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+      zeros(REAL(psiSamples_r), JN * nPost);
     }
     // Spatial parameters
     SEXP lambdaSamples_r; 
     if (monitors[lambdaMonitor]) {
       PROTECT(lambdaSamples_r = allocMatrix(REALSXP, Nq, nPost)); nProtect++;
+      zeros(REAL(lambdaSamples_r), Nq * nPost);
     }
     SEXP wSamples_r; 
     if (monitors[wMonitor]) {
       PROTECT(wSamples_r = allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
+      zeros(REAL(wSamples_r), Jq * nPost);
     }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
@@ -310,15 +317,18 @@ extern "C" {
     if (pOccRE > 0) {
       if (monitors[sigmaSqPsiMonitor]) {
         PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+        zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
       }
       if (monitors[betaStarMonitor]) {
         PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+        zeros(REAL(betaStarSamples_r), nOccREN * nPost);
       }
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
     if (monitors[likeMonitor]) {
       PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+      zeros(REAL(likeSamples_r), JN * nPost);
     }
     
     /**********************************************************************
@@ -398,6 +408,7 @@ extern "C" {
     SEXP thetaSamples_r; 
     if (monitors[thetaMonitor]) {
       PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaqSave, nPost)); nProtect++; 
+      zeros(REAL(thetaSamples_r), nThetaqSave * nPost);
     }
     // Species-level spatial random effects
     double *wStar = (double *) R_alloc(JN, sizeof(double)); zeros(wStar, JN);
@@ -448,6 +459,7 @@ extern "C" {
     double *accept2 = (double *) R_alloc(nThetaq, sizeof(double)); zeros(accept2, nThetaq);
     SEXP tuningSamples_r; 
     PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaq, inc)); nProtect++; 
+    zeros(REAL(tuningSamples_r), nThetaq);
 
     GetRNGstate();
 
