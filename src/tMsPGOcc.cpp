@@ -364,9 +364,6 @@ extern "C" {
     for (i = 0; i < pDet; i++) {
       TauAlphaInv[i * pDet + i] = tauSqAlpha[i]; 
     } // i
-    // for (i = 0; i < pDet; i++) {
-    //   Rprintf("TauAlphaInv[%i]: %f\n", i * pDet + i, TauAlphaInv[i * pDet + i]);
-    // } // i
     F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
     if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
@@ -424,9 +421,6 @@ extern "C" {
       theta[sigmaSqTIndx * N + i] = sigmaSqT[i];
       theta[rhoIndx * N + i] = rho[i];
     }
-    // for (i = 0; i < nThetaN; i++) {
-    //   Rprintf("theta[%i]: %f\n", i, theta[i]);
-    // }
     // Note you are overwriting these for each species each time. 
     double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
     double *SigmaEtaCand = (double *) R_alloc(nnYears, sizeof(double));

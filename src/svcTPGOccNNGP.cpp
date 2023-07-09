@@ -208,7 +208,7 @@ extern "C" {
         Rprintf("----------------------------------------\n");
         Rprintf("\tModel description\n");
         Rprintf("----------------------------------------\n");
-        Rprintf("Spatial NNGP Trend Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i years.\n\n", J, nYearsMax);
+        Rprintf("Spatial NNGP Multi-season Occupancy Model with Polya-Gamma latent\nvariable fit with %i sites and %i years.\n\n", J, nYearsMax);
         Rprintf("Samples per chain: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 

@@ -201,7 +201,7 @@ extern "C" {
         Rprintf("----------------------------------------\n");
         Rprintf("\tModel description\n");
         Rprintf("----------------------------------------\n");
-        Rprintf("Spatial Factor NNGP Multi-season Multispecies Occupancy Model with Polya-Gamma latent\nvariables with %i sites, %i species, and %i primary time periods.\n\n", J, N, nYearsMax);
+        Rprintf("Spatial Factor NNGP Multi-season Multi-species Occupancy Model with Polya-Gamma latent\nvariables with %i sites, %i species, and %i primary time periods.\n\n", J, N, nYearsMax);
         Rprintf("Samples per chain: %i (%i batches of length %i)\n", nSamples, nBatch, batchLength);
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 
@@ -243,20 +243,17 @@ extern "C" {
     int JnYearsq = Jq * nYearsMax;
     int JnYears = J * nYearsMax;
     int JnYearspOcc = JnYears * pOcc;
+    int JnYearspOccRE = JnYears * pOccRE;
     int JnYearspTilde = JnYears * pTilde;
     int Nq = N * q;
-    int JpOcc = J * pOcc; 
     int nObspDet = nObs * pDet;
-    int JJ = J * J;
-    int ppTilde = pTilde * pTilde;
-    int JpTilde = J * pTilde;
+    int nObspDetRE = nObs * pDetRE;
     int qpTilde = q * pTilde;
-    int qqpTilde = qpTilde * pTilde;
     int JqpTilde = J * q * pTilde;
     int JNpTilde = J * N * pTilde;
     int NqpTilde = N * q * pTilde;
     int jj, kk;
-    double tmp_0; 
+    double tmp_0, tmp_02; 
     double *tmp_one = (double *) R_alloc(inc, sizeof(double)); 
     double *tmp_ppDet = (double *) R_alloc(ppDet, sizeof(double));
     double *tmp_ppOcc = (double *) R_alloc(ppOcc, sizeof(double)); 
@@ -272,7 +269,6 @@ extern "C" {
     }
     double *tmp_J = (double *) R_alloc(J, sizeof(double));
     zeros(tmp_J, J);
-    double *tmp_J1 = (double *) R_alloc(J, sizeof(double));
     double *tmp_JnYears = (double *) R_alloc(JnYears, sizeof(double));
     zeros(tmp_JnYears, JnYears);
     double *tmp_JnYearspOcc = (double *) R_alloc(JnYears * pOcc, sizeof(double));
@@ -284,7 +280,6 @@ extern "C" {
     double *tmp_qq2 = (double *) R_alloc(qq, sizeof(double));
     double *tmp_JnYearsq = (double *) R_alloc(JnYearsq, sizeof(double));
     double *tmp_JnYearsq2 = (double *) R_alloc(JnYearsq, sizeof(double));
-    double *tmp_Jq2 = (double *) R_alloc(Jq, sizeof(double));
     double *tmp_Nq = (double *) R_alloc(Nq, sizeof(double));
     double *tmp_Nq2 = (double *) R_alloc(Nq, sizeof(double));
     double *tmp_N = (double *) R_alloc(N, sizeof(double));
@@ -469,14 +464,15 @@ extern "C" {
     // Site-level sums of the occurrence random effects
     double *betaStarSites = (double *) R_alloc(JNnYears, sizeof(double)); 
     zeros(betaStarSites, JNnYears); 
+    int *betaStarLongIndx = (int *) R_alloc(JnYearspOccRE, sizeof(int));
     // Initial sums (initiate with the first species)
-    for (i = 0; i < N; i++) {
-      for (t = 0; t < nYearsMax; t++) {
-        for (j = 0; j < J; j++) {
-          for (l = 0; l < pOccRE; l++) {
-            // betaStarSites[i * JnYears + t * J + j] += betaStar[i * nOccRE + which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
-	    // TODO: this is newly formatted.  
-            betaStarSites[t * JN + j * N + i] += betaStar[i * nOccRE + which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+    for (t = 0; t < nYearsMax; t++) {
+      for (j = 0; j < J; j++) {
+        for (l = 0; l < pOccRE; l++) {
+          betaStarLongIndx[l * JnYears + t * J + j] = which(XRE[l * JnYears + t * J + j], 
+      		                                            betaLevelIndx, nOccRE);
+          for (i = 0; i < N; i++) {
+            betaStarSites[t * JN + j * N + i] += betaStar[i * nOccRE + betaStarLongIndx[l * JnYears + t * J + j]];
           }
         }
       }
@@ -484,11 +480,13 @@ extern "C" {
     // Observation-level sums of the detection random effects
     double *alphaStarObs = (double *) R_alloc(nObsN, sizeof(double)); 
     zeros(alphaStarObs, nObsN); 
+    int *alphaStarLongIndx = (int *) R_alloc(nObspDetRE, sizeof(int));
     // Get sums of the current REs for each site/visit combo for all species
-    for (i = 0; i < N; i++) {
-      for (r = 0; r < nObs; r++) {
-        for (l = 0; l < pDetRE; l++) {
-          alphaStarObs[i * nObs + r] += alphaStar[i * nDetRE + which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)];
+    for (r = 0; r < nObs; r++) {
+      for (l = 0; l < pDetRE; l++) {
+        alphaStarLongIndx[l * nObs + r] = which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE);
+        for (i = 0; i < N; i++) {
+          alphaStarObs[i * nObs + r] += alphaStar[i * nDetRE + alphaStarLongIndx[l * nObs + r]];
         }
       }
     }
@@ -572,8 +570,6 @@ extern "C" {
 
     // wStar is JN x pTilde
     // Spatial process sums for each site and species
-    // TODO: you totally changed the order of this, so this is something to 
-    //       look out for. 
     double *wSites = (double *) R_alloc(JNnYears, sizeof(double));
     // wSites is ordered by year, site within year, then species within site. 
     // For each species and each location, multiply w x Xw
@@ -889,7 +885,6 @@ extern "C" {
           /********************************************************************
            *Update Occupancy random effects
            *******************************************************************/
-	  // TODO: these need to be updated following what you did in v0.5.0
 	  if (pOccRE > 0) {
             // Update each individual random effect one by one. 
             for (l = 0; l < nOccRE; l++) {
@@ -905,8 +900,12 @@ extern "C" {
                 for (j = 0; j < J; j++) {
                   if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
                     if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                      tmp_02 = 0.0;
+        	      for (rr = 0; rr < pOccRE; rr++) {
+                        tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[rr * JnYears + t * J + j]]; 
+        	      }
                       tmp_one[0] += kappaOcc[t * JN + j * N + i] - (F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) + 
-	        		    betaStarSites[t * JN + j * N + i] - betaStar[i * nOccRE + l] + wSites[t * JN + j * N + i]) * omegaOcc[t * JN + j * N + i];
+				     tmp_02 - betaStar[i * nOccRE + l] + wSites[t * JN + j * N + i]) * omegaOcc[t * JN + j * N + i];
 	              tmp_0 += omegaOcc[t * JN + j * N + i];
 	            }
 	          }
@@ -926,7 +925,7 @@ extern "C" {
                 betaStarSites[t * JN + j * N + i] = 0.0;
 		if (rangeInd[j * N + i] == 1.0) {
                   for (l = 0; l < pOccRE; l++) {
-                    betaStarSites[t * JN + j * N + i] += betaStar[i * nOccRE + which(XRE[l * JnYears + t * J + j], betaLevelIndx, nOccRE)];
+                    betaStarSites[t * JN + j * N + i] += betaStar[i * nOccRE + betaStarLongIndx[l * JnYears + t * J + j]];
                   }
 		}
               }
@@ -949,7 +948,11 @@ extern "C" {
                 yearIndx = zYearIndx[zLongIndx[r]]; 
 	        siteIndx = zSiteIndx[zLongIndx[r]];
                 if ((z[yearIndx * JN + siteIndx * N + i] == 1.0) && (XpRE[alphaStarIndx[l] * nObs + r] == alphaLevelIndx[l])) {
-                  tmp_one[0] += kappaDet[r] - (F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + alphaStarObs[i * nObs + r] - alphaStar[i * nDetRE + l]) * omegaDet[r];
+                  tmp_02 = 0.0;
+        	  for (rr = 0; rr < pDetRE; rr++) {
+                    tmp_02 += alphaStar[i * nDetRE + alphaStarLongIndx[rr * nObs + r]];
+        	  }
+                  tmp_one[0] += kappaDet[r] - (F77_NAME(ddot)(&pDet, &Xp[r], &nObs, &alpha[i], &N) + tmp_02 - alphaStar[i * nDetRE + l]) * omegaDet[r];
 	  	  tmp_0 += omegaDet[r];
 	        }
 	      }

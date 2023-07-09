@@ -106,7 +106,6 @@ simBinom <- function(J.x, J.y, weights, beta, psi.RE = list(), sp = FALSE,
     if (x.positive) {
       for (i in 2:n.beta) {
         X[, i] <- runif(J, 0, 1)
-        # X[, i] <- abs(min(X[, i])) + X[, i]
       }
     }
   }

@@ -1,8 +1,8 @@
 simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0, 
 		      trend = TRUE, psi.RE = list(), 
 		      p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
-		      sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
-		      range.probs, ...) {
+		      sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, 
+		      factor.model = FALSE, n.factors, range.probs, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -154,6 +154,21 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
     }
   } else {
     range.probs <- rep(1, N)
+  }
+  # AR1 -------------------------------
+  if (ar1) {
+    if (missing(rho)) {
+      stop("error: rho must be specified when ar1 = TRUE")
+    }
+    if (length(rho) != N) {
+      stop(paste0("rho must be a vector of ", N, " values"))
+    }
+    if (missing(sigma.sq.t)) {
+      stop("error: sigma.sq.t must be specified when ar1 = TRUE")
+    }
+    if (length(sigma.sq.t) != N) {
+      stop(paste0("sigma.sq.t must be a vector of ", N, " values"))
+    }
   }
 
   # Subroutines -----------------------------------------------------------
@@ -349,6 +364,17 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
     alpha.star <- NA
   }
 
+  # Simulate temporal (AR1) random effect ---------------------------------
+  eta <- matrix(0, N, n.time.max)
+  if (ar1) {
+    exponent <- abs(matrix(1:n.time.max - 1, nrow = n.time.max, 
+			   ncol = n.time.max, byrow = TRUE) - (1:n.time.max - 1))
+    for (i in 1:N) {
+      Sigma.eta <- sigma.sq.t[i] * rho[i]^exponent
+      eta[i, ] <- mvrnorm(1, rep(0, n.time.max), Sigma.eta)
+    }
+  }
+
   # Latent Occupancy Process ----------------------------------------------
   psi <- array(NA, dim = c(N, J, max(n.time)))
   z <- array(NA, dim = c(N, J, max(n.time)))
@@ -363,10 +389,10 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
             if (length(psi.RE) > 0) {
               psi[i, j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta[i, ]) + 
 	  			      X.w[j, t, ] %*% w.star.curr[j, ] + 
-	  			      beta.star.sites[i, j, t])
+	  			      beta.star.sites[i, j, t] + eta[i, t])
 	    } else {
               psi[i, j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta[i, ]) + 
-	  			      X.w[j, t, ] %*% w.star.curr[j, ]) 
+	  			      X.w[j, t, ] %*% w.star.curr[j, ] + eta[i, t]) 
 	    }
 	  }
 	} else {
@@ -382,9 +408,9 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
           for (t in 1:n.time.max) {
             if (length(psi.RE) > 0) {
               psi[i, j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta[i, ]) + 
-              			  beta.star.sites[i, j, t])
+              			  beta.star.sites[i, j, t] + eta[i, t])
             } else {
-              psi[i, j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta[i, ])) 
+              psi[i, j, t] <- logit.inv(X[j, t, ] %*% as.matrix(beta[i, ]) + eta[i, t])  
             }
 	  }
 	} else {
@@ -428,6 +454,6 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
     list(X = X, X.p = X.p, coords = coords,
 	 w = w, psi = psi, z = z, p = p, y = y, X.p.re = X.p.re, 
 	 X.re = X.re, alpha.star = alpha.star, beta.star = beta.star, 
-	 lambda = lambda, X.w = X.w, range.ind = range.ind)
+	 lambda = lambda, X.w = X.w, range.ind = range.ind, eta = eta)
   )
 }

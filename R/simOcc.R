@@ -158,7 +158,6 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     } # i
     if (x.positive) {
       for (i in 2:n.beta) {
-        # TODO: 
         X[, i] <- runif(J, 0, 1)
       }
     }

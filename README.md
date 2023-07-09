@@ -146,25 +146,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.6211
+#> Run Time (min): 1.4487
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
-#> (Intercept)            3.9383 0.5645  3.0046  3.8869  5.1902 1.0719 360
-#> scale(Elevation)      -0.5392 0.2205 -1.0162 -0.5234 -0.1469 1.0986 629
-#> I(scale(Elevation)^2) -1.1506 0.2169 -1.6481 -1.1307 -0.7910 1.2049 282
+#> (Intercept)            4.0762 0.6183  3.0681  4.0071  5.4855 1.0019 261
+#> scale(Elevation)      -0.5203 0.2249 -0.9772 -0.5132 -0.0825 1.0039 984
+#> I(scale(Elevation)^2) -1.1806 0.2257 -1.6958 -1.1593 -0.7969 1.0033 244
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6622 0.1138  0.4416  0.6612 0.8918 0.9999 5534
-#> scale(day)       0.2919 0.0697  0.1586  0.2914 0.4297 1.0000 6000
-#> scale(tod)      -0.0315 0.0695 -0.1716 -0.0318 0.1020 1.0003 6000
-#> I(scale(day)^2) -0.0750 0.0854 -0.2424 -0.0744 0.0909 1.0002 6000
+#> (Intercept)      0.6647 0.1155  0.4398  0.6623 0.8955 1.0012 5605
+#> scale(day)       0.2899 0.0709  0.1507  0.2900 0.4273 1.0020 6000
+#> scale(tod)      -0.0319 0.0697 -0.1680 -0.0327 0.1055 0.9999 6000
+#> I(scale(day)^2) -0.0756 0.0867 -0.2476 -0.0752 0.0926 1.0000 6000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.1460 1.2237 0.2082 0.7812 4.8462 2.1613  70
-#> phi      0.0103 0.0084 0.0005 0.0079 0.0285 1.6601  60
+#> sigma.sq 1.2610 1.0218 0.2063 0.9694 4.0863 1.0130 101
+#> phi      0.0093 0.0085 0.0009 0.0056 0.0294 1.0763  45
 ```
 
 ### Posterior predictive check
@@ -190,7 +190,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
 #> 
-#> Bayesian p-value:  0.4817 
+#> Bayesian p-value:  0.4828 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -203,7 +203,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -682.06701   21.50518 1407.14437
+#> -679.88774   22.96844 1405.71235
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -216,7 +216,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1414.102
+#> [1] 1414.417
 ```
 
 ### Prediction

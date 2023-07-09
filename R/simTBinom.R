@@ -143,7 +143,7 @@ simTBinom <- function(J.x, J.y, n.time, weights, beta, sp.only = 0,
   if (x.positive) {
     if (p.occ > 1) {
       for (i in 2:p.occ) {
-        X[, , i] <- abs(min(X[, , i])) + X[, , i]
+        X[, , i] <- runif(J * n.time.max, 0, 1) 
       }
     }
   }

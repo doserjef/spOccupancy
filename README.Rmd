@@ -21,6 +21,10 @@ spOccupancy fits single-species, multi-species, and integrated spatial occupancy
 
 ## Installation
 
+```{r, echo = FALSE}
+set.seed(100)
+```
+
 You can install the released version of `spOccupancy` from [CRAN](https://CRAN.R-project.org) with:
 
 ```{r, eval = FALSE}
