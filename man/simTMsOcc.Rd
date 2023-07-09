@@ -10,8 +10,8 @@
 simTMsOcc(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0, 
 	  trend = TRUE, psi.RE = list(), p.RE = list(), 
           sp = FALSE, svc.cols = 1, cov.model, 
-	  sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
-          range.probs, ...)
+	  sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, 
+	  factor.model = FALSE, n.factors, range.probs, ...)
 }
 
 \arguments{
@@ -53,6 +53,12 @@ simTMsOcc(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
 
 \item{nu}{a numeric vector of length \eqn{N}{N} containing the spatial smoothness parameter for each species. Only used when \code{sp = TRUE} and \code{cov.model = 'matern'}. If \code{factor.model = TRUE}, this should be of length \code{n.factors}.} 
 
+\item{ar1}{a logical value indicating whether to simulate a temporal random effect with an AR(1) process. By default, set to \code{FALSE}.}
+
+\item{rho}{a vector of \code{N} values indicating the AR(1) temporal correlation parameter for each species. Ignored when \code{ar1 = FALSE}.}
+
+\item{sigma.sq.t}{a vector of \code{N} values indicating the AR(1) temporal variance parameter for each species. Ignored when \code{ar1 = FALSE}.}
+
 \item{factor.model}{a logical value indicating whether to simulate data following a factor modeling approach that explicitly incoporates species correlations. If \code{sp = TRUE}, the latent factors are simulated from independent spatial processes. If \code{sp = FALSE}, the latent factors are simulated from standard normal distributions.}
 
 \item{n.factors}{a single numeric value specifying the number of latent factors to use to simulate the data if \code{factor.model = TRUE}.}
@@ -81,7 +87,7 @@ simTMsOcc(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
   \item{X.re}{a numeric matrix containing the levels of any occurrence random effect included in the model. Only relevant when occurrence random effects are specified in \code{psi.RE}.}
   \item{alpha.star}{a numeric matrix where each row contains the simulated detection random effects for each given level of the random effects included in the detection model. Only relevant when detection random effects are included in the model.}
   \item{beta.star}{a numeric matrix where each row contains the simulated occurrence random effects for each given level of the random effects included in the occurrence model. Only relevant when occurrence random effects are included in the model.}
-
+  \item{eta}{a numeric matrix with each row corresponding to species and column corresponding to time period of the AR(1) temporal random effects.}
 
 }
 
