@@ -371,7 +371,7 @@ simTMsOcc <- function(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
 			   ncol = n.time.max, byrow = TRUE) - (1:n.time.max - 1))
     for (i in 1:N) {
       Sigma.eta <- sigma.sq.t[i] * rho[i]^exponent
-      eta[i, ] <- mvrnorm(1, rep(0, n.time.max), Sigma.eta)
+      eta[i, ] <- rmvn(1, rep(0, n.time.max), Sigma.eta)
     }
   }
 

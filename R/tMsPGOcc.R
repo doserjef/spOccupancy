@@ -1031,7 +1031,6 @@ tMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
     storage.mode(chain.info) <- "integer"
     # Run the model in C
-    # Confirmed these line up with C Dec 15. 
     out.tmp[[i]] <- .Call("tMsPGOcc", y, X, X.p, X.re, X.p.re, consts, 
       		    n.occ.re.long, n.det.re.long, beta.inits, 
       		    alpha.inits, z.inits, beta.comm.inits, 

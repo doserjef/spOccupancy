@@ -8,8 +8,7 @@
 
 \usage{
 simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), 
-       p.RE = list(), sp = FALSE, svc.cols = 1, 
-       svc.joint = FALSE, Sigma, cov.model, 
+       p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
        sigma.sq, phi, nu, x.positive = FALSE, ...)
 }
 
@@ -36,10 +35,6 @@ simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(),
   estimated as spatially-varying coefficients. \code{svc.cols} is an
   integer vector with values indicating the order of covariates specified
   in the model formula (with 1 being the intercept if specified).}
-
-\item{svc.joint}{a logical value indicating whether SVCs are modeled jointly or independently. Only relevant when including multiple columns in \code{svc.cols}.}
-
-\item{Sigma}{the cross-covariance matrix between the spatially-varying coefficients. This should be a symmetric, non-negative definite matrix with \code{length{svc.cols}} rows and columns. Only relevant when fitting models with multiple SVCs and when \code{svc.joint} = TRUE.}
 
 \item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
 

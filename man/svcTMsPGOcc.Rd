@@ -12,7 +12,7 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
           n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
 	  n.factors, n.batch, batch.length, 
 	  accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, n.report = 100, 
+          verbose = TRUE, ar1 = FALSE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
           n.chains = 1, ...)
 }
@@ -198,6 +198,12 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{verbose}{if \code{TRUE}, messages about data preparation, 
     model specification, and progress of the sampler are printed to the screen. 
     Otherwise, no messages are printed.}
+
+  \item{ar1}{logical value indicating whether to include an AR(1) zero-mean
+    temporal random effect in the model. If \code{FALSE}, the model is
+    fit without an AR(1) temporal autocovariance structure. If \code{TRUE},
+    an AR(1) random effect is included in the model to account for temporal
+    autocorrelation across the primary time periods.}
  
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress. Note this is specified in terms of batches and not overall

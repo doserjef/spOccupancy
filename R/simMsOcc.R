@@ -10,6 +10,13 @@ simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list()
       if(! i %in% formal.args)
           warning("'",i, "' is not an argument")
   }
+  # Subroutines -----------------------------------------------------------
+  rmvn <- function(n, mu=0, V = matrix(1)){
+    p <- length(mu)
+    if(any(is.na(match(dim(V),p)))){stop("Dimension problem!")}
+    D <- chol(V)
+    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
+  }
   # Check function inputs -------------------------------------------------
   # J.x -------------------------------
   if (missing(J.x)) {
@@ -213,7 +220,7 @@ simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list()
         for (ll in 1:n.factors) {
           Sigma <- mkSpCov(coords, as.matrix(1), as.matrix(0), 
               	     theta[ll, ], cov.model)
-          w[[i]][ll, ] <- mvrnorm(1, rep(0, J), Sigma)
+          w[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
         }
 
       } else { # lsMsPGOcc
@@ -237,7 +244,7 @@ simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list()
         for (ll in 1:N) {
           Sigma <- mkSpCov(coords, as.matrix(sigma.sq[(i - 1) * N + ll]), as.matrix(0), 
               	     theta[ll, ], cov.model)
-          w.star[[i]][ll, ] <- mvrnorm(1, rep(0, J), Sigma)
+          w.star[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
         }
       }
       # For naming consistency

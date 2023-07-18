@@ -75,15 +75,13 @@ extern "C" {
 		      SEXP zYearIndx_r, SEXP zDatIndx_r, SEXP zSiteIndx_r,
 		      SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
 		      SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r,
-		      SEXP muBetaComm_r, SEXP muAlphaComm_r, 
-	              SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
-	              SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, SEXP phiA_r, 
-		      SEXP phiB_r, SEXP nuA_r, SEXP nuB_r, 
-		      SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+		      SEXP betaCommPriors_r, SEXP alphaCommPriors_r, 
+	              SEXP tauSqBetaPriors_r, SEXP tauSqAlphaPriors_r, SEXP phiPriors_r, 
+		      SEXP nuPriors_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		      SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		      SEXP samplesInfo_r, SEXP chainInfo_r){
+		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r){
    
     /**********************************************************************
      * Initial constants
@@ -128,27 +126,35 @@ extern "C" {
     int nDetRE = INTEGER(consts_r)[8];
     int q = INTEGER(consts_r)[9]; 
     int pTilde = INTEGER(consts_r)[10];
+    int qpTilde = q * pTilde;
     int nYearsMax = INTEGER(consts_r)[11];
+    int ar1 = INTEGER(consts_r)[12];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc; 
-    double *muBetaComm = REAL(muBetaComm_r); 
-    double *muAlphaComm = REAL(muAlphaComm_r); 
+    int nnYears = nYearsMax * nYearsMax;
+    double *muBetaComm = REAL(betaCommPriors_r); 
+    double *muAlphaComm = REAL(alphaCommPriors_r); 
     double *SigmaBetaCommInv = (double *) R_alloc(ppOcc, sizeof(double));   
-    F77_NAME(dcopy)(&ppOcc, REAL(SigmaBetaComm_r), &inc, SigmaBetaCommInv, &inc);
+    F77_NAME(dcopy)(&ppOcc, &REAL(betaCommPriors_r)[pOcc], &inc, SigmaBetaCommInv, &inc);
     double *SigmaAlphaCommInv = (double *) R_alloc(ppDet, sizeof(double));   
-    F77_NAME(dcopy)(&ppDet, REAL(SigmaAlphaComm_r), &inc, SigmaAlphaCommInv, &inc);
-    double *tauSqBetaA = REAL(tauSqBetaA_r); 
-    double *tauSqBetaB = REAL(tauSqBetaB_r); 
-    double *tauSqAlphaA = REAL(tauSqAlphaA_r); 
-    double *tauSqAlphaB = REAL(tauSqAlphaB_r); 
-    double *phiA = REAL(phiA_r); 
-    double *phiB = REAL(phiB_r); 
-    double *nuA = REAL(nuA_r); 
-    double *nuB = REAL(nuB_r); 
+    F77_NAME(dcopy)(&ppDet, &REAL(alphaCommPriors_r)[pDet], &inc, SigmaAlphaCommInv, &inc);
+    double *tauSqBetaA = REAL(tauSqBetaPriors_r); 
+    double *tauSqBetaB = &REAL(tauSqBetaPriors_r)[pOcc]; 
+    double *tauSqAlphaA = REAL(tauSqAlphaPriors_r); 
+    double *tauSqAlphaB = &REAL(tauSqAlphaPriors_r)[pDet]; 
+    double *phiA = REAL(phiPriors_r); 
+    double *phiB = &REAL(phiPriors_r)[qpTilde]; 
+    double *nuA = REAL(nuPriors_r); 
+    double *nuB = &REAL(nuPriors_r)[qpTilde]; 
     double *sigmaSqPA = REAL(sigmaSqPA_r); 
     double *sigmaSqPB = REAL(sigmaSqPB_r); 
     double *sigmaSqPsiA = REAL(sigmaSqPsiA_r); 
     double *sigmaSqPsiB = REAL(sigmaSqPsiB_r); 
+    double *rhoA = REAL(ar1Vals_r);
+    double *rhoB = &REAL(ar1Vals_r)[N];
+    double *sigmaSqTA = &REAL(ar1Vals_r)[2*N];
+    double *sigmaSqTB = &REAL(ar1Vals_r)[3*N];
+    double *ar1Tuning = &REAL(ar1Vals_r)[6*N];
     double *tuning = REAL(tuning_r); 
     int *nnIndx = INTEGER(nnIndx_r);
     int *nnIndxLU = INTEGER(nnIndxLU_r);
@@ -248,7 +254,6 @@ extern "C" {
     int Nq = N * q;
     int nObspDet = nObs * pDet;
     int nObspDetRE = nObs * pDetRE;
-    int qpTilde = q * pTilde;
     int JqpTilde = J * q * pTilde;
     int JNpTilde = J * N * pTilde;
     int NqpTilde = N * q * pTilde;
@@ -330,6 +335,12 @@ extern "C" {
     // Spatial smoothing parameter for Matern
     double *nu = (double *) R_alloc(qpTilde, sizeof(double)); 
     F77_NAME(dcopy)(&qpTilde, REAL(nuStarting_r), &inc, nu, &inc); 
+    // Temporal variance parameter
+    double *sigmaSqT = (double *) R_alloc(N, sizeof(double)); 
+    F77_NAME(dcopy)(&N, &REAL(ar1Vals_r)[5 * N], &inc, sigmaSqT, &inc);
+    // Temporal correlation parameter
+    double *rho = (double *) R_alloc(N, sizeof(double)); 
+    F77_NAME(dcopy)(&N, &REAL(ar1Vals_r)[4 * N], &inc, rho, &inc);
     // Latent Occurrence
     double *z = (double *) R_alloc(JNnYears, sizeof(double));   
     F77_NAME(dcopy)(&JNnYears, REAL(zStarting_r), &inc, z, &inc);
@@ -406,6 +417,17 @@ extern "C" {
     SEXP likeSamples_r;
     PROTECT(likeSamples_r = allocMatrix(REALSXP, JNnYears, nPost)); nProtect++;
     zeros(REAL(likeSamples_r), JNnYears * nPost);
+    // Temporal parameters
+    int nAR1 = 2, sigmaSqTIndx = 0, rhoIndx = 1;
+    int nAR1N = nAR1 * N; 
+    SEXP etaSamples_r; 
+    SEXP ar1ThetaSamples_r;
+    if (ar1) {
+      PROTECT(etaSamples_r = allocMatrix(REALSXP, NnYears, nPost)); nProtect++; 
+      zeros(REAL(etaSamples_r), NnYears * nPost);
+      PROTECT(ar1ThetaSamples_r = allocMatrix(REALSXP, nAR1N, nPost)); nProtect++; 
+      zeros(REAL(ar1ThetaSamples_r), nAR1N * nPost);
+    }
     
     /**********************************************************************
      * Additional Sampler Prep
@@ -585,9 +607,40 @@ extern "C" {
     } // t
 
     /**********************************************************************
+     * Set up AR1 stuff
+     *********************************************************************/
+    double *ar1Theta = (double *) R_alloc(nAR1N, sizeof(double));
+    for (i = 0; i < N; i++) {
+      ar1Theta[sigmaSqTIndx * N + i] = sigmaSqT[i];
+      ar1Theta[rhoIndx * N + i] = rho[i];
+    }
+    // Note you are overwriting these for each species each time. 
+    double *SigmaEta = (double *) R_alloc(nnYears, sizeof(double));
+    double *SigmaEtaCand = (double *) R_alloc(nnYears, sizeof(double));
+    double *tmp_nYearsMax = (double *) R_alloc(nYearsMax, sizeof(double));
+    double *tmp_nYearsMax2 = (double *) R_alloc(nYearsMax, sizeof(double));
+    double *tmp_nnYears = (double *) R_alloc(nnYears, sizeof(double));
+    // Initiate AR(1) matrix with first species. 
+    if (ar1) {
+      AR1(nYearsMax, ar1Theta[rhoIndx * N], ar1Theta[sigmaSqTIndx * N], SigmaEta);
+      clearUT(SigmaEta, nYearsMax);
+      F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+      if(info != 0){error("c++ error: Cholesky failed in initial time covariance matrix\n");}
+      F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+      if(info != 0){error("c++ error: Cholesky inverse failed in initial time covariance matrix\n");}
+    }
+    // Initiate temporal random effects to zero.
+    double *eta = (double *) R_alloc(NnYears, sizeof(double)); zeros(eta, NnYears);
+    double *etaTRInv = (double *) R_alloc(nYearsMax, sizeof(double));
+    double aSigmaSqTPost = 0.0;
+    double bSigmaSqTPost = 0.0;
+    double *ar1Accept = (double *) R_alloc(nAR1N, sizeof(double)); zeros(ar1Accept, nAR1N);
+    double *ar1Accept2 = (double *) R_alloc(nAR1N, sizeof(double)); zeros(ar1Accept2, nAR1N);
+
+    /**********************************************************************
      Set up stuff for Adaptive MH and other misc
      * *******************************************************************/
-    double logPostCurr = 0.0, logPostCand = 0.0; 
+    double logPostCurr = 0.0, logPostCand = 0.0, detCand = 0.0, detCurr = 0.0, rhoCand = 0.0, logMHRatio; 
     logPostCurr = R_NegInf; 
     double *accept = (double *) R_alloc(nThetaqpTilde, sizeof(double)); zeros(accept, nThetaqpTilde); 
     double phiCand = 0.0, nuCand = 0.0; 
@@ -747,7 +800,7 @@ extern "C" {
 	      // current species' range. 
 	      if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
                 omegaOcc[t * JN + j * N + i] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) + 
-				                        wSites[t * JN + j * N + i] + betaStarSites[t * JN + j * N + i]);
+				                        wSites[t * JN + j * N + i] + betaStarSites[t * JN + j * N + i] + eta[i * nYearsMax + t]);
                 kappaOcc[t * JN + j * N + i] = z[t * JN + j * N + i] - 1.0 / 2.0; 
 	        zStar[t * JN + j * N + i] = kappaOcc[t * JN + j * N + i] / omegaOcc[t * JN + j * N + i];
 	      }
@@ -775,7 +828,9 @@ extern "C" {
             for (j = 0; j < J; j++) {
               if ((zDatIndx[t * J + j] == 1) & (rangeInd[j * N + i] == 1.0)) {
                 tmp_JnYears[t * J + j] = kappaOcc[t * JN + j * N + i] - omegaOcc[t * JN + j * N + i] * 
-	                  (wSites[t * JN + j * N + i] + betaStarSites[t * JN + j * N + i]); 
+	                                 (wSites[t * JN + j * N + i] + 
+			                  betaStarSites[t * JN + j * N + i] + 
+			                  eta[i * nYearsMax + t]); 
 	      }
             } // j
 	  } // t
@@ -905,7 +960,7 @@ extern "C" {
                         tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[rr * JnYears + t * J + j]]; 
         	      }
                       tmp_one[0] += kappaOcc[t * JN + j * N + i] - (F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) + 
-				     tmp_02 - betaStar[i * nOccRE + l] + wSites[t * JN + j * N + i]) * omegaOcc[t * JN + j * N + i];
+				     tmp_02 - betaStar[i * nOccRE + l] + wSites[t * JN + j * N + i] + eta[i * nYearsMax + t]) * omegaOcc[t * JN + j * N + i];
 	              tmp_0 += omegaOcc[t * JN + j * N + i];
 	            }
 	          }
@@ -970,6 +1025,139 @@ extern "C" {
                 alphaStarObs[i * nObs + r] += alphaStar[i * nDetRE + which(XpRE[l * nObs + r], alphaLevelIndx, nDetRE)]; 
               }
             }
+          }
+          if (ar1) {
+            /********************************************************************
+             *Update sigmaSqT
+             *******************************************************************/
+            // Form correlation matrix. 
+            AR1(nYearsMax, ar1Theta[rhoIndx * N + i], 1.0, SigmaEta);
+            clearUT(SigmaEta, nYearsMax);
+            F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky failed in AR1 covariance matrix\n");}
+            F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky inverse failed in AR1 covariance matrix\n");}
+            fillUTri(SigmaEta, nYearsMax);
+            // Compute t(eta) %*% SigmaEta^-1 %*% eta
+            for (t = 0; t < nYearsMax; t++) {
+              etaTRInv[t] = F77_NAME(ddot)(&nYearsMax, &SigmaEta[t], &nYearsMax, 
+            		               &eta[i * nYearsMax], &inc); 
+            }
+            bSigmaSqTPost = F77_NAME(ddot)(&nYearsMax, etaTRInv, &inc, &eta[i * nYearsMax], &inc);	
+            bSigmaSqTPost /= 2.0;
+            bSigmaSqTPost += sigmaSqTB[i];
+	    aSigmaSqTPost = 0.5 * nYearsMax + sigmaSqTA[i];
+            ar1Theta[sigmaSqTIndx * N + i] = rigamma(aSigmaSqTPost, bSigmaSqTPost);
+            
+            /********************************************************************
+             *Update rho
+             *******************************************************************/
+            rho[i] = ar1Theta[rhoIndx * N + i];
+            sigmaSqT[i] = ar1Theta[sigmaSqTIndx * N + i];
+            rhoCand = logitInv(rnorm(logit(rho[i], rhoA[i], rhoB[i]), 
+				     exp(ar1Tuning[rhoIndx * N + i])), rhoA[i], rhoB[i]); 
+            ar1Theta[rhoIndx * N + i] = rhoCand; 
+
+            // Construct proposal covariance matrix. 
+            AR1(nYearsMax, ar1Theta[rhoIndx * N + i], ar1Theta[sigmaSqTIndx * N + i], SigmaEtaCand);
+            clearUT(SigmaEtaCand, nYearsMax);
+
+            /********************************
+             * Proposal
+             *******************************/
+            // Invert SigmaEtaCand and log det cov. 
+            detCand = 0.0;
+            F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEtaCand, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky failed in proposal covariance matrix\n");}
+            // Get log of the determinant of the covariance matrix. 
+            for (k = 0; k < nYearsMax; k++) {
+              detCand += 2.0 * log(SigmaEtaCand[k*nYearsMax+k]);
+            } // k
+            F77_NAME(dpotri)(lower, &nYearsMax, SigmaEtaCand, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky inverse failed in proposal covariance matrix\n");}
+            logPostCand = 0.0; 
+            // Jacobian and Uniform prior. 
+            logPostCand += log(rhoCand - rhoA[i]) + log(rhoB[i] - rhoCand); 
+            F77_NAME(dsymv)(lower, &nYearsMax, &one,  SigmaEtaCand, &nYearsMax, 
+			    &eta[i * nYearsMax], &inc, &zero, tmp_nYearsMax, &inc FCONE);
+            logPostCand += -0.5*detCand-0.5*F77_NAME(ddot)(&nYearsMax, &eta[i * nYearsMax], 
+			                                   &inc, tmp_nYearsMax, &inc);
+            /********************************
+             * Current
+             *******************************/
+            ar1Theta[rhoIndx * N + i] = rho[i]; 
+            AR1(nYearsMax, ar1Theta[rhoIndx * N + i], ar1Theta[sigmaSqTIndx * N + i], SigmaEta);
+            clearUT(SigmaEta, nYearsMax);
+            detCurr = 0.0;
+            F77_NAME(dpotrf)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+            for (k = 0; k < nYearsMax; k++) {
+              detCurr += 2.0 * log(SigmaEta[k*nYearsMax+k]);
+            } // k
+            F77_NAME(dpotri)(lower, &nYearsMax, SigmaEta, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+            logPostCurr = 0.0; 
+            logPostCurr += log(rho[i] - rhoA[i]) + log(rhoB[i] - rho[i]); 
+            // (-1/2) * tmp_JD` *  C^-1 * tmp_JD
+            F77_NAME(dsymv)(lower, &nYearsMax, &one, SigmaEta, &nYearsMax, 
+			    &eta[i * nYearsMax], &inc, &zero, 
+            		tmp_nYearsMax, &inc FCONE);
+            logPostCurr += -0.5*detCurr-0.5*F77_NAME(ddot)(&nYearsMax, &eta[i * nYearsMax], 
+			                                   &inc, tmp_nYearsMax, &inc);
+
+            // MH Accept/Reject
+            logMHRatio = logPostCand - logPostCurr; 
+            if (runif(0.0, 1.0) <= exp(logMHRatio)) {
+              ar1Theta[rhoIndx * N + i] = rhoCand;
+              ar1Accept[rhoIndx * N + i]++;
+              F77_NAME(dcopy)(&nnYears, SigmaEtaCand, &inc, SigmaEta, &inc); 
+            }
+            
+            /********************************************************************
+             *Update eta 
+             *******************************************************************/
+            /********************************
+             * Compute b.w
+             *******************************/
+            zeros(tmp_nYearsMax, nYearsMax);
+            for (j = 0; j < J; j++) {
+              for (t = 0; t < nYearsMax; t++) {
+	        if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                  tmp_nYearsMax[t] += kappaOcc[t * JN + j * N + i] - omegaOcc[t * JN + j * N + i] * 
+			              (F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], 
+						      &JnYears, &beta[i], &N) + 
+				       betaStarSites[t * JN + j * N + i] + 
+				       wSites[t * JN + j * N + i]);
+
+                }
+              }
+            }
+            /********************************
+             * Compute A.w
+             *******************************/
+            // Copy inverse covariance matrix into tmp_nnYears
+            F77_NAME(dcopy)(&nnYears, SigmaEta, &inc, tmp_nnYears, &inc); 
+            for (j = 0; j < J; j++) {
+              for (t = 0; t < nYearsMax; t++) {
+	        if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                  tmp_nnYears[t * nYearsMax + t] += omegaOcc[t * JN + j * N + i];
+                }
+              } // t
+            } // j
+
+            // Cholesky of A.eta
+            F77_NAME(dpotrf)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: dpotrf on A.eta failed\n");}
+            // Inverse of A.eta
+            F77_NAME(dpotri)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: dpotri on A.eta failed\n");}
+            // A.eta.inv %*% b.eta. Stored in tmp_
+            F77_NAME(dsymv)(lower, &nYearsMax, &one, tmp_nnYears, &nYearsMax, 
+            		tmp_nYearsMax, &inc, &zero, tmp_nYearsMax2, &inc FCONE);
+            F77_NAME(dpotrf)(lower, &nYearsMax, tmp_nnYears, &nYearsMax, &info FCONE); 
+            if(info != 0){error("c++ error: dpotrf on A.eta failed\n");}
+            // Args: destination, mu, cholesky of the covariance matrix, dimension
+            mvrnorm(&eta[i * nYearsMax], tmp_nYearsMax2, tmp_nnYears, nYearsMax);
           }
 	} // i (species)
 
@@ -1075,7 +1263,8 @@ extern "C" {
 	      for (i = 0; i < N; i++) {
                 if ((zDatIndx[t * J + ii] == 1) && (rangeInd[ii * N + i] == 1.0)) {
                   tmp_N[i] = (zStar[t * JN + ii * N + i] - F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + ii], &JnYears, &beta[i], &N) - 
-	          	                    betaStarSites[t * JN + ii * N + i] - tmp_NnYears[t * N + i]) * 
+	          	                    betaStarSites[t * JN + ii * N + i] - 
+					    eta[i * nYearsMax + t] - tmp_NnYears[t * N + i]) * 
 	                      omegaOcc[t * JN + ii * N + i];
                   for (ll = 0; ll < q; ll++) {
                     tmp_Nq2[ll * N + i] += lambda[rr * Nq + ll * N + i] * Xw[i * JnYearspTilde + rr * JnYears + t * J + ii];
@@ -1158,7 +1347,7 @@ extern "C" {
 	            }
 	          } // rrr (svc)
                   tmp_JnYears[t * J + j] = zStar[t * JN + j * N + i] - F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) - 
-	                                   betaStarSites[t * JN + j * N + i] - tmp_0;
+	                                   betaStarSites[t * JN + j * N + i] - tmp_0 - eta[i * nYearsMax + t];
 
 	          if (i < q) {
                     tmp_JnYears[t * J + j] -= w[rr * Jq + j * q + i] * Xw[i * JnYearspTilde + rr * JnYears + t * J + j];
@@ -1333,7 +1522,8 @@ extern "C" {
               if (tmp_JnYearsInt[zLongIndx[r]] == 0) {
                 psi[yearIndx * JN + siteIndx * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[i* JnYearspOcc + yearIndx * J + siteIndx], &JnYears, &beta[i], &N) + 
 	          	                                               wSites[yearIndx * JN + siteIndx * N + i] + 
-	          					               betaStarSites[yearIndx * JN + siteIndx * N + i], zero, one);
+	          					               betaStarSites[yearIndx * JN + siteIndx * N + i] + 
+								       eta[i * nYearsMax + yearIndx], zero, one);
               }
               piProd[yearIndx * JN + siteIndx * N + i] *= (1.0 - detProb[i * nObs + r]);
 	      piProdWAIC[yearIndx * JN + siteIndx * N + i] *= pow(detProb[i * nObs + r], y[r * N + i]);
@@ -1359,7 +1549,8 @@ extern "C" {
 	        } else {
                   psi[t * JN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) + 
 	           	                           wSites[t * JN + j * N + i] + 
-	           			           betaStarSites[t * JN + j * N + i], zero, one);
+	           			           betaStarSites[t * JN + j * N + i] + 
+						   eta[i * nYearsMax + t], zero, one);
                   z[t * JN + j * N + i] = rbinom(one, psi[t * JN + j * N + i]);		
 	        }
 	      } else {
@@ -1392,6 +1583,11 @@ extern "C" {
             F77_NAME(dcopy)(&JNnYears, z, &inc, &REAL(zSamples_r)[sPost*JNnYears], &inc); 
             F77_NAME(dcopy)(&JqpTilde, w, &inc, &REAL(wSamples_r)[sPost*JqpTilde], &inc); 
             F77_NAME(dcopy)(&nThetaqpTildeSave, &theta[phiIndx * qpTilde], &inc, &REAL(thetaSamples_r)[sPost*nThetaqpTildeSave], &inc); 
+            if (ar1) {
+              F77_NAME(dcopy)(&nAR1N, ar1Theta, &inc, 
+        		      &REAL(ar1ThetaSamples_r)[sPost*nAR1N], &inc);
+              F77_NAME(dcopy)(&NnYears, eta, &inc, &REAL(etaSamples_r)[sPost*NnYears], &inc);
+            }
 	    if (pDetRE > 0) {
               F77_NAME(dcopy)(&pDetRE, sigmaSqP, &inc, &REAL(sigmaSqPSamples_r)[sPost*pDetRE], &inc);
               F77_NAME(dcopy)(&nDetREN, alphaStar, &inc, &REAL(alphaStarSamples_r)[sPost*nDetREN], &inc);
@@ -1425,6 +1621,19 @@ extern "C" {
           } // k
         } // ll
       } // rr
+      if (ar1) {
+        for (i = 0; i < N; i++) {
+          for (k = 0; k < nAR1; k++) {
+            ar1Accept2[k * N + i] = ar1Accept[k * N + i]/batchLength; 
+            if (ar1Accept[k * N + i] / batchLength > acceptRate) {
+              ar1Tuning[k * N + i] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
+            } else{
+                ar1Tuning[k * N + i] -= std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
+              }
+            ar1Accept[k * N + i] = 0.0;
+          } // k
+        } // i
+      }
 
       /********************************************************************
        *Report 
@@ -1438,6 +1647,12 @@ extern "C" {
               Rprintf("\t%i\t\t%i\t\t%3.1f\t\t%1.5f\n", rr + 1, ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetaqpTilde + phiIndx * qpTilde + rr * q + ll], exp(tuning[phiIndx * qpTilde + rr * q + ll]));
             } // ll
 	  } // rr
+          if (ar1) {
+            Rprintf("\tSpecies\t\tParameter\tAcceptance\tTuning\n");	  
+            for (i = 0; i < N; i++) {
+                Rprintf("\t%i\t\trho\t\t%3.1f\t\t%1.5f\n", i + 1, 100.0*ar1Accept2[rhoIndx * N + i], exp(ar1Tuning[rhoIndx * N + i]));
+            } // i
+	  }
           Rprintf("-------------------------------------------------\n");
           #ifdef Win32
           R_FlushConsole();
@@ -1462,6 +1677,9 @@ extern "C" {
       nResultListObjs += 2; 
     }
     if (pOccRE > 0) {
+      nResultListObjs += 2;
+    }
+    if (ar1) {
       nResultListObjs += 2;
     }
 
@@ -1496,6 +1714,18 @@ extern "C" {
       SET_VECTOR_ELT(result_r, tmp_0, sigmaSqPsiSamples_r);
       SET_VECTOR_ELT(result_r, tmp_0 + 1, betaStarSamples_r);
     }
+    int ar1Ind = 0;
+    if (ar1) {
+      if (pOccRE > 0) {
+        ar1Ind = tmp_0 + 2;
+      } else if (pDetRE > 0) {
+        ar1Ind = 16; 
+      } else {
+        ar1Ind = 14;
+      }
+      SET_VECTOR_ELT(result_r, ar1Ind, etaSamples_r);
+      SET_VECTOR_ELT(result_r, ar1Ind + 1, ar1ThetaSamples_r);
+    }
 
     // mkChar turns a C string into a CHARSXP
     SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
@@ -1519,6 +1749,10 @@ extern "C" {
     if (pOccRE > 0) {
       SET_VECTOR_ELT(resultName_r, tmp_0, mkChar("sigma.sq.psi.samples")); 
       SET_VECTOR_ELT(resultName_r, tmp_0 + 1, mkChar("beta.star.samples")); 
+    }
+    if (ar1) {
+      SET_VECTOR_ELT(resultName_r, ar1Ind, mkChar("eta.samples")); 
+      SET_VECTOR_ELT(resultName_r, ar1Ind + 1, mkChar("ar1.theta.samples")); 
     }
    
     // Set the names of the output list.  

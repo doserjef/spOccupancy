@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette provides statistical details on the MCMC algorithms used to fit all joint species distribution models in `spOccupancy`. In particular, we discuss the Gibbs samplers for each of the following four models presented in Doser, Finley, Banerjee (2022): 
+This vignette provides statistical details on the MCMC algorithms used to fit all joint species distribution models in `spOccupancy`. In particular, we discuss the Gibbs samplers for each of the following four models presented in @doser2023joint: 
 
 1. A spatial latent factor multi-species occupancy model using `sfMsPGOcc()` that accommodates residual species correlations, imperfect detection, and spatial autocorrelation. 
 2. A latent factor multi-species occupancy model using `lfMsPGOcc()` that accommodates residual species correlations and imperfect detection. 
@@ -41,7 +41,7 @@ This vignette provides statistical details on the MCMC algorithms used to fit al
 
 We use $\pg$ data augmentation following [@polson2013] to yield an efficient Gibbs sampler for all joint species distribution models in `spOccupancy`. Traditionally, the species-specific regression coefficients (and intercepts) for occurrence ($\bm{\beta}_i$) and detection ($\bm{\alpha}_i)$ require a Metropolis update, which can lead to slow convergence and bad mixing of MCMC chains [@clark2019]. Instead, we introduce species-specific $\pg$ latent variables for both the occurrence and detection portions of the spatial factor multi-species occupancy model, which induces efficient Gibbs updates for the species-specific occurrence and detection regression coefficients.  
 
-Let $\omega_{i, \beta}(\bm{s}_j)$ for each species $i$ and location $j$ with coordinates $\bm{s}_j$ follow a $\pg$ distribution with parameters 1 and 0 (i.e., $\omega_{i, \beta}(\bm{s}_j) \sim \text{PG}(1, 0)$). Given this species-specific latent variable, we can re-express the Bernoulli process model (Equation 1 in Doser, Finley, Banerjee (2022)) as 
+Let $\omega_{i, \beta}(\bm{s}_j)$ for each species $i$ and location $j$ with coordinates $\bm{s}_j$ follow a $\pg$ distribution with parameters 1 and 0 (i.e., $\omega_{i, \beta}(\bm{s}_j) \sim \text{PG}(1, 0)$). Given this species-specific latent variable, we can re-express the Bernoulli process model (Equation 1 in @doser2023joint) as 
 
 \begin{equation}
 \begin{split}

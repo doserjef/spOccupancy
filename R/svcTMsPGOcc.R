@@ -3,7 +3,8 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 		        n.neighbors = 15, search.type = "cb", 
 			std.by.sp = FALSE, n.factors, 
 		        n.batch, batch.length, accept.rate = 0.43,
-		        n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+		        n.omp.threads = 1, verbose = TRUE, 
+			ar1 = FALSE, n.report = 100, 
 		        n.burn = round(.10 * n.batch * batch.length), 
 		        n.thin = 1, n.chains = 1, ...){
 
@@ -173,10 +174,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
   }
   # occ.covs ------------------------
-  # TODO: you may also want to eventually consider the situation where people 
-  #       don't care about occurrence at unsampled year/sites, and may not have those 
-  #       covariates. I think in this case, you can just set them to 0 without any problems, 
-  #       but would need to think about that some more. 
   if (sum(is.na(data$occ.covs)) != 0) {
     stop("error: missing values in occ.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
   }
@@ -229,6 +226,11 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
   }
 
+  # Check ar1 parameter ---------------------------------------------------
+  if (!(ar1 %in% c(TRUE, FALSE))) {
+    stop("error: ar1 must be either TRUE or FALSE")
+  }
+
   # Formula -------------------------------------------------------------
   # Occupancy -----------------------
   if (missing(occ.formula)) {
@@ -268,8 +270,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   X.big <- ifelse(is.na(X.big), 0, X.big)
 
-  # TODO: may need to think about allowing for scaling by species for
-  #       the detection covariates as well.
   # Detection -----------------------
   if (missing(det.formula)) {
     stop("error: det.formula must be specified")
@@ -733,6 +733,70 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     sigma.sq.p.b <- 0
   }
 
+  if (ar1) {
+    # rho ---------------------------
+    if ("rho.unif" %in% names(priors)) {
+      if (!is.list(priors$rho.unif) | length(priors$rho.unif) != 2) {
+        stop("error: rho.unif must be a list of length 2")
+      }
+      rho.a <- priors$rho.unif[[1]]
+      rho.b <- priors$rho.unif[[2]]
+      if (length(rho.a) != N & length(rho.a) != 1) {
+        stop(paste("error: rho.unif[[1]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to rhos' lower bound for each species", sep = ""))
+      }
+      if (length(rho.b) != N & length(rho.b) != 1) {
+        stop(paste("error: rho.unif[[2]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to rhos' upper bound for each species", sep = ""))
+      }
+      if (length(rho.a) != N) {
+        rho.a <- rep(rho.a, N)
+      }
+      if (length(rho.b) != N) {
+        rho.b <- rep(rho.b, N)
+      }
+    } else {
+      if (verbose) {
+      message("No prior specified for rho.unif.\nSetting uniform bounds to -1 and 1.\n")
+      }
+      rho.a <- rep(-1, N)
+      rho.b <- rep(1, N)
+    }
+    # sigma.sq.t ---------------------- 
+    if ("sigma.sq.t.ig" %in% names(priors)) { # inverse-gamma prior
+      if (!is.list(priors$sigma.sq.t.ig) | length(priors$sigma.sq.t.ig) != 2) {
+        stop("error: sigma.sq.t.ig must be a list of length 2")
+      }
+      sigma.sq.t.a <- priors$sigma.sq.t.ig[[1]]
+      sigma.sq.t.b <- priors$sigma.sq.t.ig[[2]]
+      if (length(sigma.sq.t.a) != N & length(sigma.sq.t.a) != 1) {
+        stop(paste("error: sigma.sq.t.ig[[1]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to sigma.sq.ts' shape for each species", sep = ""))
+      }
+      if (length(sigma.sq.t.b) != N & length(sigma.sq.t.b) != 1) {
+        stop(paste("error: sigma.sq.t.ig[[2]] must be a vector of length ", 
+        	   N, " or 1 with elements corresponding to sigma.sq.ts' scale for each species", sep = ""))
+      }
+      if (length(sigma.sq.t.a) != N) {
+        sigma.sq.t.a <- rep(sigma.sq.t.a, N)
+      }
+      if (length(sigma.sq.t.b) != N) {
+        sigma.sq.t.b <- rep(sigma.sq.t.b, N)
+      }
+    } else {
+      if (verbose) {
+        message("No prior specified for sigma.sq.t.\nUsing an inverse-Gamma prior with the shape parameter to 2 and scale parameter to 0.5.\n")
+      }
+      sigma.sq.t.a <- rep(2, N)
+      sigma.sq.t.b <- rep(0.5, N)
+    }
+  } else {
+    rho.a <- rep(1, N)
+    rho.b <- rep(1, N)
+    sigma.sq.t.a <- rep(1, N)
+    sigma.sq.t.b <- rep(1, N)
+  }
+
   # Initial values --------------------------------------------------------
   if (missing(inits)) {
     inits <- list()
@@ -1049,6 +1113,44 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     alpha.star.inits <- 0
   }
 
+  if (ar1) {
+    # rho ------------------------
+    if ("rho" %in% names(inits)) {
+      rho.inits <- inits[["rho"]]
+      if (length(rho.inits) != N & length(rho.inits) != 1) {
+        stop(paste("error: initial values for rho must be of length ", N,  " or 1",
+        	   sep = ""))
+      }
+      if (length(rho.inits) != N) {
+        rho.inits <- rep(rho.inits, N)
+      }
+    } else {
+      if (verbose) {
+        message("rho is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
+      }
+      rho.inits <- runif(N, rho.a, rho.b)
+    }
+    # sigma.sq.t ----------------------
+    if ("sigma.sq.t" %in% names(inits)) {
+      sigma.sq.t.inits <- inits[["sigma.sq.t"]]
+      if (length(sigma.sq.t.inits) != N & length(sigma.sq.t.inits) != 1) {
+        stop(paste("error: initial values for sigma.sq.t must be of length ", N, 
+      	     " or 1", sep = ""))
+      }
+      if (length(sigma.sq.t.inits) != N) {
+        sigma.sq.t.inits <- rep(sigma.sq.t.inits, N)
+      }
+    } else {
+      sigma.sq.t.inits <- runif(N, 0.5, 5)
+      if (verbose) {
+        message("sigma.sq.t is not specified in initial values.\nSetting initial values to random values between 0.5 and 5\n")
+      }
+    }
+  } else {
+    rho.inits <- rep(0, N)
+    sigma.sq.t.inits <- rep(0, N)
+  }
+
   # Should initial values be fixed --
   if ("fix" %in% names(inits)) {
     fix.inits <- inits[["fix"]]
@@ -1113,6 +1215,31 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
   }
   tuning.c <- log(c(sigma.sq.tuning, phi.tuning, nu.tuning))
+  # Get AR1 tuning values -------------------------------------------------
+  # Keeping these separate from the other tuning since it is complicated with 
+  # the SVCs and factors
+  rho.tuning <- rep(1, N)
+  sigma.sq.t.tuning <- rep(1, N)
+  if (ar1) {
+    if (missing(tuning)) {
+      rho.tuning <- rep(1, N)
+      sigma.sq.t.tuning <- rep(1, N)
+    } else {
+      names(tuning) <- tolower(names(tuning))
+      # rho ---------------------------
+      if(!"rho" %in% names(tuning)) {
+        stop("error: rho must be specified in tuning value list")
+      }
+      rho.tuning <- tuning$rho
+      if (length(rho.tuning) == 1) {
+        rho.tuning <- rep(tuning$rho, N)
+      } else if (length(rho.tuning) != N) {
+        stop(paste("error: rho tuning must be either a single value or a vector of length ",
+        	   N, sep = ""))
+      }
+    }
+  }
+  ar1.tuning.c <- log(c(sigma.sq.t.tuning, rho.tuning))
   # Set model.deviance to NA for returning when no cross-validation
   model.deviance <- NA
   curr.chain <- 1
@@ -1182,7 +1309,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(coords) <- "double"
     storage.mode(range.ind) <- "double"
     consts <- c(N, J, n.obs, p.occ, p.occ.re, n.occ.re, 
-		p.det, p.det.re, n.det.re, q, p.svc, n.years.max)
+		p.det, p.det.re, n.det.re, q, p.svc, n.years.max, ar1)
     storage.mode(consts) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(alpha.inits) <- "double"
@@ -1197,18 +1324,18 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(z.year.indx) <- "integer"
     storage.mode(z.dat.indx) <- "integer"
     storage.mode(z.site.indx) <- "integer"
-    storage.mode(mu.beta.comm) <- "double"
-    storage.mode(Sigma.beta.comm) <- "double"
-    storage.mode(mu.alpha.comm) <- "double"
-    storage.mode(Sigma.alpha.comm) <- "double"
-    storage.mode(tau.sq.beta.a) <- "double"
-    storage.mode(tau.sq.beta.b) <- "double"
-    storage.mode(tau.sq.alpha.a) <- "double"
-    storage.mode(tau.sq.alpha.b) <- "double"
-    storage.mode(phi.a) <- "double"
-    storage.mode(phi.b) <- "double"
-    storage.mode(nu.a) <- "double"
-    storage.mode(nu.b) <- "double"
+    beta.comm.priors <- c(mu.beta.comm, c(Sigma.beta.comm))
+    storage.mode(beta.comm.priors) <- 'double'
+    alpha.comm.priors <- c(mu.alpha.comm, c(Sigma.alpha.comm))
+    storage.mode(alpha.comm.priors) <- 'double'
+    tau.sq.beta.priors <- c(tau.sq.beta.a, tau.sq.beta.b)
+    storage.mode(tau.sq.beta.priors) <- 'double'
+    tau.sq.alpha.priors <- c(tau.sq.alpha.a, tau.sq.alpha.b)
+    storage.mode(tau.sq.alpha.priors) <- 'double'
+    phi.priors <- c(phi.a, phi.b)
+    storage.mode(phi.priors) <- 'double'
+    nu.priors <- c(nu.a, nu.b)
+    storage.mode(nu.priors) <- 'double'
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1251,7 +1378,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(sigma.sq.psi.b) <- "double"
     storage.mode(beta.star.inits) <- "double"
     storage.mode(beta.star.indx) <- "integer"
-
+    # AR1 parameters
+    ar1.vals <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
+		  rho.inits, sigma.sq.t.inits, ar1.tuning.c)
+    storage.mode(ar1.vals) <- 'double'
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
     out <- list()
@@ -1289,6 +1419,13 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
           beta.star.inits <- rep(beta.star.inits, N)
         }
+        if (ar1) {
+          rho.inits <- runif(N, rho.a, rho.b)
+          sigma.sq.t.inits <- runif(N, 0.5, 5)
+          ar1.vals <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
+                        rho.inits, sigma.sq.t.inits, ar1.tuning.c)
+          storage.mode(ar1.vals) <- "double"
+        }
       }
 
       storage.mode(chain.info) <- "integer"
@@ -1305,15 +1442,14 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         		    beta.star.inits, alpha.star.inits, z.long.indx, z.year.indx, 
       		    z.dat.indx, z.site.indx,
         		    beta.star.indx, beta.level.indx, alpha.star.indx, 
-        		    alpha.level.indx, mu.beta.comm, 
-        	            mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-        	            tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
-        	            tau.sq.alpha.b, phi.a, phi.b,
-        	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+        		    alpha.level.indx, beta.comm.priors, 
+        	            alpha.comm.priors, tau.sq.beta.priors, 
+			    tau.sq.alpha.priors, phi.priors, nu.priors,  
+        	            sigma.sq.psi.a, sigma.sq.psi.b, 
         		    sigma.sq.p.a, sigma.sq.p.b, 
         		    tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info)
+        	            samples.info, chain.info, ar1.vals)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1338,12 +1474,20 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2])
-      out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      if (ar1) {
+      out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
-      lambda.mat <- matrix(lambda.inits, N, q)
+      			      autoburnin = FALSE)$psrf[, 2], 
+			  gelman.diag(mcmc.list(lapply(out.tmp, function(a)
+						       mcmc(t(a$ar1.theta.samples)))))$psrf[, 2])
+      } else {
+        out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+      					      mcmc(t(a$theta.samples)))), 
+      			      autoburnin = FALSE)$psrf[, 2] 
+      }
+      lambda.mat <- matrix(NA, N, q)
       out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+        					       mcmc(t(a$lambda.samples[rep(c(lower.tri(lambda.mat)), p.svc), ])))), 
         					       autoburnin = FALSE)$psrf[, 2])
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
@@ -1362,7 +1506,12 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$tau.sq.alpha <- rep(NA, p.det)
       out$rhat$beta <- rep(NA, p.occ * N)
       out$rhat$alpha <- rep(NA, p.det * N)
-      out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q.p.svc, q.p.svc))
+      if(ar1) {
+        out$rhat$theta <- c(rep(NA, ifelse(cov.model == 'matern', 2 * q.p.svc, q.p.svc)), 
+			    rep(NA, N * 2))
+      } else {
+        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q.p.svc, q.p.svc))
+      }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- rep(NA, p.det.re)
       }
@@ -1424,6 +1573,15 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     colnames(out$lambda.samples) <- loadings.names
     out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
     colnames(out$theta.samples) <- theta.names
+    if (ar1) {
+      tmp.names <- paste(rep(c('sigma.sq.t', 'rho'), each = N), sp.names, sep = '-')
+      tmp <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$ar1.theta.samples))))
+      colnames(tmp) <- tmp.names
+      out$theta.samples <- mcmc(cbind(out$theta.samples, tmp))
+      out$eta.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$eta.samples, 
+        								dim = c(n.years.max, N, n.post.samples))))
+      out$eta.samples <- aperm(out$eta.samples, c(3, 2, 1))
+    }
 
     # Return things back in the original order. 
     out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
@@ -1452,33 +1610,27 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       								dim = c(N, J, n.years.max, n.post.samples))))
     out$like.samples <- out$like.samples[, order(ord), , ]
     out$like.samples <- aperm(out$like.samples, c(4, 1, 2, 3))
-    # TODO: some of this stuff is definitely wrong. 
-    # tmp <- matrix(NA, J * K.max, p.det)
-    # tmp[names.long, ] <- X.p
-    # tmp <- array(tmp, dim = c(J, K.max, p.det))
-    # tmp <- tmp[order(ord), , ]
-    # out$X.p <- matrix(tmp, J * K.max, p.det)
-    # out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
-    # colnames(out$X.p) <- x.p.names
-    # tmp <- matrix(NA, J * K.max, p.det.re)
-    # tmp[names.long, ] <- X.p.re
-    # tmp <- array(tmp, dim = c(J, K.max, p.det.re))
-    # tmp <- tmp[order(ord), , ]
-    # out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
-    # out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
-    # colnames(out$X.p.re) <- x.p.re.names
-    # tmp <- matrix(NA, J * K.max, n.det.re)
-    # tmp[names.long, ] <- lambda.p
-    # tmp <- array(tmp, dim = c(J, K.max, n.det.re))
-    # tmp <- tmp[order(ord), , ]
-    # out$lambda.p <- matrix(tmp, J * K.max, n.det.re)
-    # out$lambda.p <- out$lambda.p[apply(out$lambda.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+    # Get all detection covariate stuff in the right order
+    tmp <- matrix(NA, J * K.max * n.years.max, p.det)
+    tmp[names.long, ] <- X.p
+    tmp <- array(tmp, dim = c(J, n.years.max, K.max, p.det))
+    tmp <- tmp[order(ord), , , , drop = FALSE]
+    out$X.p <- matrix(tmp, J * K.max * n.years.max, p.det)
+    out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+    colnames(out$X.p) <- x.p.names
+    tmp <- matrix(NA, J * K.max * n.years.max, p.det.re)
+    tmp[names.long, ] <- X.p.re
+    tmp <- array(tmp, dim = c(J, n.years.max, K.max, p.det.re))
+    tmp <- tmp[order(ord), , , , drop = FALSE]
+    out$X.p.re <- matrix(tmp, J * K.max * n.years.max, p.det.re)
+    out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
+    colnames(out$X.p.re) <- x.p.re.names
     out$X.re <- array(X.re, dim = c(J, n.years.max, p.occ.re))
     out$X.re <- out$X.re[order(ord), , , drop = FALSE]
     dimnames(out$X.re)[[3]] <- x.re.names
-    # TODO: 
     out$X.w <- array(X.w, dim = c(J, n.years.max, p.svc))
     out$X.w <- out$X.w[order(ord), , , drop = FALSE]
+    dimnames(out$X.w)[[3]] <- x.names[svc.cols]
     # Calculate effective sample sizes
     out$ESS <- list()
     out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
@@ -1520,6 +1672,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$n.thin <- n.thin
     out$n.burn <- n.burn
     out$n.chains <- n.chains
+    out$ar1 <- as.logical(ar1)
     if (p.det.re > 0) {
       out$pRE <- TRUE
     } else {
@@ -1534,8 +1687,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     class(out) <- "svcTMsPGOcc"
   }
 
-  # TODO: temporary until adding in AR1
-  out$ar1 <- FALSE
   out$run.time <- proc.time() - ptm
   return(out)
 }

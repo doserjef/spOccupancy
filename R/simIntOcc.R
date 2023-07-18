@@ -8,6 +8,13 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
       if(! i %in% formal.args)
           warning("'",i, "' is not an argument")
   }
+  # Subroutines -----------------------------------------------------------
+  rmvn <- function(n, mu=0, V = matrix(1)){
+    p <- length(mu)
+    if(any(is.na(match(dim(V),p)))){stop("Dimension problem!")}
+    D <- chol(V)
+    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
+  }
 
   # Check function inputs -------------------------------------------------
   # n.data -------------------------------
@@ -144,7 +151,7 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
     }
     Sigma <- mkSpCov(coords, as.matrix(sigma.sq), as.matrix(0), theta, cov.model)
     # Random spatial process
-    w <- as.matrix(mvrnorm(1, rep(0, J), Sigma))
+    w <- as.matrix(rmvn(1, rep(0, J), Sigma))
   } else {
     w <- NA
   }

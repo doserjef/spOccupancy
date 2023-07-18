@@ -11,7 +11,13 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
       if(! i %in% formal.args)
           warning("'",i, "' is not an argument")
   }
-
+  # Subroutines -----------------------------------------------------------
+  rmvn <- function(n, mu=0, V = matrix(1)){
+    p <- length(mu)
+    if(any(is.na(match(dim(V),p)))){stop("Dimension problem!")}
+    D <- chol(V)
+    t(matrix(rnorm(n*p), ncol=p)%*%D + rep(mu,rep(n,p)))
+  }
   # Check function inputs -------------------------------------------------
   # J.x -------------------------------
   if (missing(J.x)) {
@@ -291,7 +297,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
     for (i in 1:p.svc) {
       Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
       # Random spatial process
-      w.mat[, i] <- mvrnorm(1, rep(0, J), Sigma)
+      w.mat[, i] <- rmvn(1, rep(0, J), Sigma)
     }
     X.w <- X[, , svc.cols, drop = FALSE]
     w.sites <- matrix(0, J, n.time.max)
@@ -310,7 +316,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
     exponent <- abs(matrix(1:n.time.max - 1, nrow = n.time.max, 
 			   ncol = n.time.max, byrow = TRUE) - (1:n.time.max - 1))
     Sigma.eta <- sigma.sq.t * rho^exponent
-    eta <- mvrnorm(1, rep(0, n.time.max), Sigma.eta)
+    eta <- rmvn(1, rep(0, n.time.max), Sigma.eta)
   } else {
     eta <- matrix(rep(0, n.time.max))
   }
