@@ -1,7 +1,7 @@
 svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
 		        tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
 		        n.neighbors = 15, search.type = "cb", 
-			std.by.sp = FALSE, n.factors, 
+			std.by.sp = FALSE, n.factors, svc.by.sp, 
 		        n.batch, batch.length, accept.rate = 0.43,
 		        n.omp.threads = 1, verbose = TRUE, 
 			ar1 = FALSE, n.report = 100, 
@@ -229,6 +229,34 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Check ar1 parameter ---------------------------------------------------
   if (!(ar1 %in% c(TRUE, FALSE))) {
     stop("error: ar1 must be either TRUE or FALSE")
+  }
+
+  # Check svc.by.sp -------------------------------------------------------
+  if (!missing(svc.by.sp)) {
+    if (!is.list(svc.by.sp)) {
+      stop('svc.by.sp must be a list')
+    }
+    if (length(svc.by.sp) != length(svc.cols)) {
+      stop(paste0("svc.by.sp must be a list of length ", length(svc.cols)))
+    }
+    for (i in 1:length(svc.by.sp)) {
+      if (length(svc.by.sp[[i]]) != nrow(y)) {
+        stop(paste0("each component of svc.by.sp must be a vector of length ", nrow(y)))
+      }
+      if (!is.logical(svc.by.sp[[i]])) {
+        stop("svc.by.sp must be a logical vector")
+      }
+      for (j in 1:length(svc.by.sp[[i]])) {
+        if (j <= n.factors & svc.by.sp[[i]][j] == FALSE) {
+          stop(paste0("The first ", n.factors, " species in each element of svc.by.sp must be set to TRUE. If you do not wish to allow one or all of the coefficients to vary spatially for one of these species, reorder to the data$y array such that the first ", n.factors, " species are ones where you do want to allow all coefficients to vary spatially."))
+	}
+      }
+    }
+  } else {
+    svc.by.sp <- list()
+    for (i in 1:length(svc.cols)) {
+      svc.by.sp[[i]] <- rep(TRUE, nrow(y))  
+    }
   }
 
   # Formula -------------------------------------------------------------
@@ -1015,7 +1043,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         stop("error: upper triangle of inits$lambda[[", i, "]] must be all 0s")
       }
     }
-    lambda.inits <- unlist(lambda.inits)
   } else {
     lambda.inits <- list()
     for (i in 1:p.svc) {
@@ -1026,8 +1053,16 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (verbose) {
       message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0\n")
     }
-    lambda.inits <- unlist(lambda.inits)
   }
+  # Fix certain values in lambda to 0 if specified in svc.by.sp
+  for (j in 1:p.svc) {
+    for (i in 1:N) {
+      if (!svc.by.sp[[j]][i]) {
+        lambda.inits[[j]][i, ] <- 0
+      }
+    }
+  }
+  lambda.inits <- unlist(lambda.inits)
   # nu ------------------------
   if ("nu" %in% names(inits)) {
     nu.inits <- inits[["nu"]]
@@ -1382,6 +1417,9 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     ar1.vals <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
 		  rho.inits, sigma.sq.t.inits, ar1.tuning.c)
     storage.mode(ar1.vals) <- 'double'
+    svc.by.sp.list <- svc.by.sp
+    svc.by.sp <- unlist(svc.by.sp.list)
+    storage.mode(svc.by.sp) <- 'integer'
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
     out <- list()
@@ -1403,6 +1441,14 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           lambda.inits[[j]] <- matrix(0, N, q)
           diag(lambda.inits[[j]]) <- 1
           lambda.inits[[j]][lower.tri(lambda.inits[[j]])] <- rnorm(sum(lower.tri(lambda.inits[[j]])))
+        }
+        # Fix certain values in lambda to 0 if specified in svc.by.sp
+        for (j in 1:p.svc) {
+          for (l in 1:N) {
+            if (!svc.by.sp.list[[j]][l]) {
+              lambda.inits[[j]][l, ] <- 0
+            }
+          }
         }
         lambda.inits <- unlist(lambda.inits)
         phi.inits <- runif(q.p.svc, phi.a, phi.b)
@@ -1449,7 +1495,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         		    sigma.sq.p.a, sigma.sq.p.b, 
         		    tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info, ar1.vals)
+        	            samples.info, chain.info, ar1.vals, svc.by.sp)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1485,10 +1531,14 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       					      mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2] 
       }
-      lambda.mat <- matrix(NA, N, q)
-      out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					       mcmc(t(a$lambda.samples[rep(c(lower.tri(lambda.mat)), p.svc), ])))), 
-        					       autoburnin = FALSE)$psrf[, 2])
+      out$rhat$lambda <- rep(NA, N * q * p.svc)
+      for (l in 1:(N * q * p.svc)) {
+        tmp <- unlist(lapply(out.tmp, function(a) sd(a$lambda.samples[l, ])))
+        if (sum(tmp) != 0) {
+          out$rhat$lambda[l] <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a)
+						      mcmc(t(a$lambda.samples[l, , drop = FALSE])))))$psrf[, 2])
+	}
+      }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$sigma.sq.p.samples)))), 

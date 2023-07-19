@@ -1,7 +1,7 @@
 ---
 title: "Spatially varying coefficient models in spOccupancy"
 author: 'Jeffrey W. Doser'
-date: "2022 (last update: July 17, 2023)"
+date: "2022 (last update: July 18, 2023)"
 fontsize: 11pt
 linestretch: 1.25
 description: Learn how to fit spatially varying coefficient models to quantify spatially varying trends and species-environment relationships 
@@ -340,8 +340,6 @@ The resulting object, here called `svc.samples`, is a list with each component c
 plot(svc.samples$occ.cov.1[, 1:6], density = FALSE)
 ```
 
-<!--We see the traceplots for the full SVC samples (i.e., the spatial effect at each site plus the nonspatial effect at each site) resemble the "grassy" looking plot we desire for full convergence of our model. With SVC models, convergence and mixing of the non-spatial effect (the `beta` values) and the spatial effects (the `w` values) individually may be quite slow, but when put together to form the entire effect of the covariate you may see the mixing of the MCMC chains be sufficient. Thus, if inference solely lies on interpreting the full effect of the covariate at each location and the full covariate effect shows adequate convergence, we can proceed with inference.--> 
-
 Below we plot the true SVCs for the covariate at the 1200 locations used for fitting the model compared to the mean estimates from our model. 
 
 ```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
@@ -432,6 +430,11 @@ plot(coords.pred, type = "n", xlab = "", ylab = "", asp = TRUE,
 points(coords.pred, pch=15, cex = 2.1, 
        col = rgb(0,0,0,(svc.cov.pred.mean-min(svc.cov.pred.mean))/
                         diff(range(svc.cov.pred.mean))))
+```
+
+```{r, echo = FALSE}
+rm(out.svc, out.pred)
+gc()
 ```
 
 We see a pretty close correspondence between the true values and the predicted values. 
@@ -728,6 +731,11 @@ points(cov.effect.pred, cov.pred.quants[2, ], pch = 19)
 ```
 
 As with the fitted values, we see the predicted values seem to capture the pattern in the true estimates. 
+
+```{r, echo = FALSE}
+rm(out.svc, out.pred)
+gc()
+```
 
 # Spatially varying coefficient multi-season occupancy model
 
@@ -1093,6 +1101,11 @@ arrows(trend.pred, trend.pred.quants[1, ], trend.pred, col = 'gray',
 points(trend.pred, trend.pred.quants[2, ], pch = 19)
 ```
 
+```{r, echo = FALSE}
+rm(out.svc.trend, out.pred)
+gc()
+```
+
 # Spatially varying coefficient multi-season generalized linear model 
 
 ## Basic model description
@@ -1382,6 +1395,11 @@ arrows(trend.pred, trend.pred.quants[1, ], trend.pred, col = 'gray',
 points(trend.pred, trend.pred.quants[2, ], pch = 19)
 ```
 
+```{r, echo = FALSE}
+rm(out.svc.trend, out.pred)
+gc()
+```
+
 # Multi-species spatially varying coefficient occupancy models
 
 Now consider the case where there are multiple species of interest, $N$, that are observed during data collection. We seek to jointly model the occupancy of the $N$ species in a single model that accommodates residual correlations between species and allows for sharing of information across species via random effects. Such multi-species approaches often have improved precision and accuracy of estimates compared to single-species models [@clark2014more; zipkin2010multi]. 
@@ -1436,6 +1454,7 @@ simMsOcc(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(),
 Below we simulate data from 6 species across 400 locations with 3 replicates at a given site, a single covariate effect on occurrence, and a single covariate effect on detection. We assume both the occupancy intercept and the effect of the covariate vary across space, so we set `svc.cols = c(1, 2)`. We use an exponential correlation function, and don't include any unstructured random intercepts. We then plot the spatially-varying effect of the covariate across the region for the first two species in the data set. We will use two spatial factors for both the intercept and spatially varying coefficient.
 
 ```{r, fig.width = 5, fig.height = 4, fig.align = 'center', units = 'in'}
+set.seed(300)
 J.x <- 20
 J.y <- 20 
 J <- J.x * J.y
@@ -1443,9 +1462,9 @@ n.rep <- rep(3, J)
 N <- 6
 # Community-level covariate effects
 # Occurrence
-beta.mean <- c(0.2, -0.2)
+beta.mean <- c(0.2, 0)
 p.occ <- length(beta.mean)
-tau.sq.beta <- c(0.6, 1.5)
+tau.sq.beta <- c(0.6, 0.5)
 # Detection
 alpha.mean <- c(0, 0.5)
 tau.sq.alpha <- c(1, 0.5)
@@ -1462,7 +1481,7 @@ for (i in 1:p.occ) {
 for (i in 1:p.det) {
   alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
 }
-n.factors <- 3
+n.factors <- 2
 svc.cols <- c(1, 2)
 p.svc <- length(svc.cols)
 q.p.svc <- n.factors * p.svc
@@ -1500,13 +1519,13 @@ plot.dat <- data.frame(x = coords[, 1],
 		       svc.sp.1 = cov.effect[1, ],
 		       svc.sp.2 = cov.effect[2, ])
 ggplot(plot.dat, aes(x = x, y = y, fill = svc.sp.1)) + 
-  geom_raster() + 
+  geom_tile(col = 'black') + 
   scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
                        high = '#2166AC', na.value = NA) + 
   theme_bw() + 
   labs(title = 'Species 1 SVC')
 ggplot(plot.dat, aes(x = x, y = y, fill = svc.sp.2)) + 
-  geom_raster() + 
+  geom_tile(col = 'black') + 
   scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
                        high = '#2166AC', na.value = NA) + 
   theme_bw() + 
@@ -1568,7 +1587,9 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
 The arguments are nearly identical to `svcPGOcc()`, with the only exceptions being the `std.by.sp` and the `n.factors` arguments. The argument `std.by.sp`, which is a logical value indicating whether covariates should be standardized individually for each species when the study area is larger than some individual species' range. In the case where auxiliary species range information is not provided or all species ranges span the study area, this argument will have no influence on the results. When auxiliary range information is provided and species ranges vary across the modeled area, setting `std.by.sp = TRUE` will separately standardize (i.e., subtract the mean and divide by the standard deviation) all the occurrence covariates using only the covariate values that fall within that species' range. We generally recommend doing this when modeling species with different ranges, as it can help with convergence and mixing of the MCMC chains, particularly when there are some species whose range only occurs in one portion of the covariate space. 
 
-The `n.factors` argument is used to specify how many factors one should use in the factor modeling approach for each SVC. Choosing the number of factors is not always straightforward, and how many factors can/should be used is dependent on the data at hand. We present guidance on choosing the number of factors, among other things, in a [separate vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelconsiderations). Given the large similarities in syntax with `svcPGOcc()`, we do not go into too much detail here on the arguments.
+The `n.factors` argument is used to specify how many factors one should use in the factor modeling approach for each SVC. Choosing the number of factors is not always straightforward, and how many factors can/should be used is dependent on the data at hand. We present guidance on choosing the number of factors, among other things, in a [separate vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelconsiderations). Given the large similarities in syntax with `svcPGOcc()`, we do not go into too much detail here on the arguments. Here we set `n.factors` to 2, which is what we used to simulate the data.
+
+We will also mention that the prior on the spatial decay parameter `phi` may be quite important in order to generate reasonable results that don't show extreme amounts of overfitting. This is not specific to SVC models, but given the fact that SVC models have multiple Gaussian processes (or rather NNGPs), there is a higher chance of extreme overfitting occurring for specific data sets. In short, if you fit a model and find large amounts of overfitting in the predicted occurrence probabilities, then you may look into restricting the lower bound of the effective spatial range (or equivalently, the upper bound on the spatial decay parameter, $\phi$). This is discussed in much more detail [here](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelconsiderations).
 
 You may also notice that there are no arguments related to cross-validation for `svcMsPGOcc()`. This is not currently implemented for multi-species SVC models. However, the GitHub repositories associated with some of our recent work on SVC occupancy models provide examples of how to do assessments of predictive performance with multi-species SVC models.
 
@@ -1617,7 +1638,7 @@ NNGP <- TRUE
 n.neighbors <- 5
 # Specify the number of spatial factors to use
 n.factors <- 2
-# Fit the model
+# Fit the model (Approx. run time: 7.5 min)
 out.ms <- svcMsPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
 		     data = data.list, inits = inits.list, 
 		     priors = prior.list, tuning = tuning.list, 
@@ -1627,13 +1648,102 @@ out.ms <- svcMsPGOcc(occ.formula = occ.formula, det.formula = det.formula,
 		     accept.rate = accept.rate, n.omp.threads = n.omp.threads,
 		     verbose = TRUE, n.report = n.report, n.burn = n.burn, 
 		     n.thin = n.thin, n.chains = n.chains)
+# Quick summary of model results
+summary(out.ms)
 ```
 
-**TODO: left off here. Should probably also mention how priors can be tricky for these models, 
+We generally see fairly adequate convergence of the model, with the potential exception of some of the spatial decay parameters. For more details on assessing convergence of `spOccupancy` model objects, particularly of spatial factor models like this one, see [this vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelconsiderations). Because we are using simulated data, we can compare the estimates from our model to the true values we used to simulate the data. Below we generate a couple very simple plots to compare the species-specific occurrence and detection regression coefficient estimates to the true values.
+
+```{r, fig.width = 7, fig.height = 7, fig.align = 'center', units = 'in'}
+# Mean non-spatial occurrence regression coefficients 
+beta.means <- apply(out.ms$beta.samples, 2, mean) 
+# True values
+beta.true <- beta
+plot(beta.true, beta.means, pch = 19)
+abline(0, 1)
+# Mean detection regression coefficients
+alpha.means <- apply(out.ms$alpha.samples, 2, mean) 
+# True values
+alpha.true <- alpha
+plot(alpha.true, alpha.means, pch = 19)
+abline(0, 1)
+```
+
+As with single-species SVC models, we can use the `getSVCSamples()` function to extract the spatially-varying coefficient estimates for each species. Below we extract the species-specific estimates, then generate a map of the true values and the estimates for one of the species. 
+
+```{r, fig.width = 5, fig.height = 4, fig.align = 'center', units = 'in'}
+svc.samples <- getSVCSamples(out.ms)
+str(svc.samples)
+# Get the means for the SVCs for each species
+svc.means <- lapply(svc.samples, function(a) apply(a, c(2, 3), mean))
+# Data frame for plotting
+plot.dat <- data.frame(x = coords.fit[, 1], 
+		       y = coords.fit[, 2], 
+		       svc.2 = svc.true.fit[2, ], 
+		       svc.est.2 = svc.means$occ.cov.1[2, ])
+ggplot(plot.dat, aes(x = x, y = y, fill = svc.2)) + 
+  geom_tile(col = 'black') + 
+  scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
+                       high = '#2166AC', na.value = NA) + 
+  theme_bw() + 
+  labs(title = 'True Species 2 SVC')
+ggplot(plot.dat, aes(x = x, y = y, fill = svc.est.2)) + 
+  geom_tile(col = 'black') + 
+  scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
+                       high = '#2166AC', na.value = NA) + 
+  theme_bw() + 
+  labs(title = 'Estimate Species 2 SVC')
+```
+
 ## Posterior predictive checks
+
+As before, we can use the `ppcOcc()` function to perform a poseterior predictive check of the model as a goodness of fit assessment. 
+
+```{r}
+# PPC with a chi-squared statistic, grouping the data by site
+out.ms.ppc <- ppcOcc(out.ms, fit.stat = 'chi-squared', group = 1)
+summary(out.ms.ppc)
+```
 
 ## Model selection using WAIC
 
+The `waicOcc()` function again allows us to calculate WAIC to compare model performance across different models. As of v0.7.0, `waicOcc()` also contains the `by.sp` argument for all multi-species models, which if set to `TRUE`, will result in a separate WAIC value returned for each species. This can be useful for comparing performances of multi-species models for individual species of interest. Note that the overall WAIC value is simply the sum of all the individual species values.
+
+```{r}
+# Overall WAIC 
+waicOcc(out.ms)
+# WAIC by species
+waicOcc(out.ms, by.sp = TRUE)
+```
+
 ## Prediction
+
+Prediction is identical to the single-species SVC model. Below we predict at the 100 hold out locations and then compare the estimated means to the true values used to simulate the data.
+
+```{r}
+# Predict occupancy at the 100 new sites
+out.ms.pred <- predict(out.ms, X.pred, coords.pred)
+str(out.ms.pred)
+# Use the getSVCSamples() function to extract the SVC values
+# at the prediction locations
+svc.pred.samples <- getSVCSamples(out.ms, pred.object = out.ms.pred)
+# Get median and 95% CIs of the SVC for the covariate for each species
+svc.pred.quants <- apply(svc.pred.samples[["occ.cov.1"]], c(2, 3), quantile,
+                           probs = c(0.025, 0.5, 0.975))
+# Plot results for one species
+plot(svc.true.pred[2, ], svc.pred.quants[2, 2, ], pch = 19,
+     ylim = c(min(svc.pred.quants[1, 2, ]), max(svc.pred.quants[3, 2, ])),
+     xlab = "True", ylab = "Fit", main = 'Spatially-varying svc')
+abline(0, 1)
+arrows(svc.true.pred[2, ], svc.pred.quants[2, 2, ], svc.true.pred[2, ], col = 'gray',
+       svc.pred.quants[1, 2, ], length = 0.02, angle = 90)
+arrows(svc.true.pred[2, ], svc.pred.quants[1, 2, ], svc.true.pred[2, ], col = 'gray',
+       svc.pred.quants[3, 2, ], length = 0.02, angle = 90)
+points(svc.true.pred[2, ], svc.pred.quants[2, 2, ], pch = 19)
+```
+
+# Multi-species multi-season spatially varying coefficient occupancy models
+
+Example coming soon... See the help page for `svcTMsPGOcc()` for a bare bones example for fitting multi-species, multi-season spatially varying coefficient occupancy models.
 
 # References {-}

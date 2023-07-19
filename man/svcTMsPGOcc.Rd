@@ -10,7 +10,7 @@
 svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
           svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
           n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
-	  n.factors, n.batch, batch.length, 
+	  n.factors, svc.by.sp, n.batch, batch.length, 
 	  accept.rate = 0.43, n.omp.threads = 1, 
           verbose = TRUE, ar1 = FALSE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
@@ -178,6 +178,13 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     total number of species in the community, which will lead to substantial 
     decreases in computation time. However, the value can be anywhere 
     between 1 and N (the number of species in the community).}
+
+  \item{svc.by.sp}{an optional list with length equal to \code{length(svc.cols)}. Each element
+    of the list should be a logical vector of length \code{N} (number of species) where each 
+    element is TRUE, which indicates the SVC should be estimated for that species, or 0, which
+    indicates the SVC should be set to 0 and no SVC for that parameter will be estimated. Note
+    the first \code{n.factors} SVCs for all spatially-varying coefficients must be set to 
+    \code{TRUE}. By default, SVCs are modeled for all species.}
 
   \item{n.batch}{the number of MCMC batches  in each chain to run for the Adaptive MCMC 
     sampler. See Roberts and Rosenthal (2009) for details.}

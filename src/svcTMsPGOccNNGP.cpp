@@ -81,7 +81,7 @@ extern "C" {
 		      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		      SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r){
+		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r){
    
     /**********************************************************************
      * Initial constants
@@ -189,6 +189,7 @@ extern "C" {
     int status = 0; 
     int thinIndx = 0; 
     int sPost = 0; 
+    int *svcBySp = INTEGER(svcBySp_r);
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -1298,113 +1299,116 @@ extern "C" {
             zeros(tmp_qq, qq);
             zeros(tmp_q, q);
 	    zeros(tmp_qq2, qq);
-	    // Compute W %*% Xtilde for the current svc. 
-	    for (ll = 0; ll < q; ll++) {
-	      for (j = 0; j < J; j++) {
-                for (t = 0; t < nYearsMax; t++) {
-                  tmp_JnYearsq[t * Jq + j * q + ll] = 0.0;
-                  if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
-                    tmp_JnYearsq[t * Jq + j * q + ll] = w[rr * Jq + j * q + ll] * Xw[i * JnYearspTilde + rr * JnYears + t * J + j];
-	          }
-	        } // t (year)
-	      } // j (site)
-	    } // ll (factor)
-	    // tmp_Jq' %*% S_beta %*% tmp_Jq 
-            for (ll = 0; ll < q; ll++) {
-              for (l = 0; l < q; l++) {
-                for (j = 0; j < J; j++) {
+	    // If that species SVC is currently being estimated
+            if (svcBySp[rr * N + i] == 1) {
+	      // Compute W %*% Xtilde for the current svc. 
+	      for (ll = 0; ll < q; ll++) {
+	        for (j = 0; j < J; j++) {
                   for (t = 0; t < nYearsMax; t++) {
+                    tmp_JnYearsq[t * Jq + j * q + ll] = 0.0;
                     if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
-                      tmp_qq[ll * q + l] += tmp_JnYearsq[t * Jq + j * q + ll] * tmp_JnYearsq[t * Jq + j * q + l] * omegaOcc[t * JN + j * N + i];
+                      tmp_JnYearsq[t * Jq + j * q + ll] = w[rr * Jq + j * q + ll] * Xw[i * JnYearspTilde + rr * JnYears + t * J + j];
 	            }
-	          }
-                } // j
-              } // l
-            } // ll
-
-
-            // currDim gives the mean dimension of mu and var. 
-	    if (i < q) {
-              currDim = i;  
-            } else {
-              currDim = q;
-            }
-            /*****************************
-	     *mu
-             *****************************/
-
-	    // zStar - X %*% beta
-	    for (j = 0; j < J; j++) {
-              tmp_J[j] = 0.0;
-              // //Get Z*Lambda*w for all columns except for the kth column for the current location.
-	      for (t = 0; t < nYearsMax; t++) {
-	        tmp_0 = 0.0;
-                tmp_JnYears[t * J + j] = 0.0; 
-                if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
-                  for (rrr = 0; rrr < pTilde; rrr++) {
-                    if (rrr != rr) { // if not on the current svc
-                        tmp_0 += wStar[rrr * JN + j * N + i] * Xw[i * JnYearspTilde + rrr * JnYears + t * J + j];
-	            }
-	          } // rrr (svc)
-                  tmp_JnYears[t * J + j] = zStar[t * JN + j * N + i] - F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) - 
-	                                   betaStarSites[t * JN + j * N + i] - tmp_0 - eta[i * nYearsMax + t];
-
-	          if (i < q) {
-                    tmp_JnYears[t * J + j] -= w[rr * Jq + j * q + i] * Xw[i * JnYearspTilde + rr * JnYears + t * J + j];
-                  }
-	        }
-	      }
-            } // j
-
-	    // S_beta %*% (W * Xw)' = tmp_Jq2
-	    for (j = 0; j < J; j++) {
+	          } // t (year)
+	        } // j (site)
+	      } // ll (factor)
+	      // tmp_Jq' %*% S_beta %*% tmp_Jq 
               for (ll = 0; ll < q; ll++) {
-                for (t = 0; t < nYearsMax; t++ ) {
-                  if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
-                    tmp_JnYearsq2[t * Jq + j * q + ll] = omegaOcc[t * JN + j * N + i] * tmp_JnYearsq[t * Jq + j * q + ll];  
-	          }
-	        }
-              }
-            }
+                for (l = 0; l < q; l++) {
+                  for (j = 0; j < J; j++) {
+                    for (t = 0; t < nYearsMax; t++) {
+                      if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                        tmp_qq[ll * q + l] += tmp_JnYearsq[t * Jq + j * q + ll] * tmp_JnYearsq[t * Jq + j * q + l] * omegaOcc[t * JN + j * N + i];
+	              }
+	            }
+                  } // j
+                } // l
+              } // ll
 
-	    // tmp_Jq2 %*% tmp_J
-	    for (k = 0; k < currDim; k++) {
-              for (j = 0; j < J; j++) {
-                for (t = 0; t < nYearsMax; t++ ) {
+
+              // currDim gives the mean dimension of mu and var. 
+	      if (i < q) {
+                currDim = i;  
+              } else {
+                currDim = q;
+              }
+              /*****************************
+	       *mu
+               *****************************/
+
+	      // zStar - X %*% beta
+	      for (j = 0; j < J; j++) {
+                tmp_J[j] = 0.0;
+                // //Get Z*Lambda*w for all columns except for the kth column for the current location.
+	        for (t = 0; t < nYearsMax; t++) {
+	          tmp_0 = 0.0;
+                  tmp_JnYears[t * J + j] = 0.0; 
                   if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
-                    tmp_q[k] += tmp_JnYearsq2[t * Jq + j * q + k] * tmp_JnYears[t * J + j];
+                    for (rrr = 0; rrr < pTilde; rrr++) {
+                      if (rrr != rr) { // if not on the current svc
+                          tmp_0 += wStar[rrr * JN + j * N + i] * Xw[i * JnYearspTilde + rrr * JnYears + t * J + j];
+	              }
+	            } // rrr (svc)
+                    tmp_JnYears[t * J + j] = zStar[t * JN + j * N + i] - F77_NAME(ddot)(&pOcc, &X[i * JnYearspOcc + t * J + j], &JnYears, &beta[i], &N) - 
+	                                     betaStarSites[t * JN + j * N + i] - tmp_0 - eta[i * nYearsMax + t];
+
+	            if (i < q) {
+                      tmp_JnYears[t * J + j] -= w[rr * Jq + j * q + i] * Xw[i * JnYearspTilde + rr * JnYears + t * J + j];
+                    }
 	          }
 	        }
               } // j
-            } // k
 
-            /*****************************
-	     *var
-             *****************************/
-	    // Only get relevant columns of t(W) %*% W
-	    for (k = 0, l = 0; k < currDim; k++) {
-              for (ll = 0; ll < currDim; ll++, l++) {
-                tmp_qq2[l] = tmp_qq[k * q + ll];
-	      } // j
-            } // k
+	      // S_beta %*% (W * Xw)' = tmp_Jq2
+	      for (j = 0; j < J; j++) {
+                for (ll = 0; ll < q; ll++) {
+                  for (t = 0; t < nYearsMax; t++ ) {
+                    if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                      tmp_JnYearsq2[t * Jq + j * q + ll] = omegaOcc[t * JN + j * N + i] * tmp_JnYearsq[t * Jq + j * q + ll];  
+	            }
+	          }
+                }
+              }
 
-	    // Add 1
-	    for (ll = 0; ll < currDim; ll++) {
-              tmp_qq2[ll * currDim + ll] += 1.0;  
-            } // ll
+	      // tmp_Jq2 %*% tmp_J
+	      for (k = 0; k < currDim; k++) {
+                for (j = 0; j < J; j++) {
+                  for (t = 0; t < nYearsMax; t++ ) {
+                    if ((zDatIndx[t * J + j] == 1) && (rangeInd[j * N + i] == 1.0)) {
+                      tmp_q[k] += tmp_JnYearsq2[t * Jq + j * q + k] * tmp_JnYears[t * J + j];
+	            }
+	          }
+                } // j
+              } // k
 
-            F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-	    if(info != 0){error("c++ error: dpotrf for spatial factors failed\n");}
-            F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-	    if(info != 0){error("c++ error: dpotri for spatial factors failed\n");}
+              /*****************************
+	       *var
+               *****************************/
+	      // Only get relevant columns of t(W) %*% W
+	      for (k = 0, l = 0; k < currDim; k++) {
+                for (ll = 0; ll < currDim; ll++, l++) {
+                  tmp_qq2[l] = tmp_qq[k * q + ll];
+	        } // j
+              } // k
 
-            F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc FCONE);
+	      // Add 1
+	      for (ll = 0; ll < currDim; ll++) {
+                tmp_qq2[ll * currDim + ll] += 1.0;  
+              } // ll
 
-            F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-	    if(info != 0){error("c++ error: dpotrf for spatial factors 2 failed\n");}
-            
-            mvrnorm(tmp_q, tmp_q2, tmp_qq2, currDim);
-            F77_NAME(dcopy)(&currDim, tmp_q, &inc, &lambda[rr * Nq + i], &N);
+              F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+	      if(info != 0){error("c++ error: dpotrf for spatial factors failed\n");}
+              F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+	      if(info != 0){error("c++ error: dpotri for spatial factors failed\n");}
+
+              F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc FCONE);
+
+              F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+	      if(info != 0){error("c++ error: dpotrf for spatial factors 2 failed\n");}
+              
+              mvrnorm(tmp_q, tmp_q2, tmp_qq2, currDim);
+              F77_NAME(dcopy)(&currDim, tmp_q, &inc, &lambda[rr * Nq + i], &N);
+	    } // if svc for the given sp is currently estimated
           } // i
 
           // Multiply Lambda %*% w[j] to get wStar.

@@ -28,6 +28,8 @@ vignettes/svcUnivariateHTML_cache
 vignettes/svcUnivariateHTML_files
 vignettes/integratedMultispecies_cache
 vignettes/integratedMultispecies_files
+vignettes/svcModels_cache
+vignettes/svcModels_files
 *.swp
 vignettes/modelConsiderations_cache
 vignettes/modelConsiderations_files
