@@ -1,12 +1,11 @@
-svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		        tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-		        n.neighbors = 15, search.type = "cb", 
-			std.by.sp = FALSE, n.factors, svc.by.sp, 
-		        n.batch, batch.length, accept.rate = 0.43,
-		        n.omp.threads = 1, verbose = TRUE, 
-			ar1 = FALSE, n.report = 100, 
-		        n.burn = round(.10 * n.batch * batch.length), 
-		        n.thin = 1, n.chains = 1, ...){
+stMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
+                      tuning, cov.model = 'exponential', NNGP = TRUE, 
+                      n.neighbors = 15, search.type = "cb", n.factors, 
+                      n.batch, batch.length, accept.rate = 0.43,
+                      n.omp.threads = 1, verbose = TRUE, 
+                      ar1 = FALSE, n.report = 100, 
+                      n.burn = round(.10 * n.batch * batch.length), 
+                      n.thin = 1, n.chains = 1, ...){
 
   ptm <- proc.time()
 
@@ -37,7 +36,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Some initial checks -------------------------------------------------
   # Only implemented for NNGP
   if (!NNGP) {
-    stop("error: svcTMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
+    stop("error: stMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
   }
   if (missing(data)) {
     stop("error: data must be specified")
@@ -86,22 +85,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (missing(n.factors)) {
     stop("error: n.factors must be specified for a spatial factor occupancy model")
   }
-  if (std.by.sp != FALSE & std.by.sp != TRUE) {
-    stop("error: std.by.sp must be either TRUE or FALSE")
-  }
-  if ('range.ind' %in% names(data)) {
-    range.ind <- data$range.ind
-    if (!is.matrix(range.ind)) {
-      stop(paste("error: if specified, range.ind must be a matrix of 0s and 1s with ", 
-                 nrow(y), " rows and ", ncol(y), " columns.", sep = ''))
-    }
-    if (nrow(range.ind) != nrow(y) | ncol(range.ind) != ncol(y)) {
-      stop(paste("error: if specified, range.ind must be a matrix of 0s and 1s with ", 
-                 nrow(y), " rows and ", ncol(y), " columns.", sep = ''))
-    }
-  } else {
-    range.ind <- matrix(1, nrow(y), ncol(y))
-  }
 
   # Neighbors and Ordering ----------------------------------------------
   if (NNGP) {
@@ -111,7 +94,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # Reorder everything to align with NN ordering
     y <- y[, ord, , , drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
-    range.ind <- range.ind[, ord, drop = FALSE]
     # Occupancy covariates
     for (i in 1:length(data$occ.covs)) {
       if (!is.null(dim(data$occ.covs[[i]]))) { # Time/space varying
@@ -231,34 +213,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     stop("error: ar1 must be either TRUE or FALSE")
   }
 
-  # Check svc.by.sp -------------------------------------------------------
-  if (!missing(svc.by.sp)) {
-    if (!is.list(svc.by.sp)) {
-      stop('svc.by.sp must be a list')
-    }
-    if (length(svc.by.sp) != length(svc.cols)) {
-      stop(paste0("svc.by.sp must be a list of length ", length(svc.cols)))
-    }
-    for (i in 1:length(svc.by.sp)) {
-      if (length(svc.by.sp[[i]]) != nrow(y)) {
-        stop(paste0("each component of svc.by.sp must be a vector of length ", nrow(y)))
-      }
-      if (!is.logical(svc.by.sp[[i]])) {
-        stop("svc.by.sp must be a logical vector")
-      }
-      for (j in 1:length(svc.by.sp[[i]])) {
-        if (j <= n.factors & svc.by.sp[[i]][j] == FALSE) {
-          stop(paste0("The first ", n.factors, " species in each element of svc.by.sp must be set to TRUE. If you do not wish to allow one or all of the coefficients to vary spatially for one of these species, reorder to the data$y array such that the first ", n.factors, " species are ones where you do want to allow all coefficients to vary spatially."))
-	}
-      }
-    }
-  } else {
-    svc.by.sp <- list()
-    for (i in 1:length(svc.cols)) {
-      svc.by.sp[[i]] <- rep(TRUE, nrow(y))  
-    }
-  }
-
   # Formula -------------------------------------------------------------
   # Occupancy -----------------------
   if (missing(occ.formula)) {
@@ -277,26 +231,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Get RE level names
   re.level.names <- lapply(data$occ.covs[, x.re.names, drop = FALSE],
 			   function (a) sort(unique(a)))
-
-  # Get a separate X for each species for standardization within species
-  # if desired.
-  X.big <- array(NA, dim = c(dim(y)[2], dim(y)[3], ncol(X), dim(y)[1]))
-  species.sds <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
-  species.means <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
-  for (i in 1:nrow(y)) {
-    curr.indx <- which(range.ind[i, ] == 1)
-    X.big[curr.indx, , , i] <- array(X, dim = c(dim(y)[2], dim(y)[3], ncol(X)))[curr.indx, , , drop = FALSE]
-    if (std.by.sp) {
-      for (r in 1:ncol(X)) {
-        if (sd(X[, r], na.rm = TRUE) != 0) {
-          species.sds[i, r] <- sd(c(X.big[curr.indx, , r, i]), na.rm = TRUE)
-          species.means[i, r] <- mean(c(X.big[curr.indx, , r, i]), na.rm = TRUE)
-          X.big[curr.indx, , r, i] <- c((X.big[curr.indx, , r, i] - species.means[i, r])) / species.sds[i, r]
-	}
-      }
-    }
-  }
-  X.big <- ifelse(is.na(X.big), 0, X.big)
 
   # Detection -----------------------
   if (missing(det.formula)) {
@@ -363,26 +297,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
-
-  # Check SVC columns -----------------------------------------------------
-  if (is.character(svc.cols)) {
-    # Check if all column names in svc are in occ.covs
-    if (!all(svc.cols %in% x.names)) {
-        missing.cols <- svc.cols[!(svc.cols %in% x.names)]
-        stop(paste("error: variable name ", paste(missing.cols, collapse=" and "), " not in occurrence covariates", sep=""))
-    }
-    # Convert desired column names into the numeric column index
-    svc.cols <- (1:p.occ)[x.names %in% svc.cols]
-    
-  } else if (is.numeric(svc.cols)) {
-    # Check if all column indices are in 1:p.occ
-    if (!all(svc.cols %in% 1:p.occ)) {
-        missing.cols <- svc.cols[!(svc.cols %in% (1:p.occ))]
-        stop(paste("error: column index ", paste(missing.cols, collapse=" "), " not in design matrix columns", sep=""))
-    }
-  }
-  p.svc <- length(svc.cols)
-  q.p.svc <- q * p.svc
 
   # Get indices for mapping different values in Z. 
   z.site.indx <- rep(1:J, n.years.max) - 1
@@ -610,36 +524,38 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
 
   # phi -----------------------------
-  coords.D <- iDist(coords)
-  # Get distance matrix which is used if priors are not specified
+  if (!NNGP) {
+    coords.D <- iDist(coords)
+  }
   if ("phi.unif" %in% names(priors)) {
     if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
       stop("error: phi.unif must be a list of length 2")
     }
     phi.a <- priors$phi.unif[[1]]
     phi.b <- priors$phi.unif[[2]]
-    if (length(phi.a) != q.p.svc & length(phi.a) != 1) {
+    if (length(phi.a) != q & length(phi.a) != 1) {
       stop(paste("error: phi.unif[[1]] must be a vector of length ", 
-      	   q.p.svc, ", a matrix with ", q, " rows and ", p.svc, 
-	   " columns, or a vector of length 1 with elements corresponding to phis' lower bound for each latent factor and spatially-varying coefficient", sep = ""))
+      	   q, " or 1 with elements corresponding to phis' lower bound for each latent factor", sep = ""))
     }
-    if (length(phi.b) != q.p.svc & length(phi.b) != 1) {
+    if (length(phi.b) != q & length(phi.b) != 1) {
       stop(paste("error: phi.unif[[2]] must be a vector of length ", 
-      	   q.p.svc, ", a matrix with ", q, " rows and ", p.svc, 
-	   " columns, or a vector of length 1 with elements corresponding to phis' upper bound for each latent factor and spatially-varying coefficient", sep = ""))
+      	   q, " or 1 with elements corresponding to phis' upper bound for each latent factor", sep = ""))
     }
-    if (length(phi.a) != q.p.svc) {
-      phi.a <- rep(phi.a, q.p.svc)
+    if (length(phi.a) != q) {
+      phi.a <- rep(phi.a, q)
     }
-    if (length(phi.b) != q.p.svc) {
-      phi.b <- rep(phi.b, q.p.svc)
+    if (length(phi.b) != q) {
+      phi.b <- rep(phi.b, q)
     }
   } else {
     if (verbose) {
     message("No prior specified for phi.unif.\nSetting uniform bounds based on the range of observed spatial coordinates.\n")
     }
-    phi.a <- rep(3 / max(coords.D), q.p.svc)
-    phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q.p.svc)
+    if (NNGP) {
+      coords.D <- iDist(coords)
+    }
+    phi.a <- rep(3 / max(coords.D), q)
+    phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
   }
 
   # nu -----------------------------
@@ -652,25 +568,23 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (!is.list(priors$nu.unif) | length(priors$nu.unif) != 2) {
       stop("error: nu.unif must be a list of length 2")
     }
-    if (length(nu.a) != q.p.svc & length(nu.a) != 1) {
+    if (length(nu.a) != q & length(nu.a) != 1) {
       stop(paste("error: nu.unif[[1]] must be a vector of length ", 
-      	   q.p.svc, ", a matrix with ", q, " rows and ", p.svc, 
-	   " columns, or a vector of length 1 with elements corresponding to nus' lower bound for each latent factor and spatially-varying coefficient", sep = ""))
+      	   q, " or 1 with elements corresponding to nus' lower bound for each latent factor", sep = ""))
     }
     if (length(nu.b) != q & length(nu.b) != 1) {
       stop(paste("error: nu.unif[[2]] must be a vector of length ", 
-      	   q.p.svc, ", a matrix with ", q, " rows and ", p.svc, 
-	   " columns, or a vector of length 1 with elements corresponding to nus' upper bound for each latent factor and spatially-varying coefficient", sep = ""))
+      	   q, " or 1 with elements corresponding to nus' upper bound for each latent factor", sep = ""))
     }
-    if (length(nu.a) != q.p.svc) {
-      nu.a <- rep(nu.a, q.p.svc)
+    if (length(nu.a) != q) {
+      nu.a <- rep(nu.a, q)
     }
-    if (length(nu.b) != q.p.svc) {
-      nu.b <- rep(nu.b, q.p.svc)
+    if (length(nu.b) != q) {
+      nu.b <- rep(nu.b, q)
     }
   } else {
-    nu.a <- rep(0, q.p.svc)
-    nu.b <- rep(0, q.p.svc)
+    nu.a <- rep(0, q)
+    nu.b <- rep(0, q)
   }
 
   # sigma.sq.psi --------------------
@@ -1002,85 +916,70 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # This is ordered by parameter, then species within parameter. 
   alpha.inits <- c(alpha.inits)
   # phi -----------------------------
-  # ORDER: a q x p.svc matrix sent in as a column-major vector sorted first by 
-  #        the spatially-varying coefficient, then latent factor within svc.
+  # ORDER: a length N vector ordered by species in the detection-nondetection data.
   if ("phi" %in% names(inits)) {
     phi.inits <- inits[["phi"]]
-    if (length(phi.inits) != q.p.svc & length(phi.inits) != 1) {
-      stop(paste("error: initial values for phi must be of length ", q.p.svc, " or 1", 
+    if (length(phi.inits) != q & length(phi.inits) != 1) {
+      stop(paste("error: initial values for phi must be of length ", q, " or 1", 
       	   sep = ""))
     }
-    if (length(phi.inits) != q.p.svc) {
-      phi.inits <- rep(phi.inits, q.p.svc)
+    if (length(phi.inits) != q) {
+      phi.inits <- rep(phi.inits, q)
     }
   } else {
-    phi.inits <- runif(q.p.svc, phi.a, phi.b)
+    phi.inits <- runif(q, phi.a, phi.b)
     if (verbose) {
       message("phi is not specified in initial values.\nSetting initial value to random values from the prior distribution\n")
     }
   }
   # lambda ----------------------------
-  # ORDER: an p.svc N x q matrices sent in as a list, each in 
-  #        column-major vector, which is ordered by factor, 
-  #        then species within factor. Eventually sent into 
-  #        C++ as a stacked p.svc x N x q matrix, ordered by 
-  #        svc, then factor within svc, then species within factor.
+  # ORDER: an N x q matrix sent in as a column-major vector, which is ordered by 
+  #        factor, then species within factor. 
   if ("lambda" %in% names(inits)) {
     lambda.inits <- inits[["lambda"]]
-    if (!is.list(lambda.inits)) {
-      stop(paste("error: initial values for lambda must be a list comprised of ", 
-		 p.svc, " matrices, each with dimensions ", N, " x ", q, sep = ""))
+    if (!is.matrix(lambda.inits)) {
+      stop(paste("error: initial values for lambda must be a matrix with dimensions ",
+		 N, " x ", q, sep = ""))
     }
-    for (i in 1:p.svc) {
-      if (nrow(lambda.inits[[i]]) != N | ncol(lambda.inits[[i]]) != q) {
-        stop(paste("error: initial values for lambda[[", i, 
-		   "]] must be a matrix with dimensions ", N, " x ", q, sep = ""))
-      }
-      if (!all.equal(diag(lambda.inits[[i]]), rep(1, q))) {
-        stop("error: diagonal of inits$lambda[[", i, "]] matrix must be all 1s")
-      }
-      if (sum(lambda.inits[[i]][upper.tri(lambda.inits[[i]])]) != 0) {
-        stop("error: upper triangle of inits$lambda[[", i, "]] must be all 0s")
-      }
+    if (nrow(lambda.inits) != N | ncol(lambda.inits) != q) {
+      stop(paste("error: initial values for lambda must be a matrix with dimensions ",
+		 N, " x ", q, sep = ""))
+    }
+    if (!all.equal(diag(lambda.inits), rep(1, q))) {
+      stop("error: diagonal of inits$lambda matrix must be all 1s")
+    }
+    if (sum(lambda.inits[upper.tri(lambda.inits)]) != 0) {
+      stop("error: upper triangle of inits$lambda must be all 0s")
     }
   } else {
-    lambda.inits <- list()
-    for (i in 1:p.svc) {
-      lambda.inits[[i]] <- matrix(0, N, q)
-      diag(lambda.inits[[i]]) <- 1
-      # lambda.inits[[i]][lower.tri(lambda.inits[[i]])] <- rnorm(sum(lower.tri(lambda.inits[[i]])))
-    }
+    lambda.inits <- matrix(0, N, q)
+    diag(lambda.inits) <- 1
+    lambda.inits[lower.tri(lambda.inits)] <- 0
     if (verbose) {
       message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0\n")
     }
+    # lambda.inits are organized by factor, then by species. This is necessary for working
+    # with dgemv.  
+    lambda.inits <- c(lambda.inits)
   }
-  # Fix certain values in lambda to 0 if specified in svc.by.sp
-  for (j in 1:p.svc) {
-    for (i in 1:N) {
-      if (!svc.by.sp[[j]][i]) {
-        lambda.inits[[j]][i, ] <- 0
-      }
-    }
-  }
-  lambda.inits <- unlist(lambda.inits)
   # nu ------------------------
   if ("nu" %in% names(inits)) {
     nu.inits <- inits[["nu"]]
-    if (length(nu.inits) != q.p.svc & length(nu.inits) != 1) {
-      stop(paste("error: initial values for nu must be of length ", q.p.svc,  " or 1",
+    if (length(nu.inits) != q & length(nu.inits) != 1) {
+      stop(paste("error: initial values for nu must be of length ", q,  " or 1",
       	   sep = ""))
     }
-    if (length(nu.inits) != q.p.svc) {
-      nu.inits <- rep(nu.inits, q.p.svc)
+    if (length(nu.inits) != q) {
+      nu.inits <- rep(nu.inits, q)
     }
   } else {
     if (cov.model == 'matern') {
       if (verbose) {
         message("nu is not specified in initial values.\nSetting initial values to random values from the prior distribution\n")
       }
-      nu.inits <- runif(q.p.svc, nu.a, nu.b)
+      nu.inits <- runif(q, nu.a, nu.b)
     } else {
-      nu.inits <- rep(0, q.p.svc)
+      nu.inits <- rep(0, q)
     }
   }
 
@@ -1207,20 +1106,15 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Obo for cov model lookup on c side
   cov.model.indx <- which(cov.model == cov.model.names) - 1
 
-  # Prep for SVCs ---------------------------------------------------------
-  X.w <- X[, svc.cols, drop = FALSE]
-  x.w.names <- colnames(X.w)
-  X.w.big <- X.big[, , svc.cols, , drop = FALSE]
-
   # Get tuning values ---------------------------------------------------
   # Not accessed, but necessary to keep things in line with the underlying functions. 
-  sigma.sq.tuning <- rep(0, q.p.svc)
-  phi.tuning <- rep(0, q.p.svc)
-  nu.tuning <- rep(0, q.p.svc)
+  sigma.sq.tuning <- rep(0, q)
+  phi.tuning <- rep(0, q)
+  nu.tuning <- rep(0, q)
   if (missing(tuning)) {
-    phi.tuning <- rep(1, q.p.svc)
+    phi.tuning <- rep(1, q)
     if (cov.model == 'matern') {
-      nu.tuning <- rep(1, q.p.svc)
+      nu.tuning <- rep(1, q)
     }
   } else {
     names(tuning) <- tolower(names(tuning))
@@ -1230,10 +1124,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     phi.tuning <- tuning$phi
     if (length(phi.tuning) == 1) {
-      phi.tuning <- rep(tuning$phi, q.p.svc)
-    } else if (length(phi.tuning) != q.p.svc) {
+      phi.tuning <- rep(tuning$phi, q)
+    } else if (length(phi.tuning) != q) {
       stop(paste("error: phi tuning must be either a single value or a vector of length ",
-      	   q.p.svc, sep = ""))
+      	   q, sep = ""))
     }
     if (cov.model == 'matern') {
       # nu --------------------------
@@ -1242,10 +1136,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       nu.tuning <- tuning$nu
       if (length(nu.tuning) == 1) {
-        nu.tuning <- rep(tuning$nu, q.p.svc)
-      } else if (length(nu.tuning) != q.p.svc) {
+        nu.tuning <- rep(tuning$nu, q)
+      } else if (length(nu.tuning) != q) {
         stop(paste("error: nu tuning must be either a single value or a vector of length ",
-        	   q.p.svc, sep = ""))
+        	   q, sep = ""))
       }
     }
   }
@@ -1282,17 +1176,12 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   # Names for spatial parameters
   if (cov.model != 'matern') {
     theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
-    theta.names <- paste(rep(theta.names, times = p.svc), 
-      		   rep(x.w.names, each = q), sep = '-')
   } else {
     theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
-    theta.names <- paste(rep(theta.names, times = p.svc), 
-      		   rep(x.w.names, each = 2 * q), sep = '-')
   } 
-
   if (!NNGP) {
 
-    stop("error: svcTMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
+    stop("error: stMsPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
 
   } else {
 
@@ -1339,12 +1228,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(y) <- "double"
     storage.mode(z.inits) <- "double"
     storage.mode(X.p) <- "double"
-    storage.mode(X.big) <- "double"
-    storage.mode(X.w.big) <- "double"
+    storage.mode(X) <- "double"
     storage.mode(coords) <- "double"
-    storage.mode(range.ind) <- "double"
     consts <- c(N, J, n.obs, p.occ, p.occ.re, n.occ.re, 
-		p.det, p.det.re, n.det.re, q, p.svc, n.years.max, ar1)
+		p.det, p.det.re, n.det.re, q, n.years.max, ar1)
     storage.mode(consts) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(alpha.inits) <- "double"
@@ -1417,9 +1304,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     ar1.vals <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
 		  rho.inits, sigma.sq.t.inits, ar1.tuning.c)
     storage.mode(ar1.vals) <- 'double'
-    svc.by.sp.list <- svc.by.sp
-    svc.by.sp <- unlist(svc.by.sp.list)
-    storage.mode(svc.by.sp) <- 'integer'
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
     out <- list()
@@ -1436,24 +1320,13 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
               		      sqrt(tau.sq.alpha.inits)), N, p.det)
         alpha.inits <- c(alpha.inits)
-        lambda.inits <- list()
-        for (j in 1:p.svc) {
-          lambda.inits[[j]] <- matrix(0, N, q)
-          diag(lambda.inits[[j]]) <- 1
-          lambda.inits[[j]][lower.tri(lambda.inits[[j]])] <- rnorm(sum(lower.tri(lambda.inits[[j]])))
-        }
-        # Fix certain values in lambda to 0 if specified in svc.by.sp
-        for (j in 1:p.svc) {
-          for (l in 1:N) {
-            if (!svc.by.sp.list[[j]][l]) {
-              lambda.inits[[j]][l, ] <- 0
-            }
-          }
-        }
-        lambda.inits <- unlist(lambda.inits)
-        phi.inits <- runif(q.p.svc, phi.a, phi.b)
+        lambda.inits <- matrix(0, N, q)
+        diag(lambda.inits) <- 1
+        lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+        lambda.inits <- c(lambda.inits)
+        phi.inits <- runif(q, phi.a, phi.b)
         if (cov.model == 'matern') {
-          nu.inits <- runif(q.p.svc, nu.a, nu.b)
+          nu.inits <- runif(q, nu.a, nu.b)
         }
         if (p.det.re > 0) {
           sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
@@ -1476,8 +1349,8 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
       storage.mode(chain.info) <- "integer"
       # Run the model in C
-      out.tmp[[i]] <- .Call("svcTMsPGOccNNGP", y, X.big, X.w.big, X.p, 
-      		      coords, X.re, X.p.re, range.ind, consts, 
+      out.tmp[[i]] <- .Call("stMsPGOccNNGP", y, X, X.p, 
+      		      coords, X.re, X.p.re, consts, 
         		    n.occ.re.long, n.det.re.long, 
         	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
         	            beta.inits, alpha.inits, z.inits,
@@ -1495,7 +1368,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         		    sigma.sq.p.a, sigma.sq.p.b, 
         		    tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info, ar1.vals, svc.by.sp)
+        	            samples.info, chain.info, ar1.vals)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------
@@ -1531,14 +1404,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       					      mcmc(t(a$theta.samples)))), 
       			      autoburnin = FALSE)$psrf[, 2] 
       }
-      out$rhat$lambda <- rep(NA, N * q * p.svc)
-      for (l in 1:(N * q * p.svc)) {
-        tmp <- unlist(lapply(out.tmp, function(a) sd(a$lambda.samples[l, ])))
-        if (sum(tmp) != 0) {
-          out$rhat$lambda[l] <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a)
-						      mcmc(t(a$lambda.samples[l, , drop = FALSE])))))$psrf[, 2])
-	}
-      }
+      lambda.mat <- matrix(lambda.inits, N, q)
+      out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+        					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+        					       autoburnin = FALSE)$psrf[, 2])
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$sigma.sq.p.samples)))), 
@@ -1557,10 +1426,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$rhat$beta <- rep(NA, p.occ * N)
       out$rhat$alpha <- rep(NA, p.det * N)
       if(ar1) {
-        out$rhat$theta <- c(rep(NA, ifelse(cov.model == 'matern', 2 * q.p.svc, q.p.svc)), 
+        out$rhat$theta <- c(rep(NA, ifelse(cov.model == 'matern', 2 * q, q)), 
 			    rep(NA, N * 2))
       } else {
-        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q.p.svc, q.p.svc))
+        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q, q))
       }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- rep(NA, p.det.re)
@@ -1617,8 +1486,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$re.level.names <- re.level.names
     }
     loadings.names <- paste(rep(sp.names, times = q), rep(1:q, each = N), sep = '-')
-    loadings.names <- paste(rep(loadings.names, times = p.svc), 
-        		    rep(x.w.names, each = N * q), sep = '-')
     out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
     colnames(out$lambda.samples) <- loadings.names
     out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
@@ -1639,19 +1506,10 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$z.samples <- out$z.samples[, order(ord), , ]
     out$z.samples <- aperm(out$z.samples, c(4, 1, 2, 3))
 
-    # Account for case when there is only 1 svc. 
-    if (p.svc == 1) {
-      tmp <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-        						      dim = c(q, J, n.post.samples))))
-      tmp <- tmp[, order(ord), , drop = FALSE]
-      out$w.samples <- array(NA, dim = c(q, J, p.svc, n.post.samples * n.chains))
-      out$w.samples[, , 1, ] <- tmp
-    } else {
-      out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-        								dim = c(q, J, p.svc, n.post.samples))))
-      out$w.samples <- out$w.samples[, order(ord), , , drop = FALSE]
-    }
-    out$w.samples <- aperm(out$w.samples, c(4, 1, 2, 3))
+    out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
+      								dim = c(q, J, n.post.samples))))
+    out$w.samples <- out$w.samples[, order(ord), , drop = FALSE]
+    out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
     out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
       								dim = c(N, J, n.years.max, n.post.samples))))
     out$psi.samples <- out$psi.samples[, order(ord), , ]
@@ -1678,9 +1536,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$X.re <- array(X.re, dim = c(J, n.years.max, p.occ.re))
     out$X.re <- out$X.re[order(ord), , , drop = FALSE]
     dimnames(out$X.re)[[3]] <- x.re.names
-    out$X.w <- array(X.w, dim = c(J, n.years.max, p.svc))
-    out$X.w <- out$X.w[order(ord), , , drop = FALSE]
-    dimnames(out$X.w)[[3]] <- x.names[svc.cols]
     # Calculate effective sample sizes
     out$ESS <- list()
     out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
@@ -1699,7 +1554,6 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     out$X <- array(X, dim = c(J, n.years.max, p.occ))
     out$X <- out$X[order(ord), , , drop = FALSE]
-    out$X.big <- X.big
     dimnames(out$X)[[3]] <- x.names
     out$y <- y.big[, order(ord), , , drop = FALSE]
     out$call <- cl
@@ -1709,13 +1563,8 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out$x.p.names <- x.p.names
     out$theta.names <- theta.names
     out$type <- "NNGP"
-    out$species.sds <- species.sds
-    out$species.means <- species.means
-    out$std.by.sp <- std.by.sp
-    out$range.ind <- range.ind[, order(ord)]
     out$coords <- coords[order(ord), ]
     out$cov.model.indx <- cov.model.indx
-    out$svc.cols <- svc.cols
     out$n.neighbors <- n.neighbors
     out$q <- q
     out$n.post <- n.post.samples
@@ -1734,7 +1583,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$psiRE <- FALSE
     }
     
-    class(out) <- "svcTMsPGOcc"
+    class(out) <- "stMsPGOcc"
   }
 
   out$run.time <- proc.time() - ptm

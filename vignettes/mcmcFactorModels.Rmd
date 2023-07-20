@@ -1,7 +1,7 @@
 ---
 title: "MCMC samplers for joint species distribution models in spOccupancy"
 author: "Jeffrey W. Doser"
-date: "2022"
+date: "2022 (last update: July 19, 2023)"
 output: 
   bookdown::pdf_document2:
     toc: true
@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette provides statistical details on the MCMC algorithms used to fit all joint species distribution models in `spOccupancy`. In particular, we discuss the Gibbs samplers for each of the following four models presented in @doser2023joint: 
+This vignette provides statistical details on the MCMC algorithms used to fit joint species distribution models in `spOccupancy` (i.e., multi-species occupancy models with species correlations). In particular, we discuss the Gibbs samplers for each of the following four models presented in @doser2023joint: 
 
 1. A spatial latent factor multi-species occupancy model using `sfMsPGOcc()` that accommodates residual species correlations, imperfect detection, and spatial autocorrelation. 
 2. A latent factor multi-species occupancy model using `lfMsPGOcc()` that accommodates residual species correlations and imperfect detection. 
@@ -89,7 +89,7 @@ Following @taylor2019spatial and @tikhonov2020computationally, we model each $r 
 
 where $\tilde{\bm{C}}_r(\bm{\theta}_r)$ is the NNGP-derived covariance matrix for the $r^{\text{th}}$ spatial process. The vector $\bm{\theta}_r$ consists of parameters governing the spatial process according to a spatial correlation function [@banerjee2014hierarchical]. For many correlation functions (e.g., exponential, spherical, Gaussian), $\bm{\theta}_r$ includes a spatial variance parameter, $\sigma^2_r$, and a spatial range parameter, $\phi_r$, while the Mat\'ern correlation function includes an additional spatial smoothness parameter, $\nu_r$.
 
-We assume all species-specific parameters ($\beta_{i, t}$ for all $t = 1, \dots, p_{\psi}$) arise from community-level distributions [@dorazio2005; gelfand2005modelling]. Specifically, we assign a normal prior with mean and variance hyperparameters that represent the community-level average and variance among species-specific effects across the community, respectively. For example, we model the non-spatial component of the species-specific occurrence intercept, $\beta_{i, 1}$, following
+We assume all species-specific parameters ($\beta_{i, t}$ for all $t = 1, \dots, p_{\psi}$) arise from community-level distributions [@dorazio2005; @gelfand2005modelling]. Specifically, we assign a normal prior with mean and variance hyperparameters that represent the community-level average and variance among species-specific effects across the community, respectively. For example, we model the non-spatial component of the species-specific occurrence intercept, $\beta_{i, 1}$, following
 
 \begin{equation} 
   \beta_{i, 1} \sim N(\mu_{\beta_1}, \tau^2_{\beta_1}),
@@ -185,7 +185,7 @@ We update the species-level occurrence regression coefficients ($\bm{\beta}_i$),
 (\#eq:beta)
 \end{equation}
 
-where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent $\pg$ variable values for species $i$, $\bm{z}_i$ is the $J \times 1$ vector of latent occurrence values for species $i$, and $\bm{1}_J$ is a $J \times 1$ vector of 1s.
+where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent $\pg$ variable values for species $i$, $\bm{z}_i$ is the $J \times 1$ vector of latent occurrence values for species $i$, $\bm{1}_J$ is a $J \times 1$ vector of 1s, and $\textbf{w}^\ast_i$ is the $J \times 1$ vector of spatial random effects for species $i$.
 
 
 ### Update species-level detection regression coefficients ($\bm{\alpha}_i$)
@@ -222,7 +222,7 @@ where $f_r(\bm{s}_1) = 0$ for all $r = 1, \dots, q$. For any two locations $\bm{
     \textbf{w}(\bm{s}_j) \mid \cdot N_q(\bm{\mu}_j\bm{\Sigma}_j, \bm{\Sigma}_j) \mbox{ where, }\\
     \bm{\mu}_j = \bm{F}(\bm{s}_j)^{-1}\bm{B}(\bm{s}_j)\textbf{w}(N(\bm{s}_j)) + \sum_{\bm{s} \in U(\bm{s}_j)}\bm{B}(\bm{s}, \bm{s}_j)^\top\bm{F}(\bm{s}_j)^{-1}\bm{a}(\bm{s}, \bm{s}_j) + \\
     \bm{\Lambda}^\top\bm{S}_{j, \beta}((\bm{z}(\bm{s}_j) - 0.5\bm{1}_N)\bm{S}_{j, \beta}^{-1} - \bm{X}(\bm{s}_j)^\top\bm{\beta}) \mbox{ and } \\
-    \bm{\Sigma}_j = \bm{F}(\bm{s}_j)^{-1} + \sum_{\bm{s} \in U(\bm{s}_j)} \bm{B}(\bm{s}, \bm{s}_j)^\top\bm{F}(\bm{s}_j)^{-1}\bm{B}(\bm{s}, \bm{s}_j) + \bm{\Lambda}^\top\bm{S}_{j, \beta}\bm{\Lambda},
+    \bm{\Sigma}_j = \big(\bm{F}(\bm{s}_j)^{-1} + \sum_{\bm{s} \in U(\bm{s}_j)} \bm{B}(\bm{s}, \bm{s}_j)^\top\bm{F}(\bm{s}_j)^{-1}\bm{B}(\bm{s}, \bm{s}_j) + \bm{\Lambda}^\top\bm{S}_{j, \beta}\bm{\Lambda}\big)^{-1},
   \end{array}
 (\#eq:w)
 \end{equation}
@@ -234,8 +234,8 @@ where $\textbf{w}(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ rea
 Recall we set all diagonal elements of $\bm{\Lambda}$ to 1 and all upper triangular elements equal to 0 in order to ensure identifiability of the latent spatial factors. Given this requirement, let $q_i = \text{min}\{i - 1, q\}$ for $2 \leq i \leq N$, and let $\tilde{\bm{\lambda}}_i = (\lambda_{i, 1}, \dots, \lambda_{i, q_i})^\top$ be the vector representing the unrestricted elements in the $i^{\text{th}}$ row of $\bm{\Lambda}$. Define $\textbf{W}$ as the $J \times q$ matrix of latent spatial factors, and let $\textbf{W}_{1:i}$ be the first $i$ columns of \textbf{W}. Using this notation, the full conditional density for $\tilde{\bm{\lambda}}_i$ is $N_q(\bm{\Omega}_{\tilde{\bm{\lambda}}_i}\bm{\mu}_{\tilde{\bm{\lambda}}_i}, \bm{\Omega}_{\tilde{\bm{\lambda}}_i})$, where
 
 \begin{align}
- \bm{\mu}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix}  \textbf{W}_{1:i}^\top\bm{S}_{i, \beta}((\bm{z}_i - 0.5\bm{1}_J)\bm{S}_{i, \beta}^{-1}) - \bm{X}_i^\top\bm{\beta}_i - \dot{\textbf{w}}_i)\hfill &\text{ if }&2\leq i\leq q  \\
- \textbf{W}^\top\bm{S}_{i, \beta}((\bm{z}_i - 0.5\bm{1}_J)\bm{S}_{i, \beta}^{-1}) - \bm{X}_i^\top\bm{\beta}_i)\hfill &\text{ if }&i > q  \end{matrix}\right.,\text{ and} \\
+ \bm{\mu}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix}  \textbf{W}_{1:i}^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{X}_i^\top\bm{\beta}_i - \dot{\textbf{w}}_i)\hfill &\text{ if }&2\leq i\leq q  \\ 
+ \textbf{W}^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{X}_i^\top\bm{\beta}_i)\hfill &\text{ if }&i > q  \end{matrix}\right.,\text{ and} \\ 
  \bm{\Omega}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix} (\textbf{W}_{1:(i - 1)}^\top\bm{S}_{i, \beta}\textbf{W}_{1:(i - 1)} + I_{j - 1})^{-1} \hfill &\text{ if }&2\leq i \leq q \\
  (\textbf{W}^\top\bm{S}_{i, \beta}\textbf{W} + I_{q})^{-1} \hfill &\text{ if }&i > q \end{matrix}\right.,
 \end{align}
@@ -283,7 +283,7 @@ Let $z_{i, j}$ be the true presence (1) or absence of some species $i$ at site $
 where $\psi_{i, j}$ is the probability of occurrence of species $i$ at site $j$, which is a function of site-specific covariates $\bm{x}_j$, a vector of species-specific regression coefficients ($\bm{\beta}_i$) for those covariates, and a latent process $\text{w}^*_{i, j}$. We incorporate residual species correlations through the formulation of the latent process $\text{w}^*_{i, j}$. We use a factor modeling approach, which is a dimension reduction approach that can account for correlations among a large number of species. Specifically, we decompose $\text{w}^*_{i, j}$ into a linear combination of $q$ latent variables (i.e., factors) and their associated species-specific coefficients (i.e., factor loadings). Thus, we have
 
 \begin{equation}
-  \text{w}^*_{i, j}) = \bm{\lambda}_i^\top\textbf{w}_j,
+  \text{w}^*_{i, j} = \bm{\lambda}_i^\top\textbf{w}_j,
 \end{equation}
 
 where $\bm{\lambda}_i$ is the $i$th row of factor loadings from an $N \times q$ matrix $\bm{\Lambda}$, and $\textbf{w}_j$ is a $q \times 1$ vector of independent latent factors at site $j$. We achieve computational improvements by setting $q << N$.  We account for residual species correlations via their individual responses (i.e., loadings) to the $q$ latent spatial factors. We can envision the latent variables $\textbf{w}_j$ as unmeasured site-specific covariates that are treated as random variables in the model estimation procedure. For the non-spatial latent factor model, we assign a standard normal prior distribution to the latent factors (i.e., we assume each latent factor is independent and arises from a normal distribution with mean 0 and standard deviation 1).
@@ -327,7 +327,7 @@ Let $\textbf{w}_j$ denote the $q$ latent factors at site $j$. Our full condition
   \begin{array}{c}
     \textbf{w}_j \mid \cdot N_q(\bm{\mu}_j\bm{\Sigma}_j, \bm{\Sigma}_j) \mbox{ where, }\\
     \bm{\mu}_j = \bm{\Lambda}^\top\bm{S}_{j, \beta}((\bm{z}_j - 0.5\bm{1}_N)\bm{S}_{j, \beta}^{-1} - \bm{X}_j^\top\bm{\beta}) \mbox{ and } \\
-    \bm{\Sigma}_j = I_q + \bm{\Lambda}^\top\bm{S}_{j, \beta}\bm{\Lambda},
+    \bm{\Sigma}_j = \big(I_q + \bm{\Lambda}^\top\bm{S}_{j, \beta}\bm{\Lambda}\big)^{-1},
   \end{array}
 (\#eq:wlfMsPGocc)
 \end{equation}

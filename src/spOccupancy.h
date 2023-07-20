@@ -478,15 +478,13 @@ extern "C" {
 		      SEXP zYearIndx_r, SEXP zDatIndx_r, SEXP zSiteIndx_r,
 		      SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
 		      SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r,
-		      SEXP muBetaComm_r, SEXP muAlphaComm_r, 
-	              SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
-	              SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r, SEXP phiA_r, 
-		      SEXP phiB_r, SEXP nuA_r, SEXP nuB_r, 
-		      SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+		      SEXP betaCommPriors_r, SEXP alphaCommPriors_r, 
+	              SEXP tauSqBetaPriors_r, SEXP tauSqAlphaPriors_r, SEXP phiPriors_r, 
+		      SEXP nuPriors_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		      SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		      SEXP samplesInfo_r, SEXP chainInfo_r);
+		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r);
 
   SEXP svcTMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r, SEXP N_r, SEXP q_r,
 		              SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, 

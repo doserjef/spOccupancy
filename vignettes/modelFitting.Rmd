@@ -2,7 +2,7 @@
 title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 description: Learn how to get started with the core spOccupancy functionality
-date: "2022"
+date: "2022 (laste update: July 19, 2023)"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette provides worked examples and explanations for fitting single-species, multi-species, and integrated occupancy models available in the `spOccupancy` R package. We will provide step by step examples on how to fit the following models: 
+This vignette provides worked examples and explanations for fitting single-species, multi-species, and integrated occupancy models in the `spOccupancy` R package. We will provide step by step examples on how to fit the following models: 
 
 1. Occupancy model using `PGOcc()`. 
 2. Spatial occupancy model using `spPGOcc()`. 
@@ -35,7 +35,14 @@ This vignette provides worked examples and explanations for fitting single-speci
 5. Integrated occupancy model using `intPGOcc()`.
 6. Spatial integrated occupancy model using `spIntPGOcc()`. 
 
-We fit all occupancy models using P&oacute;lya-Gamma data augmentation [@polson2013] for computational efficiency (**P**&oacute;lya-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting function names). In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate [MCMC sampler vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/mcmcSamplers.pdf). We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out of sample predictions using standard R helper functions (e.g., `predict()`).   
+We fit all occupancy models using P&oacute;lya-Gamma data augmentation [@polson2013] for computational efficiency (**P**&oacute;lya-**G**amma is where the `PG` comes from in all `spOccupancy` model fitting function names). In this vignette, we will provide a brief description of each model, with full statistical details provided in a separate [MCMC sampler vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/mcmcSamplers.pdf). We will also show how `spOccupancy` provides functions for posterior predictive checks as a Goodness of Fit assessment, model comparison and assessment using the Widely Applicable Information Criterion (WAIC), k-fold cross-validation, and out of sample predictions using standard R helper functions (e.g., `predict()`). 
+
+Note that this vignette does not detail all `spOccupancy` functionality, and rather just details the core functionality presented in the original implementation of the package. Additional functionality, and associated vignettes, include: 
+
++ [Improved spatial multi-species occupancy models that account for residual species correlations](https://www.jeffdoser.com/files/spoccupancy-web/articles/factormodels)
++ [Multi-season occupancy models](https://www.jeffdoser.com/files/spoccupancy-web/articles/spacetimemodelshtml)
++ [Spatially-varying coefficient occupancy models](https://www.jeffdoser.com/files/spoccupancy-web/articles/svcmodels)
++ [Integrated multi-species occupancy models](https://www.jeffdoser.com/files/spoccupancy-web/articles/integratedmultispecies)
 
 To get started, we load the `spOccupancy` package, as well as the `coda` package, which we will use for some MCMC summary and diagnostics. We will also use the `stars` and `ggplot2` packages to create some basic plots of our results. We then set a seed so you can reproduce the same results as we do.
 
@@ -719,6 +726,8 @@ out.ms.pred <- predict(out.ms, X.0)
 ```
 
 # Multi-species spatial occupancy models
+
+Here we describe a basic multi-species spatial occupancy model that was part of the original release of `spOccupancy`. Since then, we have implemented a more computationally efficient approach for fitting spatial multi-species occupancy models. We call this alternative approach a "spatial factor multi-species occupancy model", and we describe this in depth in @doser2023joint. This newer approach also accounts for residual species correlations (i.e., it is a joint species distribution model with imperfect detection). Our simulation results from @doser2023joint show that this alternative approach outperforms, or performs equally wellas, the model described in the following section, while being substantially faster. Thus, we encourage you to explore the `spOccupancy` functionality to fit the spatial factor multi-species occupancy model with the function `sfMsPGOcc()` that is described [in depth in this vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/factormodels). The model and function we describe below will generally work well for communities comprised of a moderate number of species (e.g., between 5 and 10) that are not extremely rare. 
 
 ## Basic model description
 

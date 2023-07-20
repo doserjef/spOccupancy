@@ -23,8 +23,8 @@ ppcOcc <- function(object, fit.stat, group, ...) {
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc', 
 			     'svcPGOcc', 'svcTPGOcc', 'tMsPGOcc', 'svcMsPGOcc', 
-			     'svcTMsPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc, tMsPGOcc, svcMsPGOcc, svcTMsPGOcc\n")
+			     'svcTMsPGOcc', 'stMsPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc, tMsPGOcc, svcMsPGOcc, svcTMsPGOcc, stMsPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -385,7 +385,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.chains <- object$n.chains
   }
   # Multi-species, multi-season models ------------------------------------
-  if (class(object) %in% c('tMsPGOcc', 'svcTMsPGOcc')) {
+  if (class(object) %in% c('tMsPGOcc', 'svcTMsPGOcc', 'stMsPGOcc')) {
     y <- object$y
     J <- dim(y)[2]
     N <- dim(y)[1]

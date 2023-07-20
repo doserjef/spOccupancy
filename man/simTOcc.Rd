@@ -73,7 +73,7 @@ simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TR
 }
 
 \references{
-  Stoudt, S., P. de Valpine, and W. Fithian. (In review) Non-parametric identifiability in species distribution and abundance models: why it matters and how to diagnose a lack of fit using simulation.
+  Stoudt, S., P. de Valpine, and W. Fithian. Non-parametric identifiability in species distribution and abundance models: why it matters and how to diagnose a lack of fit using simulation. Journal of Statistical Theory and Practice 17, 39 (2023). https://doi.org/10.1007/s42519-023-00336-5.
 }
 
 \value{

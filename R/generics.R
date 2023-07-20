@@ -437,7 +437,7 @@ summary.ppcOcc <- function(object, level = 'both',
     cat("Fit statistic: ", object$fit.stat, "\n")
   }
   
-  if (object$class %in% c('tMsPGOcc', 'svcTMsPGOcc')) {
+  if (object$class %in% c('tMsPGOcc', 'svcTMsPGOcc', 'stMsPGOcc')) {
     n.years.max <- dim(object$fit.y)[3]
 
     if (tolower(level) == 'community' | tolower(level) == 'both') {
@@ -2368,7 +2368,7 @@ summary.sfMsPGOcc <- function(object,
   }
     # Covariance
     cat("\n")
-    if (is(object, 'svcTMsPGOcc')) {
+    if (class(object) %in% c('stMsPGOcc', 'svcTMsPGOcc')) {
       cat("----------------------------------------\n");
       cat("\tSpatio-temporal Covariance: \n")
       cat("----------------------------------------\n");
@@ -4601,8 +4601,8 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
   if (missing(object)) {
     stop("error: predict expects object\n")
   }
-  if (!(class(object) %in% c('svcTMsPGOcc'))) {
-    stop("error: requires an output object of class svcTMsPGOcc\n")
+  if (!(class(object) %in% c('svcTMsPGOcc', 'stMsPGOcc'))) {
+    stop("error: requires an output object of class svcTMsPGOcc, stMsPGOcc\n")
   }
   if (!(tolower(type) %in% c('occupancy', 'detection'))) {
     stop("error: prediction type must be either 'occupancy' or 'detection'")
@@ -5179,4 +5179,40 @@ predict.tMsPGOcc <- function(object, X.0, t.cols, ignore.RE = FALSE,
   class(out) <- "predict.tMsPGOcc"
   out
 
+}
+
+# stMsPGOcc -------------------------------------------------------------
+print.stMsPGOcc <- function(x, ...) {
+  print.sfMsPGOcc(x)
+}
+
+summary.stMsPGOcc <- function(object,
+			      level = 'both',
+			      quantiles = c(0.025, 0.5, 0.975),
+			      digits = max(3L, getOption("digits") - 3L), ...) {
+  summary.sfMsPGOcc(object, level, quantiles, digits)
+}
+
+fitted.stMsPGOcc <- function(object, ...) {
+   fitted.tMsPGOcc(object)
+}
+
+predict.stMsPGOcc <- function(object, X.0, coords.0, 
+                              t.cols, n.omp.threads = 1,
+                              verbose = TRUE, n.report = 100,
+                              ignore.RE = FALSE, type = 'occupancy', ...) {
+  object$std.by.sp <- FALSE
+  object$species.sds <- NA
+  object$species.means <- NA
+  object$svc.cols <- 1
+  tmp <- array(NA, dim = c(object$n.post * object$n.chains, 
+			   object$q, nrow(object$coords), 1))
+  tmp[, , , 1] <- object$w.samples
+  object$w.samples <- tmp
+  object$X.w <- out$X[, , 1, drop = FALSE]
+  out <- predict.svcTMsPGOcc(object, X.0, coords.0, 
+			     t.cols, n.omp.threads, verbose, n.report,
+			     ignore.RE, type)
+  out$w.0.samples <- out$w.0.samples[, , , 1]
+  return(out)
 }
