@@ -210,7 +210,7 @@ str(X.0)
 # Subset to only grab time periods 1, 2, and 5
 t.cols <- c(1, 2, 5)
 X.pred <- X.0[, t.cols, ]
-out.pred <- predict(out, X.0, coords.0, t.cols = t.cols, type = 'occupancy')
+out.pred <- predict(out, X.pred, coords.0, t.cols = t.cols, type = 'occupancy')
 str(out.pred)
 
 # Extract SVC samples for each species at prediction locations

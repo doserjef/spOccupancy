@@ -1838,7 +1838,7 @@ test_that("posterior predictive checks work for stMsPGOcc", {
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, N, n.time.max, max(n.rep, na.rm = TRUE)))
 })
 
-# Covariates on both ------------------------------------------------------
+# Covariates and random effects on both -----------------------------------
 set.seed(100)
 # Sites
 J.x <- 10

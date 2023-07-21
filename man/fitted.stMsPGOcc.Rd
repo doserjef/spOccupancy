@@ -1,24 +1,24 @@
-\name{fitted.stMsPGocc}
+\name{fitted.stMsPGOcc}
 
-\alias{fitted.stMsPGocc}
+\alias{fitted.stMsPGOcc}
 
-\title{Extract Model Fitted Values for stMsPGocc Object}
+\title{Extract Model Fitted Values for stMsPGOcc Object}
 
 \description{
-  Method for extracting model fitted values and detection probability values from a fitted multi-species multi-season spatial occupancy (\code{stMsPGocc}) model. 
+  Method for extracting model fitted values and detection probability values from a fitted multi-species multi-season spatial occupancy (\code{stMsPGOcc}) model. 
 }
 
 \usage{
-\method{fitted}{stMsPGocc}(object, \dots)
+\method{fitted}{stMsPGOcc}(object, \dots)
 }
 
 \arguments{
-  \item{object}{object of class \code{stMsPGocc}.}
+  \item{object}{object of class \code{stMsPGOcc}.}
   \item{\dots}{currently no additional arguments}
 }
 
 \details{
-  A method to the generic \code{\link[stats]{fitted}} function to extract fitted values and detection probability values for fitted model objects of class \code{stMsPGocc}. 
+  A method to the generic \code{\link[stats]{fitted}} function to extract fitted values and detection probability values for fitted model objects of class \code{stMsPGOcc}. 
 }
 
 \value{
