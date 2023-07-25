@@ -1,7 +1,7 @@
 ---
 title: "Spatially varying coefficient models in spOccupancy"
 author: 'Jeffrey W. Doser'
-date: "2022 (last update: July 18, 2023)"
+date: "2022 (last update: July 25, 2023)"
 fontsize: 11pt
 linestretch: 1.25
 description: Learn how to fit spatially varying coefficient models to quantify spatially varying trends and species-environment relationships 
@@ -69,7 +69,7 @@ The spatially varying effects $\textbf{w}(\bm{s}_j)$ serve as local adjustments 
 	\text{$\text{w}_h(\bm{s})$} \sim N(\bm{0}, \bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)),
 \end{equation}
 
-where $\bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)$ is a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters ($\bm{\theta}_h$) that govern the spatial process according to a spatial correlation function. Our associated software implementation in \texttt{spOccupancy} supports four correlation functions: exponential, spherical, Gaussian, and Matern [@banerjee2003]. For the exponential, spherical, and Gaussian correlation functions, $\bm{\theta}_h = \{\sigma^2_h, \phi_h\}$, where $\sigma^2_h$ is a spatial variance parameter and $\phi_h$ is a spatial decay parameter. Large values of $\sigma^2_h$ indicate large variation in the magnitude of a covariate effect across space, while values of $\sigma^2_h$ close to 0 suggests little spatial variability in the magnitude of the effect. $\phi_h$ controls the range of the spatial dependence in the covariate effect and is inversely related to the spatial range, such that when $\phi_h$ is small, the covariate effect has a larger range of spatial dependence and varies more smoothly across space compared to larger values of $\phi_h$. The Matern correlation function has an additional smoothness parameter $\nu_h$, which provides further flexibility in the smoothness and decay of the spatial process. To avoid the computational burden associated with fitting the full Gaussian process model, we use NNGPs as a computationally efficient and statistically robust alternative [@datta2016hierarchical]. See the supplemental material in [the spOccupancy manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13897) and @datta2016hierarchical for more details on NNGPs and their implementations in occupancy models.
+where $\bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)$ is a $J \times J$ covariance matrix that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters ($\bm{\theta}_h$) that govern the spatial process according to a spatial correlation function. Our associated software implementation supports four correlation functions: exponential, spherical, Gaussian, and Matern [@banerjee2003]. For the exponential, spherical, and Gaussian correlation functions, $\bm{\theta}_h = \{\sigma^2_h, \phi_h\}$, where $\sigma^2_h$ is a spatial variance parameter and $\phi_h$ is a spatial decay parameter. Large values of $\sigma^2_h$ indicate large variation in the magnitude of a covariate effect across space, while values of $\sigma^2_h$ close to 0 suggests little spatial variability in the magnitude of the effect. $\phi_h$ controls the range of the spatial dependence in the covariate effect and is inversely related to the spatial range, such that when $\phi_h$ is small, the covariate effect has a larger range of spatial dependence and varies more smoothly across space compared to larger values of $\phi_h$. The Matern correlation function has an additional smoothness parameter $\nu_h$, which provides further flexibility in the smoothness and decay of the spatial process. To avoid the computational burden associated with fitting the full Gaussian process model, we use NNGPs as a computationally efficient and statistically robust alternative [@datta2016hierarchical]. See the supplemental material in [the spOccupancy manuscript](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.13897) and @datta2016hierarchical for more details on NNGPs and their implementations in occupancy models.
 
 To account for imperfect detection in an occupancy modeling framework [@mackenzie2002; @tyre2003improving], $k = 1, \dots, K(\bm{s}_j)$ sampling replicates are obtained at each site $j$. We model the observed detection (1) or nondetection (0) of a study species at site $j$, denoted $y_k(\bm{s}_j)$, conditional on the true latent occupancy process $z(\bm{s}_j)$ following
 
@@ -77,7 +77,7 @@ To account for imperfect detection in an occupancy modeling framework [@mackenzi
         y_{k}(\bm{s}_j) \mid z(\bm{s}_j) \sim \text{Bernoulli}(p_{k}(\bm{s}_j)z(\bm{s}_j)),
 \end{equation}
 
-where $p_k(\bm{s})$ is the probability of detecting the species at site $j$ during replicate $k$ given the species is truly present at the site. We model detection probability as a function of site and/or observation-level covariates according to
+where $p_k(\bm{s}_j)$ is the probability of detecting the species at site $j$ during replicate $k$ given the species is truly present at the site. We model detection probability as a function of site and/or observation-level covariates according to
 
 \begin{equation}\label{pDet}
   \text{logit}(p_{k}(\bm{s}_j)) = \bm{v}_{k}(\bm{s}_j)\bm{\alpha},
@@ -97,7 +97,7 @@ simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(),
        sigma.sq, phi, nu, x.positive = FALSE, ...)
 ```
 
-`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.rep` is a numeric vector of length `J` that indicates the number of replicates at each of the J sites (denoted as `K` in the previous model description). `n.rep.max` is an optional value that can be used to specify the maximum number of replicate surveys, which is useful for emulating data from autonomous monitoring approaches (e.g., camera traps) where sampling occurs over a set number of time periods (e.g., days), but any individual site was not sampled across all the time periods. `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively. These are only specified when we want to simulate data with unstructured random intercepts. Each list should be comprised of two tags: `levels`, a vector that specifies the number of levels for each random effect included in the model, and `sigma.sq.psi` or `sigma.sq.p`, which specify the variances of the random effects for each random effect included in the model. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially varying effects. By default, `svc.cols = 1`, which corresponds to a spatially varying intercept when `sp = TRUE` (i.e., a spatial occupancy model). `cov.model` specifies the covariance function used to model the spatial dependence structure, with supported values of `exponential`, `matern`, `spherical`, and `gaussian`. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial range parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially varying effects specified in `svc.cols`. Lastly, the `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). 
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.rep` is a numeric vector of length `J` that indicates the number of replicates at each of the J sites (denoted as `K` in the previous model description). `n.rep.max` is an optional value that can be used to specify the maximum number of replicate surveys, which is useful for emulating data from autonomous monitoring approaches (e.g., camera traps) where sampling occurs over a set number of time periods (e.g., days), but any individual site was not sampled across all the time periods. `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively. These are only specified when we want to simulate data with unstructured random intercepts. Each list should be comprised of two tags: `levels`, a vector that specifies the number of levels for each random effect included in the model, and `sigma.sq.psi` or `sigma.sq.p`, which specify the variances of the random effects for each random effect included in the model. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially varying effects. By default, `svc.cols = 1`, which corresponds to a spatially varying intercept when `sp = TRUE` (i.e., a spatial occupancy model). `cov.model` specifies the covariance function used to model the spatial dependence structure, with supported values of `exponential`, `matern`, `spherical`, and `gaussian`. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial decay parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially varying effects specified in `svc.cols`. Lastly, the `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). 
 
 Below we simulate data across 1600 sites with anywhere between 1-4 replicates at a given site, a single covariate effect on occurrence, and a single covariate effect on detection. We assume both the occupancy intercept and the effect of the covariate vary across space, so we set `svc.cols = c(1, 2)`. We use a spherical correlation function. We do not include any unstructured random effects on occurrence or detection.
 
@@ -117,7 +117,7 @@ alpha <- c(0.9, -0.3)
 psi.RE <- list() 
 # No unstructured random intercept on detection
 p.RE <- list()
-# Spatial range for intercept and covariate effect
+# Spatial decay for intercept and covariate effect
 phi <- c(3 / .8, 3 / .7)
 # Spatial variance for intercept and covariate effect
 sigma.sq <- c(1, 0.5)
@@ -374,7 +374,7 @@ We see our Bayesian p-value is very close to the optimal 0.5, suggesting adequat
 
 ## Model Selection using WAIC
 
-The `spOccupancy` function `waicOcc()` calculates the Widely Applicable Information Criterion (WAIC) for all `spOccupancy` fitted model objects. The WAIC is a fully Bayesian information criterion that is adequate for comparing a set of hierarchical models and selecting the best-performing model for final analysis (see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details). Smaller values of WAIC indicate a better performing model. Below, we fit a spatial occupancy model without the SVC of the covariate effect using the `spOcc()` function (we could equivalently do this by using `svcPGOcc()` and setting `svc.cols = 1`).
+The `spOccupancy` function `waicOcc()` calculates the Widely Applicable Information Criterion (WAIC) for all `spOccupancy` fitted model objects. The WAIC is a fully Bayesian information criterion that is adequate for comparing a set of hierarchical models and selecting the best-performing model for final analysis (see [the introductory `spOccupancy` vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details). Smaller values of WAIC indicate a better performing model. Below, we fit a spatial occupancy model without the SVC of the covariate effect using the `spPGOcc()` function (we could equivalently do this by using `svcPGOcc()` and setting `svc.cols = 1`).
 
 ```{r}
 # Using default priors and initial values.
@@ -484,7 +484,7 @@ weights <- rep(1, J)
 beta <- c(-0.5, -0.2)
 # No unstructured random intercepts
 psi.RE <- list() 
-# Spatial range for intercept and covariate effect
+# Spatial decay for intercept and covariate effect
 phi <- c(3 / .8, 3 / .7)
 # Spatial variance for intercept and covariate effect
 sigma.sq <- c(1, 0.5)
@@ -767,10 +767,10 @@ The function `simTOcc()` simulates single-species multi-season detection-nondete
 simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TRUE, 
         psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
         sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE, 
-	mis.spec.type = 'none', scale.param = 1, avail, ...)
+        mis.spec.type = 'none', scale.param = 1, avail, ...)
 ```
 
-`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.time` indicates the number of time periods over which data are collected. `n.rep` is a numeric matrix with rows corresponding to sites and columns corresponding to time periods where each element corresponds to the number of replicate surveys performed within a given time period at a given site (denoted as `K` in the previous model description). Note that throughout we will refer to "time period" as the additional temporal replication in multi-season models (often called primary time period) and will use the term "replicate" to refer to the multiple visits obtained at a given site during a given time period (often called secondary time periods). `n.rep.max` is an optional value that can be used to specify the maximum number of replicate surveys, which is useful for emulating data from autonomous monitoring approaches (e.g., camera traps) where sampling occurs over a set number of time periods (e.g., days), but any individual site was not sampled across all the time periods. `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `sp.only` is a numeric vector specifying which occurrence covariates should only vary over space and not over time. `trend` is a logical value indicating whether or not a trend parameter is included in the model (the trend is assumed to be the second covariate listed in `beta`). `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively, which are analogous to previous data simulation functions. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially varying effects. `cov.model` specifies the covariance function used to model the spatial dependence structure. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial range parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially varying effects specified in `svc.cols`. The `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). The arguments `mis.spec.type` and `scale.param` are arguments that can be used to simulate detection-nondetection data where the model is misspecified, while the `avail` parameter can be used to simulate detection-nondetection data where there is an availability component in the model. See the manual page for `simTOcc()` for more details on these last three arguments, which we will not address in this vignette.
+`J.x` and `J.y` indicate the number of spatial locations to simulate data along a horizontal and vertical axis, respectively, such that `J.x * J.y` is the total number of sites (i.e., `J`). `n.time` indicates the number of time periods over which data are collected. `n.rep` is a numeric matrix with rows corresponding to sites and columns corresponding to time periods where each element corresponds to the number of replicate surveys performed within a given time period at a given site (denoted as `K` in the previous model description). Note that throughout we will refer to "time period" as the additional temporal replication in multi-season models (often called primary time period) and will use the term "replicate" to refer to the multiple visits obtained at a given site during a given time period (often called secondary time periods). `n.rep.max` is an optional value that can be used to specify the maximum number of replicate surveys, which is useful for emulating data from autonomous monitoring approaches (e.g., camera traps) where sampling occurs over a set number of time periods (e.g., days), but any individual site was not sampled across all the time periods. `beta` and `alpha` are numeric vectors containing the intercept and any regression coefficient parameters for the occurrence and detection portions of the occupancy model, respectively. `sp.only` is a numeric vector specifying which occurrence covariates should only vary over space and not over time. `trend` is a logical value indicating whether or not a trend parameter is included in the model (the trend is assumed to be the second covariate listed in `beta`). `psi.RE` and `p.RE` are lists that are used to specify random intercepts on occurrence and detection, respectively, which are analogous to previous data simulation functions. `sp` is a logical value indicating whether to simulate data with at least one spatial Gaussian process for either the intercept or some of the occupancy covariate effects. `svc.cols` is a numeric vector indicating which of the covariates (including the intercept) are generated with spatially varying effects. `cov.model` specifies the covariance function used to model the spatial dependence structure. Finally, `sigma.sq` is the spatial variance parameter, `phi` is the spatial decay parameter, and `nu` is the spatial smoothness parameter (only applicable when `cov.model = 'matern'`). Note that `sigma.sq`, `phi`, and `nu` should have the same length as the number of spatially varying effects specified in `svc.cols`. The `x.positive` argument indicates whether or not the occupancy covariates should be simulated to be only positive from a Uniform(0, 1) distribution (`TRUE`) or both positive and negative and simulated from a Normal(0, 1) distribution (`FALSE`). The arguments `mis.spec.type` and `scale.param` are arguments that can be used to simulate detection-nondetection data where the model is misspecified, while the `avail` parameter can be used to simulate detection-nondetection data where there is an availability component in the model. See the manual page for `simTOcc()` for more details on these last three arguments, which we will not address in this vignette.
 
 For this simulation, we will attempt to estimate a spatially varying trend parameter. Such an analysis can provide useful information for monitoring programs by allowing for prioritization of locations where occupancy trends are declining. Additionally, it can often help generate hypotheses as to what factors are driving the heterogenous trends across space. Below we simulate data across 400 sites and ten time periods with anywhere between 1-4 replicates at a given time-period, a spatially varying intercept, a spatially varying trend on occupancy, and a single covariate effect on detection. Note that we vary the number of time periods each site is sampled. We assume both the occupancy intercept and the trend vary across space, so we set `svc.cols = c(1, 2)`. We use an exponential correlation function. We do not include any unstructured random effects on occurrence or detection.
 
@@ -799,7 +799,7 @@ alpha <- c(0.9, -0.3)
 psi.RE <- list() 
 # No unstructured random intercept on detection
 p.RE <- list()
-# Spatial range for intercept and trend 
+# Spatial decay for intercept and trend 
 phi <- c(3 / .8, 3 / .7)
 # Spatial variance for intercept and trend
 sigma.sq <- c(1, 0.5)
@@ -1148,7 +1148,7 @@ trend <- TRUE
 beta <- c(-0.5, -0.2)
 # No unstructured random intercept on relative occurrence
 psi.RE <- list() 
-# Spatial range for intercept and trend 
+# Spatial decay for intercept and trend 
 phi <- c(3 / .8, 3 / .7)
 # Spatial variance for intercept and trend
 sigma.sq <- c(1, 0.5)
@@ -1403,7 +1403,7 @@ gc()
 
 # Multi-species spatially varying coefficient occupancy models
 
-Now consider the case where there are multiple species of interest, $N$, that are observed during data collection. We seek to jointly model the occupancy of the $N$ species in a single model that accommodates residual correlations between species and allows for sharing of information across species via random effects. Such multi-species approaches often have improved precision and accuracy of estimates compared to single-species models [@clark2014more; zipkin2010multi]. 
+Now consider the case where there are multiple species of interest, $N$, that are observed during data collection. We seek to jointly model the occupancy of the $N$ species in a single model that accommodates residual correlations between species and allows for sharing of information across species via random effects. Such multi-species approaches often have improved precision and accuracy of estimates compared to single-species models [@clark2014more; @zipkin2010multi]. 
 
 ## Basic model description
 
@@ -1413,7 +1413,7 @@ Using similar notation to the single-species models, we model the true presence-
    z_i(\bm{s}_j) \sim \text{Bernoulli}(\psi_i(\bm{s}_j) z^\ast_i(\bm{s}_j)),
 \end{equation}
 
-where $\psi_i(\bm{s}_j)$ is the occupancy probability of species $i$ at site $j$, and $z^\ast_i(\bm{s}_j)$ is a binary auxiliary data source indicating whether site $j$ is within the range of species $i$. Such data can be obtained from a variety of sources, including international databases (e.g., BirdLife International, IUCN), field guides, or expert opinion. We suggest buffering the auxiliary data range map by a suitable distance to account for potential inaccuracies in the auxiliary data. Inclusion of such auxiliary range data can drastically reduce the run time of the model if certain species can only exist at a subset of all the spatial locations in the data set [@socolar2022biogeographic]. If auxiliary range data are not available, $z^\ast_i(\bm{s}_j)$ can be removed from (\ref{zMS}) (or equivalently, $z^\ast_i(\bm{s}_j) = 1$ for all $j$).
+where $\psi_i(\bm{s}_j)$ is the occupancy probability of species $i$ at site $j$, and $z^\ast_i(\bm{s}_j)$ is a binary auxiliary data source indicating whether site $j$ is within the range of species $i$. Such data can be obtained from a variety of sources, including international databases (e.g., BirdLife International, IUCN), field guides, or expert opinion. We suggest buffering the auxiliary data range map by a suitable distance to account for potential inaccuracies in the auxiliary data. Inclusion of such auxiliary range data can drastically reduce the run time of the model if certain species can only exist at a subset of all the spatial locations in the data set [@socolar2022biogeographic]. If auxiliary range data are not available, $z^\ast_i(\bm{s}_j)$ can be removed (or equivalently, $z^\ast_i(\bm{s}_j) = 1$ for all $j$).
 
 At sites within a species' range, we model species-specific occupancy probability as
 
@@ -1435,9 +1435,9 @@ We seek to jointly model the species-specific spatial effects, $\textbf{w}^\ast_
 \end{equation}
 where $\bm{\lambda}_{i, h}^\top$ is the $i$th row of factor loadings from the $N \times q$ loadings matrix $\bm{\Lambda}_h$, and $\textbf{w}_h(\bm{s}_j)$ is a $q \times 1$ vector of independent spatial factors at site $j$. As in the single-species SVC occupancy model, we model each of the $r = 1, \dots, q$ spatial factors for each of the $\tilde{H}$ spatially-varying effects with an NNGP.
 
-Analogous to the single-species case, we model the observed detection-nondetection of each species $i$ at site $j$ during replicate survey $k$, $y_{i, k}(\bm{s}_j)$ conditional on the true presence-absence of each species, $z_{i}(\bm{s}_j)$, following (\ref{yDet}) and (\ref{pDet}), with all parameters now varying by species. We model the species-specific detection regression coefficients ($\bm{\alpha}_i$) hierarchically, analogous to the non-spatial occupancy regression coefficients in (\ref{betaMS}).
+Analogous to the single-species case, we model the observed detection-nondetection of each species $i$ at site $j$ during replicate survey $k$, $y_{i, k}(\bm{s}_j)$ conditional on the true presence-absence of each species, $z_{i}(\bm{s}_j)$, following the single-species equations, with all parameters now varying by species. We model the species-specific detection regression coefficients ($\bm{\alpha}_i$) hierarchically, analogous to the non-spatial occupancy regression coefficients.
 
-We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $h$ are required to ensure identifiability [@taylor2019spatial; @doser2023joint]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial range parameter $\phi_{r, h}$ an independent uniform prior. For full statistical details on these models, see @doser2023joint and @doser2023SVC.
+We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $h$ are required to ensure identifiability [@taylor2019spatial; @doser2023joint]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial decay parameter $\phi_{r, h}$ an independent uniform prior. For full statistical details on these models, see @doser2023joint and @doser2023SVC.
 
 ## Simulating data with `simMsOcc()`
 
@@ -1446,7 +1446,7 @@ The function `simMsOcc()` simulates multi-species detection-nondetection data. `
 ```{r, eval = FALSE}
 simMsOcc(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(), 
          p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
-	 sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
+         sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
          range.probs, ...)
 ```
 
@@ -1495,8 +1495,8 @@ cov.model <- 'exponential'
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		psi.RE = psi.RE, p.RE = p.RE, phi = phi, sp = TRUE, svc.cols = svc.cols,
-		cov.model = 'exponential', n.factors = n.factors, factor.model = TRUE, 
+                psi.RE = psi.RE, p.RE = p.RE, phi = phi, sp = TRUE, svc.cols = svc.cols,
+                cov.model = 'exponential', n.factors = n.factors, factor.model = TRUE, 
                 range.probs = range.probs)
 str(dat)
 # Detection-nondetection data
@@ -1516,9 +1516,9 @@ svc.true <- dat$lambda[[2]] %*% dat$w[[2]]
 # Full SVC effect for each species (w + beta)
 cov.effect <- svc.true + beta[, 2]
 plot.dat <- data.frame(x = coords[, 1], 
-		       y = coords[, 2], 
-		       svc.sp.1 = cov.effect[1, ],
-		       svc.sp.2 = cov.effect[2, ])
+                       y = coords[, 2], 
+                       svc.sp.1 = cov.effect[1, ],
+                       svc.sp.2 = cov.effect[2, ])
 ggplot(plot.dat, aes(x = x, y = y, fill = svc.sp.1)) + 
   geom_tile(col = 'black') + 
   scale_fill_gradient2(midpoint = 0, low = '#B2182B', mid = 'white', 
@@ -1577,16 +1577,16 @@ The function `svcMsPGOcc()` fits multi-species SVC occupancy models. `svcMsPGOcc
 
 ```{r, eval = FALSE}
 svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-          svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-          n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
-	  n.factors, n.batch, batch.length, 
-	  accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, n.report = 100, 
-          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, ...)
+           svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+           n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
+           n.factors, n.batch, batch.length, 
+           accept.rate = 0.43, n.omp.threads = 1, 
+           verbose = TRUE, n.report = 100, 
+           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+           n.chains = 1, ...)
 ```
 
-The arguments are nearly identical to `svcPGOcc()`, with the only exceptions being the `std.by.sp` and the `n.factors` arguments. The argument `std.by.sp`, which is a logical value indicating whether covariates should be standardized individually for each species when the study area is larger than some individual species' range. In the case where auxiliary species range information is not provided or all species ranges span the study area, this argument will have no influence on the results. When auxiliary range information is provided and species ranges vary across the modeled area, setting `std.by.sp = TRUE` will separately standardize (i.e., subtract the mean and divide by the standard deviation) all the occurrence covariates using only the covariate values that fall within that species' range. We generally recommend doing this when modeling species with different ranges, as it can help with convergence and mixing of the MCMC chains, particularly when there are some species whose range only occurs in one portion of the covariate space. 
+The arguments are nearly identical to `svcPGOcc()`, with the only exceptions being the `std.by.sp` and the `n.factors` arguments. The argument `std.by.sp` is a logical value indicating whether covariates should be standardized individually for each species when the study area is larger than some individual species' range. In the case where auxiliary species range information is not provided or all species ranges span the study area, this argument will have no influence on the results. When auxiliary range information is provided and species ranges vary across the modeled area, setting `std.by.sp = TRUE` will separately standardize (i.e., subtract the mean and divide by the standard deviation) all the occurrence covariates using only the covariate values that fall within that species' range. We generally recommend doing this when modeling species with different ranges, as it can help with convergence and mixing of the MCMC chains, particularly when there are some species whose range only occurs in one portion of the covariate space. 
 
 The `n.factors` argument is used to specify how many factors one should use in the factor modeling approach for each SVC. Choosing the number of factors is not always straightforward, and how many factors can/should be used is dependent on the data at hand. We present guidance on choosing the number of factors, among other things, in a [separate vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelconsiderations). Given the large similarities in syntax with `svcPGOcc()`, we do not go into too much detail here on the arguments. Here we set `n.factors` to 2, which is what we used to simulate the data.
 
@@ -1609,19 +1609,19 @@ svc.cols <- c(1, 2)
 cov.model <- 'exponential'
 # Specify initial values
 inits.list <- list(alpha.comm = 0, # Community-level detection mean parameters
-		   beta.comm = 0, # Community-level occurrence mean parameters
-		   beta = 0, # Species-level occurrence effects
-		   alpha = 0, # Species-level detection effects
-		   tau.sq.beta = 1, # Community-level occurrence variances
-		   tau.sq.alpha = 1, # Community-level detection variances
-		   phi = 3 / .5, # Spatial decay parameter
-		   # Latent species-specific occurrence
-		   z = apply(y.fit, c(1, 2), max, na.rm = TRUE))
+                   beta.comm = 0, # Community-level occurrence mean parameters
+                   beta = 0, # Species-level occurrence effects
+                   alpha = 0, # Species-level detection effects
+                   tau.sq.beta = 1, # Community-level occurrence variances
+                   tau.sq.alpha = 1, # Community-level detection variances
+                   phi = 3 / .5, # Spatial decay parameter
+                   # Latent species-specific occurrence
+                   z = apply(y.fit, c(1, 2), max, na.rm = TRUE))
 # Specify prior values
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   alpha.comm.normal = list(mean = 0, var = 2.72),
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
                    phi.unif = list(a = 3 / 1, b = 3 / 0.1))
 # Tuning list
 tuning.list <- list(phi = 0.7)
@@ -1641,14 +1641,14 @@ n.neighbors <- 5
 n.factors <- 2
 # Fit the model (Approx. run time: 7.5 min)
 out.ms <- svcMsPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
-		     data = data.list, inits = inits.list, 
-		     priors = prior.list, tuning = tuning.list, 
-		     svc.cols = svc.cols, cov.model = cov.model, NNGP = NNGP,
-		     n.neighbors = n.neighbors, n.factors = n.factors, 
-		     n.batch = n.batch, batch.length = batch.length, 
-		     accept.rate = accept.rate, n.omp.threads = n.omp.threads,
-		     verbose = TRUE, n.report = n.report, n.burn = n.burn, 
-		     n.thin = n.thin, n.chains = n.chains)
+                     data = data.list, inits = inits.list, 
+                     priors = prior.list, tuning = tuning.list, 
+                     svc.cols = svc.cols, cov.model = cov.model, NNGP = NNGP,
+                     n.neighbors = n.neighbors, n.factors = n.factors, 
+                     n.batch = n.batch, batch.length = batch.length, 
+                     accept.rate = accept.rate, n.omp.threads = n.omp.threads,
+                     verbose = TRUE, n.report = n.report, n.burn = n.burn, 
+                     n.thin = n.thin, n.chains = n.chains)
 # Quick summary of model results
 summary(out.ms)
 ```
@@ -1721,7 +1721,7 @@ waicOcc(out.ms, by.sp = TRUE)
 
 Prediction is identical to the single-species SVC model. Below we predict at the 100 hold out locations and then compare the estimated means to the true values used to simulate the data.
 
-```{r}
+```{r, fig.width = 5, fig.height = 4, fig.align = 'center', units = 'in'}
 # Predict occupancy at the 100 new sites
 out.ms.pred <- predict(out.ms, X.pred, coords.pred)
 str(out.ms.pred)
@@ -1730,7 +1730,7 @@ str(out.ms.pred)
 svc.pred.samples <- getSVCSamples(out.ms, pred.object = out.ms.pred)
 # Get median and 95% CIs of the SVC for the covariate for each species
 svc.pred.quants <- apply(svc.pred.samples[["occ.cov.1"]], c(2, 3), quantile,
-                           probs = c(0.025, 0.5, 0.975))
+                         probs = c(0.025, 0.5, 0.975))
 # Plot results for one species
 plot(svc.true.pred[2, ], svc.pred.quants[2, 2, ], pch = 19,
      ylim = c(min(svc.pred.quants[1, 2, ]), max(svc.pred.quants[3, 2, ])),

@@ -206,7 +206,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{psi.samples}{a three-dimensional array of posterior samples
     for the latent occupancy probability values, with dimensions 
     corresponding to posterior sample, site, and primary time period. Note
-    this object will contained predicted occupancy probabilities for
+    this object will contain predicted occupancy probabilities for
     sites/primary time periods that were not sampled.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
@@ -233,7 +233,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   \item{eta.samples}{a \code{coda} object of posterior samples for the 
     AR(1) random effects for each primary time period. Only included if 
-    \code{ar1 = TRUE}}.
+    \code{ar1 = TRUE}.}
 
   \item{like.samples}{a three-dimensional array of posterior samples
     for the likelihood values associated with each site and primary

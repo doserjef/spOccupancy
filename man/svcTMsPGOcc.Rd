@@ -8,13 +8,13 @@
 
 \usage{
 svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-          svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-          n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
-	  n.factors, svc.by.sp, n.batch, batch.length, 
-	  accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, ar1 = FALSE, n.report = 100, 
-          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, ...)
+            svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+            n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
+            n.factors, svc.by.sp, n.batch, batch.length, 
+            accept.rate = 0.43, n.omp.threads = 1, 
+            verbose = TRUE, ar1 = FALSE, n.report = 100, 
+            n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+            n.chains = 1, ...)
 }
 
 \arguments{
@@ -63,8 +63,10 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
     \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, 
     \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{z}, 
-    \code{phi}, \code{lambda}, and \code{nu}. \code{nu} is only specified if 
-    \code{cov.model = "matern"}, and \code{sigma.sq.psi} and \code{sigma.sq.p} are
+    \code{phi}, \code{lambda}, \code{nu}, \code{sigma.sq.t}, and \code{rho}. 
+    \code{nu} is only specified if \code{cov.model = "matern"}, 
+    \code{sigma.sq.t} and \code{rho} are only specified if \code{ar1 = TRUE}, 
+    and \code{sigma.sq.psi} and \code{sigma.sq.p} are
     only specified if random effects are included in \code{occ.formula} or 
     \code{det.formula}, respectively. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
@@ -75,8 +77,8 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi}, 
-  \code{sigma.sq.p}, \code{phi.unif}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
+  \code{sigma.sq.p}, \code{phi.unif}, \code{nu.unif}, \code{sigma.sq.t.ig}, 
+  and \code{rho.unif}. Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
@@ -115,10 +117,20 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   are passed as a list of length two with first and second elements corresponding
   to the shape and scale parameters, respectively, which are each specified as
   vectors of length equal to the number of random intercepts or of length one 
-  if priors are the same for all random effect variances.}
+  if priors are the same for all random effect variances. \code{sigma.sq.t} and 
+  \code{rho} are the AR(1) variance and correlation parameters for the AR(1) zero-mean
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow an inverse-Gamma
+  distribution, where the hyperparameters are specified as a list of length two with the 
+  first and second elements corresponding to the shape and scale parameters, respectively, 
+  which can each be specified as vector equal to the number of species in the model or a single value
+  if the same prior is used for all species. \code{rho} is assumed to follow a 
+  uniform distribution, where the hyperparameters are specified similarly as a list of length two
+  with the first and second elements corresponding to the lower and upper bounds of the 
+  uniform prior, which can each be specified as vector equal to the number of species in the 
+  model or a single value if the same prior is used for all species.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
-    name. Valid tags are \code{phi} and \code{nu}. The value portion of each
+    name. Valid tags are \code{phi}, \code{nu}, and \code{rho}. The value portion of each
     tag defines the initial variance of the adaptive sampler. We assume the 
     initial variance of the adaptive sampler is the same for each species, 
     although the adaptive sampler will adjust the tuning variances separately
@@ -296,7 +308,8 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the species level detection regression coefficients.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
-    for the species level correlation parameters for each spatially-varying coefficient.}
+    for the species level correlation parameters for each spatially-varying coefficient and
+    the temporal autocorrelation parameters for each species when \code{ar1 = TRUE}.}
 
   \item{lambda.samples}{a \code{coda} object of posterior samples
     for the latent spatial factor loadings for each spatially-varying coefficient.}
@@ -332,9 +345,9 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
-  \item{like.samples}{a three-dimensional array of posterior samples
-    for the likelihood value associated with each site and species. 
-    Used for calculating WAIC.}
+  \item{like.samples}{a four-dimensional array of posterior samples
+    for the likelihood value used for calculating WAIC. Dimensions correspond 
+    to MCMC sample, species, site, and time period.}
 
   \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
     parameters.}
@@ -363,7 +376,6 @@ n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
   n.rep[j, 1:n.time[j]] <- sample(2:4, n.time[j], replace = TRUE)
-  # n.rep[j, 1:n.time[j]] <- rep(4, n.time[j])
 }
 N <- 7
 # Community-level covariate effects
@@ -398,8 +410,8 @@ factor.model <- TRUE
 cov.model <- 'exponential'
 
 dat <- simTMsOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, N = N,
-		 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
-		 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
+                 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
+                 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
                  svc.cols = svc.cols, n.factors = n.factors, phi = phi, sp = sp,
                  cov.model = cov.model)
 
@@ -411,23 +423,23 @@ X.re <- dat$X.re
 X.p.re <- dat$X.p.re
 
 occ.covs <- list(occ.cov.1 = X[, , 2],
-		 occ.cov.2 = X[, , 3])
+                 occ.cov.2 = X[, , 3])
 det.covs <- list(det.cov.1 = X.p[, , , 2],
-		 det.cov.2 = X.p[, , , 3])
+                 det.cov.2 = X.p[, , , 3])
 
 data.list <- list(y = y, occ.covs = occ.covs,
                   det.covs = det.covs,
                   coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   alpha.comm.normal = list(mean = 0, var = 2.72),
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
                    phi.unif = list(a = 3 / .9, b = 3 / .1))
 z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
-		   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
-		   phi = 3 / .5, z = z.init)
+                   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
+                   phi = 3 / .5, z = z.init)
 # Tuning
 tuning.list <- list(phi = 1)
 
@@ -440,25 +452,25 @@ n.thin <- 1
 n.samples <- n.batch * batch.length
 
 out <- svcTMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
-                det.formula = ~ det.cov.1 + det.cov.2,
-                data = data.list,
-                inits = inits.list,
-                n.batch = n.batch,
-                batch.length = batch.length,
-                accept.rate = 0.43,
-		NNGP = TRUE,
-		n.neighbors = 5,
-		n.factors = n.factors,
-		svc.cols = svc.cols,
-		cov.model = 'exponential',
-                priors = prior.list,
-                tuning = tuning.list,
-                n.omp.threads = 1,
-                verbose = TRUE,
-                n.report = 1,
-                n.burn = n.burn,
-		n.thin = n.thin,
-		n.chains = 1)
+                   det.formula = ~ det.cov.1 + det.cov.2,
+                   data = data.list,
+                   inits = inits.list,
+                   n.batch = n.batch,
+                   batch.length = batch.length,
+                   accept.rate = 0.43,
+                   NNGP = TRUE,
+                   n.neighbors = 5,
+                   n.factors = n.factors,
+                   svc.cols = svc.cols,
+                   cov.model = 'exponential',
+                   priors = prior.list,
+                   tuning = tuning.list,
+                   n.omp.threads = 1,
+                   verbose = TRUE,
+                   n.report = 1,
+                   n.burn = n.burn,
+                   n.thin = n.thin,
+                   n.chains = 1)
 
 summary(out)
 }

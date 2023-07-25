@@ -3,7 +3,7 @@
 \title{Function for Fitting a Spatial Factor Joint Species Distribution Model}
 
 \description{
-  The function \code{sfJSDM} fits a spatially-explicit joint species distribution model. This model does not explicitly account for imperfect detection (see \code{sfMsPGOcc()}). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using a full Gaussian Process.}
+  The function \code{sfJSDM} fits a spatially-explicit joint species distribution model. This model does not explicitly account for imperfect detection (see \code{sfMsPGOcc()}). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process.}
   
 \usage{
 sfJSDM(formula, data, inits, priors, tuning, 
@@ -336,8 +336,8 @@ sigma.sq <- rep(2, n.factors)
 nu <- rep(2, n.factors)
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-	        psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq,
-		phi = phi, nu = nu, cov.model = 'matern', factor.model = TRUE,
+                psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq,
+                phi = phi, nu = nu, cov.model = 'matern', factor.model = TRUE,
                 n.factors = n.factors)
 
 pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
@@ -355,13 +355,13 @@ y <- apply(y, c(1, 2), max, na.rm = TRUE)
 data.list <- list(y = y, coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   nu.unif = list(0.5, 2.5))
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   nu.unif = list(0.5, 2.5))
 # Starting values
 inits.list <- list(beta.comm = 0,
-		   beta = 0,
-		   fix = TRUE,
-		   tau.sq.beta = 1)
+                   beta = 0,
+                   fix = TRUE,
+                   tau.sq.beta = 1)
 # Tuning
 tuning.list <- list(phi = 1, nu = 0.25)
 
@@ -379,7 +379,7 @@ out <- sfJSDM(formula = formula,
               priors = prior.list,
               cov.model = "matern",
               tuning = tuning.list,
-	      n.factors = 3,
+              n.factors = 3,
               n.omp.threads = 1,
               verbose = TRUE,
               NNGP = TRUE,
@@ -387,7 +387,7 @@ out <- sfJSDM(formula = formula,
               search.type = 'cb',
               n.report = 10,
               n.burn = 0,
-	      n.thin = 1,
-	      n.chains = 2)
+              n.thin = 1,
+              n.chains = 2)
 summary(out)
 }

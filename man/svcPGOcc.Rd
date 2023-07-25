@@ -99,7 +99,7 @@ svcPGOcc(occ.formula, det.formula, data, inits, priors,
     integer vector with values indicating the order of covariates specified 
     in the model formula (with 1 being the intercept if specified), or it can 
     be specified as a character vector with names corresponding to variable 
-    names in \code{occ.covs} (for the intercept, use '(Intercept)'). \code{svc.cols}
+    names in \code{occ.covs} (for the intercept, use \code{'(Intercept)'}). \code{svc.cols}
     default argument of 1 results in a spatial occupancy model analogous to 
     \code{spPGOcc} (assuming an intercept is included in the model).} 
  
@@ -346,24 +346,24 @@ inits.list <- list(alpha = 0, beta = 0,
 tuning.list <- list(phi = 1) 
 
 out <- svcPGOcc(occ.formula = ~ occ.cov, 
-               det.formula = ~ det.cov.1, 
-               data = data.list, 
-               inits = inits.list, 
-               n.batch = n.batch, 
-               batch.length = batch.length, 
-               accept.rate = 0.43, 
-               priors = prior.list,
-               cov.model = 'exponential', 
-               svc.cols = c(1, 2),
-               tuning = tuning.list, 
-               n.omp.threads = 1, 
-               verbose = TRUE, 
-               NNGP = TRUE, 
-               n.neighbors = 5, 
-               search.type = 'cb', 
-               n.report = 10, 
-               n.burn = 50, 
-               n.thin = 1)
+                det.formula = ~ det.cov.1, 
+                data = data.list, 
+                inits = inits.list, 
+                n.batch = n.batch, 
+                batch.length = batch.length, 
+                accept.rate = 0.43, 
+                priors = prior.list,
+                cov.model = 'exponential', 
+                svc.cols = c(1, 2),
+                tuning = tuning.list, 
+                n.omp.threads = 1, 
+                verbose = TRUE, 
+                NNGP = TRUE, 
+                n.neighbors = 5, 
+                search.type = 'cb', 
+                n.report = 10, 
+                n.burn = 50, 
+                n.thin = 1)
 
 summary(out) 
 }

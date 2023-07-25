@@ -8,13 +8,13 @@
 
 \usage{
 svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-          svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-          n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
-	  n.factors, n.batch, batch.length, 
-	  accept.rate = 0.43, n.omp.threads = 1, 
-          verbose = TRUE, n.report = 100, 
-          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, ...)
+           svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+           n.neighbors = 15, search.type = 'cb', std.by.sp = FALSE, 
+           n.factors, n.batch, batch.length, 
+           accept.rate = 0.43, n.omp.threads = 1, 
+           verbose = TRUE, n.report = 100, 
+           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+           n.chains = 1, ...)
 }
 
 \arguments{
@@ -80,7 +80,7 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or of length one if priors are the same for 
   all coefficients. If not specified, prior means are set 
-  to 0 and prior variances set to 2.73. By default, community-level variance parameters 
+  to 0 and prior variances set to 2.72. By default, community-level variance parameters 
   for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
   assumed to follow an inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
@@ -125,7 +125,7 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     integer vector with values indicating the order of covariates specified 
     in the model formula (with 1 being the intercept if specified), or it can 
     be specified as a character vector with names corresponding to variable 
-    names in \code{occ.covs} (for the intercept, use '(Intercept)'). \code{svc.cols}
+    names in \code{occ.covs} (for the intercept, use \code{'(Intercept)'}). \code{svc.cols}
     default argument of 1 results in a spatial occupancy model analogous to 
     \code{sfMsPGOcc} (assuming an intercept is included in the model).} 
 
@@ -350,7 +350,7 @@ tau.sq.alpha <- c(1, 0.5, 1.3)
 p.det <- length(alpha.mean)
 # Random effects
 psi.RE <- list(levels = 15, 
-	       sigma.sq.psi = 0.7)
+               sigma.sq.psi = 0.7)
 p.RE <- list(levels = 20, 
              sigma.sq.p = 0.5)
 # Draw species-level effects from community means.
@@ -378,9 +378,9 @@ cov.model <- 'spherical'
 sp <- TRUE
 
 dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-		psi.RE = psi.RE, p.RE = p.RE, phi = phi, sp = sp, svc.cols = svc.cols,
-		cov.model = cov.model, n.factors = n.factors, 
-		factor.model = factor.model, range.probs = range.probs)
+                psi.RE = psi.RE, p.RE = p.RE, phi = phi, sp = sp, svc.cols = svc.cols,
+                cov.model = cov.model, n.factors = n.factors, 
+                factor.model = factor.model, range.probs = range.probs)
 
 y <- dat$y
 X <- dat$X
@@ -394,27 +394,27 @@ range.ind <- dat$range.ind
 # Occurrence covariates
 occ.covs <- cbind(X, X.re)
 colnames(occ.covs) <- c('int', 'occ.cov.1', 'occ.cov.2', 'occ.cov.3', 
-			'occ.cov.4', 'occ.factor.1')
+                        'occ.cov.4', 'occ.factor.1')
 # Detection covariates
 det.covs <- list(det.cov.1 = X.p[, , 2], 
-		 det.cov.2 = X.p[, , 3], 
+                 det.cov.2 = X.p[, , 3], 
                  det.factor.1 = X.p.re[, , 1]) 
 # Data list
 data.list <- list(y = y, coords = coords, occ.covs = occ.covs, 
                   det.covs = det.covs, range.ind = range.ind)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72), 
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
+                   alpha.comm.normal = list(mean = 0, var = 2.72), 
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1), 
                    phi.unif = list(a = 3 / 1, b = 3 / .1)) 
 inits.list <- list(alpha.comm = 0, 
-		   beta.comm = 0, 
-		   beta = 0, 
-		   alpha = 0,
-		   tau.sq.beta = 1, 
-		   tau.sq.alpha = 1, 
-		   z = apply(y, c(1, 2), max, na.rm = TRUE)) 
+                   beta.comm = 0, 
+                   beta = 0, 
+                   alpha = 0,
+                   tau.sq.beta = 1, 
+                   tau.sq.alpha = 1, 
+                   z = apply(y, c(1, 2), max, na.rm = TRUE)) 
 # Tuning
 tuning.list <- list(phi = 1)
 
@@ -432,12 +432,12 @@ out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 +
                   data = data.list,
                   inits = inits.list,
                   n.batch = n.batch,
-		  n.factors = n.factors,
+                  n.factors = n.factors,
                   batch.length = batch.length,
-		  std.by.sp = TRUE,
+                  std.by.sp = TRUE,
                   accept.rate = 0.43,
                   priors = prior.list,
-		  svc.cols = svc.cols,
+                  svc.cols = svc.cols,
                   cov.model = "spherical",
                   tuning = tuning.list,
                   n.omp.threads = 1,
@@ -447,8 +447,8 @@ out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 +
                   search.type = 'cb',
                   n.report = 10,
                   n.burn = n.burn,
-		  n.thin = n.thin,
-		  n.chains = 1) 
+                  n.thin = n.thin,
+                  n.chains = 1) 
 
 summary(out)
 }

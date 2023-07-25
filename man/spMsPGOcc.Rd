@@ -307,8 +307,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
 
   The return object will include additional objects used for 
   subsequent prediction and/or model fit evaluation. Note that detection probability
-  estimated values are not included in the model object, but can be extracted using
-  \code{fitted()}.
+  estimated values are not included in the model object, but can be extracted using \code{fitted()}.
 }
 
 \examples{

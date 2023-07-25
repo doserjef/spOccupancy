@@ -4,8 +4,8 @@
 
 \usage{
 tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
-	 n.batch, batch.length, 
-	 accept.rate = 0.43, n.omp.threads = 1, 
+         n.batch, batch.length, 
+         accept.rate = 0.43, n.omp.threads = 1, 
          verbose = TRUE, ar1 = FALSE, n.report = 100, 
          n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
          n.chains = 1, ...)
@@ -72,7 +72,7 @@ tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or of length one if priors are the same for 
   all coefficients. If not specified, prior means are set 
-  to 0 and prior variances set to 2.73. By default, community-level variance parameters 
+  to 0 and prior variances set to 2.72. By default, community-level variance parameters 
   for occupancy (\code{tau.sq.beta}) and detection (\code{tau.sq.alpha}) are 
   assumed to follow an inverse Gamma distribution. The hyperparameters of 
   the inverse gamma distribution are passed as a list of length two with 
@@ -89,8 +89,9 @@ tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   if the same prior is used for all species. \code{rho} is assumed to follow a 
   uniform distribution, where the hyperparameters are specified similarly as a list of length two
   with the first and second elements corresponding to the lower and upper bounds of the 
-  uniform prior. \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
-  effect variances for any occurrence or
+  uniform prior, which can each be specified as vector equal to the number of species in the 
+  model or a single value if the same prior is used for all species. 
+  \code{sigma.sq.psi} and \code{sigma.sq.p} are the random effect variances for any occurrence or
   detection random effects, respectively, and are assumed to follow an inverse
   Gamma distribution. The hyperparameters of the inverse-Gamma distribution
   are passed as a list of length two with first and second elements corresponding
@@ -124,7 +125,7 @@ tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     Otherwise, no messages are printed.}
 
   \item{ar1}{logical value indicating whether to include an AR(1) zero-mean 
-    temporal random effect in the model for eac species. If \code{FALSE}, the model is
+    temporal random effect in the model for each species. If \code{FALSE}, the model is
     fit without an AR(1) temporal autocovariance structure. If \code{TRUE},
     a species-specific AR(1) random effect is included in the model to account for temporal 
     autocorrelation across the primary time periods.}
@@ -231,9 +232,9 @@ tMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
-  \item{like.samples}{a three-dimensional array of posterior samples
-    for the likelihood value associated with each site and species. 
-    Used for calculating WAIC.}
+  \item{like.samples}{a four-dimensional array of posterior samples
+    for the likelihood value used for calculating WAIC. Dimensions correspond 
+    to MCMC sample, species, site, and time period.}
 
   \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
     parameters.}
@@ -262,7 +263,6 @@ n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
   n.rep[j, 1:n.time[j]] <- sample(2:4, n.time[j], replace = TRUE)
-  # n.rep[j, 1:n.time[j]] <- rep(4, n.time[j])
 }
 N <- 7
 # Community-level covariate effects
@@ -291,8 +291,8 @@ for (i in 1:p.det) {
 sp <- FALSE
 
 dat <- simTMsOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, N = N,
-		 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
-		 psi.RE = psi.RE, p.RE = p.RE, sp = sp)
+                 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
+                 psi.RE = psi.RE, p.RE = p.RE, sp = sp)
 
 y <- dat$y
 X <- dat$X
@@ -301,21 +301,21 @@ X.re <- dat$X.re
 X.p.re <- dat$X.p.re
 
 occ.covs <- list(occ.cov.1 = X[, , 2],
-		 occ.cov.2 = X[, , 3])
+                 occ.cov.2 = X[, , 3])
 det.covs <- list(det.cov.1 = X.p[, , , 2],
-		 det.cov.2 = X.p[, , , 3])
+                 det.cov.2 = X.p[, , , 3])
 
 data.list <- list(y = y, occ.covs = occ.covs,
                   det.covs = det.covs)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
+                   alpha.comm.normal = list(mean = 0, var = 2.72),
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1))
 z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
-		   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
-		   z = z.init)
+                   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
+                   z = z.init)
 # Tuning
 tuning.list <- list(phi = 1)
 
@@ -339,8 +339,8 @@ out <- tMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
                 verbose = TRUE,
                 n.report = 1,
                 n.burn = n.burn,
-		n.thin = n.thin,
-		n.chains = 1)
+                n.thin = n.thin,
+                n.chains = 1)
 
 summary(out)
 }

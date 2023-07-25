@@ -13,7 +13,8 @@ ppcOcc(object, fit.stat, group, ...)
 \arguments{
 \item{object}{an object of class \code{PGOcc}, \code{spPGOcc}, \code{msPGOcc}, 
 \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, 
-\code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}, \code{svcMsPGOcc}.}
+\code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}, \code{svcMsPGOcc}, \code{tMsPGOcc}, 
+\code{stMsPGOcc}, \code{svcTMsPGOcc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
@@ -34,7 +35,6 @@ column (replicate).}
 
 \author{
   Jeffrey W. Doser \email{doserjef@msu.edu}, \cr
-  Andrew O. Finley \email{finleya@msu.edu}
 }
 
 \value{
@@ -52,7 +52,9 @@ column (replicate).}
   of the list being a vector of posterior samples for each data set. 
   When \code{object} is of class \code{tPGOcc} or \code{stPGOcc}, this is a
   numeric matrix with rows corresponding to posterior samples and columns 
-  corresponding to primary sampling periods.}
+  corresponding to primary sampling periods. When \code{object} is of class \code{tMsPGOcc}, 
+  \code{stMsPGOcc}, or \code{svcTMsPGOcc}, this is a three-dimensional array with dimensions
+  corresponding to MCMC sample, species, and primary time period. }
 
   \item{fit.y.rep}{a numeric vector of posterior samples for the 
   fit statistic calculated on a replicate data set generated from the 
@@ -65,7 +67,9 @@ column (replicate).}
   of the list being a vector of posterior samples for each data set. 
   When \code{object} is of class \code{tPGOcc} or \code{stPGOcc}, this is a
   numeric matrix with rows corresponding to posterior samples and columns 
-  corresponding to primary sampling periods.}
+  corresponding to primary sampling periods. When \code{object} is of class \code{tMsPGOcc}, 
+  \code{stMsPGOcc}, or \code{svcTMsPGOcc}, this is a three-dimensional array with dimensions
+  corresponding to MCMC sample, species, and primary time period. }
 
   \item{fit.y.group.quants}{a matrix consisting of posterior quantiles
   for the fit statistic using the observed data for each unique element
@@ -77,7 +81,9 @@ column (replicate).}
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 
   is of class \code{tPGOcc} or \code{stPGOcc}, this is a three-dimensional array 
-  with the additional dimension corresponding to primary sampling periods.}
+  with the additional dimension corresponding to primary sampling periods. When \code{object}
+  is of class \code{tMsPGOcc}, \code{stMsPGOcc}, \code{svcTMsPGOcc}, this is a four-dimensional array
+  with dimensions corresponding to quantile, species, grouping element, and primary time period.}
 
   \item{fit.y.rep.group.quants}{a matrix consisting of posterior quantiles
   for the fit statistic using the model replicated data for each unique element
@@ -90,7 +96,9 @@ column (replicate).}
   of class \code{intPGOcc} or \code{spIntPGOcc}, this is a list, with each element 
   consisting of the posterior quantile matrix for each data set. When \code{object} 
   is of class \code{tPGOcc} or \code{stPGOcc}, this is a three-dimensional array 
-  with the additional dimension corresponding to primary sampling periods.}
+  with the additional dimension corresponding to primary sampling periods. When \code{object}
+  is of class \code{tMsPGOcc}, \code{stMsPGOcc}, \code{svcTMsPGOcc}, this is a four-dimensional array
+  with dimensions corresponding to quantile, species, grouping element, and primary time period.}
 
   The return object will include additional objects used for 
   standard extractor functions. 

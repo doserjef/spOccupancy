@@ -111,7 +111,7 @@ svcTPGOcc(occ.formula, det.formula, data, inits, priors,
     integer vector with values indicating the order of covariates specified 
     in the model formula (with 1 being the intercept if specified), or it can 
     be specified as a character vector with names corresponding to variable 
-    names in \code{occ.covs} (for the intercept, use '(Intercept)'). \code{svc.cols}
+    names in \code{occ.covs} (for the intercept, use \code{'(Intercept)'}). \code{svc.cols}
     default argument of 1 results in a spatial occupancy model analogous to 
     \code{stPGOcc} (assuming an intercept is included in the model).} 
 
@@ -358,9 +358,6 @@ dat <- simTOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep,
                sp = sp, cov.model = cov.model, sigma.sq = sigma.sq, phi = phi, 
                svc.cols = svc.cols, ar1 = ar1, rho = rho, sigma.sq.t = sigma.sq.t, 
                x.positive = x.positive)
-
-# Data summary ------------------------------------------------------------
-apply(dat$psi, 2, mean)
 
 # Prep the data for svcTPGOcc ---------------------------------------------
 # Full data set 

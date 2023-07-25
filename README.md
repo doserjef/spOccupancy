@@ -3,8 +3,8 @@
 
 # spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
-[![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://cran.r-project.org/package=spOccupancy)
-[![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://cran.r-project.org/web/packages/spOccupancy/index.html)
+[![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
+[![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/web/packages/spOccupancy/index.html)
 [![Codecov test
 coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
@@ -56,6 +56,7 @@ install.packages("spOccupancy")
 | `svcTPGOcc()`          | Single-species spatially-varying coefficient multi-season occupancy model |
 | `svcMsPGOcc()`         | Multi-species spatially-varying coefficient occupancy model               |
 | `tMsPGOcc()`           | Multi-species, multi-season occupancy model                               |
+| `stMsPGOcc()`          | Multi-species, multi-season spatial occupancy model                       |
 | `svcTMsPGOcc()`        | Multi-species, multi-season spatially-varying coefficient occupancy model |
 | `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit      |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                        |
@@ -146,7 +147,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4487
+#> Run Time (min): 1.4766
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
@@ -240,34 +241,26 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 The `vignette("modelFitting")` provides a more detailed description and
 tutorial of the core functions in `spOccupancy`. For full statistical
 details on the MCMC samplers for core functions in `spOccupancy`, see
-`vignette("mcmcSamplers")`. In addition, see [our recent
-paper](https://doi.org/10.1111/2041-210X.13897) that describes the
-package in more detail (Doser et al. 2022a). For a detailed description
-and tutorial of joint species distribution models in `spOccupancy` that
-account for residual species correlations, see
-`vignette("factorModels")`, as well as `vignette("mcmcFactorModels")`
-for full statistical details. For a description and tutorial of
-multi-season (spatio-temporal) occupancy models in `spOccupancy`, see
+`vignette("mcmcSamplers")`. In addition, see [the introductory
+spOccupancy paper](https://doi.org/10.1111/2041-210X.13897) that
+describes the package in more detail (Doser et al. 2022). For a detailed
+description and tutorial of joint species distribution models in
+`spOccupancy` that account for residual species correlations, see
+`vignette("factorModels")`, `vignette("mcmcFactorModels")`, and our
+[open-access paper](https://doi.org/10.1002/ecy.4137) (Doser et
+al. 2023). For a description and tutorial of multi-season
+(spatio-temporal) occupancy models in `spOccupancy`, see
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
-coefficient models in `spOccupancy`, see `vignette("svcUnivariateHTML")`
-and take a look at [our recent
-pre-print](https://arxiv.org/abs/2301.05645) that presents a series of
-guidelines and recommendations for using spatially-varying coefficients
-in species distribution models.
+coefficient models in `spOccupancy`, see `vignette("svcModels")` and
+`vignette(mcmcSVCModels)`.
 
 ## References
 
 Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022a).
 spOccupancy: An R package for single-species, multi-species, and
 integrated spatial occupancy models. Methods in Ecology and Evolution.
-<https://doi.org/10.1111/2041-210X.13897>.
+13(8) 1670-1678. <https://doi.org/10.1111/2041-210X.13897>.
 
-Doser, J. W., Finley, A. O., and Banerjee, S. (2022b). Joint species
+Doser, J. W., Finley, A. O., and Banerjee, S. (2023). Joint species
 distribution models with imperfect detection for high-dimensional
-spatial data. [arXiv preprint
-arXiv:2204.02707](https://arxiv.org/abs/2204.02707).
-
-Doser, J. W., Kery, M., Finley, A. O., Saunders, S. P., Weed, A. S.,
-Zipkin, E. F. (2023). Guidelines for the use of spatially-varying
-coefficients in species distribution models. [arXiv preprint
-arXiv:2301.05645](https://arxiv.org/abs/2301.05645).
+spatial data. Ecology. <https://doi.org/10.1002/ecy.4137>.

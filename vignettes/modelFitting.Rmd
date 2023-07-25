@@ -2,7 +2,7 @@
 title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 description: Learn how to get started with the core spOccupancy functionality
-date: "2022 (laste update: July 19, 2023)"
+date: "2022 (last update: July 25, 2023)"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -110,7 +110,7 @@ The `PGOcc()` function fits single-species occupancy models using P&oacute;lya-G
 PGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
       n.omp.threads = 1, verbose = TRUE, n.report = 100, 
       n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-      k.fold, k.fold.threads = 1, k.fold.seed, ...)
+      k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 ```
 
 The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to denote the covariates to be included in the occurrence and detection portions of the model, respectively. Only the right hand side of the formulas are included. Random intercepts can be included in both the occurrence and detection portions of the single-species occupancy model using `lme4` syntax [@bates2015]. For example, to include a random intercept for different observers in the detection portion of the model, we would include `(1 | observer)` in the `det.formula`, where `observer` indicates the specific observer for each data point. The names of variables given in the formulas should correspond to those found in `data`, which is a list consisting of the following tags: `y` (detection-nondetection data), `occ.covs` (occurrence covariates), `det.covs` (detection covariates). `y` should be stored as a sites x replicate matrix, `occ.covs` as a matrix or data frame with site-specific covariate values, and `det.covs` as a list with each list element corresponding to a covariate to include in the detection portion of the model. Covariates on detection can vary by site and/or survey, and so these covariates may be specified as a site by survey matrix for survey-level covariates or as a one-dimensional vector for survey level covariates. The `ovenHBEF` list is already in the required format. Here we will model OVEN occurrence as a function of linear and quadratic elevation and will include three observational covariates (linear and quadratic day of survey, time of day of survey) on the detection portion of the model. We standardize all covariates by using the `scale()` function in our model specification, and use the `I()` function to specify quadratic effects:
@@ -157,7 +157,7 @@ n.thin <- 2
 n.chains <- 3
 ```
 
-We are now nearly set to run the occupancy model. The `verbose` argument is a logical value indicating whether or not MCMC sampler progress is reported to the screen. If `verbose = TRUE`, sampler progress is reported after every multiple of the specified number of iterations in the `n.report` argument. We set `verbose = TRUE` and `n.report = 1000` to report progress after every 1000th MCMC iteration. The last three arguments to `PGOcc()` (`k.fold`, `k.fold.threads`, `k.fold.seed`) are used for performing k-fold cross-validation for model assessment, which we will illustrate in a subsequent section. For now, we won't specify the arguments, which will tell `PGOcc()` not to perform k-fold cross-validation. 
+We are now nearly set to run the occupancy model. The `verbose` argument is a logical value indicating whether or not MCMC sampler progress is reported to the screen. If `verbose = TRUE`, sampler progress is reported after every multiple of the specified number of iterations in the `n.report` argument. We set `verbose = TRUE` and `n.report = 1000` to report progress after every 1000th MCMC iteration. The last four arguments to `PGOcc()` (`k.fold`, `k.fold.threads`, `k.fold.seed`, `k.fold.only`) are used for performing k-fold cross-validation for model assessment, which we will illustrate in a subsequent section. For now, we won't specify the arguments, which will tell `PGOcc()` not to perform k-fold cross-validation. 
 
 ```{r}
 out <- PGOcc(occ.formula = oven.occ.formula, 
@@ -287,7 +287,7 @@ As a measure of out-of-sample predictive performance, we use the deviance as a s
 
 where $\bm{p}^{(q)}$ and $\bm{z}_k^{(q)}$ are MCMC samples of detection probability and latent occurrence, respectively, arising from a model that is fit without the observations $\bm{y}_k$, and $Q$ is the total number of posterior samples produced from the MCMC sampler. The -2 is used so that smaller values indicate better model fit, which aligns with most information criteria used for model assessment (like the WAIC implemented using `waicOcc()`). 
 
-The final three arguments in `PGOcc()` (`k.fold`, `k.fold.threads`, `k.fold.seed`) control whether or not k-fold cross validation is performed following the complete fit of the model using the entire data set. The `k.fold` argument indicates the number of $k$ folds to use for cross-validation. If `k.fold` is not specified, cross-validation is not performed and `k.fold.threads` and `k.fold.seed` are ignored. The `k.fold.threads` argument indicates the number of threads to use for running the $k$ models in parallel across multiple threads. Parallel processing is accomplished using the R packages `foreach` and `doParallel`. Specifying `k.fold.threads > 1` can substantially decrease run time since it allows for models to be fit simultaneously on different threads rather than sequentially. The `k.fold.seed` indicates the seed used to randomly split the data into $k$ groups. This is by default set to 100.
+The three arguments in `PGOcc()` (`k.fold`, `k.fold.threads`, `k.fold.seed`) control whether or not k-fold cross validation is performed following the complete fit of the model using the entire data set. The `k.fold` argument indicates the number of $k$ folds to use for cross-validation. If `k.fold` is not specified, cross-validation is not performed and `k.fold.threads` and `k.fold.seed` are ignored. The `k.fold.threads` argument indicates the number of threads to use for running the $k$ models in parallel across multiple threads. Parallel processing is accomplished using the R packages `foreach` and `doParallel`. Specifying `k.fold.threads > 1` can substantially decrease run time since it allows for models to be fit simultaneously on different threads rather than sequentially. The `k.fold.seed` indicates the seed used to randomly split the data into $k$ groups. This is by default set to 100. Lastly, the `k.fold.only` argument controls whether the full model is run prior to performing cross-validation (`k.fold.only = FALSE`, the default). If set to `FALSE`, only k-fold cross-validation will be performed. This can be useful when performing cross-validation after doing some initial exploration with fitting different models with the full data set so that you don't have to rerun the full model again.   
 
 Below we refit the occupancy model with elevation (linear and quadratic) as an occurrence predictor this time performing 4-fold cross-validation. We set `k.fold = 4` to perform 4-fold cross-validation and `k.fold.threads = 1` to run the model using 1 thread. Normally we would set `k.fold.threads = 4`, but using multiple threads leads to complications when compiling this vignette, so we leave that to you to explore the computational improvements of performing cross-validation across multiple cores. 
 
@@ -418,7 +418,7 @@ spPGOcc(occ.formula, det.formula, data, inits, n.batch,
         search.type = "cb", n.report = 100, 
         n.burn = round(.10 * n.batch * batch.length), 
         n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-        k.fold.seed = 100, ...)
+        k.fold.seed = 100, k.fold.only = FALSE, ...)
 ```
 
 We will walk through each of the arguments to `spPGOcc()` in the context of our Ovenbird example. The occurrence (`occ.formula`) and detection (`det.formula`) formulas, as well as the list of data (`data`), take the same form as we saw in `PGOcc`, with random intercepts allowed in both the occurrence and detection models. Notice the `coords` matrix in the `ovenHBEF` list of data. We did not use this for `PGOcc()` but specifying the spatial coordinates in `data` is required for all spatially explicit models in `spOccupancy`. 
@@ -622,7 +622,7 @@ To complete the Bayesian specification of the model, we assign multivariate norm
 msPGOcc(occ.formula, det.formula, data, inits, n.samples, priors, 
         n.omp.threads = 1, verbose = TRUE, n.report = 100, 
         n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-        k.fold, k.fold.threads = 1, k.fold.seed, ...)
+        k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 ```
 
 For illustration, we will again use the Hubbard Brook data in `hbef2015`, but we will now model occurrence for all 12 species in the community. Below we reload the `hbef2015` data set to get a fresh copy. 
@@ -712,6 +712,14 @@ We can compute the WAIC for comparison with alternative models using the `waicOc
 waicOcc(out.ms)
 ```
 
+As of `v0.7.0`, the `waicOcc()` function also contains the argument `by.sp` for all multi-species models supported by `spOccupancy`, which allows us to calculate WAIC individually for each species.
+
+```{r}
+waicOcc(out.ms, by.sp = TRUE)
+```
+
+Note that the sum of the WAIC values for each individual species is equal to the overall WAIC value for the model.
+
 k-fold cross-validation is again accomplished using the `k.fold` argument as we have seen previously. For multi-species occupancy models, using multiple threads can greatly reduce the time needed for k-fold cross-validation, so we encourage the use of multiple threads if such computing power is readily available. Using up to $k$ threads will generally involve substantial decreases in run time. For multi-species models, a separate deviance measure is reported for each species as a measure of predictive capacity, allowing for comparisons across multiple models for individual species, as well as for the entire community (by summing all species-specific values). 
 
 ## Prediction
@@ -727,7 +735,7 @@ out.ms.pred <- predict(out.ms, X.0)
 
 # Multi-species spatial occupancy models
 
-Here we describe a basic multi-species spatial occupancy model that was part of the original release of `spOccupancy`. Since then, we have implemented a more computationally efficient approach for fitting spatial multi-species occupancy models. We call this alternative approach a "spatial factor multi-species occupancy model", and we describe this in depth in @doser2023joint. This newer approach also accounts for residual species correlations (i.e., it is a joint species distribution model with imperfect detection). Our simulation results from @doser2023joint show that this alternative approach outperforms, or performs equally wellas, the model described in the following section, while being substantially faster. Thus, we encourage you to explore the `spOccupancy` functionality to fit the spatial factor multi-species occupancy model with the function `sfMsPGOcc()` that is described [in depth in this vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/factormodels). The model and function we describe below will generally work well for communities comprised of a moderate number of species (e.g., between 5 and 10) that are not extremely rare. 
+Here we describe a basic multi-species spatial occupancy model that was part of the original release of `spOccupancy`. Since then, we have implemented a more computationally efficient approach for fitting spatial multi-species occupancy models. We call this alternative approach a "spatial factor multi-species occupancy model", and we describe this in depth in @doser2023joint. This newer approach also accounts for residual species correlations (i.e., it is a joint species distribution model with imperfect detection). Our simulation results from @doser2023joint show that this alternative approach outperforms, or performs equally as well as, the model described in the following section, while being substantially faster. Thus, we encourage you to explore the `spOccupancy` functionality to fit the spatial factor multi-species occupancy model with the function `sfMsPGOcc()` that is described [in depth in this vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/factormodels). The model and function we describe below will generally work well for communities comprised of a moderate number of species (e.g., between 5 and 10) that are not extremely rare. 
 
 ## Basic model description
 
@@ -758,7 +766,7 @@ spMsPGOcc(occ.formula, det.formula, data, inits, n.batch,
           verbose = TRUE, NNGP = TRUE, n.neighbors = 15, 
           search.type = "cb", n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, ...)
+          n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 ```
 
 We will again showcase the model using the HBEF foliage-gleaning bird data set, with the same predictors in our occurrence and detection models
@@ -866,6 +874,13 @@ waicOcc(out.ms)
 
 As always, remember there is MC error in these numbers, and so the values you receive will be slightly different. The WAIC for the spatial model is considerably smaller than that for the nonspatial model, indicating the species-specific spatial processes improve prediction across the entire community. However, in a complete analysis we should ensure the models fully converge (and we have adequate ESS) before performing any model selection or comparison. 
 
+We can also compare the WAIC values individually for each species using the `by.sp` argument.
+
+```{r}
+waicOcc(out.sp.ms, by.sp = TRUE)
+waicOcc(out.ms, by.sp = TRUE)
+```
+
 k-fold cross-validation proceeds using the `k.fold` argument as we have seen previously, returning a separate scoring rule (deviance) for each species. 
 
 ## Prediction
@@ -945,7 +960,7 @@ The function `intPGOcc()` fits single-species integrated occupancy models in `sp
 intPGOcc(occ.formula, det.formula, data, inits, n.samples, priors, 
          n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
          n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-         k.fold, k.fold.threads = 1, k.fold.seed, k.fold.data, ...)
+         k.fold, k.fold.threads = 1, k.fold.seed, k.fold.data, k.fold.only = FALSE, ...)
 ```
 
 The `data` argument contains the list of data elements necessary for fitting an integrated occupancy model. For nonspatial integrated occupancy models, `data` should be a list comprised of the following objects: `y` (list of detection-nondetection data matrices for each data source), `occ.covs` (data frame or matrix of covariates for occurrence model), `det.covs` (a list of lists where each element of the list corresponds to the detection-nondetection data for the given data source), `sites` (a list where each element consists of the site indices for the given data source. 
@@ -1196,7 +1211,7 @@ spIntPGOcc(occ.formula, det.formula, data, inits, n.batch,
            search.type = 'cb', n.report = 100, 
            n.burn = round(.10 * n.batch * batch.length), 
            n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-           k.fold.seed, k.fold.data, ...)
+           k.fold.seed, k.fold.data, k.fold.only = FALSE, ...)
 ```
 
 
@@ -1297,7 +1312,7 @@ out.sp.int.k.fold <- spIntPGOcc(occ.formula = occ.formula.int,
 			        n.batch = n.batch, 
 			        n.burn = n.burn, 
 			        batch.length = batch.length, 
-				verbose = FALSE,
+                                verbose = FALSE,
 			        k.fold = 4) 
 # Non-spatial model
 out.int.k.fold$k.fold.deviance

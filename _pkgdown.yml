@@ -9,26 +9,31 @@ reference:
  - title: "Package overview"
  - contents: 
    - spOccupancy
- - title: "Fitting Models"
- - contents:
+ - title: "Single-species models"
+ - contents: 
    - PGOcc
    - spPGOcc
-   - msPGOcc
-   - spMsPGOcc
    - intPGOcc
    - spIntPGOcc
-   - lfJSDM
-   - sfJSDM
-   - lfMsPGOcc
-   - sfMsPGOcc
    - tPGOcc
    - stPGOcc
    - svcPGOcc
    - svcPGBinom
    - svcTPGOcc
    - svcTPGBinom
+ - title: "Multi-species models"
+ - contents:
+   - msPGOcc
+   - spMsPGOcc
+   - lfJSDM
+   - sfJSDM
+   - lfMsPGOcc
+   - sfMsPGOcc
    - intMsPGOcc
-   - postHocLM
+   - tMsPGOcc
+   - stMsPGOcc
+   - svcMsPGOcc
+   - svcTMsPGOcc
  - title: Goodness of Fit and Model Assessment
  - contents:
    - ppcOcc
@@ -42,6 +47,7 @@ reference:
    - simBinom
    - simTBinom
    - simIntMsOcc
+   - simTMsOcc
  - title: "Summary"
  - contents: 
    - summary.PGOcc
@@ -63,6 +69,10 @@ reference:
    - summary.svcTPGBinom
    - summary.intMsPGOcc
    - summary.postHocLM
+   - summary.svcMsPGOcc
+   - summary.tMsPGOcc
+   - summary.stMsPGOcc
+   - summary.svcTMsPGOcc
  - title: "Prediction"
  - contents:
    - predict.PGOcc
@@ -82,6 +92,10 @@ reference:
    - predict.svcTPGOcc
    - predict.svcTPGBinom
    - predict.intMsPGOcc
+   - predict.svcMsPGOcc
+   - predict.tMsPGOcc
+   - predict.stMsPGOcc
+   - predict.svcTMsPGOcc
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -100,8 +114,13 @@ reference:
    - fitted.svcPGBinom
    - fitted.svcTPGOcc
    - fitted.svcTPGBinom
+   - fitted.svcMsPGOcc
+   - fitted.tMsPGOcc
+   - fitted.stMsPGOcc
+   - fitted.svcTMsPGOcc
  - title: "Other"
  - contents: 
+   - postHocLM
    - getSVCSamples
  - title: "Data"
  - contents: 

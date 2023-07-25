@@ -87,7 +87,7 @@ svcPGBinom(formula, data, inits, priors, tuning, svc.cols = 1,
     integer vector with values indicating the order of covariates specified 
     in the model formula (with 1 being the intercept if specified), or it can 
     be specified as a character vector with names corresponding to variable 
-    names in \code{covs} (for the intercept, use '(Intercept)').} 
+    names in \code{covs} (for the intercept, use \code{'(Intercept)'}).} 
  
   \item{cov.model}{a quoted keyword that specifies the covariance
     function used to model the spatial dependence structure among the
@@ -323,22 +323,22 @@ n.thin <- 1
 
 out <- svcPGBinom(formula = ~ cov.1 + cov.2 + cov.3, 
                   svc.cols = c(1, 2),
-	          data = data.list, 
-	          n.batch = n.batch, 
-	          batch.length = batch.length, 
-	          inits = inits.list, 
-	          priors = prior.list,
-	          accept.rate = 0.43, 
-	          cov.model = "exponential", 
-	          tuning = tuning.list, 
-	          n.omp.threads = 1, 
-	          verbose = TRUE, 
-	          NNGP = TRUE, 
-	          n.neighbors = 5,
-	          n.report = 2, 
-	          n.burn = n.burn, 
-	          n.thin = n.thin, 
-	          n.chains = 1) 
+                  data = data.list, 
+                  n.batch = n.batch, 
+                  batch.length = batch.length, 
+                  inits = inits.list, 
+                  priors = prior.list,
+                  accept.rate = 0.43, 
+                  cov.model = "exponential", 
+                  tuning = tuning.list, 
+                  n.omp.threads = 1, 
+                  verbose = TRUE, 
+                  NNGP = TRUE, 
+                  n.neighbors = 5,
+                  n.report = 2, 
+                  n.burn = n.burn, 
+                  n.thin = n.thin, 
+                  n.chains = 1) 
 
 summary(out)
 }

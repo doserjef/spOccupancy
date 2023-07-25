@@ -3,8 +3,7 @@
 \title{Function for Fitting Spatial Factor Multi-Species Occupancy Models}
 
 \description{
-  The function \code{sfMsPGOcc} fits multi-species spatial occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process. Future development will allow for running the models using full Gaussian Processes. 
-}
+  The function \code{sfMsPGOcc} fits multi-species spatial occupancy models with species correlations (i.e., a spatially-explicit joint species distribution model with imperfect detection). We use Polya-Gamma latent variables and a spatial factor modeling approach. Currently, models are implemented using a Nearest Neighbor Gaussian Process.}
 
 \usage{
 sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
@@ -14,7 +13,7 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
           verbose = TRUE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
           n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, 
-	  k.fold.only = FALSE, ...)
+          k.fold.only = FALSE, ...)
 }
 
 \arguments{
@@ -441,7 +440,7 @@ out <- sfMsPGOcc(occ.formula = ~ occ.cov + (1 | occ.re),
                  n.report = 10, 
                  n.burn = 50, 
                  n.thin = 1, 
-		 n.chains = 1)
+                 n.chains = 1)
 
 summary(out)
 }

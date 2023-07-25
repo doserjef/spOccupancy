@@ -10,8 +10,8 @@
 stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning, 
           cov.model = 'exponential', NNGP = TRUE, 
           n.neighbors = 15, search.type = 'cb', 
-	  n.factors, n.batch, batch.length, 
-	  accept.rate = 0.43, n.omp.threads = 1, 
+          n.factors, n.batch, batch.length, 
+          accept.rate = 0.43, n.omp.threads = 1, 
           verbose = TRUE, ar1 = FALSE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
           n.chains = 1, ...)
@@ -30,8 +30,8 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     intercepts are allowed using lme4 syntax (Bates et al. 2015).}
 
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, 
-    \code{coords}, and \code{range.ind}. 
+    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, and
+    \code{coords}. 
     \code{y} is a four-dimensional array with first dimension equal to the 
     number of species, second dimension equal to the number of sites, third
     dimension equal to the number of primary time periods, and 
@@ -49,24 +49,18 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     sites, second dimension corresponding to primary time period, and third 
     dimension corresponding to replicate. \code{coords} is a 
     \eqn{J \times 2}{J x 2} matrix of the observation coordinates. Note that 
-    \code{spOccupancy} assumes coordinates are specified in a projected coordinate system.
-    \code{range.ind} is a matrix with rows corresponding to species and columns
-    corresponding to sites, with each element taking value 1 if that site is 
-    within the range of the corresponding species and 0 if it is outside of the 
-    range. This matrix is not required, but it can be helpful to restrict the 
-    modeled area for each individual species to be within the realistic range
-    of locations for that species when estimating the model parameters. This is
-    applicable when auxiliary data sources are available on the realistic range
-    of the species.}
+    \code{spOccupancy} assumes coordinates are specified in a projected coordinate system}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 
     \code{alpha}, \code{tau.sq.beta}, \code{tau.sq.alpha}, 
     \code{sigma.sq.psi}, \code{sigma.sq.p}, \code{z}, 
-    \code{phi}, \code{lambda}, and \code{nu}. \code{nu} is only specified if 
+    \code{phi}, \code{lambda}, \code{nu}, \code{sigma.sq.t}, 
+    and \code{rho}. \code{nu} is only specified if 
     \code{cov.model = "matern"}, and \code{sigma.sq.psi} and \code{sigma.sq.p} are
     only specified if random effects are included in \code{occ.formula} or 
-    \code{det.formula}, respectively. The value portion of each tag is 
+    \code{det.formula}, respectively. \code{sigma.sq.t} and \code{rho} are only 
+    relevant when \code{ar1 = TRUE}. The value portion of each tag is 
     the parameter's initial value. See \code{priors} description for definition
     of each parameter name. Additionally, the tag \code{fix} can be set to \code{TRUE} 
     to fix the starting values across all chains. If \code{fix} is not specified
@@ -75,8 +69,8 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   \item{priors}{a list with each tag corresponding to a parameter name. 
   Valid tags are \code{beta.comm.normal}, \code{alpha.comm.normal}, 
   \code{tau.sq.beta.ig}, \code{tau.sq.alpha.ig}, \code{sigma.sq.psi}, 
-  \code{sigma.sq.p}, \code{phi.unif}, 
-  and \code{nu.unif}. Community-level occurrence (\code{beta.comm}) and detection 
+  \code{sigma.sq.p}, \code{phi.unif}, \code{nu.unif}, \code{sigma.sq.t.ig}, and 
+  \code{rho.unif}. Community-level occurrence (\code{beta.comm}) and detection 
   (\code{alpha.comm}) regression coefficients are assumed to follow a 
   normal distribution. The hyperparameters of the normal distribution
   are passed as a list of length two with the first and second elements 
@@ -100,12 +94,12 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   with both elements being vectors of length \code{n.factors} 
   corresponding to the lower and 
   upper support, respectively, or as a single value if the same value is assigned
-  for all factor/SVC combinations. The priors for the factor loadings 
-  matrix \code{lambda} for each SVC are fixed
+  for all factor combinations. The priors for the factor loadings 
+  matrix \code{lambda} are fixed
   following the standard spatial factor model to ensure parameter 
   identifiability (Christensen and Amemlya 2002). The
   upper triangular elements of the \code{N x n.factors} matrix are fixed at 0 and the 
-  diagonal elements are fixed at 1 for each SVC. The lower triangular elements are assigned a 
+  diagonal elements are fixed at 1. The lower triangular elements are assigned a 
   standard normal prior (i.e., mean 0 and variance 1).
   \code{sigma.sq.psi} and \code{sigma.sq.p} are the random 
   effect variances for any occurrence or
@@ -114,10 +108,22 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   are passed as a list of length two with first and second elements corresponding
   to the shape and scale parameters, respectively, which are each specified as
   vectors of length equal to the number of random intercepts or of length one 
-  if priors are the same for all random effect variances.}
+  if priors are the same for all random effect variances. 
+  parameters are set to 0.1. \code{sigma.sq.t} and \code{rho} 
+  are the AR(1) variance and correlation parameters for the AR(1) zero-mean
+  temporal random effects, respectively. \code{sigma.sq.t} is assumed to follow an inverse-Gamma
+  distribution, where the hyperparameters are specified as a list of length two with the 
+  first and second elements corresponding to the shape and scale parameters, respectively, 
+  which can each be specified as vector equal to the number of species in the model or a single value
+  if the same prior is used for all species. \code{rho} is assumed to follow a 
+  uniform distribution, where the hyperparameters are specified similarly as a list of length two
+  with the first and second elements corresponding to the lower and upper bounds of the 
+  uniform prior, which can each be specified as vector equal to the number of species in the 
+  model or a single value if the same prior is used for all species. 
+}
 
   \item{tuning}{a list with each tag corresponding to a parameter
-    name. Valid tags are \code{phi} and \code{nu}. The value portion of each
+    name. Valid tags are \code{phi}, \code{nu}, \code{rho}. The value portion of each
     tag defines the initial variance of the adaptive sampler. We assume the 
     initial variance of the adaptive sampler is the same for each species, 
     although the adaptive sampler will adjust the tuning variances separately
@@ -154,8 +160,6 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     e.g., if data are on a grid. }
 
   \item{n.factors}{the number of factors to use in the spatial factor model approach. 
-    Note this corresponds to the number of factors used for each spatially-varying
-    coefficient that is estimated in the model.
     Typically, the number of factors is set to be small (e.g., 4-5) relative to the 
     total number of species in the community, which will lead to substantial 
     decreases in computation time. However, the value can be anywhere 
@@ -271,10 +275,11 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the species level detection regression coefficients.}
 
   \item{theta.samples}{a \code{coda} object of posterior samples
-    for the species level correlation parameters for each spatially-varying coefficient.}
+    for the species level correlation parameters and the species-level
+    temporal autocorrelation parameters.}
 
   \item{lambda.samples}{a \code{coda} object of posterior samples
-    for the latent spatial factor loadings for each spatially-varying coefficient.}
+    for the latent spatial factor loadings.}
 
   \item{z.samples}{a four-dimensional array of posterior samples for
     the latent occurrence values for each species. Dimensions corresopnd to 
@@ -284,10 +289,9 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     the latent occupancy probability values for each species. Dimensions correspond
     to MCMC sample, species, site, and primary time period.}
 
-  \item{w.samples}{a four-dimensional array of posterior samples for 
-    the latent spatial random effects for each spatial factor within each 
-    spatially-varying coefficient. Dimensions correspond to MCMC sample, 
-    factor, site, and spatially-varying coefficient.}
+  \item{w.samples}{a three-dimensional array of posterior samples for 
+    the latent spatial random effects for each spatial factor. 
+    Dimensions correspond to MCMC sample, factor, and site.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occurrence portion
@@ -307,9 +311,9 @@ stMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     for the detection random effects. Only included if random intercepts 
     are specified in \code{det.formula}.}
 
-  \item{like.samples}{a three-dimensional array of posterior samples
-    for the likelihood value associated with each site and species. 
-    Used for calculating WAIC.}
+  \item{like.samples}{a four-dimensional array of posterior samples
+    for the likelihood value used for calculating WAIC. Dimensions correspond 
+    to MCMC sample, species, site, and time period.}
 
   \item{rhat}{a list of Gelman-Rubin diagnostic values for some of the model
     parameters.}
@@ -338,7 +342,6 @@ n.time.max <- max(n.time)
 n.rep <- matrix(NA, J, max(n.time))
 for (j in 1:J) {
   n.rep[j, 1:n.time[j]] <- sample(2:4, n.time[j], replace = TRUE)
-  # n.rep[j, 1:n.time[j]] <- rep(4, n.time[j])
 }
 N <- 7
 # Community-level covariate effects
@@ -376,8 +379,8 @@ sigma.sq.t <- runif(N, 0.05, 1)
 rho <- runif(N, 0.1, 1)
 
 dat <- simTMsOcc(J.x = J.x, J.y = J.y, n.time = n.time, n.rep = n.rep, N = N,
-		 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
-		 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
+                 beta = beta, alpha = alpha, sp.only = sp.only, trend = trend,
+                 psi.RE = psi.RE, p.RE = p.RE, factor.model = factor.model,
                  svc.cols = svc.cols, n.factors = n.factors, phi = phi, sp = sp,
                  cov.model = cov.model, ar1 = ar1, sigma.sq.t = sigma.sq.t, rho = rho)
 
@@ -389,26 +392,26 @@ X.re <- dat$X.re
 X.p.re <- dat$X.p.re
 
 occ.covs <- list(occ.cov.1 = X[, , 2],
-		 occ.cov.2 = X[, , 3])
+                 occ.cov.2 = X[, , 3])
 det.covs <- list(det.cov.1 = X.p[, , , 2],
-		 det.cov.2 = X.p[, , , 3])
+                 det.cov.2 = X.p[, , , 3])
 
 data.list <- list(y = y, occ.covs = occ.covs,
                   det.covs = det.covs,
                   coords = coords)
 # Priors
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
-		   alpha.comm.normal = list(mean = 0, var = 2.72),
-		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
-		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-		   rho.unif = list(a = -1, b = 1),
-		   sigma.sq.t.ig = list(a = 0.1, b = 0.1),
+                   alpha.comm.normal = list(mean = 0, var = 2.72),
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
+                   rho.unif = list(a = -1, b = 1),
+                   sigma.sq.t.ig = list(a = 0.1, b = 0.1),
                    phi.unif = list(a = 3 / .9, b = 3 / .1))
 z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
 inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
-		   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
-		   rho = 0.5, sigma.sq.t = 0.5,
-		   phi = 3 / .5, z = z.init)
+                   alpha = 0, tau.sq.beta = 1, tau.sq.alpha = 1,
+                   rho = 0.5, sigma.sq.t = 0.5,
+                   phi = 3 / .5, z = z.init)
 # Tuning
 tuning.list <- list(phi = 1, rho = 0.5)
 
@@ -421,25 +424,25 @@ n.thin <- 1
 n.samples <- n.batch * batch.length
 
 out <- stMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
-                det.formula = ~ det.cov.1 + det.cov.2,
-                data = data.list,
-                inits = inits.list,
-                n.batch = n.batch,
-                batch.length = batch.length,
-                accept.rate = 0.43,
-		ar1 = TRUE,
-		NNGP = TRUE,
-		n.neighbors = 5,
-		n.factors = n.factors,
-		cov.model = 'exponential',
-                priors = prior.list,
-                tuning = tuning.list,
-                n.omp.threads = 1,
-                verbose = TRUE,
-                n.report = 1,
-                n.burn = n.burn,
-		n.thin = n.thin,
-		n.chains = 1)
+                 det.formula = ~ det.cov.1 + det.cov.2,
+                 data = data.list,
+                 inits = inits.list,
+                 n.batch = n.batch,
+                 batch.length = batch.length,
+                 accept.rate = 0.43,
+                 ar1 = TRUE,
+                 NNGP = TRUE,
+                 n.neighbors = 5,
+                 n.factors = n.factors,
+                 cov.model = 'exponential',
+                 priors = prior.list,
+                 tuning = tuning.list,
+                 n.omp.threads = 1,
+                 verbose = TRUE,
+                 n.report = 1,
+                 n.burn = n.burn,
+                 n.thin = n.thin,
+                 n.chains = 1)
 
 summary(out)
 }

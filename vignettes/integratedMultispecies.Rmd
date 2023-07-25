@@ -206,6 +206,13 @@ waicOcc(out.2)
 
 We see the model with both a linear and quadratic effect of elevation is preferred. We can also do prediction using the `predict()` function to generate species distribution maps across a region of interest (or generate estimates of community-level metrics), which follows exactly the format used for single data-source multi-species occupancy models. 
 
+As of `v0.7.0`, we can also calculate WAIC individually for each species using the `by.sp` argument
+
+```{r}
+waicOcc(out.1, by.sp = TRUE)
+waicOcc(out.2, by.sp = TRUE)
+```
+
 ## Active development
 
 The functionality for integrated multi-species occupancy models in `spOccupancy` is in active development, and currently some functionality that is common to all other `spOccupancy` model fitting functions is not available for `intMsPGOcc()` (i.e., posterior predictive checks, cross-validation, random effects on detection probability). I am actively working on incorporating these extensions into the model. Additionally, there will of course be spatially-explicit versions of these models available at some point in the future as well, with options to accommodate species correlations using the factor modeling approach detailed in @doser2023joint. 
