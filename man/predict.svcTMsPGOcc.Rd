@@ -161,7 +161,7 @@ prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
 		   alpha.comm.normal = list(mean = 0, var = 2.72),
 		   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
 		   tau.sq.alpha.ig = list(a = 0.1, b = 0.1),
-		   rho.unif = list(a = -1, b = -1),
+		   rho.unif = list(a = -1, b = 1),
 		   sigma.sq.t.ig = list(a = 0.1, b = 0.1),
                    phi.unif = list(a = 3 / .9, b = 3 / .1))
 z.init <- apply(y, c(1, 2, 3), function(a) as.numeric(sum(a, na.rm = TRUE) > 0))
