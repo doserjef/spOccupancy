@@ -5209,7 +5209,7 @@ predict.stMsPGOcc <- function(object, X.0, coords.0,
 			   object$q, nrow(object$coords), 1))
   tmp[, , , 1] <- object$w.samples
   object$w.samples <- tmp
-  object$X.w <- out$X[, , 1, drop = FALSE]
+  object$X.w <- object$X[, , 1, drop = FALSE]
   out <- predict.svcTMsPGOcc(object, X.0, coords.0, 
 			     t.cols, n.omp.threads, verbose, n.report,
 			     ignore.RE, type)

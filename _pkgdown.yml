@@ -137,10 +137,12 @@ articles:
     - spaceTimeModels
     - spaceTimeModelsHTML
     - randomEffects
-    - svcUnivariateHTML
+    - svcModels
     - integratedMultispecies
+    - modelConsiderations
   - title: MCMC sampler details 
     contents:
     - mcmcSamplers 
     - mcmcFactorModels 
+    - mcmcSVCModels
 
