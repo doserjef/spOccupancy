@@ -776,7 +776,7 @@ For now, we can do some visual comparisons of the predicted occurrence probabili
 ```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
 # Extract mean occurrence probabilities for each species from sfMsPGOcc
 psi.mean.sfMsPGOcc <- apply(out.sfMsPGOcc$psi.samples, c(2, 3), mean)
-# Extract mean occurrence probabilities for each species from sfJSDM
+# Extract mean occurrence probability for each species from sfJSDM
 psi.mean.sfJSDM <- apply(out.sfJSDM$psi.samples, c(2, 3), mean)
 # Plot results for the Red-eyed Vireo (REVI)
 curr.sp <- which(sp.ordered == 'REVI')
