@@ -1740,3 +1740,4 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   out$run.time <- proc.time() - ptm
   return(out)
 }
+

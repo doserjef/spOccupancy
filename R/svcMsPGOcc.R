@@ -947,7 +947,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       nu.inits <- rep(0, q.p.svc)
     }
   }
-
   # sigma.sq.psi ------------------
   # ORDER: a length p.occ.re vector ordered by the random effects in the formula.
   if (p.occ.re > 0) {
@@ -1010,37 +1009,6 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     sigma.sq.p.inits <- 0
     alpha.star.indx <- 0
     alpha.star.inits <- 0
-  }
-  if ("lambda" %in% names(inits)) {
-    lambda.inits <- inits[["lambda"]]
-    if (!is.list(lambda.inits)) {
-      stop(paste("error: initial values for lambda must be a list comprised of ", 
-		 p.svc, " matrices, each with dimensions ", N, " x ", q, sep = ""))
-    }
-    for (i in 1:p.svc) {
-      if (nrow(lambda.inits[[i]]) != N | ncol(lambda.inits[[i]]) != q) {
-        stop(paste("error: initial values for lambda[[", i, 
-		   "]] must be a matrix with dimensions ", N, " x ", q, sep = ""))
-      }
-      if (!all.equal(diag(lambda.inits[[i]]), rep(1, q))) {
-        stop("error: diagonal of inits$lambda[[", i, "]] matrix must be all 1s")
-      }
-      if (sum(lambda.inits[[i]][upper.tri(lambda.inits[[i]])]) != 0) {
-        stop("error: upper triangle of inits$lambda[[", i, "]] must be all 0s")
-      }
-    }
-    lambda.inits <- unlist(lambda.inits)
-  } else {
-    lambda.inits <- list()
-    for (i in 1:p.svc) {
-      lambda.inits[[i]] <- matrix(0, N, q)
-      diag(lambda.inits[[i]]) <- 1
-      lambda.inits[[i]][lower.tri(lambda.inits[[i]])] <- rnorm(sum(lower.tri(lambda.inits[[i]])))
-    }
-    if (verbose) {
-      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
-    }
-    lambda.inits <- unlist(lambda.inits)
   }
   # w -----------------------------
   if ("w" %in% names(inits)) {

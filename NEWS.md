@@ -1,3 +1,7 @@
+# spOccupancy 0.7.1
+
++ Small changes in C++ code to pass CRAN additional issues
+
 # spOccupancy 0.7.0
 
 spOccupancy v0.7.0 contains a variety of substantial updates, most notably functionality for fitting non-spatial and spatial multi-species multi-season occupancy models, as well as multi-species spatially-varying coefficient models. There are also a variety of smaller bug fixes/additional error handling that will help eliminate some common hard-to-interpret errors that users encountered.
