@@ -161,8 +161,11 @@ extern "C" {
 
     SEXP z0_r, w0_r, psi0_r;
     PROTECT(z0_r = allocMatrix(REALSXP, JStrNnYears, nSamples)); nProtect++; 
+    zeros(REAL(z0_r), JStrNnYears * nSamples);
     PROTECT(psi0_r = allocMatrix(REALSXP, JStrNnYears, nSamples)); nProtect++; 
+    zeros(REAL(psi0_r), JStrNnYears * nSamples);
     PROTECT(w0_r = allocMatrix(REALSXP, JStrqpTilde, nSamples)); nProtect++;
+    zeros(REAL(w0_r), JStrqpTilde * nSamples);
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
