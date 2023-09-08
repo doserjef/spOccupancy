@@ -4683,11 +4683,17 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
       re.level.names <- object$re.level.names
       # Get columns in design matrix with random effects
       x.re.names <- dimnames(object$X.re)[[3]]
+      x.names <- dimnames(object$X)[[3]]
       indx <- which(dimnames(X.0)[[3]] %in% x.re.names)
       X.re <- X.0[, , indx, drop = FALSE]
       X.re <- matrix(X.re, nrow = nrow(X.re) * ncol(X.re),
       	     ncol = dim(X.re)[3])
-      X.fix <- X.0[, , -indx, drop = FALSE]
+      remove.fix.indx <- indx[which(!(dimnames(X.0)[[3]][indx] %in% x.names))]
+      if (length(remove.fix.indx)) {
+        X.fix <- X.0[, , -remove.fix.indx, drop = FALSE]
+      } else {
+        X.fix <- X.0
+      }
       X.fix <- matrix(X.fix, nrow = nrow(X.fix) * ncol(X.fix),
   		      ncol = dim(X.fix)[3])
       n.occ.re <- length(unlist(re.level.names))
@@ -4722,6 +4728,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
                 beta.star.sites.0.samples[, (j - 1) * N + i] <-
                   rnorm(n.post, 0, sqrt(object$sigma.sq.psi.samples[, t])) +
                   beta.star.sites.0.samples[, (j - 1) * N + i]
+	  print("here")
               }
             } # j
           } # t
@@ -4749,7 +4756,7 @@ predict.svcTMsPGOcc <- function(object, X.0, coords.0,
     # Desired ordering: iteration, svc, site, factor
     w.samples <- aperm(w.samples, c(2, 3, 4, 1))
     eta.samples <- aperm(eta.samples, c(2, 3, 1))
-    beta.star.sites.0.sampls <- t(beta.star.sites.0.samples)
+    beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
 
     J.str <- nrow(X.fix) / n.years.max
 
