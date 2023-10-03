@@ -1,5 +1,6 @@
 simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.RE = list(), 
-		   sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu, x.positive = FALSE, ...) {
+		   sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu, x.positive = FALSE, 
+		   grid, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -124,6 +125,22 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
       }
     }
   }
+  # Grid for spatial REs that doesn't match the sites ---------------------
+  if (!missing(grid) & sp) {
+    if (is.atomic(grid)) {
+      grid <- list(grid)
+    }
+    if (length(grid) != length(svc.cols)) {
+      stop(paste0("grid must be a list of length ", svc.cols))
+    }
+    for (i in 1:p.svc) {
+      if (length(grid[[i]]) != J) {
+        stop(paste0("Each element of grid must be a vector of length ", J))
+      }  
+    }
+  } else {
+    grid <- list(1:J)
+  }
 
   # Subroutines -----------------------------------------------------------
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
@@ -132,7 +149,12 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
-  coords <- as.matrix(expand.grid(s.x, s.y))
+  coords.full <- as.matrix(expand.grid(s.x, s.y))
+  coords <- list()
+  for (i in 1:p.svc) {
+   coords[[i]] <- cbind(tapply(coords.full[, 1], grid[[i]], mean), 
+			tapply(coords.full[, 2], grid[[i]], mean)) 
+  }
 
   # Form occupancy covariates (if any) ------------------------------------
   n.beta <- length(beta)
@@ -168,6 +190,7 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   # Simulate spatial random effect ----------------------------------------
   # Matrix of spatial locations
   if (sp) {
+    J <- nrow(coords.full)
     w.mat <- matrix(NA, J, p.svc)
     if (cov.model == 'matern') {
       theta <- cbind(phi, nu)
@@ -175,9 +198,9 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
       theta <- as.matrix(phi)
     }
     for (i in 1:p.svc) {
-      Sigma.full <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      Sigma.full <- mkSpCov(coords[[i]], as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
       # Random spatial process
-      w.mat[, i] <- rmvn(1, rep(0, J), Sigma.full)
+      w.mat[, i] <- rmvn(1, rep(0, nrow(Sigma.full)), Sigma.full)[grid[[i]], 1]
     }
     w.tmp <- NA
     X.w <- X[, svc.cols, drop = FALSE]
@@ -304,6 +327,13 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     y[j, rep.indx[[j]]] <- rbinom(n.rep[j], 1, p[j, rep.indx[[j]]] * z[j])
   } # j
 
+  # Return coords as a matrix if grid is not relevant, or list if it is 1:J
+  if (length(grid) == 1) {
+    tmp <- sum(grid[[1]] == 1:J)
+    if (tmp == J) {
+      coords <- coords[[1]]
+    }
+  }
   return(
     list(X = X, X.p = X.p, coords = coords,
          w = w.mat, w.factor = w.tmp, psi = psi, z = z, p = p, y = y, 

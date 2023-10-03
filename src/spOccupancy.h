@@ -255,7 +255,7 @@ extern "C" {
 		  SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		  SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r);
+		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r, SEXP rangeInd_r);
 
   SEXP tPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, SEXP consts_r, 
 	      SEXP nOccRELong_r, SEXP nDetRELong_r, 
