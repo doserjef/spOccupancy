@@ -1,7 +1,6 @@
 sfJSDM <- function(formula, data, inits, priors, 
 		   tuning, cov.model = 'exponential', NNGP = TRUE, 
-		   n.neighbors = 15, search.type = "cb", 
-		   std.by.sp = FALSE, n.factors, 
+		   n.neighbors = 15, search.type = "cb", n.factors, 
 		   n.batch, batch.length, accept.rate = 0.43,
 		   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
 		   n.burn = round(.10 * n.batch * batch.length), 
@@ -84,23 +83,6 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: n.factors must be specified for a spatial factor occupancy model")
   }
 
-  if (std.by.sp != FALSE & std.by.sp != TRUE) {
-    stop("error: std.by.sp must be either TRUE or FALSE")
-  }
-  if ('range.ind' %in% names(data)) {
-    range.ind <- data$range.ind
-    if (!is.matrix(range.ind)) {
-      stop(paste("error: if specified, range.ind must be a matrix of 0s and 1s with ", 
-                 nrow(y), " rows and ", ncol(y), " columns.", sep = ''))
-    }
-    if (nrow(range.ind) != nrow(y) | ncol(range.ind) != ncol(y)) {
-      stop(paste("error: if specified, range.ind must be a matrix of 0s and 1s with ", 
-                 nrow(y), " rows and ", ncol(y), " columns.", sep = ''))
-    }
-  } else {
-    range.ind <- matrix(1, nrow(y), ncol(y))
-  }
-
   # Neighbors and Ordering ----------------------------------------------
   if (NNGP) {
     u.search.type <- 2 
@@ -109,7 +91,6 @@ sfJSDM <- function(formula, data, inits, priors,
     # Reorder everything to align with NN ordering
     y <- y[, ord, drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
-    range.ind <- range.ind[, ord, drop = FALSE]
     # Occupancy covariates
     data$covs <- data$covs[ord, , drop = FALSE]
   }
@@ -158,26 +139,6 @@ sfJSDM <- function(formula, data, inits, priors,
   # Get RE level names
   re.level.names <- lapply(data$covs[, x.re.names, drop = FALSE],
 			   function (a) sort(unique(a)))
-
-  # Get a separate X for each species for standardization within species
-  # if desired.
-  X.big <- array(NA, dim = c(nrow(X), ncol(X), dim(y)[1]))
-  species.sds <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
-  species.means <- matrix(NA, nrow = dim(y)[1], ncol = ncol(X))
-  for (i in 1:nrow(y)) {
-    curr.indx <- which(range.ind[i, ] == 1)
-    X.big[curr.indx, , i] <- X[curr.indx, , drop = FALSE]
-    if (std.by.sp) {
-      for (r in 1:ncol(X)) {
-        if (sd(X[, r], na.rm = TRUE) != 0) {
-          species.sds[i, r] <- sd(c(X.big[curr.indx, r, i]), na.rm = TRUE)
-          species.means[i, r] <- mean(c(X.big[curr.indx, r, i]), na.rm = TRUE)
-          X.big[curr.indx, r, i] <- c((X.big[curr.indx, r, i] - species.means[i, r])) / species.sds[i, r]
-	}
-      }
-    }
-  }
-  X.big <- ifelse(is.na(X.big), 0, X.big)
 
   # Extract data from inputs --------------------------------------------
   # Number of species 
@@ -797,8 +758,7 @@ sfJSDM <- function(formula, data, inits, priors,
     
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
-    storage.mode(X.big) <- "double"
-    storage.mode(range.ind) <- 'double'
+    storage.mode(X) <- "double"
     storage.mode(coords) <- "double"
     # consts order: N, J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, q)
     consts <- c(N, J, p.occ, p.occ.re, n.occ.re, q)
@@ -886,7 +846,7 @@ sfJSDM <- function(formula, data, inits, priors,
 
         storage.mode(chain.info) <- "integer"
         # Run the model in C
-        out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X.big, coords, X.re, consts, n.occ.re.long, 
+        out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X, coords, X.re, consts, n.occ.re.long, 
           	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
           	            beta.inits, beta.comm.inits, tau.sq.beta.inits, phi.inits, 
           	            lambda.inits, nu.inits, sigma.sq.psi.inits, beta.star.inits, w.inits,
@@ -895,7 +855,7 @@ sfJSDM <- function(formula, data, inits, priors,
           	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
           		    tuning.c, cov.model.indx, n.batch, 
           	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info, monitors, range.ind)
+          	            samples.info, chain.info, monitors)
         chain.info[1] <- chain.info[1] + 1
 	seeds.list[[i]] <- .Random.seed
       }
@@ -1093,7 +1053,6 @@ sfJSDM <- function(formula, data, inits, priors,
         }  
       }
       out$X <- X[order(ord), , drop = FALSE]
-      out$X.big <- X.big[order(ord), , , drop = FALSE]
       out$y <- y.big[, order(ord), drop = FALSE]
       out$call <- cl
       out$n.samples <- n.samples
@@ -1110,10 +1069,6 @@ sfJSDM <- function(formula, data, inits, priors,
       out$n.burn <- n.burn
       out$n.chains <- n.chains
       out$monitors <- monitors
-      out$species.sds <- species.sds
-      out$species.means <- species.means
-      out$std.by.sp <- std.by.sp
-      out$range.ind <- range.ind[, order(ord)]
       # Send out objects needed for updateMCMC 
       update.list <- list()
       tmp.val <- ifelse(cov.model == 'matern', q * 3, q * 2)
@@ -1141,11 +1096,7 @@ sfJSDM <- function(formula, data, inits, priors,
     }
 
     # K-fold cross-validation -------
-    do.k.fold <- ifelse(sum(range.ind == 0) > 0, FALSE, TRUE)
-    if (!missing(k.fold) & !do.k.fold) {
-      message("Skipping cross-validation. CV is not implemented when species have different ranges.\n")
-    }
-    if (!missing(k.fold) & do.k.fold) {
+    if (!missing(k.fold)) {
       if (verbose) {      
         cat("----------------------------------------\n");
         cat("\tCross-validation\n");
@@ -1154,8 +1105,7 @@ sfJSDM <- function(formula, data, inits, priors,
       	      " thread(s).", sep = ''))
       }
       # Currently implemented without parellization. 
-      # TODO: this doesn't work when using the update functionality, but that
-      #       is fine since the update stuff is not shown to user.
+      # TODO: don't think this works when updating. 
       set.seed(k.fold.seed)
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
@@ -1171,9 +1121,6 @@ sfJSDM <- function(formula, data, inits, priors,
         y.big.0 <- y.big[, curr.set, drop = FALSE]
         X.fit <- X[-curr.set, , drop = FALSE]
         X.0 <- X[curr.set, , drop = FALSE]
-        X.big.fit <- X.big[-curr.set, , , drop = FALSE]
-	range.ind.fit <- range.ind[, -curr.set, drop = FALSE]
-	range.ind.0 <- range.ind[, curr.set, drop = FALSE]
 	w.inits.fit <- w.inits[, curr.set, drop = FALSE]
         coords.fit <- coords[-curr.set, , drop = FALSE]
         coords.0 <- coords[curr.set, , drop = FALSE]
@@ -1228,8 +1175,7 @@ sfJSDM <- function(formula, data, inits, priors,
         ui.indx.fit <- indx$ui.indx
 
         storage.mode(y.fit) <- "double"
-        storage.mode(X.big.fit) <- "double"
-	storage.mode(range.ind.fit) <- 'double'
+        storage.mode(X.fit) <- "double"
         storage.mode(coords.fit) <- "double"
         consts.fit <- c(N, J.fit, p.occ, p.occ.re, n.occ.re.fit, q)
         storage.mode(consts.fit) <- "integer"	
@@ -1250,7 +1196,7 @@ sfJSDM <- function(formula, data, inits, priors,
 	monitors.fit <- rep(1, n.track)
 	storage.mode(monitors.fit) <- "integer"
 
-      out.fit <- .Call("sfJSDMNNGP", y.fit, X.big.fit, coords.fit, 
+      out.fit <- .Call("sfJSDMNNGP", y.fit, X.fit, coords.fit, 
 		       X.re.fit, consts.fit, n.occ.re.long.fit, 
         	       n.neighbors, nn.indx.fit, nn.indx.lu.fit, u.indx.fit, 
 		       u.indx.lu.fit, ui.indx.fit, beta.inits, 
@@ -1263,7 +1209,7 @@ sfJSDM <- function(formula, data, inits, priors,
 		       tuning.c, cov.model.indx, n.batch, 
         	       batch.length, accept.rate, n.omp.threads.fit, 
 		       verbose.fit, n.report, 
-        	       samples.info, chain.info, monitors.fit, range.ind.fit)
+        	       samples.info, chain.info, monitors.fit)
 
         if (is.null(sp.names)) {
           sp.names <- paste('sp', 1:N, sep = '')
@@ -1297,10 +1243,6 @@ sfJSDM <- function(formula, data, inits, priors,
         out.fit$n.thin <- n.thin
         out.fit$n.burn <- n.burn
         out.fit$n.chains <- 1
-        out.fit$species.sds <- species.sds
-        out.fit$species.means <- species.means
-        out.fit$std.by.sp <- std.by.sp
-        out.fit$range.ind <- range.ind.fit
         if (p.occ.re > 0) {
           out.fit$sigma.sq.psi.samples <- mcmc(t(out.fit$sigma.sq.psi.samples))
           colnames(out.fit$sigma.sq.psi.samples) <- x.re.names
@@ -1350,3 +1292,4 @@ sfJSDM <- function(formula, data, inits, priors,
   out$run.time <- proc.time() - ptm
   return(out)
 }
+

@@ -94,6 +94,7 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     stop("error: if simulating data with spatially-varying coefficients, set sp = TRUE")
   }
   # Spatial parameters ----------------
+  p.svc <- length(svc.cols)
   if (sp) {
     if(missing(sigma.sq)) {
       stop("error: sigma.sq must be specified when sp = TRUE")
@@ -112,7 +113,6 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     if (cov.model == 'matern' & missing(nu)) {
       stop("error: nu must be specified when cov.model = 'matern'")
     }
-    p.svc <- length(svc.cols)
     if (length(phi) != p.svc) {
       stop("error: phi must have the same number of elements as svc.cols")
     }
@@ -139,7 +139,10 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
       }  
     }
   } else {
-    grid <- list(1:J)
+    grid <- vector(mode = 'list', length = p.svc)
+    for (i in 1:p.svc) {
+      grid[[i]] <- 1:J
+    }
   }
 
   # Subroutines -----------------------------------------------------------
@@ -328,11 +331,16 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   } # j
 
   # Return coords as a matrix if grid is not relevant, or list if it is 1:J
-  if (length(grid) == 1) {
-    tmp <- sum(grid[[1]] == 1:J)
-    if (tmp == J) {
-      coords <- coords[[1]]
+  tmp <- rep(NA, p.svc)
+  track <- rep(FALSE, p.svc)
+  for (i in 1:p.svc) {
+    tmp[i] <- sum(grid[[1]] == 1:J)
+    if (tmp[i] == J) {
+      track[i] <- TRUE
     }
+  }
+  if (sum(track) == p.svc) {
+    coords <- coords[[1]]
   }
   return(
     list(X = X, X.p = X.p, coords = coords,

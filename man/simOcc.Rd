@@ -9,7 +9,7 @@
 \usage{
 simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), 
        p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
-       sigma.sq, phi, nu, x.positive = FALSE, ...)
+       sigma.sq, phi, nu, x.positive = FALSE, grid, ...)
 }
 
 \arguments{
@@ -45,6 +45,8 @@ simOcc(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(),
 \item{nu}{a numeric value indicating the spatial smoothness parameter. Only used when \code{sp = TRUE} and \code{cov.model = "matern"}.} 
 
 \item{x.positive}{a logical value indicating whether the simulated covariates should be simulated as random standard normal covariates (\code{x.positive = FALSE}) or restricted to positive values using a uniform distribution with lower bound 0 and upper bound 1 (\code{x.positive = TRUE}).}
+
+\item{grid}{a list or atomic vector used to specify the grid across which to simulate the latent spatial processes. If a list, each element should correspond to the grid used for each SVC in the model. This argument is used to simulate the underlying spatial process at a different resolution than the coordinates (e.g., if coordinates are distributed across a grid).}
 
 \item{...}{currently no additional arguments}
 }

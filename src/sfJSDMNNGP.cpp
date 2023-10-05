@@ -73,7 +73,7 @@ extern "C" {
 		  SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
 		  SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		  SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r, SEXP rangeInd_r){
+		  SEXP samplesInfo_r, SEXP chainInfo_r, SEXP monitors_r){
    
     /**********************************************************************
      * Initial constants
@@ -95,7 +95,6 @@ extern "C" {
     double *y = REAL(y_r);
     double *X = REAL(X_r);
     double *coords = REAL(coords_r); 
-    double *rangeInd = REAL(rangeInd_r);
     int *XRE = INTEGER(XRE_r);
     int m = INTEGER(m_r)[0]; 
     // Load constants
@@ -541,28 +540,23 @@ extern "C" {
            *Update Occupancy Auxiliary Variables 
            *******************************************************************/
           for (j = 0; j < J; j++) {
-            if (rangeInd[j * N + i] == 1.0) {
-              omegaOcc[j * N + i] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) + wStar[j * N + i] + betaStarSites[i * J + j]);
-	    }
+            omegaOcc[j * N + i] = rpg(1.0, F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + wStar[j * N + i] + betaStarSites[i * J + j]);
           } // j
           /********************************************************************
            *Update Occupancy Regression Coefficients
            *******************************************************************/
           for (j = 0; j < J; j++) {
-            tmp_J1[j] = 0.0;
-            if (rangeInd[j * N + i] == 1.0) {
-              kappaOcc[j * N + i] = y[j * N + i] - 1.0 / 2.0; 
-              tmp_J1[j] = kappaOcc[j * N + i] - omegaOcc[j * N + i] * 
-	                  (wStar[j * N + i] + betaStarSites[i * J + j]); 
-	      // For later
-	      yStar[j * N + i] = kappaOcc[j * N + i] / omegaOcc[j * N + i];
-	    }
+            kappaOcc[j * N + i] = y[j * N + i] - 1.0 / 2.0; 
+            tmp_J1[j] = kappaOcc[j * N + i] - omegaOcc[j * N + i] * 
+		        (wStar[j * N + i] + betaStarSites[i * J + j]); 
+	    // For later
+	    yStar[j * N + i] = kappaOcc[j * N + i] / omegaOcc[j * N + i];
           } // j
           /********************************
            * Compute b.beta
            *******************************/
           // t(X) * tmp_J1 + 0 * tmp_pOcc = tmp_pOcc. 
-          F77_NAME(dgemv)(ytran, &J, &pOcc, &one, &X[i * JpOcc], &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
+          F77_NAME(dgemv)(ytran, &J, &pOcc, &one, X, &J, tmp_J1, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
           // TauBetaInv %*% betaComm + tmp_pOcc = tmp_pOcc
           F77_NAME(dgemv)(ntran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, betaComm, &inc, &one, tmp_pOcc, &inc FCONE); 
 
@@ -570,17 +564,14 @@ extern "C" {
            * Compute A.beta
            * *****************************/
           // t(X) %*% diag(omegaOcc)
-	  zeros(tmp_JpOcc, JpOcc);
           for(j = 0; j < J; j++){
-            if (rangeInd[j * N + i] == 1.0) {
-              for(h = 0; h < pOcc; h++){
-                tmp_JpOcc[h*J+j] = X[i * JpOcc + h * J + j]*omegaOcc[j * N + i];
-              }
-	    }
+            for(h = 0; h < pOcc; h++){
+              tmp_JpOcc[h*J+j] = X[h*J+j]*omegaOcc[j * N + i];
+            }
           }
           // This finishes off A.beta
           // 1 * X * tmp_JpOcc + 0 * tmp_ppOcc = tmp_ppOcc
-          F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, &X[i * JpOcc], &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
+          F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &J, &one, X, &J, tmp_JpOcc, &J, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
           for (h = 0; h < ppOcc; h++) {
             tmp_ppOcc[h] += TauBetaInv[h]; 
           } // j
@@ -613,16 +604,14 @@ extern "C" {
 	      // aka information only comes from the sites with any given level 
 	      // of a random effect. 
               for (j = 0; j < J; j++) {
-                if (rangeInd[j * N + i] == 1.0) {
-                  if (XRE[betaStarIndx[l] * J + j] == betaLevelIndx[l]) {
-                    tmp_02 = 0.0;
-                    for (ll = 0; ll < pOccRE; ll++) {
-                      tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[ll * J + j]];
-	            } 
-                    tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) + tmp_02 - betaStar[i * nOccRE + l] + wStar[j * N + i]) * omegaOcc[j * N + i];
-	            tmp_0 += omegaOcc[j * N + i];
-	          }
-		}
+                if (XRE[betaStarIndx[l] * J + j] == betaLevelIndx[l]) {
+                  tmp_02 = 0.0;
+                  for (ll = 0; ll < pOccRE; ll++) {
+                    tmp_02 += betaStar[i * nOccRE + betaStarLongIndx[ll * J + j]];
+	          } 
+                  tmp_one[0] += kappaOcc[j * N + i] - (F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + tmp_02 - betaStar[i * nOccRE + l] + wStar[j * N + i]) * omegaOcc[j * N + i];
+	          tmp_0 += omegaOcc[j * N + i];
+	        }
               }
               /********************************
                * Compute A.beta.star
@@ -700,11 +689,8 @@ extern "C" {
           if(info != 0){error("c++ error: dpotri var failed\n");}
 
 	  // mu
-	  zeros(tmp_N, N);
 	  for (k = 0; k < N; k++) {
-            if (rangeInd[ii * N + k] == 1.0) {
-              tmp_N[k] = (yStar[ii * N + k] - F77_NAME(ddot)(&pOcc, &X[k * JpOcc + ii], &J, &beta[k], &N) - betaStarSites[k * J + ii]) * omegaOcc[ii * N + k];
-	    }
+            tmp_N[k] = (yStar[ii * N + k] - F77_NAME(ddot)(&pOcc, &X[ii], &J, &beta[k], &N) - betaStarSites[k * J + ii]) * omegaOcc[ii * N + k];
           } // k
 
 	  F77_NAME(dgemv)(ytran, &N, &q, &one, lambda, &N, tmp_N, &inc, &zero, mu, &inc FCONE);
@@ -749,15 +735,12 @@ extern "C" {
            *****************************/
 	  // zStar - X %*% beta
 	  for (j = 0; j < J; j++) {
-            tmp_J[j] = 0.0;
-            if (rangeInd[j * N + i] == 1.0) {
-              tmp_J[j] = yStar[j * N + i] - F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) - 
-	                 betaStarSites[i * J + j];
+            tmp_J[j] = yStar[j * N + i] - F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) - 
+		       betaStarSites[i * J + j];
 
-	      if (i < q) {
-                tmp_J[j] -= w[j * q + i];
-              }
-	    }
+	    if (i < q) {
+              tmp_J[j] -= w[j * q + i];
+            }
           } // j
 
 	  // S_beta %*% W' = tmp_Jq
@@ -898,13 +881,8 @@ extern "C" {
          *******************************************************************/
         for (i = 0; i < N; i++) {
           for (j = 0; j < J; j++) {
-            if (rangeInd[j * N + i] == 1.0) {
-              psi[j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[i * JpOcc + j], &J, &beta[i], &N) + wStar[j * N + i] + betaStarSites[i * J + j], zero, one); 
-              z[j * N + i] = rbinom(one, psi[j * N + i]);           
-	    } else {
-              psi[j * N + i] = 0.0;
-	      z[j * N + i] = 0.0;
-	    }
+            psi[j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) + wStar[j * N + i] + betaStarSites[i * J + j], zero, one); 
+            z[j * N + i] = rbinom(one, psi[j * N + i]);           
 	    if (y[j * N + i] == 1) {
               yWAIC[j * N + i] = psi[j * N + i];
 	    } else {
@@ -1104,5 +1082,6 @@ extern "C" {
     return(result_r);
   }
 }
+
 
 
