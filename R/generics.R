@@ -2116,8 +2116,10 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
     sp.indx <- rep(1:N, p.occ)
     n.post <- object$n.post * object$n.chains
     beta.samples <- as.matrix(object$beta.samples)
-    lambda.samples <- array(object$lambda.samples, dim = c(n.post, N, q))
-    w.samples <- object$w.samples
+    if (q > 0) {
+      lambda.samples <- array(object$lambda.samples, dim = c(n.post, N, q))
+      w.samples <- object$w.samples
+    }
     if (object$psiRE) {
       p.occ.re <- length(object$re.level.names)
     } else {
@@ -2190,25 +2192,32 @@ predict.lfMsPGOcc <- function(object, X.0, coords.0, ignore.RE = FALSE,
     }
     J.str <- nrow(X.0.new)
     # Create new random normal latent factors at unobserved sites. 
-    w.0.samples <- array(rnorm(n.post * q * J.str), dim = c(n.post, q, J.str))
-    w.star.0.samples <- array(NA, dim = c(n.post, N, J.str))
-
-    for (i in 1:n.post) {
-      w.star.0.samples[i, , ] <- matrix(lambda.samples[i, , ], N, q) %*%
-                               matrix(w.0.samples[i, , ], q, J.str)
+    if (q > 0) {
+      w.0.samples <- array(rnorm(n.post * q * J.str), dim = c(n.post, q, J.str))
+      w.star.0.samples <- array(NA, dim = c(n.post, N, J.str))
+      for (i in 1:n.post) {
+        w.star.0.samples[i, , ] <- matrix(lambda.samples[i, , ], N, q) %*%
+                                 matrix(w.0.samples[i, , ], q, J.str)
+      }
     }
+
     out <- list()
     out$psi.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
     out$z.0.samples <- array(NA, dim = c(n.post, N, nrow(X.fix)))
     # Make predictions
     for (i in 1:N) {
       for (j in 1:J.str) {
-      out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
-          				   t(beta.samples[, sp.indx == i]) + 
-          				   w.star.0.samples[, i, j] + 
-                                             beta.star.sites.0.samples[, (j - 1) * N + i])
-      out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
-    				     
+        if (q > 0) {
+          out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				         t(beta.samples[, sp.indx == i]) + 
+          				         w.star.0.samples[, i, j] + 
+                                                 beta.star.sites.0.samples[, (j - 1) * N + i])
+	} else {
+          out$psi.0.samples[, i, j] <- logit.inv(t(as.matrix(X.fix[j, ])) %*% 
+          				         t(beta.samples[, sp.indx == i]) + 
+                                                 beta.star.sites.0.samples[, (j - 1) * N + i])
+	}
+        out$z.0.samples[, i, j] <- rbinom(n.post, 1, out$psi.0.samples[, i, j])
       } # j
     } # i
 

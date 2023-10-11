@@ -1,4 +1,3 @@
-# Latent factor model for a classic non-spatial JSDM without imperfect detection.
 lfJSDM <- function(formula, data, inits, priors, 
 		   n.factors, n.samples,
 		   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
@@ -64,10 +63,10 @@ lfJSDM <- function(formula, data, inits, priors,
     }
   }
   if (missing(n.factors)) {
-    stop("error: n.factors must be specified for a latent factor occupancy model")
+    stop("error: n.factors must be specified for a latent factor JSDM")
   }
   if (!'coords' %in% names(data)) {
-    stop("error: coords must be specified in data for a latent factor occupancy model.")
+    stop("error: coords must be specified in data for a latent factor JSDM.")
   }
   coords <- as.matrix(data$coords)
   
@@ -364,32 +363,36 @@ lfJSDM <- function(formula, data, inits, priors,
   # lambda ----------------------------
   # ORDER: an N x q matrix sent in as a column-major vector, which is ordered by 
   #        factor, then species within factor. 
-  if ("lambda" %in% names(inits)) {
-    lambda.inits <- inits[["lambda"]]
-    if (!is.matrix(lambda.inits)) {
-      stop(paste("error: initial values for lambda must be a matrix with dimensions ",
-		 N, " x ", q, sep = ""))
-    }
-    if (nrow(lambda.inits) != N | ncol(lambda.inits) != q) {
-      stop(paste("error: initial values for lambda must be a matrix with dimensions ",
-		 N, " x ", q, sep = ""))
-    }
-    if (!all.equal(diag(lambda.inits), rep(1, q))) {
-      stop("error: diagonal of inits$lambda matrix must be all 1s")
-    }
-    if (sum(lambda.inits[upper.tri(lambda.inits)]) != 0) {
-      stop("error: upper triangle of inits$lambda must be all 0s")
+  if (q != 0) {
+    if ("lambda" %in% names(inits)) {
+      lambda.inits <- inits[["lambda"]]
+      if (!is.matrix(lambda.inits)) {
+        stop(paste("error: initial values for lambda must be a matrix with dimensions ",
+          	 N, " x ", q, sep = ""))
+      }
+      if (nrow(lambda.inits) != N | ncol(lambda.inits) != q) {
+        stop(paste("error: initial values for lambda must be a matrix with dimensions ",
+          	 N, " x ", q, sep = ""))
+      }
+      if (!all.equal(diag(lambda.inits), rep(1, q))) {
+        stop("error: diagonal of inits$lambda matrix must be all 1s")
+      }
+      if (sum(lambda.inits[upper.tri(lambda.inits)]) != 0) {
+        stop("error: upper triangle of inits$lambda must be all 0s")
+      }
+    } else {
+      lambda.inits <- matrix(0, N, q)
+      diag(lambda.inits) <- 1
+      lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+      if (verbose) {
+        message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
+      }
+      # lambda.inits are organized by factor, then by species. This is necessary for working
+      # with dgemv.  
+      lambda.inits <- c(lambda.inits)
     }
   } else {
-    lambda.inits <- matrix(0, N, q)
-    diag(lambda.inits) <- 1
-    lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
-    if (verbose) {
-      message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to random values from a standard normal\n")
-    }
-    # lambda.inits are organized by factor, then by species. This is necessary for working
-    # with dgemv.  
-    lambda.inits <- c(lambda.inits)
+    lambda.inits <- 0
   }
   # sigma.sq.psi ------------------
   # ORDER: a length p.occ.re vector ordered by the random effects in the formula.
@@ -487,10 +490,12 @@ lfJSDM <- function(formula, data, inits, priors,
         beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
               		     sqrt(tau.sq.beta.inits)), N, p.occ)
         beta.inits <- c(beta.inits)
-        lambda.inits <- matrix(0, N, q)
-        diag(lambda.inits) <- 1
-        lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
-        lambda.inits <- c(lambda.inits)
+	if (q != 0) {
+          lambda.inits <- matrix(0, N, q)
+          diag(lambda.inits) <- 1
+          lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+          lambda.inits <- c(lambda.inits)
+	}
         if (p.occ.re > 0) {
           sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
           beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
@@ -524,10 +529,12 @@ lfJSDM <- function(formula, data, inits, priors,
       out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					         mcmc(t(a$beta.samples)))), 
       			     autoburnin = FALSE)$psrf[, 2])
-      lambda.mat <- matrix(lambda.inits, N, q)
-      out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-          					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
-          					       autoburnin = FALSE)$psrf[, 2])
+      if (q > 0) {
+        lambda.mat <- matrix(lambda.inits, N, q)
+        out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+            					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+            					       autoburnin = FALSE)$psrf[, 2])
+      }
       if (p.occ.re > 0) {
         out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$sigma.sq.psi.samples)))), 
@@ -567,9 +574,11 @@ lfJSDM <- function(formula, data, inits, priors,
       colnames(out$beta.star.samples) <- beta.star.names
       out$re.level.names <- re.level.names
     }
-    loadings.names <- paste(rep(sp.names, times = n.factors), rep(1:n.factors, each = N), sep = '-')
-    out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
-    colnames(out$lambda.samples) <- loadings.names
+    if (q > 0) {
+      loadings.names <- paste(rep(sp.names, times = n.factors), rep(1:n.factors, each = N), sep = '-')
+      out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
+      colnames(out$lambda.samples) <- loadings.names
+    }
 
     # Return things back in the original order. 
     out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
@@ -581,15 +590,19 @@ lfJSDM <- function(formula, data, inits, priors,
     out$like.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$like.samples, 
       								dim = c(N, J, n.post.samples))))
     out$like.samples <- aperm(out$like.samples, c(3, 1, 2))
-    out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-      								dim = c(q, J, n.post.samples))))
-    out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
+    if (q > 0) {
+      out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
+        								dim = c(q, J, n.post.samples))))
+      out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
+    }
     # Calculate effective sample sizes
     out$ESS <- list()
     out$ESS$beta.comm <- effectiveSize(out$beta.comm.samples)
     out$ESS$tau.sq.beta <- effectiveSize(out$tau.sq.beta.samples)
     out$ESS$beta <- effectiveSize(out$beta.samples)
-    out$ESS$lambda <- effectiveSize(out$lambda.samples)
+    if (q > 0) {
+      out$ESS$lambda <- effectiveSize(out$lambda.samples)
+    }
     if (p.occ.re > 0) {
       out$ESS$sigma.sq.psi <- effectiveSize(out$sigma.sq.psi.samples)
     }
@@ -705,10 +718,12 @@ lfJSDM <- function(formula, data, inits, priors,
       coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
       out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
       colnames(out.fit$beta.samples) <- coef.names
-      loadings.names <- paste(rep(sp.names, times = n.factors), 
-      			rep(1:n.factors, each = N), sep = '-')
-      out.fit$lambda.samples <- mcmc(t(out.fit$lambda.samples))
-      colnames(out.fit$lambda.samples) <- loadings.names
+      if (q > 0) {
+        loadings.names <- paste(rep(sp.names, times = n.factors), 
+        			rep(1:n.factors, each = N), sep = '-')
+        out.fit$lambda.samples <- mcmc(t(out.fit$lambda.samples))
+        colnames(out.fit$lambda.samples) <- loadings.names
+      }
       out.fit$w.samples <- array(out.fit$w.samples, dim = c(q, J, n.post.samples))
       out.fit$w.samples <- aperm(out.fit$w.samples, c(3, 1, 2))
       out.fit$X <- X.fit

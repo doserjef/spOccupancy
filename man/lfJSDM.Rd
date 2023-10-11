@@ -75,7 +75,9 @@ lfJSDM(formula, data, inits, priors, n.factors,
     Typically, the number of factors is set to be small (e.g., 4-5) relative to the
     total number of species in the community, which will lead to substantial
     decreases in computation time. However, the value can be anywhere
-    between 1 and N (the number of species in the community).}
+    between 0 and N (the number of species in the community). When set to 0, the model
+    assumes there are no residual species correlations, which is equivalent to the 
+    \code{msPGOcc()} function but without imperfect detection.}
 
 \item{n.samples}{the number of posterior samples to collect in each chain.}
 

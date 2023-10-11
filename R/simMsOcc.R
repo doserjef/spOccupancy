@@ -1,7 +1,7 @@
 simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(), 
 		     p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
 		     sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
-                     range.probs, ...) {
+                     range.probs, shared.spatial = FALSE, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -110,8 +110,11 @@ simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list()
     }
     q.p.svc <- n.factors * length(svc.cols)
     if (sp) {
-      if (!missing(sigma.sq)) {
+      if (!missing(sigma.sq) & !shared.spatial) {
         message("sigma.sq is specified but will be set to 1 for spatial latent factor model")
+      }
+      if (missing(sigma.sq) & shared.spatial) {
+        stop("sigma.sq must be specified when shared.spatial = TRUE")
       }
       if(missing(phi)) {
         stop("error: phi must be specified when sp = TRUE")
@@ -202,54 +205,69 @@ simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list()
   # Form spatial process for each spatially-varying covariate
   for (i in 1:p.svc) {
     w.star[[i]] <- matrix(0, nrow = N, ncol = J)
-    if (factor.model) {
-      lambda[[i]] <- matrix(rnorm(N * n.factors, 0, 1), N, n.factors) 
-      # Set diagonals to 1
-      diag(lambda[[i]]) <- 1
-      # Set upper tri to 0
-      lambda[[i]][upper.tri(lambda[[i]])] <- 0
-      w[[i]] <- matrix(NA, n.factors, J)
-      if (sp) { # sfMsPGOcc
-        if (cov.model == 'matern') {
-          # Assume all spatial parameters ordered by svc first, then factor
-          theta <- cbind(phi[((i - 1) * n.factors + 1):(i * n.factors)], 
-			 nu[((i - 1) * n.factors + 1):(i * n.factors)])
-        } else {
-          theta <- as.matrix(phi[((i - 1) * n.factors + 1):(i * n.factors)])
-        }
-        for (ll in 1:n.factors) {
-          Sigma <- mkSpCov(coords, as.matrix(1), as.matrix(0), 
-              	     theta[ll, ], cov.model)
-          w[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
-        }
+    w[[i]] <- rep(0, J)
+    if (shared.spatial) {
+      if (cov.model == 'matern') {
+        theta <- cbind(phi, nu)
+      } else {
+        theta <- as.matrix(phi)
+      }
+      Sigma.full <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      w[[i]] <- rmvn(1, rep(0, J), Sigma.full)
+      for (ll in 1:N) {
+        w.star[[i]][ll, ] <- w[[i]]
+      }
 
-      } else { # lsMsPGOcc
-        for (ll in 1:n.factors) {
-          w[[i]][ll, ] <- rnorm(J)
-        } # ll  
-      }
-      for (j in 1:J) {
-        w.star[[i]][, j] <- lambda[[i]] %*% w[[i]][, j]
-      }
     } else {
-      if (sp) { # spMsPGOcc
+      if (factor.model) {
+        lambda[[i]] <- matrix(rnorm(N * n.factors, 0, 1), N, n.factors) 
+        # Set diagonals to 1
+        diag(lambda[[i]]) <- 1
+        # Set upper tri to 0
+        lambda[[i]][upper.tri(lambda[[i]])] <- 0
+        w[[i]] <- matrix(NA, n.factors, J)
+        if (sp) { # sfMsPGOcc
+          if (cov.model == 'matern') {
+            # Assume all spatial parameters ordered by svc first, then factor
+            theta <- cbind(phi[((i - 1) * n.factors + 1):(i * n.factors)], 
+          		 nu[((i - 1) * n.factors + 1):(i * n.factors)])
+          } else {
+            theta <- as.matrix(phi[((i - 1) * n.factors + 1):(i * n.factors)])
+          }
+          for (ll in 1:n.factors) {
+            Sigma <- mkSpCov(coords, as.matrix(1), as.matrix(0), 
+                	     theta[ll, ], cov.model)
+            w[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
+          }
+
+        } else { # lsMsPGOcc
+          for (ll in 1:n.factors) {
+            w[[i]][ll, ] <- rnorm(J)
+          } # ll  
+        }
+        for (j in 1:J) {
+          w.star[[i]][, j] <- lambda[[i]] %*% w[[i]][, j]
+        }
+      } else {
+        if (sp) { # spMsPGOcc
+          lambda <- NA
+          if (cov.model == 'matern') {
+            theta <- cbind(phi[((i - 1) * N + 1):(i * N)], 
+          		 nu[((i - 1) * N + 1):(i * N)])
+          } else {
+            theta <- as.matrix(phi[((i - 1) * N + 1):(i * N)])
+          }
+          # Spatial random effects for each species
+          for (ll in 1:N) {
+            Sigma <- mkSpCov(coords, as.matrix(sigma.sq[(i - 1) * N + ll]), as.matrix(0), 
+                	     theta[ll, ], cov.model)
+            w.star[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
+          }
+        }
+        # For naming consistency
+        w <- w.star
         lambda <- NA
-        if (cov.model == 'matern') {
-          theta <- cbind(phi[((i - 1) * N + 1):(i * N)], 
-			 nu[((i - 1) * N + 1):(i * N)])
-        } else {
-          theta <- as.matrix(phi[((i - 1) * N + 1):(i * N)])
-        }
-        # Spatial random effects for each species
-        for (ll in 1:N) {
-          Sigma <- mkSpCov(coords, as.matrix(sigma.sq[(i - 1) * N + ll]), as.matrix(0), 
-              	     theta[ll, ], cov.model)
-          w.star[[i]][ll, ] <- rmvn(1, rep(0, J), Sigma)
-        }
       }
-      # For naming consistency
-      w <- w.star
-      lambda <- NA
     }
   } # i (spatially-varying coefficient)
   # Design matrix for spatially-varying coefficients

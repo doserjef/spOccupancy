@@ -8,7 +8,8 @@
 \usage{
 sfJSDM(formula, data, inits, priors, tuning, 
        cov.model = 'exponential', NNGP = TRUE, 
-       n.neighbors = 15, search.type = 'cb', n.factors, n.batch, 
+       n.neighbors = 15, search.type = 'cb', 
+       std.by.sp = FALSE, n.factors, n.batch, 
        batch.length, accept.rate = 0.43, n.omp.threads = 1, 
        verbose = TRUE, n.report = 100, 
        n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
@@ -24,7 +25,7 @@ sfJSDM(formula, data, inits, priors, tuning,
     using \pkg{lme4} syntax (Bates et al. 2015).}
   
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{covs}, and \code{coords}. \code{y}
+    Valid tags are \code{y}, \code{covs}, \code{coords}, \code{range.ind}. \code{y}
     is a two-dimensional array with first dimension equal to the number 
     of species and second dimension equal to the number of sites. Note how this differs
     from other \code{spOccupancy} functions in that \code{y} does not have any 
@@ -34,7 +35,13 @@ sfJSDM(formula, data, inits, priors, tuning,
     each column (variable). \code{coords} is a matrix with \eqn{J}{J} 
     rows and 2 columns consisting of the spatial coordinates of each site in 
     the data. Note that \code{spOccupancy} assumes coordinates are specified 
-  in a projected coordinate system.}
+  in a projected coordinate system. 
+    \code{range.ind} is a matrix with rows corresponding to species and columns
+    corresponding to sites, with each element taking value 1 if that site is 
+    within the range of the corresponding species and 0 if it is outside of the 
+    range. This matrix is not required, but it can be helpful to restrict the 
+    modeled area for each individual species to be within the realistic range
+    of locations for that species when estimating the model parameters.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{beta.comm}, \code{beta},  \code{tau.sq.beta}, 
@@ -121,6 +128,14 @@ sfJSDM(formula, data, inits, priors, tuning,
     might produce different, but equally valid, neighbor sets, 
     e.g., if data are on a grid. }
 
+  \item{std.by.sp}{a logical value indicating whether the covariates are standardized
+    separately for each species within the corresponding range for each species (\code{TRUE}) 
+    or not (\code{FALSE}). Note that if \code{range.ind} is specified in \code{data.list}, 
+    this will result in the covariates being standardized differently for each species
+    based on the sites where \code{range.ind == 1} for that given species. If \code{range.ind} is not specified 
+    and \code{std.by.sp = TRUE}, this will simply be equivalent to standardizing 
+    the covariates across all locations prior to fitting the model.}
+
   \item{n.factors}{the number of factors to use in the spatial factor model approach. 
     Typically, the number of factors is set to be small (e.g., 4-5) relative to the 
     total number of species in the community, which will lead to substantial 
@@ -194,7 +209,7 @@ sfJSDM(formula, data, inits, priors, tuning,
     \code{theta}, \code{w}, \code{like} (used for WAIC calculation), 
     \code{beta.star}, \code{sigma.sq.psi}. Note that if all parameters are not returned, 
     subsequent functions that require the model object may not work. We only recommend
-    specifying this option when working with large data sets (e.g., > 100 species and
+    specifying this option when working with large data sets (e.g., > 100 species and/or 
     > 10,000 sites).} 
 
   \item{keep.only.mean.95}{not currently supported.}

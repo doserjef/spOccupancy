@@ -10,7 +10,7 @@
 simMsOcc(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(), 
          p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
 	 sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
-         range.probs, ...)
+         range.probs, shared.spatial = FALSE, ...)
 }
 
 \arguments{
@@ -53,6 +53,8 @@ simMsOcc(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(),
 \item{n.factors}{a single numeric value specifying the number of latent factors to use to simulate the data if \code{factor.model = TRUE}.}
 
 \item{range.probs}{a numeric vector of length \code{N} where each value should fall between 0 and 1, and indicates the probability that one of the \code{J} spatial locations simulated is within the simulated range of the given species. If set to 1, every species has the potential of being present at each location.}
+
+\item{shared.spatial}{a logical value indicating used to specify whether a common spatial process should be estimated for all species instead of the factor modeling approach.}
 
 \item{...}{currently no additional arguments}
 }

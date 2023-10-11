@@ -102,7 +102,11 @@ extern "C" {
         Rprintf("Thinning Rate: %i \n", nThin); 
         Rprintf("Number of Chains: %i \n", nChain);
         Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
-        Rprintf("Using %i latent factors.\n\n", q);
+	if (q > 0) {
+          Rprintf("Using %i latent factors.\n\n", q);
+	} else {
+          Rprintf("Assuming no residual species correlations.\n\n");
+	}
 #ifdef _OPENMP
         Rprintf("Source compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
@@ -279,8 +283,10 @@ extern "C" {
     // Species-level latent effects
     double *wStar = (double *) R_alloc(JN, sizeof(double)); zeros(wStar, JN);
     // Multiply Lambda %*% w[j] to get wStar. 
-    for (j = 0; j < J; j++) {
-      F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
+    if (q > 0) {
+      for (j = 0; j < J; j++) {
+        F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
+      }
     }
     double *mu = (double *) R_alloc(q, sizeof(double));
     double *var = (double *) R_alloc(qq, sizeof(double));
@@ -459,124 +465,127 @@ extern "C" {
       /********************************************************************
        *Update latent effects (w) 
        *******************************************************************/
-      for (ii = 0; ii < J; ii++) {
-        // tmp_qq = lambda' S_beta lambda 
-        for (i = 0; i < N; i++) {
-          for (ll = 0; ll < q; ll++) {
-            tmp_Nq[ll * N + i] = lambda[ll * N + i] * omegaOcc[ii * N + i];
-          } // ll
-        } // i
-	F77_NAME(dgemm)(ytran, ntran, &q, &q, &N, &one, tmp_Nq, &N, lambda, &N, &zero, var, &q FCONE FCONE);
+      if (q > 0) {
+        for (ii = 0; ii < J; ii++) {
+          // tmp_qq = lambda' S_beta lambda 
+          for (i = 0; i < N; i++) {
+            for (ll = 0; ll < q; ll++) {
+              tmp_Nq[ll * N + i] = lambda[ll * N + i] * omegaOcc[ii * N + i];
+            } // ll
+          } // i
+          F77_NAME(dgemm)(ytran, ntran, &q, &q, &N, &one, tmp_Nq, &N, lambda, &N, &zero, var, &q FCONE FCONE);
 
-	// var
-	for (k = 0; k < q; k++) {
-          var[k * q + k] += 1.0; 
-        } // k
-	F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE);
-        if (info != 0){error("c++ error: dpotrf var failed\n");}
-	F77_NAME(dpotri)(lower, &q, var, &q, &info FCONE);
-        if (info != 0){error("c++ error: dpotri var failed\n");}
+          // var
+          for (k = 0; k < q; k++) {
+            var[k * q + k] += 1.0; 
+          } // k
+          F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE);
+          if (info != 0){error("c++ error: dpotrf var failed\n");}
+          F77_NAME(dpotri)(lower, &q, var, &q, &info FCONE);
+          if (info != 0){error("c++ error: dpotri var failed\n");}
 
-	// mu
-	for (k = 0; k < N; k++) {
-          tmp_N[k] = (yStar[ii * N + k] - F77_NAME(ddot)(&pOcc, &X[ii], &J, &beta[k], &N) - betaStarSites[k * J + ii]) * omegaOcc[ii * N + k];
-        } // k
+          // mu
+          for (k = 0; k < N; k++) {
+            tmp_N[k] = (yStar[ii * N + k] - F77_NAME(ddot)(&pOcc, &X[ii], &J, &beta[k], &N) - betaStarSites[k * J + ii]) * omegaOcc[ii * N + k];
+          } // k
 
-	F77_NAME(dgemv)(ytran, &N, &q, &one, lambda, &N, tmp_N, &inc, &zero, mu, &inc FCONE);
+          F77_NAME(dgemv)(ytran, &N, &q, &one, lambda, &N, tmp_N, &inc, &zero, mu, &inc FCONE);
 
-        F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc FCONE);
+          F77_NAME(dsymv)(lower, &q, &one, var, &q, mu, &inc, &zero, tmp_N, &inc FCONE);
 
-	F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
+          F77_NAME(dpotrf)(lower, &q, var, &q, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
 
-	mvrnorm(&w[ii * q], tmp_N, var, q);
+          mvrnorm(&w[ii * q], tmp_N, var, q);
 
-      } // ii
+        } // ii
+      }
       /********************************************************************
        *Update spatial factors (lambda)
        *******************************************************************/
-      for (i = 1; i < N; i++) {
-        zeros(tmp_qq, qq);
-        zeros(tmp_q, q);
-        zeros(tmp_qq2, qq);
-        // W' %*% S_beta %*% W
-        for (k = 0; k < q; k++) {
-          for (l = 0; l < q; l++) {
-            for (j = 0; j < J; j++) {
-              tmp_qq[k * q + l] += w[j * q + k] * w[j * q + l] * omegaOcc[j * N + i];
-            } // j
-          } // l
-        } // k
+      if (q > 0) {
+        for (i = 1; i < N; i++) {
+          zeros(tmp_qq, qq);
+          zeros(tmp_q, q);
+          zeros(tmp_qq2, qq);
+          // W' %*% S_beta %*% W
+          for (k = 0; k < q; k++) {
+            for (l = 0; l < q; l++) {
+              for (j = 0; j < J; j++) {
+                tmp_qq[k * q + l] += w[j * q + k] * w[j * q + l] * omegaOcc[j * N + i];
+              } // j
+            } // l
+          } // k
 
 
-        // currDim gives the mean dimension of mu and var. 
-        if (i < q) {
-          currDim = i;  
-        } else {
-          currDim = q;
-        }
-        /*****************************
-         *mu
-         *****************************/
-        // zStar - X %*% beta
-        for (j = 0; j < J; j++) {
-          tmp_J[j] = yStar[j * N + i] - F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) -
-		     betaStarSites[i * J + j];
-
+          // currDim gives the mean dimension of mu and var. 
           if (i < q) {
-            tmp_J[j] -= w[j * q + i];
+            currDim = i;  
+          } else {
+            currDim = q;
           }
-        } // j
-
-        // S_beta %*% W' = tmp_Jq
-        // aka multiply W[j, ] by omegaOcc[j] of the current species you're on. 
-        for (j = 0, l = 0; j < J; j++) {
-          for (ll = 0; ll < q; ll++, l++) {
-            tmp_Jq[l] = omegaOcc[j * N + i] * w[j * q + ll];  
-          }
-        }
-
-        // tmp_Jq %*% tmp_J
-        for (k = 0; k < currDim; k++) {
+          /*****************************
+           *mu
+           *****************************/
+          // zStar - X %*% beta
           for (j = 0; j < J; j++) {
-            tmp_q[k] += tmp_Jq[j * q + k] * tmp_J[j];
-          } // j
-        } // k
+            tmp_J[j] = yStar[j * N + i] - F77_NAME(ddot)(&pOcc, &X[j], &J, &beta[i], &N) -
+          	     betaStarSites[i * J + j];
 
-        /*****************************
-         *var
-         *****************************/
-        // Only get relevant columns of t(W) %*% W
-        for (k = 0, l = 0; k < currDim; k++) {
-          for (j = 0; j < currDim; j++, l++) {
-            tmp_qq2[l] = tmp_qq[k * q + j];
+            if (i < q) {
+              tmp_J[j] -= w[j * q + i];
+            }
           } // j
-        } // k
 
-        // Add 1
-        for (j = 0; j < currDim; j++) {
-          tmp_qq2[j * currDim + j] += 1.0;  
+          // S_beta %*% W' = tmp_Jq
+          // aka multiply W[j, ] by omegaOcc[j] of the current species you're on. 
+          for (j = 0, l = 0; j < J; j++) {
+            for (ll = 0; ll < q; ll++, l++) {
+              tmp_Jq[l] = omegaOcc[j * N + i] * w[j * q + ll];  
+            }
+          }
+
+          // tmp_Jq %*% tmp_J
+          for (k = 0; k < currDim; k++) {
+            for (j = 0; j < J; j++) {
+              tmp_q[k] += tmp_Jq[j * q + k] * tmp_J[j];
+            } // j
+          } // k
+
+          /*****************************
+           *var
+           *****************************/
+          // Only get relevant columns of t(W) %*% W
+          for (k = 0, l = 0; k < currDim; k++) {
+            for (j = 0; j < currDim; j++, l++) {
+              tmp_qq2[l] = tmp_qq[k * q + j];
+            } // j
+          } // k
+
+          // Add 1
+          for (j = 0; j < currDim; j++) {
+            tmp_qq2[j * currDim + j] += 1.0;  
+          } // j
+
+          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf for spatial factors failed\n");}
+          F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri for spatial factors failed\n");}
+
+          F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc FCONE);
+
+          F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf for spatial factors 2 failed\n");}
+          
+          mvrnorm(tmp_q, tmp_q2, tmp_qq2, currDim);
+          F77_NAME(dcopy)(&currDim, tmp_q, &inc, &lambda[i], &N);
+        } // i
+
+        // Multiply Lambda %*% w[j] to get wStar. 
+        for (j = 0; j < J; j++) {
+          F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
         } // j
-
-        F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf for spatial factors failed\n");}
-        F77_NAME(dpotri)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri for spatial factors failed\n");}
-
-        F77_NAME(dsymv)(lower, &currDim, &one, tmp_qq2, &currDim, tmp_q, &inc, &zero, tmp_q2, &inc FCONE);
-
-        F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf for spatial factors 2 failed\n");}
-        
-        mvrnorm(tmp_q, tmp_q2, tmp_qq2, currDim);
-        F77_NAME(dcopy)(&currDim, tmp_q, &inc, &lambda[i], &N);
-      } // i
-
-      // Multiply Lambda %*% w[j] to get wStar. 
-      for (j = 0; j < J; j++) {
-        F77_NAME(dgemv)(ntran, &N, &q, &one, lambda, &N, &w[j*q], &inc, &zero, &wStar[j * N], &inc FCONE);
-      } // j
-
+      }
       /********************************************************************
        *Get fitted values and occurrence probability
        *******************************************************************/
