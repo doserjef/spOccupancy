@@ -13,8 +13,8 @@ sfJSDM(formula, data, inits, priors, tuning,
        batch.length, accept.rate = 0.43, n.omp.threads = 1, 
        verbose = TRUE, n.report = 100, 
        n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, 
-       k.fold.only = FALSE, monitors, keep.only.mean.95, ...)
+       n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed = 100, 
+       k.fold.only = FALSE, monitors, keep.only.mean.95, shared.spatial = FALSE, ...)
 }
 
 \arguments{
@@ -213,6 +213,11 @@ sfJSDM(formula, data, inits, priors, tuning,
     > 10,000 sites).} 
 
   \item{keep.only.mean.95}{not currently supported.}
+
+  \item{shared.spatial}{a logical value used to specify whether a common spatial process 
+  should be estimated for all species instead of the factor modeling approach. If true, 
+  a spatial variance parameter \code{sigma.sq} is estimated for the model, which can 
+  be specified in the initial values and prior distributions (\code{sigma.sq.ig}).}
   
   \item{...}{currently no additional arguments}
 }
@@ -285,7 +290,11 @@ sfJSDM(formula, data, inits, priors, tuning,
     the latent occurrence probability values for each species.}
 
   \item{w.samples}{a three-dimensional array of posterior samples for 
-    the latent spatial random effects for each latent factor.}
+    the latent spatial random effects for each latent factor. Array
+    dimensions correspond to MCMC sample, latent factor, and site. 
+    If \code{shared.spatial = TRUE}, this is still returned as a 
+    three-dimensional array where the first dimension is MCMC sample, 
+    second dimension is 1, and third dimension is site.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occurrence portion

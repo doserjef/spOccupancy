@@ -230,7 +230,7 @@ extern "C" {
 			    SEXP thetaSamples_r, SEXP lambdaSamples_r, 
 			    SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
 			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r);
+			    SEXP nReport_r, SEXP sharedSpatial_r);
 
   SEXP lfJSDM(SEXP y_r, SEXP X_r, SEXP XRE_r, SEXP consts_r, SEXP nOccRELong_r, 
 		 SEXP betaStarting_r, SEXP betaCommStarting_r, 

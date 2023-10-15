@@ -7,7 +7,7 @@ sfJSDM <- function(formula, data, inits, priors,
 		   n.burn = round(.10 * n.batch * batch.length), 
 		   n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
 		   k.fold.seed = 100, k.fold.only = FALSE, monitors, 
-		   keep.only.mean.95, ...){
+		   keep.only.mean.95, shared.spatial = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -99,6 +99,11 @@ sfJSDM <- function(formula, data, inits, priors,
     }
   } else {
     range.ind <- matrix(1, nrow(y), ncol(y))
+  }
+
+  if (shared.spatial & n.factors != 1) {
+    message("n.factors is ignored when shared.spatial = TRUE\n")
+    n.factors <- 1
   }
 
   # Neighbors and Ordering ----------------------------------------------
@@ -228,6 +233,18 @@ sfJSDM <- function(formula, data, inits, priors,
   }
   names(priors) <- tolower(names(priors))
 
+  # Independent beta parameters -----
+  if ('independent.betas' %in% names(priors)) {
+    if (priors$independent.betas == TRUE) {
+      message("Beta parameters will be estimated independently\n")
+      ind.betas <- TRUE
+    } else if (priors$independent.betas == FALSE) {
+      ind.betas <- FALSE 
+    }
+  } else {
+    ind.betas <- FALSE
+  }
+
   # beta.comm -----------------------
   if ("beta.comm.normal" %in% names(priors)) {
     if (!is.list(priors$beta.comm.normal) | length(priors$beta.comm.normal) != 2) {
@@ -261,7 +278,7 @@ sfJSDM <- function(formula, data, inits, priors,
     }
     Sigma.beta.comm <- sigma.beta.comm * diag(p.occ)
   } else {
-    if (verbose) {
+    if (verbose & !ind.betas) {
       message("No prior specified for beta.comm.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.beta.comm <- rep(0, p.occ)
@@ -300,7 +317,7 @@ sfJSDM <- function(formula, data, inits, priors,
       tau.sq.beta.b <- rep(tau.sq.beta.b, p.occ)
     }
   } else {
-    if (verbose) {	    
+    if (verbose & !ind.betas) {	    
       message("No prior specified for tau.sq.beta.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
     }
     tau.sq.beta.a <- rep(0.1, p.occ)
@@ -341,7 +358,24 @@ sfJSDM <- function(formula, data, inits, priors,
     phi.a <- rep(3 / max(coords.D), q)
     phi.b <- rep(3 / sort(unique(c(coords.D)))[2], q)
   }
-
+  # sigma.sq -----------------------------
+  # Check if both an ig and uniform prior are specified
+  if ("sigma.sq.ig" %in% names(priors)) {
+    if (!shared.spatial) {
+      message("sigma.sq.ig specified in priors. This is ignored when shared.spatial = FALSE\n")
+    }
+    if (!is.vector(priors$sigma.sq.ig) | !is.atomic(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
+      stop("error: sigma.sq.ig must be a vector of length 2 with elements corresponding to sigma.sq's shape and scale parameters")
+    }
+    sigma.sq.a <- priors$sigma.sq.ig[1]
+    sigma.sq.b <- priors$sigma.sq.ig[2]
+  } else {
+    if (verbose & shared.spatial) {
+      message("No prior specified for sigma.sq.\nUsing an inverse-Gamma prior with the shape parameter set to 2 and scale parameter to 1.\n")
+    }
+    sigma.sq.a <- 2
+    sigma.sq.b <- 1
+  }
   # nu -----------------------------
   if (cov.model == "matern") {
     if (!"nu.unif" %in% names(priors)) {
@@ -530,12 +564,27 @@ sfJSDM <- function(formula, data, inits, priors,
     lambda.inits <- matrix(0, N, q)
     diag(lambda.inits) <- 1
     lambda.inits[lower.tri(lambda.inits)] <- 0
-    if (verbose) {
+    if (verbose & !shared.spatial) {
       message("lambda is not specified in initial values.\nSetting initial values of the lower triangle to 0\n")
     }
     # lambda.inits are organized by factor, then by species. This is necessary for working
     # with dgemv.  
     lambda.inits <- c(lambda.inits)
+    if (shared.spatial) {
+      lambda.inits <- rep(1, N)
+    }
+  }
+  # sigma.sq ------------------------
+  if ("sigma.sq" %in% names(inits)) {
+    sigma.sq.inits <- inits[["sigma.sq"]]
+    if (length(sigma.sq.inits) != 1) {
+      stop("error: initial values for sigma.sq must be of length 1")
+    }
+  } else {
+    sigma.sq.inits <- runif(1, 0.1, 5)
+    if (verbose & shared.spatial) {
+      message("sigma.sq is not specified in initial values.\nSetting initial value to random value from Uniform(0.1, 5)\n")
+    }
   }
   # nu ------------------------
   if ("nu" %in% names(inits)) {
@@ -614,24 +663,29 @@ sfJSDM <- function(formula, data, inits, priors,
     beta.star.inits <- 0
   }
   # w -----------------------------
-  if ("w" %in% names(inits)) {
-    w.inits <- inits[["w"]]
-    if (!is.matrix(w.inits)) {
-      stop(paste("error: initial values for w must be a matrix with dimensions ",
-      	   q, " x ", J, sep = ""))
-    }
-    if (nrow(w.inits) != q | ncol(w.inits) != J) {
-      stop(paste("error: initial values for w must be a matrix with dimensions ",
-      	   q, " x ", J, sep = ""))
-    }
-    if (NNGP) {
-      w.inits <- w.inits[, ord]
+  if (!shared.spatial) {
+    if ("w" %in% names(inits)) {
+      w.inits <- inits[["w"]]
+      if (!is.matrix(w.inits)) {
+        stop(paste("error: initial values for w must be a matrix with dimensions ",
+        	   q, " x ", J, sep = ""))
+      }
+      if (nrow(w.inits) != q | ncol(w.inits) != J) {
+        stop(paste("error: initial values for w must be a matrix with dimensions ",
+        	   q, " x ", J, sep = ""))
+      }
+      if (NNGP) {
+        w.inits <- w.inits[, ord]
+      }
+    } else {
+      w.inits <- matrix(0, q, J)
+      if (verbose) {
+        message("w is not specified in initial values.\nSetting initial value to 0\n")
+      }
     }
   } else {
-    w.inits <- matrix(0, q, J)
-    if (verbose) {
-      message("w is not specified in initial values.\nSetting initial value to 0\n")
-    }
+    # Just set initial W values to 0. 
+    w.inits <- rep(0, J)
   }
   # Should initial values be fixed --
   if ("fix" %in% names(inits)) {
@@ -800,13 +854,13 @@ sfJSDM <- function(formula, data, inits, priors,
     storage.mode(X.big) <- "double"
     storage.mode(range.ind) <- 'double'
     storage.mode(coords) <- "double"
-    # consts order: N, J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, q)
-    consts <- c(N, J, p.occ, p.occ.re, n.occ.re, q)
+    consts <- c(N, J, p.occ, p.occ.re, n.occ.re, q, ind.betas, shared.spatial)
     storage.mode(consts) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(beta.comm.inits) <- "double"
     storage.mode(tau.sq.beta.inits) <- "double"
     storage.mode(phi.inits) <- "double"
+    storage.mode(sigma.sq.inits) <- "double"
     storage.mode(lambda.inits) <- "double"
     storage.mode(nu.inits) <- "double"
     storage.mode(mu.beta.comm) <- "double"
@@ -815,6 +869,8 @@ sfJSDM <- function(formula, data, inits, priors,
     storage.mode(tau.sq.beta.b) <- "double"
     storage.mode(phi.a) <- "double"
     storage.mode(phi.b) <- "double"
+    storage.mode(sigma.sq.a) <- "double"
+    storage.mode(sigma.sq.b) <- "double"
     storage.mode(nu.a) <- "double"
     storage.mode(nu.b) <- "double"
     storage.mode(tuning.c) <- "double"
@@ -855,6 +911,7 @@ sfJSDM <- function(formula, data, inits, priors,
     if (! exists(".Random.seed")) runif(1)
     init.seed <- .Random.seed
 
+
     # Fit the model -------------------------------------------------------
     out.tmp <- list()
     # Random seed information for each chain of the model. 
@@ -864,15 +921,21 @@ sfJSDM <- function(formula, data, inits, priors,
       for (i in 1:n.chains) {
         # Change initial values if i > 1
         if ((i > 1) & (!fix.inits)) {
-          beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-          tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+          if (!ind.betas) {
+            beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+	  }
           beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
                 		     sqrt(tau.sq.beta.inits)), N, p.occ)
           beta.inits <- c(beta.inits)
-          lambda.inits <- matrix(0, N, q)
-          diag(lambda.inits) <- 1
-          lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
-          lambda.inits <- c(lambda.inits)
+	  if (!shared.spatial) {
+            lambda.inits <- matrix(0, N, q)
+            diag(lambda.inits) <- 1
+            lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+            lambda.inits <- c(lambda.inits)
+	  } else {
+            sigma.sq.inits <- rep(1, 0.1, 5)
+	  }
           phi.inits <- runif(q, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(q, nu.a, nu.b)
@@ -889,9 +952,10 @@ sfJSDM <- function(formula, data, inits, priors,
         out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X.big, coords, X.re, consts, n.occ.re.long, 
           	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
           	            beta.inits, beta.comm.inits, tau.sq.beta.inits, phi.inits, 
-          	            lambda.inits, nu.inits, sigma.sq.psi.inits, beta.star.inits, w.inits,
+          	            lambda.inits, sigma.sq.inits, nu.inits, 
+			    sigma.sq.psi.inits, beta.star.inits, w.inits,
           		    beta.star.indx, beta.level.indx, mu.beta.comm, Sigma.beta.comm, 
-          	            tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b,
+          	            tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b,
           	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
           		    tuning.c, cov.model.indx, n.batch, 
           	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
@@ -904,16 +968,21 @@ sfJSDM <- function(formula, data, inits, priors,
       out$rhat <- list()
       if (n.chains > 1) {
         # as.vector removes the "Upper CI" when there is only 1 variable. 
-        if (monitors[beta.comm.monitor]) {
-          out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-          					      mcmc(t(a$beta.comm.samples)))), 
+        if (!ind.betas) {
+          if (monitors[beta.comm.monitor]) {
+            out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+            					      mcmc(t(a$beta.comm.samples)))), 
+            			     autoburnin = FALSE)$psrf[, 2])
+          }
+          if (monitors[tau.sq.beta.monitor]) {
+            out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+          					      mcmc(t(a$tau.sq.beta.samples)))), 
           			     autoburnin = FALSE)$psrf[, 2])
-        }
-        if (monitors[tau.sq.beta.monitor]) {
-          out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					      mcmc(t(a$tau.sq.beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
-        }
+          }
+	} else {
+        out$rhat$beta.comm <- rep(NA, p.occ)
+        out$rhat$tau.sq.beta <- rep(NA, p.occ)
+	}
         if (monitors[beta.monitor]) {
           out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					         mcmc(t(a$beta.samples)))), 
@@ -925,10 +994,12 @@ sfJSDM <- function(formula, data, inits, priors,
         			      autoburnin = FALSE)$psrf[, 2]
         }
         if (monitors[lambda.monitor]) {
-          lambda.mat <- matrix(lambda.inits, N, q)
-          out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-          					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
-          					       autoburnin = FALSE)$psrf[, 2])
+          if (!shared.spatial) {
+            lambda.mat <- matrix(lambda.inits, N, q)
+            out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
+            					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
+            					       autoburnin = FALSE)$psrf[, 2])
+	  }
         }
         if (p.occ.re > 0) {
           if (monitors[sigma.sq.psi.monitor]) {
@@ -941,7 +1012,11 @@ sfJSDM <- function(formula, data, inits, priors,
         out$rhat$beta.comm <- rep(NA, p.occ)
         out$rhat$tau.sq.beta <- rep(NA, p.occ)
         out$rhat$beta <- rep(NA, p.occ * N)
-        out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q, q))
+	if (shared.spatial) {
+          out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
+	} else {
+          out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 2 * q, q))
+	}
         if (p.occ.re > 0) {
           out$rhat$sigma.sq.psi <- rep(NA, p.occ.re)
         }
@@ -987,11 +1062,19 @@ sfJSDM <- function(formula, data, inits, priors,
         out$lambda.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$lambda.samples))))
         colnames(out$lambda.samples) <- loadings.names
       }
-      if (cov.model != 'matern') {
-        theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
+      if (!shared.spatial) {
+        if (cov.model != 'matern') {
+          theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
+        } else {
+          theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
+        } 
       } else {
-        theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
-      } 
+        if (cov.model == 'matern') {
+          theta.names <- c('sigma.sq', 'phi', 'nu')
+	} else {
+          theta.names <- c('sigma.sq', 'phi')
+	}
+      }
       if (monitors[theta.monitor]) {
         out$theta.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$theta.samples))))
         colnames(out$theta.samples) <- theta.names
@@ -1035,7 +1118,7 @@ sfJSDM <- function(formula, data, inits, priors,
         out$ESS$beta <- effectiveSize(out$beta.samples)
       }
       if (monitors[theta.monitor]) {
-        out$ESS$theta <- effectiveSize(out$theta.samples)
+          out$ESS$theta <- effectiveSize(out$theta.samples)
       }
       if (monitors[lambda.monitor]) {
         out$ESS$lambda <- effectiveSize(out$lambda.samples)
@@ -1114,6 +1197,7 @@ sfJSDM <- function(formula, data, inits, priors,
       out$species.means <- species.means
       out$std.by.sp <- std.by.sp
       out$range.ind <- range.ind[, order(ord)]
+      out$shared.spatial <- shared.spatial
       # Send out objects needed for updateMCMC 
       update.list <- list()
       tmp.val <- ifelse(cov.model == 'matern', q * 3, q * 2)
@@ -1174,7 +1258,11 @@ sfJSDM <- function(formula, data, inits, priors,
         X.big.fit <- X.big[-curr.set, , , drop = FALSE]
 	range.ind.fit <- range.ind[, -curr.set, drop = FALSE]
 	range.ind.0 <- range.ind[, curr.set, drop = FALSE]
-	w.inits.fit <- w.inits[, curr.set, drop = FALSE]
+	if (shared.spatial) {
+          w.inits.fit <- w.inits[-curr.set]
+	} else {
+	  w.inits.fit <- w.inits[, -curr.set, drop = FALSE]
+	}
         coords.fit <- coords[-curr.set, , drop = FALSE]
         coords.0 <- coords[curr.set, , drop = FALSE]
         J.fit <- nrow(X.fit)
@@ -1231,7 +1319,7 @@ sfJSDM <- function(formula, data, inits, priors,
         storage.mode(X.big.fit) <- "double"
 	storage.mode(range.ind.fit) <- 'double'
         storage.mode(coords.fit) <- "double"
-        consts.fit <- c(N, J.fit, p.occ, p.occ.re, n.occ.re.fit, q)
+        consts.fit <- c(N, J.fit, p.occ, p.occ.re, n.occ.re.fit, q, ind.betas, shared.spatial)
         storage.mode(consts.fit) <- "integer"	
         storage.mode(n.omp.threads.fit) <- "integer"
         storage.mode(verbose.fit) <- "integer"
@@ -1255,11 +1343,12 @@ sfJSDM <- function(formula, data, inits, priors,
         	       n.neighbors, nn.indx.fit, nn.indx.lu.fit, u.indx.fit, 
 		       u.indx.lu.fit, ui.indx.fit, beta.inits, 
         	       beta.comm.inits, tau.sq.beta.inits, phi.inits, 
-        	       lambda.inits, nu.inits, sigma.sq.psi.inits,
+        	       lambda.inits, sigma.sq.inits, nu.inits, sigma.sq.psi.inits,
 		       beta.star.inits.fit, w.inits.fit, beta.star.indx.fit, beta.level.indx.fit, 
 		       mu.beta.comm, Sigma.beta.comm,
         	       tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b,
-        	       nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+        	       sigma.sq.a, sigma.sq.b, nu.a, nu.b, 
+		       sigma.sq.psi.a, sigma.sq.psi.b, 
 		       tuning.c, cov.model.indx, n.batch, 
         	       batch.length, accept.rate, n.omp.threads.fit, 
 		       verbose.fit, n.report, 
@@ -1272,11 +1361,19 @@ sfJSDM <- function(formula, data, inits, priors,
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- coef.names
         out.fit$theta.samples <- mcmc(t(out.fit$theta.samples))
-        if (cov.model != 'matern') {
-          theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
+        if (!shared.spatial) {
+          if (cov.model != 'matern') {
+            theta.names <- paste(rep(c('phi'), each = q), 1:q, sep = '-')
+          } else {
+            theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
+          } 
         } else {
-          theta.names <- paste(rep(c('phi', 'nu'), each = q), 1:q, sep = '-')
-        } 
+          if (cov.model == 'matern') {
+            theta.names <- c('sigma.sq', 'phi', 'nu')
+          } else {
+            theta.names <- c('sigma.sq', 'phi')
+          }
+        }
         colnames(out.fit$theta.samples) <- theta.names
         loadings.names <- paste(rep(sp.names, times = n.factors), 
 				rep(1:n.factors, each = N), sep = '-')
@@ -1301,6 +1398,7 @@ sfJSDM <- function(formula, data, inits, priors,
         out.fit$species.means <- species.means
         out.fit$std.by.sp <- std.by.sp
         out.fit$range.ind <- range.ind.fit
+	out.fit$shared.spatial <- shared.spatial
         if (p.occ.re > 0) {
           out.fit$sigma.sq.psi.samples <- mcmc(t(out.fit$sigma.sq.psi.samples))
           colnames(out.fit$sigma.sq.psi.samples) <- x.re.names

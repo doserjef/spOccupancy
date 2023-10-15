@@ -2553,6 +2553,17 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     w.samples <- aperm(w.samples, c(2, 3, 1))
     beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
 
+    # Logical indicating whether fitting a shared spatial model
+    if (is(object, 'sfJSDM')) {
+      if (object$shared.spatial) {
+        shared.spatial <- TRUE
+      } else {
+        shared.spatial <- FALSE
+      }
+    } else {
+      shared.spatial <- FALSE
+    }
+
     J.str <- nrow(X.0.new)
 
     if (sp.type == 'GP') {
@@ -2582,12 +2593,13 @@ predict.sfMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.omp.threads) <- "integer"
       storage.mode(verbose) <- "integer"
       storage.mode(n.report) <- "integer"
+      storage.mode(shared.spatial) <- 'integer'
 
       out <- .Call("sfMsPGOccNNGPPredict", coords, J, N, q, p.occ, n.neighbors,
                    X.fix, coords.0.new, J.str, nn.indx.0, beta.samples,
                    theta.samples, lambda.samples, w.samples, 
           	   beta.star.sites.0.samples, n.post,
-                   cov.model.indx, n.omp.threads, verbose, n.report)
+                   cov.model.indx, n.omp.threads, verbose, n.report, shared.spatial)
 
     }
     out$z.0.samples <- array(out$z.0.samples, dim = c(N, J.str, n.post))

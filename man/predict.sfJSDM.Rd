@@ -132,8 +132,7 @@ data.list <- list(y = y,
 # Priors 
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72), 
                    tau.sq.beta.ig = list(a = 0.1, b = 0.1), 
-                   phi.unif = list(a = 3/1, b = 3/.1), 
-                   sigma.sq.ig = list(a = 2, b = 2)) 
+                   phi.unif = list(a = 3/1, b = 3/.1)) 
 # Starting values
 lambda.inits <- matrix(0, N, n.factors)
 diag(lambda.inits) <- 1

@@ -24,7 +24,7 @@ extern "C" {
 			    SEXP thetaSamples_r, SEXP lambdaSamples_r, 
 			    SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
 			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r){
+			    SEXP nReport_r, SEXP sharedSpatial_r){
 
     int i, j, k, l, s, info, nProtect=0, ll;
     const int inc = 1;
@@ -63,6 +63,7 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int sharedSpatial = INTEGER(sharedSpatial_r)[0];
     
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -81,7 +82,11 @@ extern "C" {
       Rprintf("Number of covariates %i (including intercept if specified).\n\n", pOcc);
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Using %i nearest neighbors.\n", m);
-      Rprintf("Using %i latent spatial factors.\n\n", q);
+      if (sharedSpatial == 0) {
+        Rprintf("Using %i latent spatial factors.\n\n", q);
+      } else {
+          Rprintf("Using a common spatial process across species.\n\n");
+      }
       Rprintf("Number of MCMC samples %i.\n\n", nSamples);
       Rprintf("Predicting at %i non-sampled locations.\n\n", JStr);  
 #ifdef _OPENMP
@@ -92,9 +97,10 @@ extern "C" {
     } 
     
     // parameters
-    int nTheta, phiIndx, nuIndx;
+    int nTheta, phiIndx, nuIndx, sigmaSqIndx;
 
     // NOTE: this differs from other non-factor modeling functions
+    if (sharedSpatial == 0) {
     if (corName != "matern") {
       nTheta = 1; //phi
       phiIndx = 0;
@@ -102,6 +108,16 @@ extern "C" {
 	nTheta = 2; //phi, nu
 	phiIndx = 0; nuIndx = 1;
       }
+    } else {
+      if (corName != "matern") {
+        nTheta = 2; //sigmaSq, phi
+        sigmaSqIndx = 0; phiIndx = 1;
+      } else{
+          nTheta = 3; //sigmaSq, phi, nu
+          sigmaSqIndx = 0; phiIndx = 2; nuIndx = 2;
+        }
+
+    }
    
     int nThetaq = nTheta * q; 
     // get max nu
@@ -177,7 +193,11 @@ extern "C" {
 	  if(corName == "matern"){
 	    nu = theta[s * nThetaq + nuIndx * q + ll];
 	  }
-	  sigmaSq = 1.0;
+	  if (sharedSpatial == 0) {
+	    sigmaSq = 1.0;
+	  } else {
+            sigmaSq = theta[s * nThetaq + sigmaSqIndx * q + ll];
+	  }
 
 	  for(k = 0; k < m; k++){
 	    d = dist2(coords[nnIndx0[j+JStr*k]], coords[J+nnIndx0[j+JStr*k]], coords0[j], coords0[JStr+j]);

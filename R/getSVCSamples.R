@@ -17,7 +17,8 @@ getSVCSamples <- function(object, pred.object, ...) {
   }
   if (!(class(object) %in% c('svcPGOcc', 'svcPGBinom', 
 			     'svcTPGOcc', 'svcTPGBinom', 
-			     'svcMsPGOcc', 'svcTMsPGOcc'))) {
+			     'svcMsPGOcc', 'svcTMsPGOcc', 
+			     'svcAbund', 'svcMsAbund'))) {
     stop("error: object must be of class svcPGOcc, svcPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc, svcTMsPGOcc\n")
   }
 
@@ -36,7 +37,7 @@ getSVCSamples <- function(object, pred.object, ...) {
   p.svc <- length(svc.cols)
   # Single-species models -------------------------------------------------
   if (class(object) %in% c('svcPGOcc', 'svcPGBinom', 
-			   'svcTPGOcc', 'svcTPGBinom')) {
+			   'svcTPGOcc', 'svcTPGBinom', 'svcAbund')) {
     if (!missing(pred.object)) {
       svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, which(svc.cols == a), ]))
     } else {
@@ -44,10 +45,14 @@ getSVCSamples <- function(object, pred.object, ...) {
     }
   }
   # Multi-species models --------------------------------------------------
-  if (class(object) %in% c('svcMsPGOcc', 'svcTMsPGOcc')) {
+  if (class(object) %in% c('svcMsPGOcc', 'svcTMsPGOcc', 'svcMsAbund')) {
     N <- nrow(object$y)
     if (!missing(pred.object)) {
-      J <- dim(pred.object$z.0.samples)[3]
+      if (is(object, 'svcMsAbund')) {
+        J <- dim(pred.object$y.0.samples)[3]
+      } else {
+        J <- dim(pred.object$z.0.samples)[3]
+      }
     } else {
       J <- ncol(object$y)
     }
