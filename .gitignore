@@ -30,6 +30,8 @@ vignettes/integratedMultispecies_cache
 vignettes/integratedMultispecies_files
 vignettes/svcModels_cache
 vignettes/svcModels_files
+vignettes/identifiability_cache
+vignettes/identifiability_files
 *.swp
 vignettes/modelConsiderations_cache
 vignettes/modelConsiderations_files

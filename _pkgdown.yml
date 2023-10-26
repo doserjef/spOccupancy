@@ -140,6 +140,7 @@ articles:
     - svcModels
     - integratedMultispecies
     - modelConsiderations
+    - identifiability
   - title: MCMC sampler details 
     contents:
     - mcmcSamplers 

@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
-spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;lya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. As of v0.4.0, `spOccupancy` provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting funcitons. For more information, see the resources referenced at the bottom of this page. 
+spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using P&oacute;lya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. As of v0.4.0, `spOccupancy` provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we provide a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting functions. For more information, see the resources referenced at the bottom of this page. 
 
 ## Installation
 
@@ -84,7 +84,7 @@ btbwHBEF$y <- btbwHBEF$y[sp.names == "BTBW", , ]
 
 ### Fit a spatial occupancy model using `spPGOcc()`
 
-Below we fit a single-species spatial occupancy model to the BTBW data using a Nearest Neighbor Gaussian Process. We use the default priors and initial values for the occurrence (`beta`) and regression (`alpha`) coefficients, the spatial variance (`sigma.sq`), the spatial range parameter (`phi`), the spatial random effects (`w`), and the latent occurrence values (`z`). We assume occurrence is a function of linear and quadratic elevation along with a spatial random intercept. We model detection as a function of linear and quadratic day of survey and linear time of day the survey occurred.
+Below we fit a single-species spatial occupancy model to the BTBW data using a Nearest Neighbor Gaussian Process. We use the default priors and initial values for the occurrence (`beta`) and detection (`alpha`) coefficients, the spatial variance (`sigma.sq`), the spatial range parameter (`phi`), the spatial random effects (`w`), and the latent occurrence values (`z`). We assume occurrence is a function of linear and quadratic elevation along with a spatial random intercept. We model detection as a function of linear and quadratic day of survey and linear time of day the survey occurred.
 
 ```{r}
 # Specify model formulas
@@ -92,7 +92,7 @@ btbw.occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
 btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
-We run the model using an Adaptive MCMC sampler with a target acceptance rate of 0.43. We run 3 chains of the model each for 10,000 iterations split into 400 batches each of length 25. For each chain, we discard the first 6000 iterations as burn-in and use a thinning rate of 4 for a resulting 3000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 2-fold cross-validation after fitting the full model. Run `?spPGOcc` for more detailed information on all function arguments.
+We run the model using an Adaptive MCMC sampler with a target acceptance rate of 0.43. We run 3 chains of the model each for 10,000 iterations split into 400 batches each of length 25. For each chain, we discard the first 2000 iterations as burn-in and use a thinning rate of 4 for a resulting 6000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 2-fold cross-validation after fitting the full model. Run `?spPGOcc` for more detailed information on all function arguments.
 
 ```{r}
 # Run the model

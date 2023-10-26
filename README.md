@@ -6,7 +6,7 @@
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test
-coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy?branch=main)
+coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -20,7 +20,7 @@ species distribution model framework while accounting for imperfect
 detection. As of v0.4.0, `spOccupancy` provides functions for
 multi-season (i.e., spatio-temporal) single-species occupancy models.
 Below we provide a very brief introduction to some of the package’s
-functionality, and illustrate just one of the model fitting funcitons.
+functionality, and illustrate just one of the model fitting functions.
 For more information, see the resources referenced at the bottom of this
 page.
 
@@ -94,7 +94,7 @@ btbwHBEF$y <- btbwHBEF$y[sp.names == "BTBW", , ]
 
 Below we fit a single-species spatial occupancy model to the BTBW data
 using a Nearest Neighbor Gaussian Process. We use the default priors and
-initial values for the occurrence (`beta`) and regression (`alpha`)
+initial values for the occurrence (`beta`) and detection (`alpha`)
 coefficients, the spatial variance (`sigma.sq`), the spatial range
 parameter (`phi`), the spatial random effects (`w`), and the latent
 occurrence values (`z`). We assume occurrence is a function of linear
@@ -111,8 +111,8 @@ btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 We run the model using an Adaptive MCMC sampler with a target acceptance
 rate of 0.43. We run 3 chains of the model each for 10,000 iterations
 split into 400 batches each of length 25. For each chain, we discard the
-first 6000 iterations as burn-in and use a thinning rate of 4 for a
-resulting 3000 samples from the joint posterior. We fit the model using
+first 2000 iterations as burn-in and use a thinning rate of 4 for a
+resulting 6000 samples from the joint posterior. We fit the model using
 5 nearest neighbors and an exponential correlation function. We also
 specify the `k.fold` argument to perform 2-fold cross-validation after
 fitting the full model. Run `?spPGOcc` for more detailed information on
@@ -147,7 +147,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.4166
+#> Run Time (min): 1.9149
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
