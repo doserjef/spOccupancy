@@ -824,6 +824,18 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     sigma.sq.t.a <- rep(1, N)
     sigma.sq.t.b <- rep(1, N)
   }
+  # lambda ----------------------------------------------------------------
+  if ("lambda.var" %in% names(priors)) {
+    if (!is.atomic(priors$lambda.var) | length(priors$lambda.var) != p.svc) {
+      stop(paste0("lambda.var must be a vector of length ", p.svc)) 
+    }
+    var.lambda <- priors$lambda.var
+  } else {
+    var.lambda <- rep(1, p.svc)
+    if (verbose) {
+     message("Using standard normal priors for factor loadings.\n")
+    }
+  }
 
   # Initial values --------------------------------------------------------
   if (missing(inits)) {
@@ -1371,6 +1383,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(phi.priors) <- 'double'
     nu.priors <- c(nu.a, nu.b)
     storage.mode(nu.priors) <- 'double'
+    storage.mode(var.lambda) <- 'double'
     storage.mode(tuning.c) <- "double"
     storage.mode(n.batch) <- "integer"
     storage.mode(batch.length) <- "integer"
@@ -1436,21 +1449,22 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
               		      sqrt(tau.sq.alpha.inits)), N, p.det)
         alpha.inits <- c(alpha.inits)
-        lambda.inits <- list()
-        for (j in 1:p.svc) {
-          lambda.inits[[j]] <- matrix(0, N, q)
-          diag(lambda.inits[[j]]) <- 1
-          lambda.inits[[j]][lower.tri(lambda.inits[[j]])] <- rnorm(sum(lower.tri(lambda.inits[[j]])))
-        }
-        # Fix certain values in lambda to 0 if specified in svc.by.sp
-        for (j in 1:p.svc) {
-          for (l in 1:N) {
-            if (!svc.by.sp.list[[j]][l]) {
-              lambda.inits[[j]][l, ] <- 0
-            }
-          }
-        }
-        lambda.inits <- unlist(lambda.inits)
+	# TODO: 
+        # lambda.inits <- list()
+        # for (j in 1:p.svc) {
+        #   lambda.inits[[j]] <- matrix(0, N, q)
+        #   diag(lambda.inits[[j]]) <- 1
+        #   lambda.inits[[j]][lower.tri(lambda.inits[[j]])] <- rnorm(sum(lower.tri(lambda.inits[[j]])))
+        # }
+        # # Fix certain values in lambda to 0 if specified in svc.by.sp
+        # for (j in 1:p.svc) {
+        #   for (l in 1:N) {
+        #     if (!svc.by.sp.list[[j]][l]) {
+        #       lambda.inits[[j]][l, ] <- 0
+        #     }
+        #   }
+        # }
+        # lambda.inits <- unlist(lambda.inits)
         phi.inits <- runif(q.p.svc, phi.a, phi.b)
         if (cov.model == 'matern') {
           nu.inits <- runif(q.p.svc, nu.a, nu.b)
@@ -1495,7 +1509,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         		    sigma.sq.p.a, sigma.sq.p.b, 
         		    tuning.c, cov.model.indx, n.batch, 
         	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-        	            samples.info, chain.info, ar1.vals, svc.by.sp)
+        	            samples.info, chain.info, ar1.vals, svc.by.sp, var.lambda)
       chain.info[1] <- chain.info[1] + 1
     }
     # Calculate R-Hat ---------------

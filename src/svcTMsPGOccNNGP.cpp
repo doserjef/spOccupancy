@@ -81,7 +81,8 @@ extern "C" {
 		      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		      SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r){
+		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r, 
+		      SEXP varLambda_r){
    
     /**********************************************************************
      * Initial constants
@@ -190,6 +191,7 @@ extern "C" {
     int thinIndx = 0; 
     int sPost = 0; 
     int *svcBySp = INTEGER(svcBySp_r);
+    double *varLambda = REAL(varLambda_r);
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -1391,9 +1393,9 @@ extern "C" {
 	        } // j
               } // k
 
-	      // Add 1
+	      // Add varLambda
 	      for (ll = 0; ll < currDim; ll++) {
-                tmp_qq2[ll * currDim + ll] += 1.0;  
+                tmp_qq2[ll * currDim + ll] += 1.0 / varLambda[rr];  
               } // ll
 
               F77_NAME(dpotrf)(lower, &currDim, tmp_qq2, &currDim, &info FCONE); 

@@ -484,7 +484,8 @@ extern "C" {
 		      SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
 		      SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, SEXP batchLength_r, 
 		      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r);
+		      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP ar1Vals_r, SEXP svcBySp_r, 
+		      SEXP varLambda_r);
 
   SEXP svcTMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r, SEXP N_r, SEXP q_r,
 		              SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, 
