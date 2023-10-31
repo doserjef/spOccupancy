@@ -1,3 +1,11 @@
+# spOccupancy 0.7.2
+
++ Added in functionality for using the `plot()` function to generate simple traceplots using `spOccupancy` model objects. Details can be found in the help page (e.g., for `spPGOcc` models, type `?plot.spPGOcc` in the console).  
++ Not an update to the package, but a [new vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/identifiability) has been posted on testing model identifiability using `spOccupancy`. Thanks to Sara Stoudt for writing this!
++ Added in the ability to fit `lfJSDM()` without residual species correlations by setting `n.factors = 0`. This is a model analogous to `msPGOcc()`, but without the detection component. 
++ Added in the `shared.spatial` argument to `sfJSDM()`. If set to `TRUE`, this argument estimates a common spatial process for all species instead of using the default spatial factor modeling approach. 
++ Fixed a bug in `predict.svcTMsPGOcc()` when same variable was used for a fixed and random effect (e.g., if including a linear year trend and also an unstructured random intercept for year). Thanks to Liam Kendall for pointing this out.  
+
 # spOccupancy 0.7.1
 
 + Small changes in C++ code to pass CRAN additional issues
