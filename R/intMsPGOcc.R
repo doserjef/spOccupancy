@@ -950,22 +950,22 @@ intMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         # as.vector removes the "Upper CI" when there is only 1 variable. 
         out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$beta.comm.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$alpha.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.comm.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$tau.sq.beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$tau.sq.alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$tau.sq.alpha.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					         mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2])
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         if (p.occ.re > 0) {
           out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.psi.samples)))), 
