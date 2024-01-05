@@ -115,7 +115,6 @@ stMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # Reorder everything to align with NN ordering
     y <- y[, long.ord, , , drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
-    range.ind <- range.ind[, long.ord, drop = FALSE]
     # Occupancy covariates
     for (i in 1:length(data$occ.covs)) {
       if (!is.null(dim(data$occ.covs[[i]]))) { # Time/space varying
