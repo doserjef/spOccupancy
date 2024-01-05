@@ -5200,7 +5200,8 @@ fitted.stMsPGOcc <- function(object, ...) {
 predict.stMsPGOcc <- function(object, X.0, coords.0, 
                               t.cols, n.omp.threads = 1,
                               verbose = TRUE, n.report = 100,
-                              ignore.RE = FALSE, type = 'occupancy', ...) {
+                              ignore.RE = FALSE, type = 'occupancy', 
+			      grid.index.0, ...) {
   object$std.by.sp <- FALSE
   object$species.sds <- NA
   object$species.means <- NA
@@ -5212,7 +5213,7 @@ predict.stMsPGOcc <- function(object, X.0, coords.0,
   object$X.w <- object$X[, , 1, drop = FALSE]
   out <- predict.svcTMsPGOcc(object, X.0, coords.0, 
 			     t.cols, n.omp.threads, verbose, n.report,
-			     ignore.RE, type)
+			     ignore.RE, type, grid.index.0)
   out$w.0.samples <- out$w.0.samples[, , , 1]
   return(out)
 }

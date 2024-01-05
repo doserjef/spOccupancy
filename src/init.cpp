@@ -38,7 +38,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"svcMsPGOccNNGPPredict", (DL_FUNC) &svcMsPGOccNNGPPredict, 22},
     {"svcTMsPGOccNNGP", (DL_FUNC) &svcTMsPGOccNNGP, 63},
     {"svcTMsPGOccNNGPPredict", (DL_FUNC) &svcTMsPGOccNNGPPredict, 26},
-    {"stMsPGOccNNGP", (DL_FUNC) &svcTMsPGOccNNGP, 58},
+    {"stMsPGOccNNGP", (DL_FUNC) &svcTMsPGOccNNGP, 59},
     {NULL, NULL, 0}
 };
 

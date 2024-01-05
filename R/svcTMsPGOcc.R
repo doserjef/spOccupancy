@@ -1543,7 +1543,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2], 
 			  gelman.diag(mcmc.list(lapply(out.tmp, function(a)
 						       mcmc(t(a$ar1.theta.samples)))), 
-				      autuburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+				      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       } else {
         out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
