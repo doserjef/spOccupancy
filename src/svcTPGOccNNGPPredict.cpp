@@ -26,7 +26,8 @@ extern "C" {
 			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
                             SEXP sitesLink_r, SEXP sites0Sampled_r, 
 			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-			    SEXP verbose_r, SEXP nReport_r){
+			    SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
+			    SEXP gridIndx0_r){
 
     int i, j, k, l, ll, s, t, info, nProtect=0;
     const int inc = 1;
@@ -39,6 +40,8 @@ extern "C" {
     int nYears = INTEGER(nYearsMax_r)[0];
     int pOcc = INTEGER(pOcc_r)[0];
     int pTilde = INTEGER(pTilde_r)[0];
+    int Jw0 = INTEGER(Jw0_r)[0];
+    int Jw = INTEGER(Jw_r)[0];
 
     double *X0 = REAL(X0_r);
     double *Xw0 = REAL(Xw0_r);
@@ -48,10 +51,11 @@ extern "C" {
     int m = INTEGER(m_r)[0]; 
     int mm = m * m; 
     int qnYears = q * nYears;
-    int JpTilde = J * pTilde;
-    int qpTilde = q * pTilde;
+    int JwpTilde = Jw * pTilde;
+    int Jw0pTilde = Jw0 * pTilde;
     int *sitesLink = INTEGER(sitesLink_r);
     int *sites0Sampled = INTEGER(sites0Sampled_r);
+    int *gridIndx0 = INTEGER(gridIndx0_r);
 
     int *nnIndx0 = INTEGER(nnIndx0_r);        
     double *beta = REAL(betaSamples_r);
@@ -143,11 +147,11 @@ extern "C" {
     SEXP z0_r, w0_r, psi0_r;
     PROTECT(z0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
     PROTECT(psi0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
-    PROTECT(w0_r = allocMatrix(REALSXP, qpTilde, nSamples)); nProtect++;
+    PROTECT(w0_r = allocMatrix(REALSXP, Jw0pTilde, nSamples)); nProtect++;
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
-    zeros(w0, qpTilde * nSamples);
+    zeros(w0, Jw0pTilde * nSamples);
     double wSites = 0.0; 
  
     if (verbose) {
@@ -160,15 +164,15 @@ extern "C" {
     }
 
     int vIndx = -1;
-    double *wV = (double *) R_alloc(qpTilde*nSamples, sizeof(double));
+    double *wV = (double *) R_alloc(Jw0pTilde*nSamples, sizeof(double));
 
     GetRNGstate();
     
-    for(i = 0; i < qpTilde*nSamples; i++){
+    for(i = 0; i < Jw0pTilde*nSamples; i++){
       wV[i] = rnorm(0.0,1.0);
     }
     
-    for(j = 0; j < q; j++){
+    for(j = 0; j < Jw0; j++){
       for (ll = 0; ll < pTilde; ll++) {
 #ifdef _OPENMP
 #pragma omp parallel for private(threadID, phi, nu, sigmaSq, k, l, d, info)
@@ -178,7 +182,7 @@ extern "C" {
 	  threadID = omp_get_thread_num();
 #endif 	
           if (sites0Sampled[j] == 1) {
-            w0[s * qpTilde + j * pTilde + ll] = w[s * JpTilde + sitesLink[j] * pTilde + ll];
+            w0[s * Jw0pTilde + j * pTilde + ll] = w[s * JwpTilde + sitesLink[j] * pTilde + ll];
 	  } else { 
 	    phi = theta[s * nThetapTilde + phiIndx * pTilde + ll];
 	    if(corName == "matern"){
@@ -188,10 +192,10 @@ extern "C" {
 	    // sigmaSq = 1.0;
 
 	    for(k = 0; k < m; k++){
-	      d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords0[j], coords0[q+j]);
+	      d = dist2(coords[nnIndx0[j+Jw0*k]], coords[Jw+nnIndx0[j+Jw0*k]], coords0[j], coords0[Jw0+j]);
 	      c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
 	      for(l = 0; l < m; l++){
-	        d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords[nnIndx0[j+q*l]], coords[J+nnIndx0[j+q*l]]);
+	        d = dist2(coords[nnIndx0[j+Jw0*k]], coords[Jw+nnIndx0[j+Jw0*k]], coords[nnIndx0[j+Jw0*l]], coords[Jw+nnIndx0[j+Jw0*l]]);
 	        C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[ll]]);
 	      }
 	    }
@@ -205,7 +209,7 @@ extern "C" {
 
 	    d = 0;
 	    for(k = 0; k < m; k++){
-	      d += tmp_m[threadID*m+k]*w[s*JpTilde+nnIndx0[j+q*k] * pTilde + ll];
+	      d += tmp_m[threadID*m+k]*w[s*JwpTilde+nnIndx0[j+Jw0*k] * pTilde + ll];
 	    }
 
 	    #ifdef _OPENMP
@@ -213,7 +217,7 @@ extern "C" {
             #endif   
 	    vIndx++;
 
-	    w0[s * qpTilde + j * pTilde + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
+	    w0[s * Jw0pTilde + j * pTilde + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 	  }
 
         } // sample
@@ -221,7 +225,7 @@ extern "C" {
       
       if(verbose){
 	if(status == nReport){
-	  Rprintf("Location: %i of %i, %3.2f%%\n", j, q, 100.0*j/q);
+	  Rprintf("Location: %i of %i, %3.2f%%\n", j, Jw0, 100.0*j/Jw0);
           #ifdef Win32
 	  R_FlushConsole();
           #endif
@@ -233,7 +237,7 @@ extern "C" {
     }
     
     if(verbose){
-      Rprintf("Location: %i of %i, %3.2f%%\n", j, q, 100.0*j/q);
+      Rprintf("Location: %i of %i, %3.2f%%\n", j, Jw0, 100.0*j/Jw0);
       #ifdef Win32
       R_FlushConsole();
       #endif
@@ -247,7 +251,7 @@ extern "C" {
       for(s = 0; s < nSamples; s++){
         for (t = 0; t < nYears; t++) {
           wSites = F77_NAME(ddot)(&pTilde, &Xw0[t * q + i], &qnYears, 
-        		          &w0[s * qpTilde + i * pTilde], &inc);
+        		          &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
           psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
           z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
         } // s

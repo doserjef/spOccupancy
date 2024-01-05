@@ -24,7 +24,8 @@ extern "C" {
 			  SEXP thetaSamples_r, SEXP wSamples_r, 
 			  SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
 			  SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			  SEXP nReport_r){
+			  SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r, SEXP gridIndx0_r, 
+			  SEXP sitesLink_r, SEXP sites0Sampled_r){
 
     int i, k, l, s, info, nProtect=0;
     const int inc = 1;
@@ -35,6 +36,8 @@ extern "C" {
     double *coords = REAL(coords_r);
     int J = INTEGER(J_r)[0];
     int pOcc = INTEGER(pOcc_r)[0];
+    int Jw0 = INTEGER(Jw0_r)[0];
+    int Jw = INTEGER(Jw_r)[0];
 
     double *X0 = REAL(X0_r);
     double *coords0 = REAL(coords0_r);
@@ -47,6 +50,9 @@ extern "C" {
     double *theta = REAL(thetaSamples_r);
     double *w = REAL(wSamples_r);
     double *betaStarSite = REAL(betaStarSiteSamples_r);
+    int *gridIndx0 = INTEGER(gridIndx0_r);
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -73,7 +79,7 @@ extern "C" {
       Rprintf("Using the %s spatial correlation model.\n\n", corName.c_str());
       Rprintf("Using %i nearest neighbors.\n\n", m);
       Rprintf("Number of MCMC samples %i.\n\n", nSamples);
-      Rprintf("Predicting at %i non-sampled locations.\n\n", q);  
+      Rprintf("Predicting at %i locations.\n\n", q);  
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i threads.\n", nThreads);
 #else
@@ -117,7 +123,7 @@ extern "C" {
     SEXP z0_r, w0_r, psi0_r;
     PROTECT(z0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++; 
     PROTECT(psi0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++; 
-    PROTECT(w0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++;
+    PROTECT(w0_r = allocMatrix(REALSXP, Jw0, nSamples)); nProtect++;
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
@@ -132,15 +138,15 @@ extern "C" {
     }
 
     int vIndx = -1;
-    double *wV = (double *) R_alloc(q*nSamples, sizeof(double));
+    double *wV = (double *) R_alloc(Jw0*nSamples, sizeof(double));
 
     GetRNGstate();
     
-    for(i = 0; i < q*nSamples; i++){
+    for(i = 0; i < Jw0*nSamples; i++){
       wV[i] = rnorm(0.0,1.0);
     }
     
-    for(i = 0; i < q; i++){
+    for(i = 0; i < Jw0; i++){
 #ifdef _OPENMP
 #pragma omp parallel for private(threadID, phi, nu, sigmaSq, k, l, d, info)
 #endif     
@@ -148,46 +154,48 @@ extern "C" {
 #ifdef _OPENMP
 	threadID = omp_get_thread_num();
 #endif 	
-	phi = theta[s*nTheta+phiIndx];
-	if(corName == "matern"){
-	  nu = theta[s*nTheta+nuIndx];
-	}
-	sigmaSq = theta[s*nTheta+sigmaSqIndx];
-
-	for(k = 0; k < m; k++){
-	  d = dist2(coords[nnIndx0[i+q*k]], coords[J+nnIndx0[i+q*k]], coords0[i], coords0[q+i]);
-	  c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
-	  for(l = 0; l < m; l++){
-	    d = dist2(coords[nnIndx0[i+q*k]], coords[J+nnIndx0[i+q*k]], coords[nnIndx0[i+q*l]], coords[J+nnIndx0[i+q*l]]);
-	    C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
+	if (sites0Sampled[i] == 1) {
+          w0[s * Jw0 + i] = w[s * Jw + sitesLink[i]];
+	} else {
+	  phi = theta[s*nTheta+phiIndx];
+	  if(corName == "matern"){
+	    nu = theta[s*nTheta+nuIndx];
 	  }
+	  sigmaSq = theta[s*nTheta+sigmaSqIndx];
+
+	  for(k = 0; k < m; k++){
+	    d = dist2(coords[nnIndx0[i+Jw0*k]], coords[Jw+nnIndx0[i+Jw0*k]], coords0[i], coords0[Jw0+i]);
+	    c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
+	    for(l = 0; l < m; l++){
+	      d = dist2(coords[nnIndx0[i+Jw0*k]], coords[Jw+nnIndx0[i+Jw0*k]], coords[nnIndx0[i+Jw0*l]], coords[Jw+nnIndx0[i+Jw0*l]]);
+	      C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
+	    }
+	  }
+
+	  F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	  if(info != 0){error("c++ error: dpotrf failed\n");}
+	  F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	  if(info != 0){error("c++ error: dpotri failed\n");}
+
+	  F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
+
+	  d = 0;
+	  for(k = 0; k < m; k++){
+	    d += tmp_m[threadID*m+k]*w[s*Jw+nnIndx0[i+Jw0*k]];
+	  }
+
+	  #ifdef _OPENMP
+          #pragma omp atomic
+          #endif   
+	  vIndx++;
+	  
+	  w0[s*Jw0+i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 	}
-
-	F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	if(info != 0){error("c++ error: dpotrf failed\n");}
-	F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	if(info != 0){error("c++ error: dpotri failed\n");}
-
-	F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
-
-	d = 0;
-	for(k = 0; k < m; k++){
-	  d += tmp_m[threadID*m+k]*w[s*J+nnIndx0[i+q*k]];
-	}
-
-	#ifdef _OPENMP
-        #pragma omp atomic
-        #endif   
-	vIndx++;
-	
-	w0[s*q+i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
-
-	psi0[s*q+i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[i], &q, &beta[s*pOcc], &inc) + w0[s*q+i] + betaStarSite[s * q + i], zero, one);
       }
       
       if(verbose){
 	if(status == nReport){
-	  Rprintf("Location: %i of %i, %3.2f%%\n", i, q, 100.0*i/q);
+	  Rprintf("Location: %i of %i, %3.2f%%\n", i, Jw0, 100.0*i/Jw0);
           #ifdef Win32
 	  R_FlushConsole();
           #endif
@@ -199,7 +207,7 @@ extern "C" {
     }
     
     if(verbose){
-      Rprintf("Location: %i of %i, %3.2f%%\n", i, q, 100.0*i/q);
+      Rprintf("Location: %i of %i, %3.2f%%\n", i, Jw0, 100.0*i/Jw0);
       #ifdef Win32
       R_FlushConsole();
       #endif
@@ -212,6 +220,7 @@ extern "C" {
     }
     for(i = 0; i < q; i++){
       for(s = 0; s < nSamples; s++){
+	psi0[s * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[i], &q, &beta[s * pOcc], &inc) + w0[s * Jw0 + gridIndx0[i]] + betaStarSite[s * q + i], zero, one);
         z0[s * q + i] = rbinom(one, psi0[s * q + i]);
       } // s
     } // i

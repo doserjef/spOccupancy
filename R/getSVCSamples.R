@@ -51,10 +51,10 @@ getSVCSamples <- function(object, pred.object, ...) {
       if (is(object, 'svcMsAbund')) {
         J <- dim(pred.object$y.0.samples)[3]
       } else {
-        J <- dim(pred.object$z.0.samples)[3]
+        J <- dim(pred.object$w.0.samples)[3]
       }
     } else {
-      J <- ncol(object$y)
+      J <- dim(object$w.samples)[3]
     }
     q <- object$q
     svc.samples <- list()

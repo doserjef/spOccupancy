@@ -1,3 +1,7 @@
+# spOccupancy 0.7.3
+
++ Fixed a few typos in the MCMC sampler vignettes for factor models and SVC models.
+
 # spOccupancy 0.7.2
 
 + Added in functionality for using the `plot()` function to generate simple traceplots using `spOccupancy` model objects. Details can be found in the help page (e.g., for `spPGOcc` models, type `?plot.spPGOcc` in the console).  

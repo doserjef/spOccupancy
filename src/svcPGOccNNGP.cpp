@@ -78,7 +78,7 @@ extern "C" {
 	            SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	            SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	            SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r, 
-		    SEXP fixedParams_r, SEXP sigmaSqIG_r){
+		    SEXP fixedParams_r, SEXP sigmaSqIG_r, SEXP gridIndx_r){
    
     /**********************************************************************
      * Initial constants
@@ -114,10 +114,11 @@ extern "C" {
     int pDetRE = INTEGER(consts_r)[6];
     int nDetRE = INTEGER(consts_r)[7];
     int pTilde = INTEGER(consts_r)[8];
+    int Jw = INTEGER(consts_r)[9];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc; 
     int ppTilde = pTilde * pTilde;
-    int JpTilde = J * pTilde;
+    int JwpTilde = Jw * pTilde;
     // Priors
     double *muBeta = (double *) R_alloc(pOcc, sizeof(double));   
     F77_NAME(dcopy)(&pOcc, REAL(muBeta_r), &inc, muBeta, &inc);
@@ -170,6 +171,7 @@ extern "C" {
     int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
+    int *gridIndx = INTEGER(gridIndx_r);
 
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -233,8 +235,8 @@ extern "C" {
     double *alphaStar = (double *) R_alloc(nDetRE, sizeof(double)); 
     F77_NAME(dcopy)(&nDetRE, REAL(alphaStarStarting_r), &inc, alphaStar, &inc); 
     // Spatial processes
-    double *w = (double *) R_alloc(JpTilde, sizeof(double));   
-    F77_NAME(dcopy)(&JpTilde, REAL(wStarting_r), &inc, w, &inc);
+    double *w = (double *) R_alloc(JwpTilde, sizeof(double));   
+    F77_NAME(dcopy)(&JwpTilde, REAL(wStarting_r), &inc, w, &inc);
     // Spatial variance
     double *sigmaSq = (double *) R_alloc(pTilde, sizeof(double)); 
     F77_NAME(dcopy)(&pTilde, REAL(sigmaSqStarting_r), &inc, sigmaSq, &inc); 
@@ -266,8 +268,8 @@ extern "C" {
     PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     zeros(REAL(zSamples_r), J * nPost);
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, JpTilde, nPost)); nProtect++; 
-    zeros(REAL(wSamples_r), JpTilde * nPost);
+    PROTECT(wSamples_r = allocMatrix(REALSXP, JwpTilde, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), JwpTilde * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
     zeros(REAL(psiSamples_r), J * nPost);
@@ -430,14 +432,14 @@ extern "C" {
     } // i
     // Allocate for the U index vector that keep track of which locations have 
     // the i-th location as a neighbor
-    int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(J-m-1)*m);
+    int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(Jw-m-1)*m);
 
     // For NNGP
     int mm = m*m;
     double *B = (double *) R_alloc(nIndx * pTilde, sizeof(double));
-    double *F = (double *) R_alloc(J * pTilde, sizeof(double));
+    double *F = (double *) R_alloc(Jw * pTilde, sizeof(double));
     double *BCand = (double *) R_alloc(nIndx, sizeof(double));
-    double *FCand = (double *) R_alloc(J, sizeof(double));
+    double *FCand = (double *) R_alloc(Jw, sizeof(double));
     double *c =(double *) R_alloc(m*nThreads * pTilde, sizeof(double));
     double *C = (double *) R_alloc(mm*nThreads * pTilde, sizeof(double));
     int sizeBK = nThreads*(1.0+static_cast<int>(floor(nuB[0])));
@@ -445,7 +447,7 @@ extern "C" {
 
     // Initiate B and F for each SVC
     for (i = 0; i < pTilde; i++) {
-    updateBFSVC(&B[i * nIndx], &F[i*J], &c[i * m*nThreads], &C[i * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx * pTilde + i], theta[phiIndx * pTilde + i], nu[i], covModel, &bk[i * sizeBK], nuB[i]);
+    updateBFSVC(&B[i * nIndx], &F[i*Jw], &c[i * m*nThreads], &C[i * mm * nThreads], coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx * pTilde + i], theta[phiIndx * pTilde + i], nu[i], covModel, &bk[i * sizeBK], nuB[i]);
     }
     // Spatial process sums for each site
     double *wSites = (double *) R_alloc(J, sizeof(double));
@@ -453,7 +455,7 @@ extern "C" {
     for (j = 0; j < J; j++) {
       wSites[j] = 0.0;
       for (ll = 0; ll < pTilde; ll++) {
-        wSites[j] += w[j * pTilde + ll] * Xw[ll * J + j];
+        wSites[j] += w[gridIndx[j] * pTilde + ll] * Xw[ll * J + j];
       }
     }
 
@@ -689,46 +691,54 @@ extern "C" {
 	//       	&bk[ll * sizeBK], nuB[ll]);
         // }
 
-	for (ii = 0; ii < J; ii++) {
+	for (ii = 0; ii < Jw; ii++) {
 
           for (ll = 0; ll < pTilde; ll++) { // row
-            // tmp_pTilde = X_tilde' %*% omega_beta  
-            tmp_pTilde[ll] = Xw[ll * J + ii] * omegaOcc[ii];
-	    // Compute tmp_pTilde %*% t(Xw)
-	    for (k = 0; k < pTilde; k++) { // column
-              tmp_ppTilde[ll * pTilde + k] = tmp_pTilde[ll] * 
-		                             Xw[k * J + ii];
-	    } // k
 
             a[ll] = 0; 
 	    v[ll] = 0; 
 
-	    if (uIndxLU[J + ii] > 0){ // is ii a neighbor for anybody
-	      for (j = 0; j < uIndxLU[J+ii]; j++){ // how many locations have ii as a neighbor
+	    if (uIndxLU[Jw + ii] > 0){ // is ii a neighbor for anybody
+	      for (j = 0; j < uIndxLU[Jw+ii]; j++){ // how many locations have ii as a neighbor
 	        b = 0;
 	        // now the neighbors for the jth location who has ii as a neighbor
 	        jj = uIndx[uIndxLU[ii]+j]; // jj is the index of the jth location who has ii as a neighbor
-	        for(k = 0; k < nnIndxLU[J+jj]; k++){ // these are the neighbors of the jjth location
+	        for(k = 0; k < nnIndxLU[Jw+jj]; k++){ // these are the neighbors of the jjth location
 	          kk = nnIndx[nnIndxLU[jj]+k]; // kk is the index for the jth locations neighbors
 	          if(kk != ii){ //if the neighbor of jj is not ii
 	    	    b += B[ll*nIndx + nnIndxLU[jj]+k]*w[kk * pTilde + ll]; //covariance between jj and kk and the random effect of kk
 	          }
 	        } // k
 	        aij = w[jj * pTilde + ll] - b;
-	        a[ll] += B[ll*nIndx + nnIndxLU[jj]+uiIndx[uIndxLU[ii]+j]]*aij/F[ll*J + jj];
-	        v[ll] += pow(B[ll * nIndx + nnIndxLU[jj]+uiIndx[uIndxLU[ii]+j]],2)/F[ll * J + jj];
+	        a[ll] += B[ll*nIndx + nnIndxLU[jj]+uiIndx[uIndxLU[ii]+j]]*aij/F[ll*Jw + jj];
+	        v[ll] += pow(B[ll * nIndx + nnIndxLU[jj]+uiIndx[uIndxLU[ii]+j]],2)/F[ll * Jw + jj];
 	      } // j
 	    }
 	    
 	    e = 0;
-	    for(j = 0; j < nnIndxLU[J+ii]; j++){
+	    for(j = 0; j < nnIndxLU[Jw+ii]; j++){
 	      e += B[ll * nIndx + nnIndxLU[ii]+j]*w[nnIndx[nnIndxLU[ii]+j] * pTilde + ll];
 	    }
 
-	    ff[ll] = 1.0 / F[ll * J + ii];
-	    gg[ll] = e / F[ll * J + ii];
+	    ff[ll] = 1.0 / F[ll * Jw + ii];
+	    gg[ll] = e / F[ll * Jw + ii];
 	  } // ll
-
+            
+	  zeros(tmp_pTilde, pTilde);
+	  zeros(tmp_ppTilde, ppTilde);
+	  for (j = 0; j < J; j++) {
+            if (gridIndx[j] == ii) {
+              for (ll = 0; ll < pTilde; ll++) {
+                // tmp_pTilde = X_tilde' %*% omega_beta  
+                tmp_pTilde[ll] = Xw[ll * J + j] * omegaOcc[j];
+	        // Compute tmp_pTilde %*% t(Xw)
+	        for (k = 0; k < pTilde; k++) { // column
+                  tmp_ppTilde[ll * pTilde + k] += tmp_pTilde[ll] * 
+	                                         Xw[k * J + j];
+	        } // k
+	      }
+	    }
+	  }
 	  // var
 	  F77_NAME(dcopy)(&ppTilde, tmp_ppTilde, &inc, var, &inc);
 	  for (k = 0; k < pTilde; k++) {
@@ -740,17 +750,23 @@ extern "C" {
           if(info != 0){error("c++ error: dpotri var failed\n");}
 
 	  // mu
+	  zeros(mu, pTilde);
+	  for (j = 0; j < J; j++) {
+            if (gridIndx[j] == ii) {
+	      for (k = 0; k < pTilde; k++) {
+                mu[k] += (zStar[j] - F77_NAME(ddot)(&pOcc, &X[j], &J, beta, &inc) - betaStarSites[j]) * omegaOcc[j] * Xw[k * J + j];
+              } // k
+	    }
+	  }
 	  for (k = 0; k < pTilde; k++) {
-            mu[k] = (zStar[ii] - F77_NAME(ddot)(&pOcc, &X[ii], &J, beta, &inc) - betaStarSites[ii]) * omegaOcc[ii] * Xw[k * J + ii] + gg[k] + a[k];
-          } // k
-
+            mu[k] += gg[k] + a[k];
+	  }
 	  F77_NAME(dsymv)(lower, &pTilde, &one, var, &pTilde, mu, &inc, &zero, tmp_pTilde, &inc FCONE);
 
 	  F77_NAME(dpotrf)(lower, &pTilde, var, &pTilde, &info FCONE); 
           if(info != 0){error("c++ error: dpotrf var 2 failed\n");}
 
 	  mvrnorm(&w[ii * pTilde], tmp_pTilde, var, pTilde);
-
         } // ii
 	
 
@@ -759,10 +775,8 @@ extern "C" {
 	for (j = 0; j < J; j++) {
           wSites[j] = 0.0;
 	  for (ll = 0; ll < pTilde; ll++) {
-            wSites[j] += w[j * pTilde + ll] * Xw[ll * J + j];
-	    // Rprintf("w[%i]: %f\n", j * pTilde + ll, w[j * pTilde + ll]);
+            wSites[j] += w[gridIndx[j] * pTilde + ll] * Xw[ll * J + j];
 	  }
-	  // Rprintf("wSites[%i]: %f\n", j, wSites[j]);
 	}
 
         /********************************************************************
@@ -778,20 +792,20 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, i, b) reduction(+:aa, logDet)
 #endif
-              for (j = 0; j < J; j++){
-                if(nnIndxLU[J+j] > 0){
+              for (j = 0; j < Jw; j++){
+                if(nnIndxLU[Jw+j] > 0){
                   e = 0;
-                  for(i = 0; i < nnIndxLU[J+j]; i++){
+                  for(i = 0; i < nnIndxLU[Jw+j]; i++){
                     e += B[ll * nIndx + nnIndxLU[j]+i]*w[nnIndx[nnIndxLU[j]+i] * pTilde + ll];
                   }
                   b = w[j * pTilde + ll] - e;
                 }else{
                   b = w[j * pTilde + ll];
                 }	
-                aa += b*b/F[ll * J + j];
+                aa += b*b/F[ll * Jw + j];
               }
 
-	      theta[sigmaSqIndx * pTilde + ll] = rigamma(sigmaSqA[ll] + J / 2.0, sigmaSqB[ll] + 0.5 * aa * theta[sigmaSqIndx * pTilde + ll]); 
+	      theta[sigmaSqIndx * pTilde + ll] = rigamma(sigmaSqA[ll] + Jw / 2.0, sigmaSqB[ll] + 0.5 * aa * theta[sigmaSqIndx * pTilde + ll]); 
 	    }
 	  }
       
@@ -803,7 +817,7 @@ extern "C" {
             if (corName == "matern"){ 
 	      nu[ll] = theta[nuIndx * pTilde + ll];
        	    }
-            updateBFSVC(&B[ll * nIndx], &F[ll*J], &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx * pTilde + ll], theta[phiIndx * pTilde + ll], nu[ll], covModel, &bk[ll * sizeBK], nuB[ll]);
+            updateBFSVC(&B[ll * nIndx], &F[ll*Jw], &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx * pTilde + ll], theta[phiIndx * pTilde + ll], nu[ll], covModel, &bk[ll * sizeBK], nuB[ll]);
 	  }
           aa = 0;
           logDet = 0;
@@ -812,18 +826,18 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:aa, logDet)
 #endif
-            for (j = 0; j < J; j++){
-              if (nnIndxLU[J+j] > 0){
+            for (j = 0; j < Jw; j++){
+              if (nnIndxLU[Jw+j] > 0){
                 e = 0;
-                for (ii = 0; ii < nnIndxLU[J+j]; ii++){
+                for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
                   e += B[ll * nIndx + nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii] * pTilde + ll];
                 }
                 b = w[j * pTilde + ll] - e;
               } else{
                 b = w[j * pTilde + ll];
               }	
-              aa += b*b/F[ll * J + j];
-              logDet += log(F[ll * J + j]);
+              aa += b*b/F[ll * Jw + j];
+              logDet += log(F[ll * Jw + j]);
             }
       
             logPostCurr = -0.5 * logDet - 0.5 * aa;
@@ -847,9 +861,9 @@ extern "C" {
 	  }
      
 	  if (sigmaSqIG) { 
-            updateBFSVC(BCand, FCand, &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx * pTilde + ll], phiCand, nuCand, covModel, &bk[ll * sizeBK], nuB[ll]);
+            updateBFSVC(BCand, FCand, &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx * pTilde + ll], phiCand, nuCand, covModel, &bk[ll * sizeBK], nuB[ll]);
 	  } else {
-            updateBFSVC(BCand, FCand, &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, &bk[ll * sizeBK], nuB[ll]);
+            updateBFSVC(BCand, FCand, &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, Jw, m, sigmaSqCand, phiCand, nuCand, covModel, &bk[ll * sizeBK], nuB[ll]);
 	  }
       
             aa = 0;
@@ -858,10 +872,10 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:aa, logDet)
 #endif
-            for (j = 0; j < J; j++){
-              if (nnIndxLU[J+j] > 0){
+            for (j = 0; j < Jw; j++){
+              if (nnIndxLU[Jw+j] > 0){
                 e = 0;
-                for (ii = 0; ii < nnIndxLU[J+j]; ii++){
+                for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
                   e += BCand[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii] * pTilde + ll];
                 }
                 b = w[j * pTilde + ll] - e;
@@ -884,7 +898,7 @@ extern "C" {
             if (runif(0.0,1.0) <= exp(logPostCand - logPostCurr)) {
 
               F77_NAME(dcopy)(&nIndx, BCand, &inc, &B[ll * nIndx], &inc);
-              F77_NAME(dcopy)(&J, FCand, &inc, &F[ll * J], &inc);
+              F77_NAME(dcopy)(&Jw, FCand, &inc, &F[ll * Jw], &inc);
               
 	      theta[phiIndx * pTilde + ll] = phiCand;
               accept[phiIndx * pTilde + ll]++;
@@ -952,7 +966,7 @@ extern "C" {
             F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[sPost*pOcc], &inc);
             F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
             F77_NAME(dcopy)(&J, psi, &inc, &REAL(psiSamples_r)[sPost*J], &inc); 
-            F77_NAME(dcopy)(&JpTilde, w, &inc, &REAL(wSamples_r)[sPost*JpTilde], &inc); 
+            F77_NAME(dcopy)(&JwpTilde, w, &inc, &REAL(wSamples_r)[sPost*JwpTilde], &inc); 
 	    F77_NAME(dcopy)(&nThetapTilde, theta, &inc, 
 			    &REAL(thetaSamples_r)[sPost*nThetapTilde], &inc); 
 	    F77_NAME(dcopy)(&J, z, &inc, &REAL(zSamples_r)[sPost*J], &inc); 

@@ -29,7 +29,7 @@ svcTPGOcc(occ.formula, det.formula, data, inits, priors,
   are allowed using lme4 syntax (Bates et al. 2015).}
 
 \item{data}{a list containing data necessary for model fitting.
-  Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, and \code{coords}. \code{y}
+  Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, \code{coords}, and \code{grid.index}. \code{y}
   is a three-dimensional array with first dimension equal to the number of 
   sites (\eqn{J}{J}), second dimension equal to the maximum number of 
   primary time periods (i.e., years or seasons), and third dimension equal 
@@ -45,9 +45,19 @@ svcTPGOcc(occ.formula, det.formula, data, inits, priors,
   detection covariates can also be observational-level. Observation-level covariates
   are specified as a three-dimensional array with first dimension corresponding to 
   sites, second dimension corresponding to primary time period, and third 
-  dimension corresponding to replicate. \code{coords} is a \eqn{J \times 2}{J x 2} 
-  matrix of the observation coordinates. Note that \code{spOccupancy} assumes 
-  coordinates are specified in a projected coordinate system.}
+  dimension corresponding to replicate. 
+  \code{coords} is a matrix of the observation coordinates used
+  to estimate the SVCs for each site. \code{coords} has two columns for the 
+  easting and northing coordinate, respectively. Typically, each site in the data 
+  set will have it's own coordinate, such that \code{coords} is a \eqn{J \times 2}{J x 2} 
+  matrix and \code{grid.index} should not be specified. 
+  If you desire to estimate SVCs at some larger spatial level, 
+  e.g., if points fall within grid cells and you want to estimate an SVC for 
+  each grid cell instead of each point, \code{coords} can be specified as the coordinate for 
+  each grid cell. In such a case, \code{grid.index} is an indexing vector of length J, where each 
+  value of \code{grid.index} indicates the corresponding row in \code{coords} that the given 
+  site corresponds to. Note that \code{spOccupancy} assumes coordinates are specified 
+  in a projected coordinate system.}
 
 \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 

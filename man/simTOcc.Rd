@@ -10,7 +10,7 @@
 simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TRUE, 
         psi.RE = list(), p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
         sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, x.positive = FALSE, 
-	mis.spec.type = 'none', scale.param = 1, avail, ...)
+	mis.spec.type = 'none', scale.param = 1, avail, grid, ...)
 }
 
 \arguments{
@@ -64,6 +64,8 @@ simTOcc(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, trend = TR
 \item{scale.param}{a positive number between 0 and 1 that indicates the scale parameter for the occupancy portion of the model when \code{mis.spec.type = 'scale'}. When specified, \code{scale.param} corresponds to the scale parameter for the occupancy portion of the model, while the reciprocal of \code{scale.param} is used for the detection portion of the model.}
 
 \item{avail}{a site x primary time period x visit array indicating the availability probability of the species during each survey simulated at the given site/primary time period/visit combination. This can be used to assess impacts of non-constant availability across replicate surveys in simulation studies. Values should fall between 0 and 1. When not specified, availability is set to 1 for all surveys.}
+
+\item{grid}{an atomic vector used to specify the grid across which to simulate the latent spatial processes. This argument is used to simulate the underlying spatial processes at a different resolution than the coordinates (e.g., if coordinates are distributed across a grid).}
 
 \item{...}{currently no additional arguments}
 }

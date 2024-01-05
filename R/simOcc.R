@@ -127,22 +127,14 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   }
   # Grid for spatial REs that doesn't match the sites ---------------------
   if (!missing(grid) & sp) {
-    if (is.atomic(grid)) {
-      grid <- list(grid)
+    if (!is.atomic(grid)) {
+      stop("grid must be a vector")
     }
-    if (length(grid) != length(svc.cols)) {
-      stop(paste0("grid must be a list of length ", svc.cols))
-    }
-    for (i in 1:p.svc) {
-      if (length(grid[[i]]) != J) {
-        stop(paste0("Each element of grid must be a vector of length ", J))
-      }  
+    if (length(grid) != J) {
+      stop(paste0("grid must be of length ", J))
     }
   } else {
-    grid <- vector(mode = 'list', length = p.svc)
-    for (i in 1:p.svc) {
-      grid[[i]] <- 1:J
-    }
+    grid <- 1:J
   }
 
   # Subroutines -----------------------------------------------------------
@@ -152,12 +144,11 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
+  # TODO: for testing, can use runif.
   coords.full <- as.matrix(expand.grid(s.x, s.y))
-  coords <- list()
-  for (i in 1:p.svc) {
-   coords[[i]] <- cbind(tapply(coords.full[, 1], grid[[i]], mean), 
-			tapply(coords.full[, 2], grid[[i]], mean)) 
-  }
+  # coords.full <- cbind(runif(J,0,1), runif(J,0,1))
+  coords <- cbind(tapply(coords.full[, 1], grid, mean), 
+                  tapply(coords.full[, 2], grid, mean)) 
 
   # Form occupancy covariates (if any) ------------------------------------
   n.beta <- length(beta)
@@ -194,34 +185,33 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   # Matrix of spatial locations
   if (sp) {
     J <- nrow(coords.full)
-    w.mat <- matrix(NA, J, p.svc)
+    w.mat.full <- matrix(NA, J, p.svc)
     if (cov.model == 'matern') {
       theta <- cbind(phi, nu)
     } else {
       theta <- as.matrix(phi)
     }
+    w.mat <- matrix(NA, nrow(coords), p.svc)
     for (i in 1:p.svc) {
-      Sigma.full <- mkSpCov(coords[[i]], as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      Sigma.full <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      w.mat[, i] <- rmvn(1, rep(0, nrow(Sigma.full)), Sigma.full)
       # Random spatial process
-      w.mat[, i] <- rmvn(1, rep(0, nrow(Sigma.full)), Sigma.full)[grid[[i]], 1]
+      w.mat.full[, i] <- w.mat[grid, i]
     }
-    w.tmp <- NA
     X.w <- X[, svc.cols, drop = FALSE]
     # Convert w to a J*ptilde x 1 vector, sorted so that the p.svc values for 
     # each site are given, then the next site, then the next, etc.
-    w <- c(t(w.mat))
+    w <- c(t(w.mat.full))
     # Create X.tilde, which is a J x J*p.tilde matrix. 
     X.tilde <- matrix(0, J, J * p.svc)
     # Fill in the matrix
     for (j in 1:J) {
       X.tilde[j, ((j - 1) * p.svc + 1):(j * p.svc)] <- X.w[j, ]
     }
-    lambda <- NA
   } else {
+    w.mat.full <- NA
     w.mat <- NA
     X.w <- NA
-    lambda <- NA
-    w.tmp <- NA
   }
 
   # Random effects --------------------------------------------------------
@@ -330,23 +320,10 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
     y[j, rep.indx[[j]]] <- rbinom(n.rep[j], 1, p[j, rep.indx[[j]]] * z[j])
   } # j
 
-  # Return coords as a matrix if grid is not relevant, or list if it is 1:J
-  tmp <- rep(NA, p.svc)
-  track <- rep(FALSE, p.svc)
-  for (i in 1:p.svc) {
-    tmp[i] <- sum(grid[[1]] == 1:J)
-    if (tmp[i] == J) {
-      track[i] <- TRUE
-    }
-  }
-  if (sum(track) == p.svc) {
-    coords <- coords[[1]]
-  }
   return(
-    list(X = X, X.p = X.p, coords = coords,
-         w = w.mat, w.factor = w.tmp, psi = psi, z = z, p = p, y = y, 
+    list(X = X, X.p = X.p, coords = coords, coords.full = coords.full,
+         w = w.mat.full, w.grid = w.mat, psi = psi, z = z, p = p, y = y, 
 	 X.p.re = X.p.re, X.re = X.re, X.w = X.w, 
-	 alpha.star = alpha.star, beta.star = beta.star, 
-         lambda = lambda)
+	 alpha.star = alpha.star, beta.star = beta.star)
   )
 }

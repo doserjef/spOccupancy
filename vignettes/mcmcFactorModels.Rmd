@@ -234,9 +234,9 @@ where $\textbf{w}(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ rea
 Recall we set all diagonal elements of $\bm{\Lambda}$ to 1 and all upper triangular elements equal to 0 in order to ensure identifiability of the latent spatial factors. Given this requirement, let $q_i = \text{min}\{i - 1, q\}$ for $2 \leq i \leq N$, and let $\tilde{\bm{\lambda}}_i = (\lambda_{i, 1}, \dots, \lambda_{i, q_i})^\top$ be the vector representing the unrestricted elements in the $i^{\text{th}}$ row of $\bm{\Lambda}$. Define $\textbf{W}$ as the $J \times q$ matrix of latent spatial factors, and let $\textbf{W}_{1:i}$ be the first $i$ columns of \textbf{W}. Using this notation, the full conditional density for $\tilde{\bm{\lambda}}_i$ is $N_q(\bm{\Omega}_{\tilde{\bm{\lambda}}_i}\bm{\mu}_{\tilde{\bm{\lambda}}_i}, \bm{\Omega}_{\tilde{\bm{\lambda}}_i})$, where
 
 \begin{align}
- \bm{\mu}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix}  \textbf{W}_{1:i}^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{X}_i^\top\bm{\beta}_i - \dot{\textbf{w}}_i)\hfill &\text{ if }&2\leq i\leq q  \\ 
+ \bm{\mu}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix}  \textbf{W}_{1:(i-1)}^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{X}_i^\top\bm{\beta}_i - \dot{\textbf{w}}_i)\hfill &\text{ if }&2\leq i\leq q  \\ 
  \textbf{W}^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{X}_i^\top\bm{\beta}_i)\hfill &\text{ if }&i > q  \end{matrix}\right.,\text{ and} \\ 
- \bm{\Omega}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix} (\textbf{W}_{1:(i - 1)}^\top\bm{S}_{i, \beta}\textbf{W}_{1:(i - 1)} + I_{j - 1})^{-1} \hfill &\text{ if }&2\leq i \leq q \\
+ \bm{\Omega}_{\tilde{\bm{\lambda}}_i} &= \left\{ \begin{matrix} (\textbf{W}_{1:(i - 1)}^\top\bm{S}_{i, \beta}\textbf{W}_{1:(i - 1)} + I_{i - 1})^{-1} \hfill &\text{ if }&2\leq i \leq q \\
  (\textbf{W}^\top\bm{S}_{i, \beta}\textbf{W} + I_{q})^{-1} \hfill &\text{ if }&i > q \end{matrix}\right.,
 \end{align}
 

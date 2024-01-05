@@ -26,7 +26,7 @@ extern "C" {
 			      SEXP wSamples_r, SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
 			      SEXP sitesLink_r, SEXP sites0Sampled_r,
 			      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			      SEXP nReport_r){
+			      SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r, SEXP gridIndx0_r){
 
     int i, j, t, k, l, s, info, nProtect=0, ll, rr;
     const int inc = 1;
@@ -43,14 +43,16 @@ extern "C" {
     int pOcc = INTEGER(pOcc_r)[0];
     int pTilde = INTEGER(pTilde_r)[0];
     int pOccN = pOcc * N;
-    int Jq = J * q;
     int Nq = N * q;
     int NpTilde = N * pTilde;
     int qpTilde = q * pTilde;
     int NqpTilde = N * q * pTilde;
-    int JqpTilde = J * q * pTilde;
     int *sitesLink = INTEGER(sitesLink_r);
     int *sites0Sampled = INTEGER(sites0Sampled_r);
+    int Jw0 = INTEGER(Jw0_r)[0];
+    int Jw = INTEGER(Jw_r)[0];
+    int Jwq = Jw * q;
+    int JwqpTilde = Jw * q * pTilde;
 
     double *X0 = REAL(X0_r);
     double *Xw0 = REAL(Xw0_r);
@@ -58,14 +60,15 @@ extern "C" {
     int NnYears = N * nYears;
     int JStr = INTEGER(JStr_r)[0];
     int JStrN = JStr * N;
-    int JStrq = JStr * q;
-    int JStrqpTilde = JStr * q * pTilde;
+    int Jw0q = Jw0 * q;
+    int Jw0qpTilde = Jw0 * q * pTilde;
     int JStrNnYears = JStr * N * nYears;
     int JStrnYears = JStr * nYears;
     int JStrnYearspTilde = JStrnYears * pTilde;
     int JStrnYearspOcc = JStrnYears * pOcc;
     int m = INTEGER(m_r)[0]; 
     int mm = m * m; 
+    int *gridIndx0 = INTEGER(gridIndx0_r);
 
     int *nnIndx0 = INTEGER(nnIndx0_r);        
     double *beta = REAL(betaSamples_r);
@@ -164,8 +167,8 @@ extern "C" {
     zeros(REAL(z0_r), JStrNnYears * nSamples);
     PROTECT(psi0_r = allocMatrix(REALSXP, JStrNnYears, nSamples)); nProtect++; 
     zeros(REAL(psi0_r), JStrNnYears * nSamples);
-    PROTECT(w0_r = allocMatrix(REALSXP, JStrqpTilde, nSamples)); nProtect++;
-    zeros(REAL(w0_r), JStrqpTilde * nSamples);
+    PROTECT(w0_r = allocMatrix(REALSXP, Jw0qpTilde, nSamples)); nProtect++;
+    zeros(REAL(w0_r), Jw0qpTilde * nSamples);
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
@@ -181,15 +184,15 @@ extern "C" {
     }
 
     int vIndx = -1;
-    double *wV = (double *) R_alloc(JStrqpTilde*nSamples, sizeof(double));
+    double *wV = (double *) R_alloc(Jw0qpTilde*nSamples, sizeof(double));
 
     GetRNGstate();
     
-    for(i = 0; i < JStrqpTilde*nSamples; i++){
+    for(i = 0; i < Jw0qpTilde*nSamples; i++){
       wV[i] = rnorm(0.0,1.0);
     }
     
-    for(j = 0; j < JStr; j++){
+    for(j = 0; j < Jw0; j++){
       for (rr = 0; rr < pTilde; rr++) {
         for (ll = 0; ll < q; ll++) {
 #ifdef _OPENMP
@@ -200,7 +203,7 @@ extern "C" {
 	    threadID = omp_get_thread_num();
 #endif 	
 	    if (sites0Sampled[j] == 1) {
-              w0[s * JStrqpTilde + rr * JStrq + j * q + ll] = w[s * JqpTilde + rr * Jq + sitesLink[j] * q + ll];
+              w0[s * Jw0qpTilde + rr * Jw0q + j * q + ll] = w[s * JwqpTilde + rr * Jwq + sitesLink[j] * q + ll];
 	    } else {
 	      phi = theta[s * nThetaqpTilde + phiIndx * qpTilde + rr * q + ll];
 	      if(corName == "matern"){
@@ -209,10 +212,10 @@ extern "C" {
 	      sigmaSq = 1.0;
 
 	      for(k = 0; k < m; k++){
-	        d = dist2(coords[nnIndx0[j+JStr*k]], coords[J+nnIndx0[j+JStr*k]], coords0[j], coords0[JStr+j]);
+	        d = dist2(coords[nnIndx0[j+Jw0*k]], coords[Jw+nnIndx0[j+Jw0*k]], coords0[j], coords0[Jw0+j]);
 	        c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[rr * q + ll]]);
 	        for(l = 0; l < m; l++){
-	          d = dist2(coords[nnIndx0[j+JStr*k]], coords[J+nnIndx0[j+JStr*k]], coords[nnIndx0[j+JStr*l]], coords[J+nnIndx0[j+JStr*l]]);
+	          d = dist2(coords[nnIndx0[j+Jw0*k]], coords[Jw+nnIndx0[j+Jw0*k]], coords[nnIndx0[j+Jw0*l]], coords[Jw+nnIndx0[j+Jw0*l]]);
 	          C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[rr * q + ll]]);
 	        }
 	      }
@@ -226,7 +229,7 @@ extern "C" {
 
 	      d = 0;
 	      for(k = 0; k < m; k++){
-	        d += tmp_m[threadID*m+k]*w[s * JqpTilde + rr * Jq + nnIndx0[j+JStr*k] * q + ll];
+	        d += tmp_m[threadID*m+k]*w[s * JwqpTilde + rr * Jwq + nnIndx0[j+Jw0*k] * q + ll];
 	      }
 
 	      #ifdef _OPENMP
@@ -234,7 +237,7 @@ extern "C" {
               #endif   
 	      vIndx++;
 
-	      w0[s * JStrqpTilde + rr * JStrq + j * q + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
+	      w0[s * Jw0qpTilde + rr * Jw0q + j * q + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 
 	    }
           } // s (sample)
@@ -243,7 +246,7 @@ extern "C" {
 
       if(verbose){
 	if(status == nReport){
-	  Rprintf("Location: %i of %i, %3.2f%%\n", j, JStr, 100.0*j/JStr);
+	  Rprintf("Location: %i of %i, %3.2f%%\n", j, Jw0, 100.0*j/Jw0);
           #ifdef Win32
 	  R_FlushConsole();
           #endif
@@ -255,7 +258,7 @@ extern "C" {
     } // location
 
     if(verbose){
-      Rprintf("Location: %i of %i, %3.2f%%\n", j, JStr, 100.0*j/JStr);
+      Rprintf("Location: %i of %i, %3.2f%%\n", j, Jw0, 100.0*j/Jw0);
       #ifdef Win32
       R_FlushConsole();
       #endif
@@ -272,7 +275,7 @@ extern "C" {
           zeros(w0Sites, N);
           for (rr = 0; rr < pTilde; rr++) {
             F77_NAME(dgemv)(ntran, &N, &q, &one, &lambda[s * NqpTilde + rr * Nq], &N, 
-          		  &w0[s * JStrqpTilde + rr * JStrq + j * q], &inc, &zero, 
+          		  &w0[s * Jw0qpTilde + rr * Jw0q + gridIndx0[j] * q], &inc, &zero, 
           		  &w0Star[rr * N], &inc FCONE);
             for (i = 0; i < N; i++) {
               w0Sites[i] += w0Star[rr * N + i] * Xw0[i * JStrnYearspTilde + rr * JStrnYears + t * JStr + j];

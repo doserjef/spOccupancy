@@ -2,7 +2,7 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
 		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
 		    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
                     rho, sigma.sq.t, x.positive = FALSE, mis.spec.type = 'none', 
-		    scale.param = 1, avail, ...) {
+		    scale.param = 1, avail, grid, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -155,9 +155,30 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
     }
   }
 
+  # Grid for spatial REs that doesn't match the sites ---------------------
+  if (!missing(grid) & sp) {
+    if (!is.atomic(grid)) {
+      stop("grid must be a vector")
+    }
+    if (length(grid) != J) {
+      stop(paste0("grid must be of length ", J))
+    }
+  } else {
+    grid <- 1:J
+  }
+
   # Subroutines -----------------------------------------------------------
   logit <- function(theta, a = 0, b = 1){log((theta-a)/(b-theta))}
   logit.inv <- function(z, a = 0, b = 1){b-(b-a)/(1+exp(z))}
+
+  # Matrix of spatial locations
+  s.x <- seq(0, 1, length.out = J.x)
+  s.y <- seq(0, 1, length.out = J.y)
+  # TODO: for testing, can use runif.
+  coords.full <- as.matrix(expand.grid(s.x, s.y))
+  # coords.full <- cbind(runif(J,0,1), runif(J,0,1))
+  coords <- cbind(tapply(coords.full[, 1], grid, mean), 
+                  tapply(coords.full[, 2], grid, mean)) 
 
   # Occurrence ------------------------------------------------------------
   p.occ <- length(beta)
@@ -284,30 +305,30 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
 
   # Simulate spatial random effect ----------------------------------------
   # Matrix of spatial locations
-  s.x <- seq(0, 1, length.out = J.x)
-  s.y <- seq(0, 1, length.out = J.y)
-  coords <- as.matrix(expand.grid(s.x, s.y))
   if (sp) {
-    w.mat <- matrix(NA, J, p.svc)
+    w.mat.full <- matrix(NA, J, p.svc)
     if (cov.model == 'matern') {
       theta <- cbind(phi, nu)
     } else {
       theta <- as.matrix(phi)
     }
+    w.mat <- matrix(NA, nrow(coords), p.svc)
     for (i in 1:p.svc) {
-      Sigma <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      Sigma.full <- mkSpCov(coords, as.matrix(sigma.sq[i]), as.matrix(0), theta[i, ], cov.model)
+      w.mat[, i] <- rmvn(1, rep(0, nrow(Sigma.full)), Sigma.full)
       # Random spatial process
-      w.mat[, i] <- rmvn(1, rep(0, J), Sigma)
+      w.mat.full[, i] <- w.mat[grid, i]
     }
     X.w <- X[, , svc.cols, drop = FALSE]
     w.sites <- matrix(0, J, n.time.max)
     for (j in 1:J) {
       for (t in 1:n.time.max) {
-        w.sites[j, t] <- w.mat[j, ] %*% X.w[j, t, ] 
+        w.sites[j, t] <- w.mat.full[j, ] %*% X.w[j, t, ] 
       }
     }
   } else {
     w.mat <- NA
+    w.mat.full <- NA
     w.sites <- matrix(0, J, n.time.max) 
   }
 
@@ -432,8 +453,8 @@ simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0
   } # j
 
   return(
-    list(X = X, X.p = X.p, coords = coords,
-	 psi = psi, z = z, p = p, y = y, w = w.mat,
+    list(X = X, X.p = X.p, coords = coords, coords.full = coords.full,
+	 psi = psi, z = z, p = p, y = y, w = w.mat.full, w.grid = w.mat, 
 	 X.p.re = X.p.re, X.re = X.re,
 	 alpha.star = alpha.star, beta.star = beta.star, eta = eta)
   )

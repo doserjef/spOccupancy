@@ -146,4 +146,7 @@ articles:
     - mcmcSamplers 
     - mcmcFactorModels 
     - mcmcSVCModels
-
+home:
+  links:
+  - text: spAbundance R package
+    href: https://www.jeffdoser.com/files/spabundance-web/

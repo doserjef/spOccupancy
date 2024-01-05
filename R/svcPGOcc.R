@@ -84,10 +84,28 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     stop("error: coords must be a matrix or data frame")
   }
   coords <- as.matrix(data$coords)
+  if (!is.list(data$det.covs)) {
+    stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
+  }
+  # Check grid index
+  if (!'grid.index' %in% names(data)) {
+    if (nrow(data$coords) != nrow(data$y)) {
+      stop("data$grid.index must be specified if nrow(data$coords) != nrow(data$y)")
+    }
+    grid.index <- 1:nrow(coords)
+  } else {
+    if (!is.atomic(data$grid.index) | !is.numeric(data$grid.index)) {
+      stop("data$grid.index must be a numeric vector")
+    }
+    if (length(data$grid.index) < nrow(data$coords)) {
+      stop("length(data$grid.index) must be greater than or equal to nrow(data$coords)")
+    }
+    grid.index <- data$grid.index
+  }
   # Check if all spatial coordinates are unique. 
   unique.coords <- unique(data$coords)
   if (nrow(unique.coords) < nrow(data$coords)) {
-    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement.") 
+    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement. Alternatively, you can use data$grid.index to specify the SVC at a larger spatial level than the individual sites (e.g., a grid). See ?svcPGOcc for details.") 
   }
   if (!is.list(data$det.covs)) {
     stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
@@ -103,16 +121,22 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     u.search.type <- 2 
     ## Order by x column. Could potentially allow this to be user defined. 
     ord <- order(coords[,1]) 
+    tmp <- lapply(ord, function (a) which(grid.index == a))
+    tmp.2 <- sapply(tmp, length)
+    # TODO: this could be a potential problem if you run into issues.
+    grid.index.c <- unlist(lapply(1:length(tmp.2), function(a) rep(a, tmp.2[a]))) - 1
+    grid.index.r <- grid.index.c + 1
+    long.ord <- unlist(lapply(ord, function(a) which(grid.index == a)))
     # Reorder everything to align with NN ordering
-    y <- y[ord, , drop = FALSE]
+    y <- y[long.ord, , drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
     # Occupancy covariates
-    data$occ.covs <- data$occ.covs[ord, , drop = FALSE]
+    data$occ.covs <- data$occ.covs[long.ord, , drop = FALSE]
     for (i in 1:length(data$det.covs)) {
       if (!is.null(dim(data$det.covs[[i]]))) {
-        data$det.covs[[i]] <- data$det.covs[[i]][ord, , drop = FALSE]
+        data$det.covs[[i]] <- data$det.covs[[i]][long.ord, , drop = FALSE]
       } else {
-        data$det.covs[[i]] <- data$det.covs[[i]][ord]
+        data$det.covs[[i]] <- data$det.covs[[i]][long.ord]
       }
     }
   }
@@ -232,6 +256,8 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # Get basic info from inputs ------------------------------------------
   # Number of sites
   J <- nrow(y.big)
+  # Number of coordinates in coordinate grid
+  J.w <- nrow(coords)
   # Number of occupancy parameters 
   p.occ <- ncol(X)
   # Number of detection parameters
@@ -662,7 +688,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     }
     # Reorder the user supplied inits values
     if (NNGP) {
-      z.inits <- z.inits[ord]
+      z.inits <- z.inits[long.ord]
     }
     z.test <- apply(y.big, 1, max, na.rm = TRUE)
     init.test <- sum(z.inits < z.test)
@@ -760,17 +786,17 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     w.inits <- inits[["w"]]
     if (!is.matrix(w.inits)) {
       stop(paste("error: initial values for w must be a matrix with dimensions ",
-      	   p.svc, " x ", J, sep = ""))
+      	   p.svc, " x ", J.w, sep = ""))
     }
-    if (nrow(w.inits) != p.svc | ncol(w.inits) != J) {
+    if (nrow(w.inits) != p.svc | ncol(w.inits) != J.w) {
       stop(paste("error: initial values for w must be a matrix with dimensions ",
-      	   p.svc, " x ", J, sep = ""))
+      	   p.svc, " x ", J.w, sep = ""))
     }
     if (NNGP) {
       w.inits <- w.inits[, ord, drop = FALSE]
     }
   } else {
-    w.inits <- matrix(0, p.svc, J)
+    w.inits <- matrix(0, p.svc, J.w)
     if (verbose) {
       message("w is not specified in initial values.\nSetting initial value to 0\n")
     }
@@ -939,7 +965,6 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 
   if (!NNGP) {
     stop("error: svcPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
-
   } else {
 
     # Nearest Neighbor Search ---------------------------------------------
@@ -973,7 +998,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(nn.indx) <- "integer"
     storage.mode(nn.indx.lu) <- "integer"
     storage.mode(u.search.type) <- "integer"
-    storage.mode(J) <- "integer"
+    storage.mode(J.w) <- "integer"
 
     if(verbose){
       cat("----------------------------------------\n");
@@ -981,7 +1006,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       cat("----------------------------------------\n");
     }
     
-    indx <- mkUIndx(J, n.neighbors, nn.indx, nn.indx.lu, u.search.type)
+    indx <- mkUIndx(J.w, n.neighbors, nn.indx, nn.indx.lu, u.search.type)
     
     u.indx <- indx$u.indx
     u.indx.lu <- indx$u.indx.lu
@@ -994,8 +1019,9 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     storage.mode(X.p) <- "double"
     storage.mode(X) <- "double"
     storage.mode(X.w) <- "double"
-    consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, p.svc)
+    consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, n.det.re, p.svc, J.w)
     storage.mode(consts) <- "integer"
+    storage.mode(grid.index.c) <- "integer"
     storage.mode(K) <- "double"
     storage.mode(coords) <- "double"
     storage.mode(beta.inits) <- "double"
@@ -1104,7 +1130,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         	                    tuning.c, cov.model.indx,
                               n.batch, batch.length, 
                               accept.rate, n.omp.threads, verbose, n.report, 
-                              samples.info, chain.info, fixed.params, sigma.sq.ig)
+                              samples.info, chain.info, fixed.params, sigma.sq.ig, grid.index.c)
         chain.info[1] <- chain.info[1] + 1
       }
       # Calculate R-Hat ---------------
@@ -1113,38 +1139,22 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         # as.vector removes the "Upper CI" when there is only 1 variable. 
         out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					         mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2])
-        if (!fixed.params[which(all.params == 'sigma.sq')] & 
-            !fixed.params[which(all.params == 'phi')]) { # none are fixed
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
           out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					        mcmc(t(a$theta.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2]
-        } else if (fixed.params[which(all.params == 'sigma.sq')] & 
-          	 !fixed.params[which(all.params == 'phi')]) { # sigma.sq is fixed
-          out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					        mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
-        			      autoburnin = FALSE)$psrf[, 2])
-        } else if (!fixed.params[which(all.params == 'sigma.sq')] & 
-          	 fixed.params[which(all.params == 'phi')]) { # phi/nu is fixed
-          tmp <- ifelse(cov.model == 'matern', NA, c(NA, NA))
-          out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
-        					        mcmc(t(a$theta.samples[1, , drop = FALSE])))), 
-        			      autoburnin = FALSE)$psrf[, 2], tmp)
-        } else { # both are fixed
-          out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
-        } 
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         if (p.det.re > 0) {
           out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.p.samples)))), 
-          			     autoburnin = FALSE)$psrf[, 2])
+          			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
         if (p.occ.re > 0) {
           out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.psi.samples)))), 
-          			     autoburnin = FALSE)$psrf[, 2])
+          			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
       } else {
         out$rhat$beta <- rep(NA, p.occ)
@@ -1172,49 +1182,49 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       # Get everything back in the original order
       out$coords <- coords[order(ord), ]
       out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
-      out$z.samples <- mcmc(out$z.samples[, order(ord), drop = FALSE])
-      out$X <- X[order(ord), , drop = FALSE]
-      out$X.re <- X.re[order(ord), , drop = FALSE]
-      out$X.w <- X.w[order(ord), , drop = FALSE]
+      out$z.samples <- mcmc(out$z.samples[, order(long.ord), drop = FALSE])
+      out$X <- X[order(long.ord), , drop = FALSE]
+      out$X.re <- X.re[order(long.ord), , drop = FALSE]
+      out$X.w <- X.w[order(long.ord), , drop = FALSE]
       # Account for case when intercept only spatial model. 
       if (p.svc == 1) {
         tmp <- do.call(rbind, lapply(out.tmp, function(a) t(a$w.samples)))
         tmp <- tmp[, order(ord), drop = FALSE]
-        out$w.samples <- array(NA, dim = c(p.svc, J, n.post.samples * n.chains))
+        out$w.samples <- array(NA, dim = c(p.svc, J.w, n.post.samples * n.chains))
         out$w.samples[1, , ] <- t(tmp)
       } else {
         out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-          								dim = c(p.svc, J, n.post.samples))))
+          								dim = c(p.svc, J.w, n.post.samples))))
         out$w.samples <- out$w.samples[, order(ord), ]
       }
       out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
       out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
-      out$psi.samples <- mcmc(out$psi.samples[, order(ord), drop = FALSE])
+      out$psi.samples <- mcmc(out$psi.samples[, order(long.ord), drop = FALSE])
       out$like.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$like.samples))))
-      out$like.samples <- mcmc(out$like.samples[, order(ord), drop = FALSE])
+      out$like.samples <- mcmc(out$like.samples[, order(long.ord), drop = FALSE])
       # Get detection covariate stuff in right order. Method of doing this
       # depends on if there are observation level covariates or not. 
       if (!binom) {
         tmp <- matrix(NA, J * K.max, p.det)
         tmp[names.long, ] <- X.p
         tmp <- array(tmp, dim = c(J, K.max, p.det))
-        tmp <- tmp[order(ord), , ]
+        tmp <- tmp[order(long.ord), , ]
         out$X.p <- matrix(tmp, J * K.max, p.det)
         out$X.p <- out$X.p[apply(out$X.p, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
         colnames(out$X.p) <- x.p.names
         tmp <- matrix(NA, J * K.max, p.det.re)
         tmp[names.long, ] <- X.p.re
         tmp <- array(tmp, dim = c(J, K.max, p.det.re))
-        tmp <- tmp[order(ord), , ]
+        tmp <- tmp[order(long.ord), , ]
         out$X.p.re <- matrix(tmp, J * K.max, p.det.re)
         out$X.p.re <- out$X.p.re[apply(out$X.p.re, 1, function(a) sum(is.na(a))) == 0, , drop = FALSE]
         colnames(out$X.p.re) <- x.p.re.names
         tmp <- matrix(NA, J * K.max, n.det.re)
       } else {
-        out$X.p <- X.p[order(ord), , drop = FALSE]
-        out$X.p.re <- X.p.re[order(ord), , drop = FALSE]
+        out$X.p <- X.p[order(long.ord), , drop = FALSE]
+        out$X.p.re <- X.p.re[order(long.ord), , drop = FALSE]
       }
-      out$y <- y.big[order(ord), , drop = FALSE]
+      out$y <- y.big[order(long.ord), , drop = FALSE]
       if (p.occ.re > 0) {
         out$sigma.sq.psi.samples <- mcmc(
           do.call(rbind, lapply(out.tmp, function(a) t(a$sigma.sq.psi.samples))))
@@ -1280,11 +1290,12 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
       set.seed(k.fold.seed)
       # Number of sites in each hold out data set. 
-      sites.random <- sample(1:J)    
+      sites.random <- sample(1:J.w)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
       model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
-        curr.set <- sort(sites.random[sites.k.fold[[i]]])
+        curr.set.small <- sort(sites.random[sites.k.fold[[i]]])
+        curr.set <- which(grid.index.r %in% curr.set.small)
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
         } else {
@@ -1303,8 +1314,21 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 	X.w.0 <- X.w[curr.set, , drop = FALSE]
 	J.fit <- nrow(X.fit)
 	J.0 <- nrow(X.0)
-        coords.fit <- coords[-curr.set, , drop = FALSE]
-        coords.0 <- coords[curr.set, , drop = FALSE]
+        coords.fit <- coords[-curr.set.small, , drop = FALSE]
+        coords.0 <- coords[curr.set.small, , drop = FALSE]
+	J.w.fit <- nrow(coords.fit)
+        tmp.grid.fit <- grid.index.r[-curr.set]
+        tmp.grid.0 <- grid.index.r[curr.set]
+        # Reorder the grids to get their indices to work
+        grid.fit <- vector('numeric', length = length(tmp.grid.fit))
+        for (j in 1:nrow(coords.fit)) {
+          grid.fit[which(tmp.grid.fit == (1:J.w)[-curr.set.small][j])] <- j
+        }
+        grid.0 <- vector('numeric', length = length(tmp.grid.0))
+        for (j in 1:nrow(coords.0)) {
+          grid.0[which(tmp.grid.0 == curr.set.small[j])] <- j
+        }
+	grid.fit.c <- grid.fit - 1
 	K.fit <- K[-curr.set]
 	K.0 <- K[curr.set]
 	rep.indx.fit <- rep.indx[-curr.set]
@@ -1377,7 +1401,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         nn.indx.fit <- indx$nnIndx
         nn.indx.lu.fit <- indx$nnIndxLU
         
-        indx <- mkUIndx(J.fit, n.neighbors, nn.indx.fit, 
+        indx <- mkUIndx(J.w.fit, n.neighbors, nn.indx.fit, 
       		  nn.indx.lu.fit, u.search.type)
         
         u.indx.fit <- indx$u.indx
@@ -1392,7 +1416,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         storage.mode(coords.fit) <- "double"
         storage.mode(K.fit) <- "double"
         consts.fit <- c(J.fit, n.obs.fit, p.occ, p.occ.re, n.occ.re.fit, 
-                        p.det, p.det.re, n.det.re.fit, p.svc)
+                        p.det, p.det.re, n.det.re.fit, p.svc, J.w.fit)
         storage.mode(consts.fit) <- "integer"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(nn.indx.fit) <- "integer"
@@ -1416,6 +1440,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         storage.mode(beta.level.indx.fit) <- "integer"
         chain.info[1] <- 1
         storage.mode(chain.info) <- "integer"
+	storage.mode(grid.fit.c) <- 'integer'
         # Run the model in C
         out.fit <- .Call("svcPGOccNNGP", y.fit, X.fit, X.w.fit, X.p.fit, coords.fit, X.re.fit, X.p.re.fit,
 			 consts.fit, K.fit, n.occ.re.long.fit, n.det.re.long.fit, 
@@ -1429,7 +1454,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 			 sigma.sq.a, sigma.sq.b, nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
 			 sigma.sq.p.a, sigma.sq.p.b, tuning.c, cov.model.indx, 
 			 n.batch, batch.length, accept.rate, n.omp.threads.fit, verbose.fit, 
-			 n.report, samples.info, chain.info, fixed.params, sigma.sq.ig)
+			 n.report, samples.info, chain.info, fixed.params, sigma.sq.ig, grid.fit.c)
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
         out.fit$alpha.samples <- mcmc(t(out.fit$alpha.samples))
@@ -1438,10 +1463,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         # Account for case when intercept only spatial model. 
         if (p.svc == 1) {
           tmp <- t(out.fit$w.samples)
-          out.fit$w.samples <- array(NA, dim = c(p.svc, J.fit, n.post.samples * n.chains))
+          out.fit$w.samples <- array(NA, dim = c(p.svc, J.w.fit, n.post.samples * n.chains))
           out.fit$w.samples[1, , ] <- tmp
         } else {
-          out.fit$w.samples <- array(out.fit$w.samples, dim = c(p.svc, J.fit, n.post.samples))
+          out.fit$w.samples <- array(out.fit$w.samples, dim = c(p.svc, J.w.fit, n.post.samples))
         }
         out.fit$w.samples <- aperm(out.fit$w.samples, c(3, 1, 2))
         out.fit$X <- X.fit
@@ -1499,7 +1524,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
         if (p.occ.re > 0) {
 	  X.0 <- cbind(X.0, X.re.0)
 	}
-        out.pred <- predict.svcPGOcc(out.fit, X.0, coords.0, verbose = FALSE)
+        out.pred <- predict.svcPGOcc(out.fit, X.0, coords.0, verbose = FALSE, grid.index.0 = grid.0)
 
 	# Detection 
         # Generate detection values
@@ -1538,5 +1563,4 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   out$run.time <- proc.time() - ptm
   return(out)
 }
-
 

@@ -25,7 +25,8 @@ extern "C" {
 			  SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
                           SEXP sitesLink_r, SEXP sites0Sampled_r, 
 			  SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-			  SEXP verbose_r, SEXP nReport_r){
+			  SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
+			  SEXP gridIndx0_r){
 
     int i, k, l, s, t, info, nProtect=0;
     const int inc = 1;
@@ -34,9 +35,10 @@ extern "C" {
     char const *lower = "L";
     
     double *coords = REAL(coords_r);
-    int J = INTEGER(J_r)[0];
     int nYears = INTEGER(nYearsMax_r)[0];
     int pOcc = INTEGER(pOcc_r)[0];
+    int Jw0 = INTEGER(Jw0_r)[0];
+    int Jw = INTEGER(Jw_r)[0];
 
     double *X0 = REAL(X0_r);
     double *coords0 = REAL(coords0_r);
@@ -46,6 +48,7 @@ extern "C" {
     int qnYears = q * nYears;
     int *sitesLink = INTEGER(sitesLink_r);
     int *sites0Sampled = INTEGER(sites0Sampled_r);
+    int *gridIndx0 = INTEGER(gridIndx0_r);
 
     int *nnIndx0 = INTEGER(nnIndx0_r);        
     double *beta = REAL(betaSamples_r);
@@ -123,7 +126,7 @@ extern "C" {
     SEXP z0_r, w0_r, psi0_r;
     PROTECT(z0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
     PROTECT(psi0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
-    PROTECT(w0_r = allocMatrix(REALSXP, q, nSamples)); nProtect++;
+    PROTECT(w0_r = allocMatrix(REALSXP, Jw0, nSamples)); nProtect++;
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
@@ -138,15 +141,15 @@ extern "C" {
     }
 
     int vIndx = -1;
-    double *wV = (double *) R_alloc(q*nSamples, sizeof(double));
+    double *wV = (double *) R_alloc(Jw0*nSamples, sizeof(double));
 
     GetRNGstate();
     
-    for(i = 0; i < q*nSamples; i++){
+    for(i = 0; i < Jw0*nSamples; i++){
       wV[i] = rnorm(0.0,1.0);
     }
     
-    for(i = 0; i < q; i++){
+    for(i = 0; i < Jw0; i++){
 #ifdef _OPENMP
 #pragma omp parallel for private(threadID, phi, nu, sigmaSq, k, l, d, info)
 #endif     
@@ -155,7 +158,7 @@ extern "C" {
 	threadID = omp_get_thread_num();
 #endif 	
         if (sites0Sampled[i] == 1) {
-          w0[s * q + i] = w[s * J + sitesLink[i]];
+          w0[s * Jw0 + i] = w[s * Jw + sitesLink[i]];
 	} else {
 	  phi = theta[s*nTheta+phiIndx];
 	  if(corName == "matern"){
@@ -164,10 +167,10 @@ extern "C" {
 	  sigmaSq = theta[s*nTheta+sigmaSqIndx];
 
 	  for(k = 0; k < m; k++){
-	    d = dist2(coords[nnIndx0[i+q*k]], coords[J+nnIndx0[i+q*k]], coords0[i], coords0[q+i]);
+	    d = dist2(coords[nnIndx0[i+Jw0*k]], coords[Jw+nnIndx0[i+Jw0*k]], coords0[i], coords0[Jw0+i]);
 	    c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
 	    for(l = 0; l < m; l++){
-	      d = dist2(coords[nnIndx0[i+q*k]], coords[J+nnIndx0[i+q*k]], coords[nnIndx0[i+q*l]], coords[J+nnIndx0[i+q*l]]);
+	      d = dist2(coords[nnIndx0[i+Jw0*k]], coords[Jw+nnIndx0[i+Jw0*k]], coords[nnIndx0[i+Jw0*l]], coords[Jw+nnIndx0[i+Jw0*l]]);
 	      C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb]);
 	    }
 	  }
@@ -181,7 +184,7 @@ extern "C" {
 
 	  d = 0;
 	  for(k = 0; k < m; k++){
-	    d += tmp_m[threadID*m+k]*w[s*J+nnIndx0[i+q*k]];
+	    d += tmp_m[threadID*m+k]*w[s*Jw+nnIndx0[i+Jw0*k]];
 	  }
 
 	  #ifdef _OPENMP
@@ -189,14 +192,14 @@ extern "C" {
           #endif   
 	  vIndx++;
 	  
-	  w0[s*q+i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
+	  w0[s*Jw0+i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
 	}
 
       }
       
       if(verbose){
 	if(status == nReport){
-	  Rprintf("Location: %i of %i, %3.2f%%\n", i, q, 100.0*i/q);
+	  Rprintf("Location: %i of %i, %3.2f%%\n", i, Jw0, 100.0*i/Jw0);
           #ifdef Win32
 	  R_FlushConsole();
           #endif
@@ -208,7 +211,7 @@ extern "C" {
     }
     
     if(verbose){
-      Rprintf("Location: %i of %i, %3.2f%%\n", i, q, 100.0*i/q);
+      Rprintf("Location: %i of %i, %3.2f%%\n", i, Jw0, 100.0*i/Jw0);
       #ifdef Win32
       R_FlushConsole();
       #endif
@@ -221,7 +224,7 @@ extern "C" {
     for(i = 0; i < q; i++){
       for (t = 0; t < nYears; t++) {
         for(s = 0; s < nSamples; s++){
-          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + w0[s * q + i] + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
+          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + w0[s * Jw0 + gridIndx0[i]] + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
           z0[s * qnYears + t * q + i] = rbinom(one, psi0[s * qnYears + t * q + i]);
         } // s
       } // t

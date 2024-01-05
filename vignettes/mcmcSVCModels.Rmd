@@ -51,18 +51,18 @@ where $\psi(\bm{s}_j)$ is the occupancy probability of the species at site $j$. 
    \text{logit}(\psi(\bm{s}_j)) = (\beta_1 + \delta_1\text{w}_1(\bm{s}_j)) + \sum_{h = 2}^H\text{x}_h(\bm{s}_j)\{\beta_h + \delta_h\text{w}_h(\bm{s}_j)\},
 \end{equation}
 
-where $\beta_1$ is an intercept, $\text{x}_h(\bm{s}_j)$ is the $t$th covariate with $h = 2, \dots, H$, $\beta_h$ is the non-spatial effect of covariate $\text{x}_h(\bm{s}_j)$, and $\text{w}_1(\bm{s}_j)$ and $\text{w}_h(\bm{s}_j)$ are spatially-varying effects for the intercept and covariates, respectively. We use indicator variables $\delta_h$ for $h = 1, \dots, H$ to indicate those covariates whose effects vary spatially ($\delta_h = 1$) and those whose effects are assumed constant ($\delta_h = 0$). Note that the model reduces to a traditional single-species occupancy model when $\delta_h = 0$ for all $h$ and a spatial occupancy model [@johnson2013spatial; @doser2022spoccupancy] when $\delta_1 = 1$ and $\delta_h = 0$ for all $h \geq 1$. For later use, define $\tilde{H}$ as the total number of spatially-varying effects estimated in the model (i.e., $\tilde{H} = \sum_{h = 1}^H\delta_h$), define $\tilde{\textbf{x}}(\bm{s}_j)$ as the $\tilde{H} \times 1$ vector of covariates at location $j$ (including an intercept if applicable), and define $\tilde{\beta}_h(\bm{s}_j) = \beta_h  + \text{w}_h(\bm{s}_j)$ as the spatially-varying coefficients for those effects with $\delta_h = 1$.
+where $\beta_1$ is an intercept, $\text{x}_h(\bm{s}_j)$ is the $h$th covariate with $h = 2, \dots, H$, $\beta_h$ is the non-spatial effect of covariate $\text{x}_h(\bm{s}_j)$, and $\text{w}_1(\bm{s}_j)$ and $\text{w}_h(\bm{s}_j)$ are spatially-varying effects for the intercept and covariates, respectively. We use indicator variables $\delta_h$ for $h = 1, \dots, H$ to indicate those covariates whose effects vary spatially ($\delta_h = 1$) and those whose effects are assumed constant ($\delta_h = 0$). Note that the model reduces to a traditional single-species occupancy model when $\delta_h = 0$ for all $h$ and a spatial occupancy model [@johnson2013spatial; @doser2022spoccupancy] when $\delta_1 = 1$ and $\delta_h = 0$ for all $h > 1$. For later use, define $\tilde{H}$ as the total number of spatially-varying effects estimated in the model (i.e., $\tilde{H} = \sum_{h = 1}^H\delta_h$), define $\tilde{\textbf{x}}(\bm{s}_j)$ as the $\tilde{H} \times 1$ vector of covariates at location $j$ (including an intercept if applicable), and define $\tilde{\beta}_h(\bm{s}_j) = \beta_h  + \text{w}_h(\bm{s}_j)$ as the spatially-varying coefficients for those effects with $\delta_h = 1$.
 
-Let $\mathcal{L} = \{\bm{s}_1, \bm{s}_2, \dots, \bm{s}_J\}$ be the set of sampled spatial locations, and define $\textbf{w}_h$ as a $J \times 1$ vector of the spatial random effects for covariate $t$ for each of the $\tilde{H}$ effects with corresponding $\delta_h = 1$. The spatially-varying effects $\textbf{w}_h$ serve as local adjustments of the covariate effects (or intercept) at each site $j$ from the overall non-spatial effect $\beta_h$, resulting in the covariate having a unique effect (i.e., $\tilde{\beta}_h(\bm{s}_j))$ on species occupancy probability at each site $j$. Following @gelfand2003spatial, we envision each $h = 1, \dots, \tilde{H}$ spatially-varying effects $\text{w}_h(\bm{s}_j)$ as realizations of a smooth latent surface $\{\text{w}_h(\bm{s}) \mid \bm{s} \in \mathcal{D}\}$, where $\mathcal{D}$ is the geographical domain of interest. Following standard approaches for modeling species distributions (e.g., @latimer2006building), we use Gaussian Processes (GPs) to model each of the $\tilde{H}$ smooth functions across the spatial domain. By definition, a GP model for the $t$th spatially-varying surface $\{\text{w}_h(\bm{s})\}$ implies that for any finite set of locations $\mathcal{L}$, the vector of random effects $\textbf{w}_h$ follows a zero-mean multivariate Gaussian distribution with a $J \times J$ covariance matrix $\bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)$ that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters ($\bm{\theta}_h$) that govern the spatial process according to a parametric covariance function. In our subsequent simulations and case study, we use an exponential covariance function such that $\bm{\theta}_h = \{\sigma^2_h, \phi_h\}$, where $\sigma^2_h$ is a spatial variance parameter and $\phi_h$ is a spatial decay parameter. Large values of $\sigma^2_h$ indicate large variation in the magnitude of a covariate effect across space, while values of $\sigma^2_h$ close to 0 suggest little spatial variability in the magnitude of the effect. $\phi_h$ controls the distance-dependent decay of the spatial dependence in the covariate effect and is inversely related to the spatial range, such that when $\phi_h$ is small, the covariate effect has a larger range of spatial dependence and varies more smoothly across space compared to larger values of $\phi_h$. When using an exponential correlation function, the effective spatial range, or the distance at which the spatial correlation between points drops to 0.05 [@banerjee2014hierarchical], corresponds to approximately 3 / $\phi$ (i.e., since $3 \approx -\text{log}(0.05))$.
+Let $\mathcal{L} = \{\bm{s}_1, \bm{s}_2, \dots, \bm{s}_J\}$ be the set of sampled spatial locations, and define $\textbf{w}_h$ as a $J \times 1$ vector of the spatial random effects for covariate $h$ for each of the $\tilde{H}$ effects with corresponding $\delta_h = 1$. The spatially-varying effects $\textbf{w}_h$ serve as local adjustments of the covariate effects (or intercept) at each site $j$ from the overall non-spatial effect $\beta_h$, resulting in the covariate having a unique effect (i.e., $\tilde{\beta}_h(\bm{s}_j))$ on species occupancy probability at each site $j$. Following @gelfand2003spatial, we envision each $h = 1, \dots, \tilde{H}$ spatially-varying effect $\text{w}_h(\bm{s}_j)$ as a realization of a smooth latent surface $\{\text{w}_h(\bm{s}) \mid \bm{s} \in \mathcal{D}\}$, where $\mathcal{D}$ is the geographical domain of interest. Following standard approaches for modeling species distributions (e.g., @latimer2006building), we use Gaussian Processes (GPs) to model each of the $\tilde{H}$ smooth functions across the spatial domain. By definition, a GP model for the $h$th spatially-varying surface $\{\text{w}_h(\bm{s})\}$ implies that for any finite set of locations $\mathcal{L}$, the vector of random effects $\textbf{w}_h$ follows a zero-mean multivariate Gaussian distribution with a $J \times J$ covariance matrix $\bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)$ that is a function of the distances between any pair of site coordinates $\bm{s}$ and $\bm{s}'$ and a set of parameters ($\bm{\theta}_h$) that govern the spatial process according to a parametric covariance function. In our subsequent simulations and case study, we use an exponential covariance function such that $\bm{\theta}_h = \{\sigma^2_h, \phi_h\}$, where $\sigma^2_h$ is a spatial variance parameter and $\phi_h$ is a spatial decay parameter. Large values of $\sigma^2_h$ indicate large variation in the magnitude of a covariate effect across space, while values of $\sigma^2_h$ close to 0 suggest little spatial variability in the magnitude of the effect. $\phi_h$ controls the distance-dependent decay of the spatial dependence in the covariate effect and is inversely related to the spatial range, such that when $\phi_h$ is small, the covariate effect has a larger range of spatial dependence and varies more smoothly across space compared to larger values of $\phi_h$. When using an exponential correlation function, the effective spatial range, or the distance at which the spatial correlation between points drops to 0.05 [@banerjee2014hierarchical], corresponds to approximately 3 / $\phi$ (i.e., since $3 \approx -\text{log}(0.05))$.
 
 Both frequentist and Bayesian estimation of the model defined by (\ref{z}) and (\ref{psi}) requires taking the inverse and determinant of $\tilde{H}$ dense $J \times J$ covariance matrices (i.e., $\bm{C}_h(\bm{s}, \bm{s}', \bm{\theta}_h)$), which involves $O(J^3)$ computations for each of the $\tilde{H}$ spatially-varying coefficients (floating point operations or FLOPs), which quickly renders such an approach impractical for even moderately sized data sets (i.e., hundreds of spatial locations). Here we replace the GP prior for the spatially-varying coefficients with a Nearest Neighbor Gaussian Process (NNGP) prior [@datta2016hierarchical]. The NNGP is a valid GP that is based on writing the full multivariate Gaussian distribution for $\textbf{w}_h$ as a product of conditional densities, such that
 \begin{equation}\label{wConditional}
    p(\textbf{w}_h) = p(\text{w}_h(\bm{s}_1)) \cdot p(\text{w}_h(\bm{s}_2) \mid \text{w}_h(\bm{s}_1)) \cdots p(\text{w}_h(\bm{s}_J) \mid \text{w}_h(\bm{s}_{J - 1}), \dots, \text{w}_h(\bm{s}_1)),
 \end{equation}
 
-where $p(\cdot)$ denotes a probability density function. The NNGP prior achieves computational efficiency by replacing the conditioning sets on the right-hand side of (\ref{wConditional}) with a set of new conditioning sets, whose maximum size is determined by a pre-specified number of neighbors, $m$, where $m << J$. [@datta2016hierarchical] showed that $m = 15$ provides nearly identical inference to the full GP under a variety of scenarios. Let $N(\bm{s}_j)$ denote the set of at most $m$ neighbors for location $\bm{s}_j$. Following [@vecchia1988estimation], we set $N(\bm{s}_j)$ to be the set of at most $m$ nearest neighbors of $\bm{s}_j$ from $\{\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{j - 1}\}$ with respect to Euclidean distance. Note that this requires the set of $\mathcal{L}$ locations to have some prespecified ordering, where here we order the coordinates along the horizontal axis. Through careful construction of the neighbor sets and set of spatial locations as a directed acyclic graph, Gaussian distribution theory reveals the NNGP prior yields a new joint density for $\textbf{w}_h$, denoted $\tilde{p}(\textbf{w}_h)$. Let $\textbf{w}_h(N(\bm{s}_j))$ denote the at most $m$ realizations of the $t^{\text{th}}$ NNGP at the locations in the neighbor set $N(\bm{s}_j)$. Let $C(\cdot, \bm{\theta}_h)$ denote the covariance function of the original Gaussian Process (GP) from which the $t^{\text{th}}$ NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\bm{\theta}_h)$ as the covariance matrix between the observations in $A_1$ and $A_2$ for the $t^{\text{th}}$ GP. For all $h = 1, \dots, \tilde{H}$, our NNGP prior for $\textbf{w}_h$ thus takes the form
+where $p(\cdot)$ denotes a probability density function. The NNGP prior achieves computational efficiency by replacing the conditioning sets on the right-hand side of (\ref{wConditional}) with a set of new conditioning sets, whose maximum size is determined by a pre-specified number of neighbors, $m$, where $m << J$. @datta2016hierarchical showed that $m = 15$ provides nearly identical inference to the full GP under a variety of scenarios. Let $N(\bm{s}_j)$ denote the set of at most $m$ neighbors for location $\bm{s}_j$. Following @vecchia1988estimation, we set $N(\bm{s}_j)$ to be the set of at most $m$ nearest neighbors of $\bm{s}_j$ from $\{\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{j - 1}\}$ with respect to Euclidean distance. Note that this requires the set of $\mathcal{L}$ locations to have some prespecified ordering, where here we order the coordinates along the horizontal axis. Through careful construction of the neighbor sets and set of spatial locations as a directed acyclic graph, Gaussian distribution theory reveals the NNGP prior yields a new joint density for $\textbf{w}_h$, denoted $\tilde{p}(\textbf{w}_h)$. Let $\textbf{w}_h(N(\bm{s}_j))$ denote the at most $m$ realizations of the $h^{\text{th}}$ NNGP at the locations in the neighbor set $N(\bm{s}_j)$. Let $C(\cdot, \bm{\theta}_h)$ denote the covariance function of the original GP from which the $h^{\text{th}}$ NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\bm{\theta}_h)$ as the covariance matrix between the observations in $A_1$ and $A_2$ for the $h^{\text{th}}$ GP. For all $h = 1, \dots, \tilde{H}$, our NNGP prior for $\textbf{w}_h$ thus takes the form
 \begin{equation}\label{NNGP}
-     \tilde{p}(\textbf{w}_h) = \prod_{j = 1}^J \text{Normal}(\text{w}_h(\bm{s}_j) \mid \textbf{w}_h(N(\bm{s}_j))\textbf{b}_h(\bm{s}_j), \text{f}_h(\bm{s}_j)),
+     \tilde{p}(\textbf{w}_h) = \prod_{j = 1}^J \text{Normal}(\text{w}_h(\bm{s}_j) \mid \textbf{b}_h(\bm{s}_j)\textbf{w}_h(N(\bm{s}_j)), \text{f}_h(\bm{s}_j)),
 \end{equation}
 where $\textbf{b}_h(\bm{s}_j)$ is defined as
 \begin{equation}\label{bNNGP}
@@ -101,28 +101,28 @@ We first sample the occurrence auxiliary variable ($\omega_{\beta}(\bm{s}_j)$ in
 
 ### Update detection auxiliary variables ($\omega_{k, \alpha}(\bm{s}_j)$)
 
-We next update the latent \pg auxiliary variable for the detection process, $\omega_{k, \alpha}(\bm{s}_j)$, for each replicate $k$ at each site $j$. Note that we only need to sample $\omega_{k, \alpha}(\bm{s}_j)$ when $\sum_{k = 1}^{K_j}y_{k}(\bm{s}_j) = 0$. Following [@polson2013], we have
+We next update the latent \pg auxiliary variable for the detection process, $\omega_{k, \alpha}(\bm{s}_j)$, for each replicate $k$ at each site $j$. Note that we only need to sample $\omega_{k, \alpha}(\bm{s}_j)$ when $\sum_{k = 1}^{K_j}y_{k}(\bm{s}_j) = 0$. Following @polson2013, we have
 
 \begin{equation}
-  \omega_{k, \alpha}(\bm{s}_j) \mid \cdot \sim \text{PG}(1, \bm{v}(\bm{s}_j)^\top\bm{\alpha}).
+  \omega_{k, \alpha}(\bm{s}_j) \mid \cdot \sim \text{PG}(1, \textbf{v}(\bm{s}_j)^\top\bm{\alpha}).
 \end{equation}
 
 ### Update non-spatial occurrence regression coefficients ($\bm{\beta}$)
 
-Define $\text{w}^*(\bm{s}_j) = \tilde{\text{x}}(\bm{s}_j)^\top \textbf{w}(\bm{s}_j)$, and similarly let $\textbf{w}^*$ be the $J \times 1$ vector of $\text{w}^*(\bm{s}_j)$ for all $j = 1, \dots, J$. Let $\bm{\beta} \sim N(\bm{\mu0}_{\beta}, \bm{\Sigma}_{\beta}^{-1})$ denote the prior distribution for $\bm{\beta}$, with $\Sigma_{\beta}$ being a diagonal matrix. The \pg scheme induces a Gibbs update for the occurrence regression coefficients, which are updated at each iteration according to
+Define $\tilde{\text{w}}(\bm{s}_j) = \tilde{\text{x}}(\bm{s}_j)^\top \textbf{w}(\bm{s}_j)$, and similarly let $\tilde{\textbf{w}}$ be the $J \times 1$ vector of $\tilde{\text{w}}(\bm{s}_j)$ for all $j = 1, \dots, J$. Let $\bm{\beta} \sim N(\bm{\mu}_{0, \beta}, \bm{\Sigma}_{\beta})$ denote the prior distribution for $\bm{\beta}$, with $\Sigma_{\beta}$ being a diagonal matrix. The \pg scheme induces a Gibbs update for the occurrence regression coefficients, which are updated at each iteration according to
 
 \begin{equation} \label{betaSampler}
-\bm{\beta} \mid \cdot \sim \text{Normal}\Big([\bm{\Sigma}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}[\bm{X}^{\top}(\bm{z} - 0.5 \bm{1}_J - \bm{S}_{\beta}\textbf{w}^*) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu0}_{\beta}], [\bm{\Sigma}_{\beta}^{-1} + \bm{X}^{\top}\bm{S}_{\beta}\bm{X}]^{-1}\Big),
+\bm{\beta} \mid \cdot \sim \text{Normal}\Big([\bm{\Sigma}_{\beta}^{-1} + \textbf{X}^{\top}\bm{S}_{\beta}\textbf{X}]^{-1}[\textbf{X}^{\top}(\bm{z} - 0.5 \bm{1}_J - \bm{S}_{\beta}\tilde{\textbf{w}}) + \bm{\Sigma}_{\beta}^{-1}\bm{\mu}_{0, \beta}], [\bm{\Sigma}_{\beta}^{-1} + \textbf{X}^{\top}\bm{S}_{\beta}\textbf{X}]^{-1}\Big),
 \end{equation}
 
-where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent PG variable values ($\omega_{1, \beta}, \dots, \omega_{J, \beta})$ and $\bm{z}$ is the $J \times 1$ vector of the latent occurrence values at each site $j$.
+where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent PG variable values ($\omega_{1, \beta}, \dots, \omega_{J, \beta})$ and $\bm{z}$ is the $J \times 1$ vector of the latent occurrence values.
 
 ### Update detection regression coefficients ($\bm{\alpha}$)
 
-Similarly, let $\bm{\alpha} \sim N(\bm{\mu0}_{\alpha}, \bm{\Sigma}_{\alpha}^{-1})$ denote the prior distribution for $\bm{\alpha}$, with $\Sigma_{\alpha}$ being a diagonal matrix. We sample the detection regression coefficients $\bm{\alpha}$ from
+Similarly, let $\bm{\alpha} \sim N(\bm{\mu}_{0, \alpha}, \bm{\Sigma}_{\alpha})$ denote the prior distribution for $\bm{\alpha}$, with $\bm{\Sigma}_{\alpha}$ being a diagonal matrix. We sample the detection regression coefficients $\bm{\alpha}$ from
 
 \begin{equation} \label{alphaSampler}
-\bm{\alpha} \mid \cdot \sim \text{Normal}\Big([\bm{\Sigma}_{\alpha}^{-1} + \bm{\tilde{V}}^{\top}\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}[\bm{\tilde{V}}^{\top}(\bm{\tilde{y}} - 0.5 \bm{1}_{J^*}) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu0}_{\alpha}], [\bm{\Sigma}_{\alpha}^{-1} + \bm{\tilde{V}}^{\top}\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}\Big).
+\bm{\alpha} \mid \cdot \sim \text{Normal}\Big([\bm{\Sigma}_{\alpha}^{-1} + \bm{\tilde{V}}^{\top}\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}[\bm{\tilde{V}}^{\top}(\bm{\tilde{y}} - 0.5 \bm{1}_{J^*}) + \bm{\Sigma}_{\alpha}^{-1}\bm{\mu}_{0, \alpha}], [\bm{\Sigma}_{\alpha}^{-1} + \bm{\tilde{V}}^{\top}\bm{S}_{\alpha}\bm{\tilde{V}}]^{-1}\Big).
 \end{equation}
 
 The detection regression coefficients $\bm{\alpha}$ are only informed by the locations where $z(\bm{s}_j) = 1$, since we assume no false positive detections in the standard occupancy model. We define $J^*$ as the total number of sites at the current iteration of the MCMC with $z(\bm{s}_j) = 1$. $\bm{S}_{\alpha}$ is a diagonal matrix with diagonal entries equal to the latent \pg variable values ($\omega_{1, 1, \alpha}, \dots, \omega_{J^*, K_{J^*}, \alpha}$). The matrix $\bm{\tilde{V}}$ is the matrix of detection covariates associated with the sites where $z(\bm{s}_j) = 1$. Similarly, $\bm{\tilde{y}}$ is a vector of stacked detection-nondetection data values at the entries associated with $z(\bm{s}_j) = 1$.
@@ -130,7 +130,7 @@ The detection regression coefficients $\bm{\alpha}$ are only informed by the loc
 
 ### Update spatially-varying coefficients ($\textbf{w}(\bm{s}_j)$)
 
-Next we update the spatially-varying coefficients $\textbf{w}(\bm{s}_j)$ sequentially for each of the $j = 1, \dots, J$ spatial locations. Let $N(\bm{s}_j)$ denote the set of $m$ nearest neighbors of $\bm{s}_j$ among $\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{J - 1}$. For all model implementations in \texttt{spOccupancy}, we order the spatial locations by the horizontal axis. Let $\textbf{w}_h(N(\bm{s}_j))$ denote the $m$ realizations of the $t^{\text{th}}$ NNGP at the locations in $N(\bm{s}_j)$, where $t$ iterates across the total $\tilde{H}$ spatially-varying coefficients. Let $C(\cdot, \bm{\theta}_h)$ denote the covariance function of the original Gaussian Process (GP) from which the $t^{\text{th}}$ NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\bm{\theta}_h)$ as the covariance matrix between the observations in $A_1$ and $A_2$ for the $t^{\text{th}}$ GP. For $j \geq 1$, we have
+Next we update the spatially-varying coefficients $\textbf{w}(\bm{s}_j)$ sequentially for each of the $j = 1, \dots, J$ spatial locations. Let $N(\bm{s}_j)$ denote the set of $m$ nearest neighbors of $\bm{s}_j$ among $\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{J - 1}$. For all model implementations in \texttt{spOccupancy}, we order the spatial locations by the horizontal axis. Let $\textbf{w}_h(N(\bm{s}_j))$ denote the $m$ realizations of the $h^{\text{th}}$ NNGP at the locations in $N(\bm{s}_j)$, where $h$ iterates across the total $\tilde{H}$ spatially-varying coefficients. Let $C(\cdot, \bm{\theta}_h)$ denote the covariance function of the original Gaussian Process (GP) from which the $h^{\text{th}}$ NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\bm{\theta}_h)$ as the covariance matrix between the observations in $A_1$ and $A_2$ for the $h^{\text{th}}$ GP. For $j \geq 1$, we have
 
 \begin{equation}\label{Eq: bNNGP}
   \textbf{b}_h(\bm{s}_j) = \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\bm{\theta}_h)\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\bm{\theta}_h),
@@ -139,10 +139,10 @@ Next we update the spatially-varying coefficients $\textbf{w}(\bm{s}_j)$ sequent
 where $\textbf{b}_h(\bm{s}_1) = \bm{0}$ for all $h = 1, \dots, \tilde{H}$. Further, we have
 
 \begin{equation}\label{Eq: fNNGP}
-  f_h(\bm{s}_j) = \textbf{C}_{\bm{s}_j, \bm{s}_j}(\bm{\theta}_h) - \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\bm{\theta}_h)\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\bm{\theta}_h)\textbf{C}_{N(\bm{s}_j), \bm{s}_j}(\bm{\theta}_h),
+  f_h(\bm{s}_j) = \textbf{C}_{\bm{s}_j, \bm{s}_j}(\bm{\theta}_h) - \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\bm{\theta}_h)\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\bm{\theta}_h)\textbf{C}_{N(\bm{s}_j), \bm{s}_j}(\bm{\theta}_h).
 \end{equation}
 
-where $f_h(\bm{s}_1) = 0$ for all $h = 1, \dots, \tilde{H}$. For any two locations $\bm{s}_1$ and $\bm{s}_2$, if $\bm{s}_1 \in N(\bm{s}_2)$ and is the $l^{\text{th}}$ member of $N(\bm{s}_2)$, then define $b_h(\bm{s}_2, \bm{s}_1)$ as the $l^{\text{th}}$ entry of $\textbf{b}_h(\bm{s}_2)$. Let $U(\bm{s}_1) = \{\bm{s}_2 \in S \mid \bm{s}_1 \in N(\bm{s}_2)\}$ be the collection of locations $\bm{s}_2$ for which $\bm{s}_1$ is a neighbor, where $S$ is the set of all $J$ spatial locations. For every $\bm{s}_2 \in U(\bm{s}_1)$, define $a_h(\bm{s}_2, \bm{s}_1) = \text{w}_h(\bm{s}_2) - \sum_{\bm{s} \in N(\bm{s}_2), \bm{s} \neq \bm{s}_2} \text{w}_h(\bm{s})b_h(\bm{s}_2, \bm{s})$. Extending this to matrix notation, let $\bm{B}(\bm{s}_j)$ be a $\tilde{H} \times m\tilde{H}$ block matrix, with each $\tilde{H} \times \tilde{H}$ diagonal block containing the elements of $\bm{b}_h(\bm{s}_j)$ for each of the $h = 1, \dots \tilde{H}$ spatial NNGPs for each of the specific $m$ neighbors. Let $\bm{F}(\bm{s}_j)$ be a $\tilde{H} \times \tilde{H}$ diagonal matrix with diagonal elements of $f_h(\bm{s}_j)$. Let $\bm{a}(\bm{s}, \bm{s}_j)$ contain the values $a_h(\bm{s}, \bm{s}_j)$ for each of the $h = 1, \dots, \tilde{H}$ spatially-varying coefficients. Using this notation, the full conditional for $\textbf{w}(\bm{s}_j)$ is
+For any two locations $\bm{s}_1$ and $\bm{s}_2$, if $\bm{s}_1 \in N(\bm{s}_2)$ and is the $l^{\text{th}}$ member of $N(\bm{s}_2)$, then define $b_h(\bm{s}_2, \bm{s}_1)$ as the $l^{\text{th}}$ entry of $\textbf{b}_h(\bm{s}_2)$. Let $U(\bm{s}_1) = \{\bm{s}_2 \in S \mid \bm{s}_1 \in N(\bm{s}_2)\}$ be the collection of locations $\bm{s}_2$ for which $\bm{s}_1$ is a neighbor, where $S$ is the set of all $J$ spatial locations. For every $\bm{s}_2 \in U(\bm{s}_1)$, define $a_h(\bm{s}_2, \bm{s}_1) = \text{w}_h(\bm{s}_2) - \sum_{\bm{s} \in N(\bm{s}_2), \bm{s} \neq \bm{s}_2} \text{w}_h(\bm{s})b_h(\bm{s}_2, \bm{s})$. Extending this to matrix notation, let $\bm{B}(\bm{s}_j)$ be a $\tilde{H} \times m\tilde{H}$ block matrix, with $\tilde{H} \times \tilde{H}$ diagonal blocks containing the elements of $\bm{b}_h(\bm{s}_j)$ for each of the $h = 1, \dots \tilde{H}$ spatial NNGPs for each of the specific $m$ neighbors. Let $\bm{F}(\bm{s}_j)$ be a $\tilde{H} \times \tilde{H}$ diagonal matrix with diagonal elements of $f_h(\bm{s}_j)$. Let $\bm{a}(\bm{s}, \bm{s}_j)$ contain the values $a_h(\bm{s}, \bm{s}_j)$ for each of the $h = 1, \dots, \tilde{H}$ spatially-varying coefficients. Using this notation, the full conditional for $\textbf{w}(\bm{s}_j)$ is
 
 
 \begin{equation}\label{Eq: w}
@@ -154,7 +154,7 @@ where $f_h(\bm{s}_1) = 0$ for all $h = 1, \dots, \tilde{H}$. For any two locatio
   \end{array}
 \end{equation}
 
-where $\textbf{w}(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ realizations of each of the $t$ NNGPs at the locations in $N(\bm{s}_j)$ and $\bm{S}_{j, \beta}$ is a $\tilde{H} \times \tilde{H}$ diagonal matrix with each diagonal entry equal to the the \pg auxiliary variable at site $j$.
+where $\textbf{w}(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ realizations of each of the $h$ NNGPs at the locations in $N(\bm{s}_j)$ and $\bm{S}_{j, \beta}$ is a $\tilde{H} \times \tilde{H}$ diagonal matrix with each diagonal entry equal to the \pg auxiliary variable at site $j$.
 
 ### Update spatial decay parameters ($\bm{\phi}$)
 
@@ -162,25 +162,27 @@ We use a Metropolis within Gibbs step to sample $\bm{\phi}$, the spatial decay p
 \begin{equation}\label{Eq: fulltheta}
 \begin{array}{c}
 p(\phi_h \mid \cdot ) \propto p_h(\phi_h)p(\textbf{w}_h \mid \phi_h) \\
-\propto p(\phi_h) \times \prod_{j = 1}^J N\left(\text{w}_h(\bm{s}_j) \mid \textbf{b}_h(\bm{s}_j)^\top\textbf{w}_h (N(\bm{s}_j)), f_h (\bm{s}_j). \right)
+\propto p(\phi_h) \times \prod_{j = 1}^J N\left(\text{w}_h(\bm{s}_j) \mid \textbf{b}_h(\bm{s}_j)\textbf{w}_h (N(\bm{s}_j)), f_h (\bm{s}_j). \right)
 \end{array}
 \end{equation}
 
-The same update is used for the spatial smoothness parameter $\nu_h$ if using a Mat\'ern correlation function.
+The same update is used for the spatial smoothness parameter $\nu_h$ if using a Mat&eacute;rn correlation function.
 
 ### Update spatial variances ($\bm{\sigma^2}$)
 
 The default prior for the spatial variance parameter $\sigma^2_h$ for each spatially-varying coefficient in \texttt{spOccupancy} is an inverse-Gamma distribution (i.e., $\sigma^2_h \sim IG(a_{\sigma}, b_{\sigma})$). When using an inverse-Gamma prior, we sample from the following full conditional:
 
 \begin{equation}\label{eq:sigmaSq}
-\sigma^2_h \mid \cdot \sim IG(a_\sigma+J/2,\; b_\sigma+\frac 12 \sum_{j=1}^J \left(\text{w}_j(\bm{s}_j)-\textbf{b}_h(\bm{s}_j)'\textbf{w}_h(N(\bm{s}_j)) \right) ^2/f^*_h(\bm{s}_j).
+\sigma^2_h \mid \cdot \sim IG(a_\sigma+J/2,\; b_\sigma+\frac 12 \sum_{j=1}^J \left(\text{w}_h(\bm{s}_j)-\textbf{b}_h(\bm{s}_j)\textbf{w}_h(N(\bm{s}_j)) \right) ^2/f^\ast_h(\bm{s}_j),
 \end{equation}
+
+where $f^\ast_h(\bm{s}_j) = f_h(\bm{s}_j) / \sigma^2_h$. Note that to generate $\sigma^2_h$ for the $l$th iteration of the Gibbs sampler, we calculate $f^\ast_h(\bm{s}_j)$ using the value of $\sigma^2_h$ in the $(h - 1)$th iteration.
 
 If using a uniform prior on the spatial variances, the update is analogous to the update for the Metropolis within Gibbs step of the spatial decay parameters in Equation \ref{Eq: fulltheta}.
 
 ### Update latent occurrence values ($\bm{z}(\bm{s}_j)$)
 
-Finally, we sample the latent occurrence states for each species. We set $z(\bm{s}_j) = 1$ for all sites where there is at least one detection of our species of interest, and so we only need to sample $z(\bm{s}_j)$ at sites where there are no detections. Thus, for all locations with no detections, we sample $z(\bm{s}_j)$ according to
+Finally, we sample the latent occurrence states. We set $z(\bm{s}_j) = 1$ for all sites where there is at least one detection of our species of interest, and so we only need to sample $z(\bm{s}_j)$ at sites where there are no detections. Thus, for all locations with no detections, we sample $z(\bm{s}_j)$ according to
 
 \begin{equation}
 z(\bm{s}_j) \mid \cdot \sim \text{Bernoulli}\Bigg(\frac{\psi(\bm{s}_j) \prod_{k = 1}^{K_j}(1 - p_{k}(\bm{s}_j))}{1 - \psi(\bm{s}_j) + \psi(\bm{s}_j) \prod_{k = 1}^{K_j}(1 - p_{k}(\bm{s}_j))}\Bigg).
@@ -203,33 +205,33 @@ where $\psi_i(\bm{s}_j)$ is the occupancy probability of species $i$ at site $j$
 At sites within each species set of potentially suitable areas, we model species-specific occupancy probability as
 
 \begin{equation}\label{psiMS}
-   \text{logit}(\psi_i(\bm{s}_j)) = (\beta_{i, 1} + \delta_1\text{w}^\ast_{i, 1}(\bm{s}_j)) + \sum_{h = 2}^H\text{x}_h(\bm{s}_j)\{\beta_{i, t} + \delta_j\text{w}^\ast_{i, t}(\bm{s}_j)\},
+   \text{logit}(\psi_i(\bm{s}_j)) = (\beta_{i, 1} + \delta_1\text{w}^\ast_{i, 1}(\bm{s}_j)) + \sum_{h = 2}^H\text{x}_h(\bm{s}_j)\{\beta_{i, h} + \delta_j\text{w}^\ast_{i, h}(\bm{s}_j)\},
 \end{equation}
 
-with all parameters as defined before, but now spatial and non-spatial effects are unique to each species. Note we assume the same variables have spatially-varying effects across species (i.e., $\delta_{i, t} = \delta_h$ for all $i$), although this could be modified to allow $\delta_h$ to vary by species by either setting values \textit{a priori} or estimating the indicator variables within the model itself. We model the non-spatial component of the $t$th regression coefficient for each species $i$ hierarchically from a common community-level distribution to share information across species [@dorazio2005; @gelfand2005modelling]. More specifically, we have
+with $\text{w}^\ast_{i, h}(\bm{s}_j)$ being the spatially-varying component of the intercept ($h = 1$) or coefficient ($h > 1$) for species $i$ at site $\bm{s}_j$ and all parameters as defined before, but now spatial and non-spatial effects are unique to each species. Note we assume the same variables have spatially-varying effects across species (i.e., $\delta_{i, h} = \delta_h$ for all $i$), although this could be modified to allow $\delta_h$ to vary by species by either setting values \textit{a priori} or estimating the indicator variables within the model itself. We model the non-spatial component of the $h$th regression coefficient for each species $i$ hierarchically from a common community-level distribution to share information across species [@dorazio2005; @gelfand2005modelling]. More specifically, we have
 
 \begin{equation}\label{betaMS}
-     \beta_{i, t} \sim \text{Normal}(\mu_{\beta_h}, \tau^2_{\beta_h}),
+     \beta_{i, h} \sim \text{Normal}(\mu_{\beta_h}, \tau^2_{\beta_h}),
 \end{equation}
 where $\mu_{\beta_h}$ is the average non-spatial effect across all species in the community, and $\tau^2_{\beta_h}$ is the variability in the non-spatial effect across all species.
 
-We seek to jointly model the species-specific spatial effects, $\textbf{w}^\ast_{i, t}$, to account for correlation in species-specific responses to covariate effects, as well as residual correlation between species after accounting for their relationships with any covariates included in the model. For a small number of species (e.g., 5), a linear model of coregionalization (LMC) framework [@gelfand2004] is a viable solution, but such an approach quickly becomes computationally intractable as the number of species in the community increases. Instead, we use a spatial factor model [@hogan2004bayesian], a dimension reduction technique that accounts for correlations in species-specific responses, while drastically reducing computational run time compared to a LMC that requires estimation of a full $N \times N$ cross-covariance matrix for each effect that is assumed to vary spatially. Here, we decompose $\text{w}^\ast_{i, t}(\bm{s}_j)$ into a linear combination of $q$ latent factors and their associated species-specific coefficients (i.e., factor loadings). Thus for each SVC in the model, we have
+We seek to jointly model the species-specific spatial effects, $\textbf{w}^\ast_{i, t}$, to account for correlation in species-specific responses to covariate effects, as well as residual correlation between species after accounting for their relationships with any covariates included in the model. For a small number of species (e.g., 5), a linear model of coregionalization (LMC) framework [@gelfand2004] is a viable solution, but such an approach quickly becomes computationally intractable as the number of species in the community increases. Instead, we use a spatial factor model [@hogan2004bayesian], a dimension reduction technique that accounts for correlations in species-specific responses, while drastically reducing computational run time compared to a LMC that requires estimation of a full $N \times N$ cross-covariance matrix for each effect that is assumed to vary spatially. Here, we decompose $\text{w}^\ast_{i, h}(\bm{s}_j)$ into a linear combination of $q$ latent factors and their associated species-specific coefficients (i.e., factor loadings). Thus for each SVC in the model, we have
 
 \begin{equation}\label{wStar}
-     \text{w}^\ast_{i, t}(\bm{s}_j) = \bm{\lambda}^\top_{i, t}\textbf{w}_{t}(\bm{s}_j),
+     \text{w}^\ast_{i, h}(\bm{s}_j) = \bm{\lambda}^\top_{i, h}\textbf{w}_{h}(\bm{s}_j),
 \end{equation}
-where $\bm{\lambda}_{i, t}^\top$ is the $i$th row of factor loadings from the $N \times q$ loadings matrix $\bm{\Lambda}_h$, and $\textbf{w}_h(\bm{s}_j)$ is a $q \times 1$ vector of independent spatial factors at site $j$. As in the single-species SVC occupancy model, we model each of the $r = 1, \dots, q$ spatial factors for each of the $\tilde{H}$ spatially-varying effects with an NNGP prior following
+where $\bm{\lambda}_{i, h}^\top$ is the $i$th row of factor loadings from the $N \times q$ loadings matrix $\bm{\Lambda}_h$, and $\textbf{w}_h(\bm{s}_j)$ is a $q \times 1$ vector of independent spatial factors at site $j$. As in the single-species SVC occupancy model, we model each of the $r = 1, \dots, q$ spatial factors for each of the $\tilde{H}$ spatially-varying effects with an NNGP prior following
 
 \begin{equation}\label{NNGPMS}
-     \tilde{p}(\textbf{w}_{r, t}) = \prod_{j = 1}^J \text{Normal}(\text{w}_{r, t}(\bm{s}_j) \mid \textbf{w}_{r, t}(N(\bm{s}_j))\textbf{b}_{r, t}(\bm{s}_j), \text{f}_{r, t}(\bm{s}_j)),
+     \tilde{p}(\textbf{w}_{r, h}) = \prod_{j = 1}^J \text{Normal}(\text{w}_{r, h}(\bm{s}_j) \mid \textbf{b}_{r, h}(\bm{s}_j)\textbf{w}_{r, h}(N(\bm{s}_j)), \text{f}_{r, h}(\bm{s}_j)),
 \end{equation}
-with $\textbf{b}_{r, t}(\bm{s}_j)$ and $\text{f}_{r, t}(\bm{s}_j)$ defined in (\ref{bNNGP}) and (\ref{fNNGP}), respectively.
+with $\textbf{b}_{r, h}(\bm{s}_j)$ and $\text{f}_{r, h}(\bm{s}_j)$ defined in (\ref{bNNGP}) and (\ref{fNNGP}), respectively.
 
 For each SVC, we can derive an inter-species covariance matrix $\bm{\Sigma}_h = \bm{\Lambda}_h\bm{\Lambda}_h^\top$, which has rank $q << N$, and, thus, is singular. However, the inter-species covariance matrices can still be used to detect species clustering [@shirota2019sinica; @doser2023joint]. For a spatially-varying intercept, the inter-species covariance matrix provides information on the residual co-occurrence patterns between each pair of species across space after accounting for any covariates included in the model, which can be used to generate hypotheses regarding the abiotic and/or biotic drivers of residual species co-occurrence patterns (e.g., @tobler2019joint). For a spatially-varying covariate effect, a positive correlation between species in $\bm{\Sigma}_h$ indicates similar responses to an environmental covariate across space, which can be used as a model-based ordination technique to identify groups of species that respond similarly to changes in environmental variables.
 
 Analogous to the single-species case, we model the observed detection-nondetection of each species $i$ at site $j$ during replicate survey $k$, $y_{i, k}(\bm{s}_j)$ conditional on the true presence-absence of each species, $z_{i}(\bm{s}_j)$, following (\ref{yDet}) and (\ref{pDet}), with all parameters now varying by species. We model the species-specific detection regression coefficients ($\bm{\alpha}_i$) hierarchically, analogous to the non-spatial occupancy regression coefficients in (\ref{betaMS}).
 
-We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $t$ are required to ensure identifiability [@taylor2019spatial]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial range parameter $\phi_{r, t}$ an independent uniform prior.
+We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $h$ are required to ensure identifiability [@taylor2019spatial]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial range parameter $\phi_{r, h}$ an independent uniform prior.
 
 
 ## Gibbs sampler {#sfMsPGOccSampler}
@@ -256,33 +258,33 @@ Next, we sample the community-level detection coefficients. Let $\bm{\mu}_{\alph
 
 ### Update community-level occurrence variances ($\bm{\tau^2_{\beta}}$)
 
-Let $\tau^2_{t, \beta}$ denote the community-level variance for the $t^{\text{th}}$ occurrence parameter ($h = 1, \dots, p_{\psi}$). We assign an inverse gamma prior to $\tau^2_{t, \beta}$ with shape parameter $a_{\tau_{t, \beta}}$ and scale parameter $b_{\tau_{t, \beta}}$. Our full conditional is then
+Let $\tau^2_{h, \beta}$ denote the community-level variance for the $h^{\text{th}}$ occurrence parameter ($h = 1, \dots, p_{\psi}$). We assign an inverse gamma prior to $\tau^2_{h, \beta}$ with shape parameter $a_{\tau_{h, \beta}}$ and scale parameter $b_{\tau_{h, \beta}}$. Our full conditional is then
 
 \begin{equation}
-\tau^2_{t, \beta} \mid \cdot \sim \text{IG}(a_{\tau_{t, \beta}} + \frac{N}{2}, b_{\tau_{t, \beta}} + \frac{\sum_{i = 1}^N(\beta_{i, t} - \mu_{\beta_h})^2}{2}).
+\tau^2_{h, \beta} \mid \cdot \sim \text{IG}(a_{\tau_{h, \beta}} + \frac{N}{2}, b_{\tau_{h, \beta}} + \frac{\sum_{i = 1}^N(\beta_{i, h} - \mu_{\beta_h})^2}{2}).
 (\#eq:tauBeta)
 \end{equation}
 
 
 ### Update community-level detection variances ($\bm{\tau^2_{\alpha}}$)
 
-Let $\tau^2_{t, \alpha}$ denote the community-level variance for the $t^{\text{th}}$ detection parameter ($h = 1, \dots, p_{H}$). We assign an inverse gamma prior to $\tau^2_{t, \alpha}$ with shape parameter $a_{\tau_{t, \alpha}}$ and scale parameter $b_{\tau_{t, \alpha}}$. Our full conditional is then
+Let $\tau^2_{h, \alpha}$ denote the community-level variance for the $h^{\text{th}}$ detection parameter ($h = 1, \dots, p_{H}$). We assign an inverse gamma prior to $\tau^2_{h, \alpha}$ with shape parameter $a_{\tau_{h, \alpha}}$ and scale parameter $b_{\tau_{h, \alpha}}$. Our full conditional is then
 
 \begin{equation}
-\tau^2_{t, \alpha} \mid \cdot \sim \text{IG}(a_{\tau_{t, \alpha}} + \frac{N}{2}, b_{\tau_{t, \alpha}} + \frac{\sum_{i = 1}^N(\alpha_{i, t} - \mu_{\alpha_h})^2}{2}).
+\tau^2_{h, \alpha} \mid \cdot \sim \text{IG}(a_{\tau_{h, \alpha}} + \frac{N}{2}, b_{\tau_{h, \alpha}} + \frac{\sum_{i = 1}^N(\alpha_{i, h} - \mu_{\alpha_h})^2}{2}).
 (\#eq:tauAlpha)
 \end{equation}
 
 ### Update species-specific occurrence auxiliary variables ($\omega_{i, \beta}(\bm{s}_j)$)
 
-We next sample the occurrence auxiliary variable ($\omega_{i, \beta}(\bm{s}_j)$ individually for each species $i$ and site $j$. If $z_i^\ast(\bm{s}_j) = 1$ (i.e., site $\bm{s}_j$ is within the species range as defined by any auxiliary data source supplied to the model), our full conditional is
+We next sample the occurrence auxiliary variable ($\omega_{i, \beta}(\bm{s}_j)$) individually for each species $i$ and site $j$. If $z_i^\ast(\bm{s}_j) = 1$ (i.e., site $\bm{s}_j$ is within the species range as defined by any auxiliary data source supplied to the model), our full conditional is
 
 \begin{equation}
-\omega_{i, \beta}(\bm{s}_j) \mid \cdot \sim \text{PG}(1, \bm{x}(\bm{s}_j)^{\top}\bm{\beta}_i + \text{w}^*_{i}(\bm{s}_j)).
+\omega_{i, \beta}(\bm{s}_j) \mid \cdot \sim \text{PG}(1, \bm{x}(\bm{s}_j)^{\top}\bm{\beta}_i + \tilde{\textbf{x}}(\bm{s}_j)^\top\text{w}^*_{i}(\bm{s}_j)).
 (\#eq:omegaBeta)
 \end{equation}
 
-For sites and species where $z_i^\ast(\bm{s}_j) = 1$, we do not need to generate an auxiliary variable.
+For sites and species where $z_i^\ast(\bm{s}_j) = 0$, we do not need to generate an auxiliary variable.
 
 ### Update species-specific detection auxiliary variables ($\omega_{i, k, \alpha}(\bm{s}_j)$)
 
@@ -304,7 +306,7 @@ We update the species-level occurrence regression coefficients ($\bm{\beta}_i$),
 where
 
 \begin{equation}
-\bm{\mu}^\ast_{\beta, i} = \bm{X}^{\top}\bm{Z}^\ast_i(\bm{z}_i - 0.5 \bm{1}_J - \bm{S}_{\beta}\sum_{h = 1}^{\tilde{p}_\psi}\tilde{\bm{X}}_{t, J}\bm{Z}^\ast_i\textbf{W}_h^\top\bm{\lambda}_{i, t}) + \bm{T}_{\beta}^{-1}\bm{\mu_{\beta}},
+\bm{\mu}^\ast_{\beta, i} = \bm{X}^{\top}\bm{Z}^\ast_i(\bm{z}_i - 0.5 \bm{1}_J - \bm{S}_{\beta}\sum_{h = 1}^{\tilde{H}}\tilde{\bm{X}}_{h, J}\bm{Z}^\ast_i\textbf{W}_h^\top\bm{\lambda}_{i, h}) + \bm{T}_{\beta}^{-1}\bm{\mu_{\beta}},
 \end{equation}
 
 and
@@ -313,7 +315,7 @@ and
 \textbf{L}^\ast_{\beta, i} = [\bm{T}_{\beta}^{-1} + \bm{X}^{\top}\bm{Z}^\ast_i\bm{S}_{\beta}\bm{Z}^\ast_i\bm{X}]^{-1},
 \end{equation}
 
-where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent $\pg$ variable values for species $i$, $\bm{z}_i$ is the $J \times 1$ vector of latent occurrence values for species $i$, $\bm{1}_J$ is a $J \times 1$ vector of 1s, $\bm{Z}^\ast_i$ is a $J \times J$ diagonal matrix with diagonal elements equal to the auxiliary range binary data points for species $i$, $\tilde{\bm{X}}_{t, J}$ is a $J \times J$ diagonal matrix with diagonal elements equal to the $t$th covariate value at site $j$ whose effect is assumed to vary spatially, $\textbf{W}_h$ is the $q \times J$ matrix of spatial factors for the $t$th spatially-varying coefficient, and $\bm{\lambda}_{i, t}$ is the $i$th row of factor loadings for the $t$th spatially-varying coefficient.
+where $\bm{S}_{\beta}$ is a diagonal $J \times J$ matrix with diagonal entries equal to the latent $\pg$ variable values for species $i$, $\bm{z}_i$ is the $J \times 1$ vector of latent occurrence values for species $i$, $\bm{1}_J$ is a $J \times 1$ vector of 1s, $\bm{Z}^\ast_i$ is a $J \times J$ diagonal matrix with diagonal elements equal to the auxiliary range binary data points for species $i$, $\tilde{\bm{X}}_{h, J}$ is a $J \times J$ diagonal matrix with diagonal elements equal to the $h$th covariate value at site $j$ whose effect is assumed to vary spatially, $\textbf{W}_h$ is the $q \times J$ matrix of spatial factors for the $h$th spatially-varying coefficient, and $\bm{\lambda}_{i, h}$ is the $i$th row of factor loadings for the $t$th spatially-varying coefficient.
 
 
 ### Update species-level detection regression coefficients ($\bm{\alpha}_i$)
@@ -339,61 +341,61 @@ where $\bm{S}_\alpha$ is a diagonal $K_{\text{TOT}} \times K_{\text{TOT}}$ matri
 
 ### Update latent spatial factors for each SVC ($\textbf{w}_h(\bm{s}_j)$)
 
-Let $N(\bm{s}_j)$ denote the set of $m$ nearest neighbors of $\bm{s}_j$ among $\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{j - 1}$. Let $\textbf{w}_{r, t}(N(\bm{s}_j))$ denote the $m$ realizations of the $r^{\text{th}}$ NNGP factor for the $t$th spatially-varying coefficient at the locations in $N(\bm{s}_j)$. Let $C(\cdot, \phi_{r, t})$ denote the correlation function of the original Gaussian Process (GP) from which the NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\phi_{r, t})$ as the correlation matrix between the observations in $A_1$ and $A_2$ for the $r^{\text{th}}$ GP for the $t^{\text{th}}$ spatially-varying coefficient. For $j \geq 1$, we have
+Let $N(\bm{s}_j)$ denote the set of $m$ nearest neighbors of $\bm{s}_j$ among $\bm{s}_1, \bm{s}_2, \dots, \bm{s}_{j - 1}$. Let $\textbf{w}_{r, h}(N(\bm{s}_j))$ denote the $m$ realizations of the $r^{\text{th}}$ NNGP factor for the $h$th spatially-varying coefficient at the locations in $N(\bm{s}_j)$. Let $C(\cdot, \phi_{r, h})$ denote the correlation function of the original Gaussian Process (GP) from which the NNGP is derived. For any two sets $A_1$ and $A_2$, define $\text{C}_{A_1, A_2}(\phi_{r, h})$ as the correlation matrix between the observations in $A_1$ and $A_2$ for the $r^{\text{th}}$ GP for the $h^{\text{th}}$ spatially-varying coefficient. For $j \geq 1$, we have
 
 \begin{equation}
-  \textbf{b}_{r, t}(\bm{s}_j) = \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\phi_{r, t})\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\phi_{r, t}),
+  \textbf{b}_{r, h}(\bm{s}_j) = \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\phi_{r, h})\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\phi_{r, h}),
 (\#eq:bNNGP)
 \end{equation}
 
-where $\textbf{b}_{r, t}(\bm{s}_1) = \bm{0}$ for all $r = 1, \dots, q$ and $h = 1, \dots, \tilde{H}$. Further, we have
+where $\textbf{b}_{r, h}(\bm{s}_1) = \bm{0}$ for all $r = 1, \dots, q$ and $h = 1, \dots, \tilde{H}$. Further, we have
 
 \begin{equation}
-  f_{r, t}(\bm{s}_j) = \textbf{C}_{\bm{s}_j, \bm{s}_j}(\phi_{r, t}) - \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\phi_{r, t})\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\phi_{r, t})\textbf{C}_{N(\bm{s}_j), \bm{s}_j}(\phi_{r, t}),
+  f_{r, h}(\bm{s}_j) = \textbf{C}_{\bm{s}_j, \bm{s}_j}(\phi_{r, h}) - \textbf{C}_{\bm{s}_j, N(\bm{s}_j)}(\phi_{r, h})\textbf{C}^{-1}_{N(\bm{s}_j), N(\bm{s}_j)}(\phi_{r, h})\textbf{C}_{N(\bm{s}_j), \bm{s}_j}(\phi_{r, h}).
 (\#eq:fNNGP)
 \end{equation}
 
-where $f_{r, t}(\bm{s}_1) = 0$ for all $r = 1, \dots, q$ and $h = 1, \dots, \tilde{H}$. For any two locations $\bm{s}_1$ and $\bm{s}_2$, if $\bm{s}_1 \in N(\bm{s}_2)$ and is the $l^{\text{th}}$ member of $N(\bm{s}_2)$, then define $b_{r, t}(\bm{s}_2, \bm{s}_1)$ as the $l^{\text{th}}$ entry of $\textbf{b}_{r, t}(\bm{s}_2)$. Let $U(\bm{s}_1) = \{\bm{s}_2 \in S \mid \bm{s}_1 \in N(\bm{s}_2)\}$ be the collection of locations $\bm{s}_2$ for which $\bm{s}_1$ is a neighbor, where $S$ is the set of all $J$ spatial locations. For every $\bm{s}_2 \in U(\bm{s}_1)$, define $a_{r, t}(\bm{s}_2, \bm{s}_1) = \text{w}_{r, t}(\bm{s}_2) - \sum_{\bm{s} \in N(\bm{s}_2), \bm{s} \neq \bm{s}_2} \text{w}_{r, t}(\bm{s})b_{r, t}(\bm{s}_2, \bm{s})$. Extending this to matrix notation, let $\bm{B}_h(\bm{s}_j)$ be a $q \times mq$ block matrix, with each $q \times q$ diagonal block containing the elements of $\bm{b}_{r, t}(\bm{s}_j)$ for each of the $r = 1, \dots q$ spatial factors for the $h = 1, \dots, \tilde{H}$ spatially-varying coefficients for each of the specific $m$ neighbors. Let $\bm{F}_h(\bm{s}_j)$ be a $q \times q$ diagonal matrix with diagonal elements of $f_{r, t}(\bm{s}_j)$. Let $\bm{a}_h(\bm{s}, \bm{s}_j)$ contain the values $a_{r, t}(\bm{s}, \bm{s}_j)$ for each of the $r = 1, \dots, q$ latent factors for the $t$th spatially-varying coefficient. Using this notation, the full conditional distribution for $\textbf{w}_h(\bm{s}_j)$ is
+For any two locations $\bm{s}_1$ and $\bm{s}_2$, if $\bm{s}_1 \in N(\bm{s}_2)$ and is the $l^{\text{th}}$ member of $N(\bm{s}_2)$, then define $b_{r, h}(\bm{s}_2, \bm{s}_1)$ as the $l^{\text{th}}$ entry of $\textbf{b}_{r, h}(\bm{s}_2)$. Let $U(\bm{s}_1) = \{\bm{s}_2 \in S \mid \bm{s}_1 \in N(\bm{s}_2)\}$ be the collection of locations $\bm{s}_2$ for which $\bm{s}_1$ is a neighbor, where $S$ is the set of all $J$ spatial locations. For every $\bm{s}_2 \in U(\bm{s}_1)$, define $a_{r, t}(\bm{s}_2, \bm{s}_1) = \text{w}_{r, h}(\bm{s}_2) - \sum_{\bm{s} \in N(\bm{s}_2), \bm{s} \neq \bm{s}_2} \text{w}_{r, h}(\bm{s})b_{r, h}(\bm{s}_2, \bm{s})$. Extending this to matrix notation, let $\bm{B}_h(\bm{s}_j)$ be a $q \times mq$ block matrix, with each $q \times q$ diagonal block containing the elements of $\bm{b}_{r, h}(\bm{s}_j)$ for each of the $r = 1, \dots q$ spatial factors for the $h = 1, \dots, \tilde{H}$ spatially-varying coefficients for each of the specific $m$ neighbors. Let $\bm{F}_h(\bm{s}_j)$ be a $q \times q$ diagonal matrix with diagonal elements of $f_{r, h}(\bm{s}_j)$. Let $\bm{a}_h(\bm{s}, \bm{s}_j)$ contain the values $a_{r, h}(\bm{s}, \bm{s}_j)$ for each of the $r = 1, \dots, q$ latent factors for the $h$th spatially-varying coefficient. Using this notation, the full conditional distribution for $\textbf{w}_h(\bm{s}_j)$ is
 
 \begin{equation}
   \begin{array}{c}
-    \textbf{w}_h(\bm{s}_j) \mid \cdot \sim N_q(\bm{\mu}_{j, t}\bm{\Sigma}_{j, t}, \bm{\Sigma}_{j, t}) \mbox{ where, }\\
-    \bm{\mu}_{j, t} = \bm{F}_h(\bm{s}_j)^{-1}\bm{B}_h(\bm{s}_j)\textbf{w}_h(N(\bm{s}_j)) + \sum_{\bm{s} \in U(\bm{s}_j)}\bm{B}_h(\bm{s}, \bm{s}_j)^\top\bm{F}_h(\bm{s}_j)^{-1}\bm{a}_h(\bm{s}, \bm{s}_j) + \\
-    \bm{\Lambda}_h^\top\tilde{\bm{X}}_{t, N}(\bm{s}_j)\bm{Z}^\ast_{N}(\bm{s}_j)\bm{S}_{N}(\bm{s}_j)(\bm{S}_{N}(\bm{s}_j)^{-1}(\bm{z}(\bm{s}_j) - 0.5\bm{1}_N) - \bm{Z}^\ast_N(\bm{s}_j)(\bm{X}(\bm{s}_j)^\top\bm{\beta} + \sum_{k \neq t}^{\tilde{p}}\tilde{\bm{X}}_{k, N}(\bm{s}_j)\bm{\Lambda}_k\textbf{w}_k(\bm{s}_j))) \mbox{ and } \\
-    \bm{\Sigma}_{j, t} = (\bm{F}_h(\bm{s}_j)^{-1} + \sum_{\bm{s} \in U(\bm{s}_j)} \bm{B}_h(\bm{s}, \bm{s}_j)^\top\bm{F}_h(\bm{s}_j)^{-1}\bm{B}_h(\bm{s}, \bm{s}_j) + \\
-    (\bm{\Lambda}_h^\top\tilde{\bm{X}}_{t, N}(\bm{s}_j)\bm{Z}^\ast_n(\bm{s}_j))\bm{S}_{N}(\bm{s}_j)(\bm{\Lambda}_h^\top\tilde{\bm{X}}_{t, N}(\bm{s}_j)\bm{Z}^\ast_n(\bm{s}_j))^\top)^{-1},
+    \textbf{w}_h(\bm{s}_j) \mid \cdot \sim N_q(\bm{\mu}_{j, h}\bm{\Sigma}_{j, h}, \bm{\Sigma}_{j, h}) \mbox{ where, }\\
+    \bm{\mu}_{j, h} = \bm{F}_h(\bm{s}_j)^{-1}\bm{B}_h(\bm{s}_j)\textbf{w}_h(N(\bm{s}_j)) + \sum_{\bm{s} \in U(\bm{s}_j)}\bm{B}_h(\bm{s}, \bm{s}_j)^\top\bm{F}_h(\bm{s}_j)^{-1}\bm{a}_h(\bm{s}, \bm{s}_j) + \\
+    \bm{\Lambda}_h^\top\tilde{\bm{X}}_{h, N}(\bm{s}_j)\bm{Z}^\ast_{N}(\bm{s}_j)\bm{S}_{N}(\bm{s}_j)(\bm{S}_{N}(\bm{s}_j)^{-1}(\bm{z}(\bm{s}_j) - 0.5\bm{1}_N) - \bm{Z}^\ast_N(\bm{s}_j)(\bm{X}(\bm{s}_j)^\top\bm{\beta} + \sum_{k \neq h}^{\tilde{H}}\tilde{\bm{X}}_{k, N}(\bm{s}_j)\bm{\Lambda}_k\textbf{w}_k(\bm{s}_j))) \mbox{ and } \\
+    \bm{\Sigma}_{j, h} = (\bm{F}_h(\bm{s}_j)^{-1} + \sum_{\bm{s} \in U(\bm{s}_j)} \bm{B}_h(\bm{s}, \bm{s}_j)^\top\bm{F}_h(\bm{s}_j)^{-1}\bm{B}_h(\bm{s}, \bm{s}_j) + \\
+    (\bm{\Lambda}_h^\top\tilde{\bm{X}}_{h, N}(\bm{s}_j)\bm{Z}^\ast_N(\bm{s}_j))\bm{S}_{N}(\bm{s}_j)(\bm{\Lambda}_h^\top\tilde{\bm{X}}_{h, N}(\bm{s}_j)\bm{Z}^\ast_N(\bm{s}_j))^\top)^{-1},
   \end{array}
 (\#eq:w)
 \end{equation}
 
-where $\textbf{w}_h(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ realizations of each of the $r$ NNGPs at the locations in $N(\bm{s}_j)$, $\bm{S}_{N}(\bm{s}_j)$ is an $N \times N$ diagonal matrix with the $\pg$ occupancy variables for each species $i$ at site $j$ along the diagonal elements, $\tilde{\bm{X}}_{t, N}(\bm{s}_j)$ is a $N \times N$ diagonal matrix with diagonal elements all equal to the value of the $k$th spatially-varying covariate at location $\bm{s}_j$, $\bm{Z}^\ast_N(\bm{s}_j)$ is a $N \times N$ diagonal matrix with diagonal elements equal to the auxiliary range binary data points at site $\bm{s}_j$ for each of the $N$ species, $\bm{X}(\bm{s}_j)^\top$ is a $N \times (NH)$ block-diagonal matrix with the $i$th diagonal block the $\bm{x}(\bm{s}_j)$ vector of $H$ covariates (including the intercept), and $\bm{\beta}$ is the $(NH) \times 1$ stacked vector of species-specific regression coefficients (including the intercept).
+where $\textbf{w}_h(N(\bm{s}_j))$ is a stacked $mq \times 1$ vector of the $m$ realizations of each of the $r$ NNGPs at the locations in $N(\bm{s}_j)$, $\bm{S}_{N}(\bm{s}_j)$ is an $N \times N$ diagonal matrix with the $\pg$ occupancy variables for each species $i$ at site $j$ along the diagonal elements, $\tilde{\bm{X}}_{h, N}(\bm{s}_j)$ is a $N \times N$ diagonal matrix with diagonal elements all equal to the value of the $h$th spatially-varying covariate at location $\bm{s}_j$, $\bm{Z}^\ast_N(\bm{s}_j)$ is a $N \times N$ diagonal matrix with diagonal elements equal to the auxiliary range binary data points at site $\bm{s}_j$ for each of the $N$ species, $\bm{X}(\bm{s}_j)^\top$ is a $N \times (NH)$ block-diagonal matrix with the $i$th diagonal block the $\bm{x}(\bm{s}_j)$ vector of $H$ covariates (including the intercept), and $\bm{\beta}$ is the $(NH) \times 1$ stacked vector of species-specific regression coefficients (including the intercept).
 
 ### Update latent spatial factor loadings for each SVC ($\bm{\Lambda}_h$)
 
-Recall we set all diagonal elements of $\bm{\Lambda}$ to 1 and all upper triangular elements equal to 0 in order to ensure identifiability of the latent spatial factors. Given this requirement, let $q_i = \text{min}\{i - 1, q\}$ for $2 \leq i \leq N$, and let $\tilde{\bm{\lambda}}_{i, t} = (\lambda_{i, t, 1}, \dots, \lambda_{i, t, q_i})^\top$ be the vector representing the unrestricted elements in the $i^{\text{th}}$ row of $\bm{\Lambda}_h$. Define $\textbf{W}_h$ as the $J \times q$ matrix of latent spatial factors for the $t$th SVC, and let $\textbf{W}_{1:i, t}$ be the first $i$ columns of $\textbf{W}_h$. Using this notation, the full conditional density for $\tilde{\bm{\lambda}}_{i, t}$ is $N_q(\bm{\Omega}_{\tilde{\bm{\lambda}}_{i, t}}\bm{\mu}_{\tilde{\bm{\lambda}}_{i, t}}, \bm{\Omega}_{\tilde{\bm{\lambda}}_{i, t}})$, where
+Recall we set all diagonal elements of $\bm{\Lambda}_h$ to 1 and all upper triangular elements equal to 0 in order to ensure identifiability of the latent spatial factors. Given this requirement, let $q_i = \text{min}\{i - 1, q\}$ for $2 \leq i \leq N$, and let $\tilde{\bm{\lambda}}_{i, h} = (\lambda_{i, h, 1}, \dots, \lambda_{i, h, q_i})^\top$ be the vector representing the unrestricted elements in the $i^{\text{th}}$ row of $\bm{\Lambda}_h$. Define $\textbf{W}_h$ as the $J \times q$ matrix of latent spatial factors for the $h$th SVC, and let $\textbf{W}_{1:i, h}$ be the first $i$ columns of $\textbf{W}_h$. Using this notation, the full conditional density for $\tilde{\bm{\lambda}}_{i, h}$ is $N_q(\bm{\Omega}_{\tilde{\bm{\lambda}}_{i, h}}\bm{\mu}_{\tilde{\bm{\lambda}}_{i, h}}, \bm{\Omega}_{\tilde{\bm{\lambda}}_{i, h}})$, where
 
 \begin{align}
- \bm{\mu}_{\tilde{\bm{\lambda}}_{i, t}} &= \left\{ \begin{matrix}  (\tilde{\bm{X}}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t, 1:i})^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{Z}^\ast_i(\bm{X}\bm{\beta}_i + [\sum_{k \neq t}^{\tilde{H}}\tilde{\bm{X}}_{k, J}\textbf{W}_k\bm{\lambda}_{k, i}] + \tilde{\bm{X}}_{t, J}\dot{\textbf{w}}_{t, i}))\hfill &\text{ if }&2\leq i\leq q  \\
-(\tilde{\bm{X}}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t})^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{Z}^\ast_i(\bm{X}\bm{\beta}_i + [\sum_{k \neq t}^{\tilde{H}}\tilde{\bm{X}}_{k, J}\textbf{W}_k\bm{\lambda}_{k, i}])) \hfill &\text{ if }&j > q \end{matrix}\right.\\
-\bm{\Omega}_{\tilde{\bm{\lambda}}_{i, t}} &= \left\{ \begin{matrix} ((\tilde{\bm{X}}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t, 1:i})^\top\bm{S}_{i, \beta}(\tilde{X}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t, 1:(i - 1)}) + I_{i - 1})^{-1} \hfill &\text{ if }&2\leq i \leq q \\
-((\tilde{\bm{X}}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t})^\top\bm{S}_{i, \beta}(\tilde{X}_{t, J}\bm{Z}^\ast_i\textbf{W}_{t}) + I_{i - 1})^{-1} \hfill &\text{ if }&i > q
+ \bm{\mu}_{\tilde{\bm{\lambda}}_{i, h}} &= \left\{ \begin{matrix}  (\tilde{\bm{X}}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h, 1:(i-1)})^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{Z}^\ast_i(\bm{X}\bm{\beta}_i + [\sum_{k \neq h}^{\tilde{H}}\tilde{\bm{X}}_{k, J}\textbf{W}_k\bm{\lambda}_{k, i}] + \tilde{\bm{X}}_{h, J}\dot{\textbf{w}}_{h, i}))\hfill &\text{ if }&2\leq i\leq q  \\
+(\tilde{\bm{X}}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h})^\top\bm{S}_{i, \beta}(\bm{S}_{i, \beta}^{-1}(\bm{z}_i - 0.5\bm{1}_J) - \bm{Z}^\ast_i(\bm{X}\bm{\beta}_i + [\sum_{k \neq h}^{\tilde{H}}\tilde{\bm{X}}_{k, J}\textbf{W}_k\bm{\lambda}_{k, i}])) \hfill &\text{ if }&i > q \end{matrix}\right.\\
+\bm{\Omega}_{\tilde{\bm{\lambda}}_{i, h}} &= \left\{ \begin{matrix} ((\tilde{\bm{X}}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h, 1:(i-1)})^\top\bm{S}_{i, \beta}(\tilde{X}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h, 1:(i - 1)}) + I_{i - 1})^{-1} \hfill &\text{ if }&2\leq i \leq q \\
+((\tilde{\bm{X}}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h})^\top\bm{S}_{i, \beta}(\tilde{X}_{h, J}\bm{Z}^\ast_i\textbf{W}_{h}) + I_{q})^{-1} \hfill &\text{ if }&i > q 
 \end{matrix}\right.,
 \end{align}
 
-where $\dot{\textbf{w}}_{t, i}$ is the $i^{\text{th}}$ column of $\textbf{W}_h$, and all other variables are as defined previously.
+where $\dot{\textbf{w}}_{h, i}$ is the $i^{\text{th}}$ column of $\textbf{W}_h$, and all other variables are as defined previously.
 
 ### Update spatial range parameters ($\bm{\phi}$)
 
-We use a Metropolis within Gibbs step to sample $\bm{\phi}$. The full conditional posterior density for $\phi_{r, t}$ for each $r = 1, \dots, q$ and $h = 1, \dots, \tilde{H}$ is proportional to
+We use a Metropolis within Gibbs step to sample $\bm{\phi}$. The full conditional posterior density for $\phi_{r, h}$ for each $r = 1, \dots, q$ and $h = 1, \dots, \tilde{H}$ is proportional to
 \begin{equation}
 \begin{array}{c}
-p(\phi_{r, t} \mid \cdot ) \propto p(\phi_{r, t})p(\textbf{w}_{r, t} \mid \phi_{r, t}) \\
-\propto p(\phi_{r, t}) \times \prod_{j = 1}^J N\left(\text{w}_{r, t}(\bm{s}_j) \mid \textbf{b}_{r, t}(\bm{s}_j)^\top\textbf{w}_{r, t} (N(\bm{s}_j)), f_{r, t} (\bm{s}_j). \right)
+p(\phi_{r, h} \mid \cdot ) \propto p(\phi_{r, h})p(\textbf{w}_{r, h} \mid \phi_{r, h}) \\
+\propto p(\phi_{r, h}) \times \prod_{j = 1}^J N\left(\text{w}_{r, h}(\bm{s}_j) \mid \textbf{b}_{r, h}(\bm{s}_j)\textbf{w}_{r, h} (N(\bm{s}_j)), f_{r, h} (\bm{s}_j). \right)
 \end{array}
 (\#eq:fullTheta)
 \end{equation}
 
-We sample $\phi_{r, t}$ using a random walk Metropolis step. We use a normal proposal distribution along with a Jacobian transformation.
+We sample $\phi_{r, h}$ using a random walk Metropolis step. We use a normal proposal distribution along with a Jacobian transformation.
 
 ### Update latent occurrence values ($z_{i}(\bm{s}_j)$)
 

@@ -11,7 +11,7 @@ simTMsOcc(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
 	  trend = TRUE, psi.RE = list(), p.RE = list(), 
           sp = FALSE, svc.cols = 1, cov.model, 
 	  sigma.sq, phi, nu, ar1 = FALSE, rho, sigma.sq.t, 
-	  factor.model = FALSE, n.factors, range.probs, ...)
+	  factor.model = FALSE, n.factors, range.probs, grid, ...)
 }
 
 \arguments{
@@ -64,6 +64,8 @@ simTMsOcc(J.x, J.y, n.time, n.rep, N, beta, alpha, sp.only = 0,
 \item{n.factors}{a single numeric value specifying the number of latent factors to use to simulate the data if \code{factor.model = TRUE}.}
 
 \item{range.probs}{a numeric vector of length \code{N} where each value should fall between 0 and 1, and indicates the probability that one of the \code{J} spatial locations simulated is within the simulated range of the given species. If set to 1, every species has the potential of being present at each location.}
+
+\item{grid}{an atomic vector used to specify the grid across which to simulate the latent spatial processes. This argument is used to simulate the underlying spatial processes at a different resolution than the coordinates (e.g., if coordinates are distributed across a grid).}
 
 \item{...}{currently no additional arguments}
 }

@@ -83,7 +83,7 @@ extern "C" {
 		   SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
 	           SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
 	           SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
-		   SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r){
+		   SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r, SEXP gridIndx_r){
    
     /**********************************************************************
      * Initial constants
@@ -117,6 +117,7 @@ extern "C" {
     int pDetRE = INTEGER(consts_r)[6];
     int nDetRE = INTEGER(consts_r)[7];
     int nYearsMax = INTEGER(consts_r)[8];
+    int Jw = INTEGER(consts_r)[9];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc;
     /**********************************
@@ -182,6 +183,7 @@ extern "C" {
     int sigmaSqIG = INTEGER(sigmaSqIG_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
+    int *gridIndx = INTEGER(gridIndx_r);
 
     // Some constants
     int JnYears = J * nYearsMax;
@@ -253,8 +255,8 @@ extern "C" {
     double *alphaStar = (double *) R_alloc(nDetRE, sizeof(double)); 
     F77_NAME(dcopy)(&nDetRE, REAL(alphaStarStarting_r), &inc, alphaStar, &inc); 
     // Spatial process
-    double *w = (double *) R_alloc(J, sizeof(double));   
-    F77_NAME(dcopy)(&J, REAL(wStarting_r), &inc, w, &inc);
+    double *w = (double *) R_alloc(Jw, sizeof(double));   
+    F77_NAME(dcopy)(&Jw, REAL(wStarting_r), &inc, w, &inc);
     // Spatial range parameter
     double phi = REAL(phiStarting_r)[0];
     // Spatial variance parameter
@@ -283,8 +285,8 @@ extern "C" {
     PROTECT(zSamples_r = allocMatrix(REALSXP, JnYears, nPost)); nProtect++; 
     zeros(REAL(zSamples_r), JnYears * nPost);
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
-    zeros(REAL(wSamples_r), J * nPost);
+    PROTECT(wSamples_r = allocMatrix(REALSXP, Jw, nPost)); nProtect++; 
+    zeros(REAL(wSamples_r), Jw * nPost);
     SEXP etaSamples_r; 
     if (ar1) {
       PROTECT(etaSamples_r = allocMatrix(REALSXP, nYearsMax, nPost)); nProtect++; 
@@ -452,14 +454,14 @@ extern "C" {
     zeros(REAL(thetaSamples_r), nTheta * nPost);
     // Allocate for the U index vector that keep track of which locations have 
     // the i-th location as a neighbor
-    int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(J-m-1)*m);
+    int nIndx = static_cast<int>(static_cast<double>(1+m)/2*m+(Jw-m-1)*m);
 
     // For NNGP
     int mm = m*m;
     double *B = (double *) R_alloc(nIndx, sizeof(double));
-    double *F = (double *) R_alloc(J, sizeof(double));
+    double *F = (double *) R_alloc(Jw, sizeof(double));
     double *BCand = (double *) R_alloc(nIndx, sizeof(double));
-    double *FCand = (double *) R_alloc(J, sizeof(double));
+    double *FCand = (double *) R_alloc(Jw, sizeof(double));
     double *c =(double *) R_alloc(m*nThreads, sizeof(double));
     double *C = (double *) R_alloc(mm*nThreads, sizeof(double));
 
@@ -468,7 +470,7 @@ extern "C" {
     if (corName == "matern") {
       nu = theta[nuIndx];
     }
-    updateBFT(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], theta[phiIndx], nu, covModel, bk, nuB);
+    updateBFT(B, F, c, C, coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx], theta[phiIndx], nu, covModel, bk, nuB);
 
     /**********************************************************************
      * Set up AR1 stuff
@@ -528,7 +530,7 @@ extern "C" {
 	    if (zDatIndx[t * J + j] == 1) { 
               tmp_JnYears[t * J + j] = F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, 
 	         	                      beta, &inc);
-	      omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + w[j] + betaStarSites[t * J + j] + eta[t]);
+	      omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + w[gridIndx[j]] + betaStarSites[t * J + j] + eta[t]);
 	      // Update kappa values along the way. 
               kappaOcc[t * J + j] = z[t * J + j] - 1.0 / 2.0; 
 	    }
@@ -562,7 +564,7 @@ extern "C" {
 	for (t = 0; t < nYearsMax; t++) {
           for (j = 0; j < J; j++) {
             if (zDatIndx[t * J + j] == 1) {
-              tmp_JnYears[t * J + j] = kappaOcc[t * J + j] - omegaOcc[t * J + j] * (w[j] + betaStarSites[t * J + j] + eta[t]); 
+              tmp_JnYears[t * J + j] = kappaOcc[t * J + j] - omegaOcc[t * J + j] * (w[gridIndx[j]] + betaStarSites[t * J + j] + eta[t]); 
 	    }
 	  } // j
 	} // t
@@ -696,7 +698,7 @@ extern "C" {
                       tmp_02 += betaStar[betaStarLongIndx[rr * JnYears + t * J + j]];
 	            } 
                     tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
-                    	    tmp_02 - betaStar[l] + w[j] + eta[t]) * omegaOcc[t * J + j];
+                    	    tmp_02 - betaStar[l] + w[gridIndx[j]] + eta[t]) * omegaOcc[t * J + j];
                     tmp_0 += omegaOcc[t * J + j];
 		  }
                 }
@@ -762,15 +764,15 @@ extern "C" {
         /********************************************************************
          *Update w (spatial random effects)
          *******************************************************************/
-	for (ii = 0; ii < J; ii++ ) {
+	for (ii = 0; ii < Jw; ii++ ) {
           a = 0;
 	  v = 0;
-	  if (uIndxLU[J + ii] > 0){ // is i a neighbor for anybody
-	    for (j = 0; j < uIndxLU[J+ii]; j++){ // how many locations have ii as a neighbor
+	  if (uIndxLU[Jw + ii] > 0){ // is i a neighbor for anybody
+	    for (j = 0; j < uIndxLU[Jw+ii]; j++){ // how many locations have ii as a neighbor
 	      b = 0;
 	      // now the neighbors for the jth location who has ii as a neighbor
 	      jj = uIndx[uIndxLU[ii]+j]; // jj is the index of the jth location who has ii as a neighbor
-	      for(k = 0; k < nnIndxLU[J+jj]; k++){ // these are the neighbors of the jjth location
+	      for(k = 0; k < nnIndxLU[Jw+jj]; k++){ // these are the neighbors of the jjth location
 	        kk = nnIndx[nnIndxLU[jj]+k]; // kk is the index for the jth locations neighbors
 	        if(kk != ii){ //if the neighbor of jj is not ii
 	  	b += B[nnIndxLU[jj]+k]*w[kk]; //covariance between jj and kk and the random effect of kk
@@ -782,23 +784,23 @@ extern "C" {
 	    }
 	  }
 	  e = 0;
-	  for(j = 0; j < nnIndxLU[J+ii]; j++){
+	  for(j = 0; j < nnIndxLU[Jw+ii]; j++){
 	    e += B[nnIndxLU[ii]+j]*w[nnIndx[nnIndxLU[ii]+j]];
 	  }
 	  mu = 0.0; 
-	  for (t = 0; t < nYearsMax; t++) {
-            if (zDatIndx[t * J + ii] == 1) {
-              mu += (kappaOcc[t * J + ii] / omegaOcc[t * J + ii] - F77_NAME(ddot)(&pOcc, &X[t * J + ii], &JnYears, beta, &inc) - betaStarSites[t * J + ii] - eta[t]) * omegaOcc[t * J + ii];
+	  tmp_0 = 0.0;
+	  for (j = 0; j < J; j++) {
+            if (gridIndx[j] == ii) {
+	      for (t = 0; t < nYearsMax; t++) {
+                if (zDatIndx[t * J + j] == 1) {
+                  mu += (kappaOcc[t * J + j] / omegaOcc[t * J + j] - F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) - betaStarSites[t * J + j] - eta[t]) * omegaOcc[t * J + j];
+                  tmp_0 += omegaOcc[t * J + j];
+	        }
+	      } // t
 	    }
-	  } // t
+	  }
 	  mu += e/F[ii] + a;
 	 
-	  tmp_0 = 0.0;
-	  for (t = 0; t < nYearsMax; t++) {
-            if (zDatIndx[t * J + ii] == 1) {
-              tmp_0 += omegaOcc[t * J + ii];
-	    }
-	  } // t
 	  var = 1.0/(tmp_0 + 1.0/F[ii] + v);
 	  
 	  w[ii] = rnorm(mu*var, sqrt(var));
@@ -812,10 +814,10 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:a, logDet)
 #endif
-          for (j = 0; j < J; j++){
-            if(nnIndxLU[J+j] > 0){
+          for (j = 0; j < Jw; j++){
+            if(nnIndxLU[Jw+j] > 0){
               e = 0;
-              for(ii = 0; ii < nnIndxLU[J+j]; ii++){
+              for(ii = 0; ii < nnIndxLU[Jw+j]; ii++){
                 e += B[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii]];
               }
               b = w[j] - e;
@@ -824,7 +826,7 @@ extern "C" {
             }	
             a += b*b/F[j];
           }
-	  theta[sigmaSqIndx] = rigamma(sigmaSqA + J / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
+	  theta[sigmaSqIndx] = rigamma(sigmaSqA + Jw / 2.0, sigmaSqB + 0.5 * a * theta[sigmaSqIndx]); 
 	}
 
         /********************************************************************
@@ -834,7 +836,7 @@ extern "C" {
         if (corName == "matern"){ 
 	  nu = theta[nuIndx];
        	}
-        updateBFT(B, F, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], 
+        updateBFT(B, F, c, C, coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx], 
 	          theta[phiIndx], nu, covModel, bk, nuB);
         a = 0;
         logDet = 0;
@@ -842,10 +844,10 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:a, logDet)
 #endif
-        for (j = 0; j < J; j++){
-          if (nnIndxLU[J+j] > 0){
+        for (j = 0; j < Jw; j++){
+          if (nnIndxLU[Jw+j] > 0){
             e = 0;
-            for (ii = 0; ii < nnIndxLU[J+j]; ii++){
+            for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
               e += B[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii]];
             }
             b = w[j] - e;
@@ -875,9 +877,9 @@ extern "C" {
 				 exp(tuning[sigmaSqIndx])), sigmaSqA, sigmaSqB); 
 	}
 	if (sigmaSqIG) { 
-          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
+          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuB);
 	} else {
-          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, J, m, sigmaSqCand, phiCand, nuCand, covModel, bk, nuB);
+          updateBFT(BCand, FCand, c, C, coords, nnIndx, nnIndxLU, Jw, m, sigmaSqCand, phiCand, nuCand, covModel, bk, nuB);
 	}
 
         a = 0;
@@ -886,10 +888,10 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:a, logDet)
 #endif
-        for (j = 0; j < J; j++){
-          if (nnIndxLU[J+j] > 0){
+        for (j = 0; j < Jw; j++){
+          if (nnIndxLU[Jw+j] > 0){
             e = 0;
-            for (ii = 0; ii < nnIndxLU[J+j]; ii++){
+            for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
               e += BCand[nnIndxLU[j]+ii]*w[nnIndx[nnIndxLU[j]+ii]];
             }
             b = w[j] - e;
@@ -1012,7 +1014,7 @@ extern "C" {
           for (j = 0; j < J; j++) {
             for (t = 0; t < nYearsMax; t++) {
               if (zDatIndx[t * J + j] == 1) {
-                tmp_nYearsMax[t] += kappaOcc[t * J + j] - omegaOcc[t * J + j] * (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + betaStarSites[t * J + j] + w[j]);
+                tmp_nYearsMax[t] += kappaOcc[t * J + j] - omegaOcc[t * J + j] * (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + betaStarSites[t * J + j] + w[gridIndx[j]]);
 	      }
 	    }
           }
@@ -1053,7 +1055,7 @@ extern "C" {
           if (tmp_JnYearsInt[zLongIndx[i]] == 0) {
             psi[zLongIndx[i]] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[i]], &JnYears, 
 	  			                      beta, &inc) + 
-	    			         w[zLongSiteIndx[i]] + betaStarSites[zLongIndx[i]] +
+	    			         w[gridIndx[zLongSiteIndx[i]]] + betaStarSites[zLongIndx[i]] +
 					 eta[zYearIndx[zLongIndx[i]]], 
 				         zero, one); 
           }
@@ -1098,7 +1100,7 @@ extern "C" {
             F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[sPost*pOcc], &inc);
             F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
             F77_NAME(dcopy)(&JnYears, psi, &inc, &REAL(psiSamples_r)[sPost*JnYears], &inc); 
-            F77_NAME(dcopy)(&J, w, &inc, &REAL(wSamples_r)[sPost*J], &inc); 
+            F77_NAME(dcopy)(&Jw, w, &inc, &REAL(wSamples_r)[sPost*Jw], &inc); 
 	    F77_NAME(dcopy)(&nTheta, theta, &inc, &REAL(thetaSamples_r)[sPost*nTheta], &inc); 
 	    F77_NAME(dcopy)(&JnYears, z, &inc, &REAL(zSamples_r)[sPost*JnYears], &inc); 
 	    if (ar1) {
