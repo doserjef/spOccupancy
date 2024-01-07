@@ -4,7 +4,7 @@
 
 
 \description{
-Function for fitting multi-species occupancy models using Polya-Gamma latent variables. 
+Function for fitting integrated multi-species occupancy models using Polya-Gamma latent variables. 
 }
 
 \usage{

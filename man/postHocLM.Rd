@@ -1,6 +1,6 @@
 \name{postHocLM}
 \alias{postHocLM}
-\title{Function for Fitting Linear Mixed Models Previous Model Estimates}
+\title{Function for Fitting Linear Mixed Models with Previous Model Estimates}
 
 \usage{
 postHocLM(formula, data, inits, priors, verbose = FALSE, 

@@ -1,6 +1,7 @@
 # spOccupancy 0.7.3
 
 + Fixed a few typos in the MCMC sampler vignettes for factor models and SVC models.
++ Fixed a bug that prevented cross-validation from working properly in multi-species models when setting `k.fold.only = TRUE`. Thanks to Zack Steel for pointing this out.
 
 # spOccupancy 0.7.2
 

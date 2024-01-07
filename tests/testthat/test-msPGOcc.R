@@ -4093,6 +4093,27 @@ test_that("cross-validation works", {
   expect_equal(sum(out$k.fold.deviance < 0), 0)
 })
 
+# Check cross-validation --------------
+test_that("cross-validation only works", {
+  out <- msPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+	       inits = inits.list, 
+	       n.samples = n.samples, 
+	       priors = prior.list, 
+               n.omp.threads = 1, 
+	       verbose = TRUE, 
+	       n.report = n.report, 
+	       n.burn = 400,
+	       n.thin = 2, 
+	       n.chains = 2,
+	       k.fold = 3,
+               k.fold.threads = 1, k.fold.only = TRUE)
+  expect_equal(length(out$k.fold.deviance), N)
+  expect_type(out$k.fold.deviance, "double")
+  expect_equal(sum(out$k.fold.deviance < 0), 0)
+})
+
 # Check random effects ----------------
 test_that("random effects are empty", {
   expect_equal(out$pRE, TRUE)

@@ -1155,6 +1155,7 @@ msPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         coef.names <- paste(rep(x.names, each = N), sp.names, sep = '-')
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- coef.names
+        coef.names.det <- paste(rep(x.p.names, each = N), sp.names, sep = '-')
         out.fit$alpha.samples <- mcmc(t(out.fit$alpha.samples))
         colnames(out.fit$alpha.samples) <- coef.names.det
         out.fit$X <- X.fit

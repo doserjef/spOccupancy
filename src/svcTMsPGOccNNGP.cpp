@@ -1444,37 +1444,40 @@ extern "C" {
             aa = 0;
             logDet = 0;
 
+	    // If lower and upper bound of uniform prior is the same, don't sample, since phi is fixed at initial value.
+	    if (phiA[rr * q + ll] != phiB[rr * q + ll]) {
+
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:aa, logDet)
 #endif
-            for (j = 0; j < Jw; j++){
-              if (nnIndxLU[Jw+j] > 0){
-                e = 0;
-                for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
-                  e += B[ll * nIndx + nnIndxLU[j]+ii]*w[rr * Jwq + nnIndx[nnIndxLU[j]+ii] * q + ll];
-                }
-                b = w[rr * Jwq + j * q + ll] - e;
-              } else{
-                b = w[rr * Jwq + j * q + ll];
-              }	
-              aa += b*b/F[ll * Jw + j];
-              logDet += log(F[ll * Jw + j]);
-            }
+              for (j = 0; j < Jw; j++){
+                if (nnIndxLU[Jw+j] > 0){
+                  e = 0;
+                  for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
+                    e += B[ll * nIndx + nnIndxLU[j]+ii]*w[rr * Jwq + nnIndx[nnIndxLU[j]+ii] * q + ll];
+                  }
+                  b = w[rr * Jwq + j * q + ll] - e;
+                } else{
+                  b = w[rr * Jwq + j * q + ll];
+                }	
+                aa += b*b/F[ll * Jw + j];
+                logDet += log(F[ll * Jw + j]);
+              }
       
-            logPostCurr = -0.5 * logDet - 0.5 * aa;
-            logPostCurr += log(theta[phiIndx * qpTilde + rr * q + ll] - 
-	          	 phiA[rr * q + ll]) + log(phiB[rr * q + ll] - 
-	          	 theta[phiIndx * qpTilde + rr * q + ll]); 
-            if(corName == "matern"){
-       	      logPostCurr += log(theta[nuIndx * qpTilde + rr * q + ll] - nuA[rr * q + ll]) + 
-	                         log(nuB[rr * q + ll] - theta[nuIndx * qpTilde + rr * q + ll]); 
-            }
-            
-            // Candidate
-            phiCand = logitInv(rnorm(logit(theta[phiIndx * qpTilde + rr * q + ll], phiA[rr * q + ll], phiB[rr * q + ll]), exp(tuning[phiIndx * qpTilde + rr * q + ll])), phiA[rr * q + ll], phiB[rr * q + ll]);
-            if (corName == "matern"){
-      	      nuCand = logitInv(rnorm(logit(theta[nuIndx * qpTilde + rr * q + ll], nuA[rr * q + ll], nuB[rr * q + ll]), exp(tuning[nuIndx * qpTilde + rr * q + ll])), nuA[rr * q + ll], nuB[rr * q + ll]);
-            }
+              logPostCurr = -0.5 * logDet - 0.5 * aa;
+              logPostCurr += log(theta[phiIndx * qpTilde + rr * q + ll] - 
+	            	 phiA[rr * q + ll]) + log(phiB[rr * q + ll] - 
+	            	 theta[phiIndx * qpTilde + rr * q + ll]); 
+              if(corName == "matern"){
+       	        logPostCurr += log(theta[nuIndx * qpTilde + rr * q + ll] - nuA[rr * q + ll]) + 
+	                           log(nuB[rr * q + ll] - theta[nuIndx * qpTilde + rr * q + ll]); 
+              }
+              
+              // Candidate
+              phiCand = logitInv(rnorm(logit(theta[phiIndx * qpTilde + rr * q + ll], phiA[rr * q + ll], phiB[rr * q + ll]), exp(tuning[phiIndx * qpTilde + rr * q + ll])), phiA[rr * q + ll], phiB[rr * q + ll]);
+              if (corName == "matern"){
+      	        nuCand = logitInv(rnorm(logit(theta[nuIndx * qpTilde + rr * q + ll], nuA[rr * q + ll], nuB[rr * q + ll]), exp(tuning[nuIndx * qpTilde + rr * q + ll])), nuA[rr * q + ll], nuB[rr * q + ll]);
+              }
       
             updateBFsvcTMs(BCand, FCand, &c[ll * m*nThreads], &C[ll * mm * nThreads], coords, nnIndx, nnIndxLU, Jw, m, theta[sigmaSqIndx * qpTilde + rr * q + ll], phiCand, nuCand, covModel, &bk[ll * sizeBK], nuB[rr * q + ll]);
       
@@ -1484,39 +1487,41 @@ extern "C" {
 #ifdef _OPENMP
 #pragma omp parallel for private (e, ii, b) reduction(+:aa, logDet)
 #endif
-            for (j = 0; j < Jw; j++){
-              if (nnIndxLU[Jw+j] > 0){
-                e = 0;
-                for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
-                  e += BCand[nnIndxLU[j]+ii]*w[rr * Jwq + nnIndx[nnIndxLU[j]+ii] * q + ll];
-                }
-                b = w[rr * Jwq + j * q + ll] - e;
-              } else{
-                b = w[rr * Jwq + j * q + ll];
-                }	
-                aa += b*b/FCand[j];
-                logDet += log(FCand[j]);
-            }
-            
-            logPostCand = -0.5*logDet - 0.5*aa;      
-            logPostCand += log(phiCand - phiA[rr * q + ll]) + log(phiB[rr * q + ll] - phiCand); 
-            if (corName == "matern"){
-              logPostCand += log(nuCand - nuA[rr * q + ll]) + log(nuB[rr * q + ll] - nuCand); 
-            }
-
-            if (runif(0.0,1.0) <= exp(logPostCand - logPostCurr)) {
-
-              F77_NAME(dcopy)(&nIndx, BCand, &inc, &B[ll * nIndx], &inc);
-              F77_NAME(dcopy)(&Jw, FCand, &inc, &F[ll * Jw], &inc);
-              
-	      theta[phiIndx * qpTilde + rr * q + ll] = phiCand;
-              accept[phiIndx * qpTilde + rr * q + ll]++;
-              if (corName == "matern") {
-                nu[rr * q + ll] = nuCand; 
-	        theta[nuIndx * qpTilde + rr * q + ll] = nu[rr * q + ll]; 
-                accept[nuIndx * qpTilde + rr * q + ll]++; 
+              for (j = 0; j < Jw; j++){
+                if (nnIndxLU[Jw+j] > 0){
+                  e = 0;
+                  for (ii = 0; ii < nnIndxLU[Jw+j]; ii++){
+                    e += BCand[nnIndxLU[j]+ii]*w[rr * Jwq + nnIndx[nnIndxLU[j]+ii] * q + ll];
+                  }
+                  b = w[rr * Jwq + j * q + ll] - e;
+                } else{
+                  b = w[rr * Jwq + j * q + ll];
+                  }	
+                  aa += b*b/FCand[j];
+                  logDet += log(FCand[j]);
               }
-            }
+              
+              logPostCand = -0.5*logDet - 0.5*aa;      
+              logPostCand += log(phiCand - phiA[rr * q + ll]) + log(phiB[rr * q + ll] - phiCand); 
+              if (corName == "matern"){
+                logPostCand += log(nuCand - nuA[rr * q + ll]) + log(nuB[rr * q + ll] - nuCand); 
+              }
+
+              if (runif(0.0,1.0) <= exp(logPostCand - logPostCurr)) {
+
+                F77_NAME(dcopy)(&nIndx, BCand, &inc, &B[ll * nIndx], &inc);
+                F77_NAME(dcopy)(&Jw, FCand, &inc, &F[ll * Jw], &inc);
+                
+	        theta[phiIndx * qpTilde + rr * q + ll] = phiCand;
+                accept[phiIndx * qpTilde + rr * q + ll]++;
+                if (corName == "matern") {
+                  nu[rr * q + ll] = nuCand; 
+	          theta[nuIndx * qpTilde + rr * q + ll] = nu[rr * q + ll]; 
+                  accept[nuIndx * qpTilde + rr * q + ll]++; 
+                }
+              }
+
+	    }
 	  } // ll (factor)
         } // rr (svc)
 

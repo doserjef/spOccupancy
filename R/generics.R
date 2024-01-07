@@ -624,7 +624,7 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     w.samples <- t(w.samples)
     beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
 
-    q <- nrow(X.0)
+    q <- nrow(X.0.new)
 
     if (sp.type == 'GP') {
       obs.pred.D <- iDist(coords, coords.0.new)
@@ -652,6 +652,25 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
           	 w.samples, beta.star.sites.0.samples, 
           	 n.post, cov.model.indx, n.omp.threads, 
           	 verbose, n.report)
+
+      if (nrow(X.0) == q) {
+        out$z.0.samples <- mcmc(t(out$z.0.samples))
+        out$psi.0.samples <- mcmc(t(out$psi.0.samples))
+        out$w.0.samples <- mcmc(t(out$w.0.samples))
+      } else {
+        tmp <- matrix(NA, n.post, nrow(X.0))
+        tmp[, coords.0.indx] <- t(out$z.0.samples)
+        tmp[, coords.place.indx] <- object$z.samples[, coords.indx]
+        out$z.0.samples <- mcmc(tmp)
+        tmp <- matrix(NA, n.post, nrow(X.0))
+        tmp[, coords.0.indx] <- t(out$psi.0.samples)
+        tmp[, coords.place.indx] <- object$psi.samples[, coords.indx]
+        out$psi.0.samples <- mcmc(tmp)
+        tmp <- matrix(NA, n.post, nrow(X.0))
+        tmp[, coords.0.indx] <- t(out$w.0.samples)
+        tmp[, coords.place.indx] <- object$w.samples[, coords.indx]
+        out$w.0.samples <- mcmc(tmp)
+      }
     } else { 
       # Get nearest neighbors 
       # nn2 is a function from RANN. 
@@ -696,11 +715,12 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
                    theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
                    cov.model.indx, n.omp.threads, verbose, n.report, J.w.0, J.w, grid.index.0.c, 
                    sites.link, sites.0.sampled)
+    
+      out$z.0.samples <- mcmc(t(out$z.0.samples))
+      out$psi.0.samples <- mcmc(t(out$psi.0.samples))
+      out$w.0.samples <- mcmc(t(out$w.0.samples))
     }
 
-    out$z.0.samples <- mcmc(t(out$z.0.samples))
-    out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-    out$w.0.samples <- mcmc(t(out$w.0.samples))
   }
   # Detection predictions -------------------------------------------------
   if (tolower(type) == 'detection') {
