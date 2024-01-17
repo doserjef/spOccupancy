@@ -25,17 +25,25 @@ sfJSDM(formula, data, inits, priors, tuning,
     using \pkg{lme4} syntax (Bates et al. 2015).}
   
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{covs}, \code{coords}, \code{range.ind}. \code{y}
+    Valid tags are \code{y}, \code{covs}, \code{coords}, \code{range.ind}, and \code{grid.index}. \code{y}
     is a two-dimensional array with first dimension equal to the number 
     of species and second dimension equal to the number of sites. Note how this differs
     from other \code{spOccupancy} functions in that \code{y} does not have any 
     replicate surveys. This is because \code{sfJSDM} does not account for imperfect
     detection. \code{covs} is a matrix or data frame containing the variables 
     used in the model, with \eqn{J}{J} rows for 
-    each column (variable). \code{coords} is a matrix with \eqn{J}{J} 
-    rows and 2 columns consisting of the spatial coordinates of each site in 
-    the data. Note that \code{spOccupancy} assumes coordinates are specified 
-  in a projected coordinate system. 
+    each column (variable). \code{coords} is a matrix of the observation coordinates used
+    to estimate the SVCs for each site. \code{coords} has two columns for the 
+    easting and northing coordinate, respectively. Typically, each site in the data 
+    set will have it's own coordinate, such that \code{coords} is a \eqn{J \times 2}{J x 2} 
+    matrix and \code{grid.index} should not be specified. 
+    If you desire to estimate SVCs at some larger spatial level, 
+    e.g., if points fall within grid cells and you want to estimate an SVC for 
+    each grid cell instead of each point, \code{coords} can be specified as the coordinate for 
+    each grid cell. In such a case, \code{grid.index} is an indexing vector of length J, where each 
+    value of \code{grid.index} indicates the corresponding row in \code{coords} that the given 
+    site corresponds to. Note that \code{spOccupancy} assumes coordinates are specified 
+    in a projected coordinate system. 
     \code{range.ind} is a matrix with rows corresponding to species and columns
     corresponding to sites, with each element taking value 1 if that site is 
     within the range of the corresponding species and 0 if it is outside of the 

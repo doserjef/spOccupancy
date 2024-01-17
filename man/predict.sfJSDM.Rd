@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{sfJSDM}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-        n.report = 100, ignore.RE = FALSE, ...)
+        n.report = 100, ignore.RE = FALSE, grid.index.0, ...)
 }
 
 \arguments{
@@ -37,6 +37,8 @@
     prediction will only use the fixed effects and the spatial random effects. If FALSE, 
     random effects will be included in the prediction for both observed and unobserved 
     levels of the unstructured random effects.}
+
+  \item{grid.index.0}{an indexing vector used to specify how each row in \code{X.0} corresponds to the coordinates specified in \code{coords.0}. Only relevant if the spatial random effect was estimated at a higher spatial resolution (e.g., grid cells) than point locations.}
 
   \item{...}{currently no additional arguments}
 }

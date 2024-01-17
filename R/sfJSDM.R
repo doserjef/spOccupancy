@@ -70,10 +70,25 @@ sfJSDM <- function(formula, data, inits, priors,
     stop("error: coords must be specified in data for a spatial occupancy model.")
   }
   coords <- as.matrix(data$coords)
+  # Check grid index
+  if (!'grid.index' %in% names(data)) {
+    if (nrow(data$coords) != ncol(data$y)) {
+      stop("data$grid.index must be specified if nrow(data$coords) != nrow(data$y)")
+    }
+    grid.index <- 1:nrow(coords)
+  } else {
+    if (!is.atomic(data$grid.index) | !is.numeric(data$grid.index)) {
+      stop("data$grid.index must be a numeric vector")
+    }
+    if (length(data$grid.index) < nrow(data$coords)) {
+      stop("length(data$grid.index) must be greater than or equal to nrow(data$coords)")
+    }
+    grid.index <- data$grid.index
+  }
   # Check if all spatial coordinates are unique. 
   unique.coords <- unique(data$coords)
   if (nrow(unique.coords) < nrow(data$coords)) {
-    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement.") 
+    stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement. Alternatively, you can use data$grid.index to specify the spatial random effect at a larger spatial level than the individual sites (e.g., a grid). See ?sfJSDM for details.") 
   }
   if (!missing(k.fold)) {
     if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
@@ -111,12 +126,18 @@ sfJSDM <- function(formula, data, inits, priors,
     u.search.type <- 2 
     ## Order by x column. Could potentially allow this to be user defined. 
     ord <- order(coords[,1]) 
+    tmp <- lapply(ord, function (a) which(grid.index == a))
+    tmp.2 <- sapply(tmp, length)
+    # TODO: this could be a potential problem if you run into issues.
+    grid.index.c <- unlist(lapply(1:length(tmp.2), function(a) rep(a, tmp.2[a]))) - 1
+    grid.index.r <- grid.index.c + 1
+    long.ord <- unlist(lapply(ord, function(a) which(grid.index == a)))
     # Reorder everything to align with NN ordering
-    y <- y[, ord, drop = FALSE]
+    y <- y[, long.ord, drop = FALSE]
     coords <- coords[ord, , drop = FALSE]
-    range.ind <- range.ind[, ord, drop = FALSE]
+    range.ind <- range.ind[, long.ord, drop = FALSE]
     # Occupancy covariates
-    data$covs <- data$covs[ord, , drop = FALSE]
+    data$covs <- data$covs[long.ord, , drop = FALSE]
   }
 
   data$covs <- as.data.frame(data$covs)
@@ -198,6 +219,8 @@ sfJSDM <- function(formula, data, inits, priors,
   n.occ.re.long <- apply(X.re, 2, function(a) length(unique(a)))
   # Number of sites
   J <- nrow(X)
+  # Number of coordinates in coordinate grid
+  J.w <- nrow(coords)
   if (missing(n.batch)) {
     stop("error: must specify number of MCMC batches")
   }
@@ -668,24 +691,24 @@ sfJSDM <- function(formula, data, inits, priors,
       w.inits <- inits[["w"]]
       if (!is.matrix(w.inits)) {
         stop(paste("error: initial values for w must be a matrix with dimensions ",
-        	   q, " x ", J, sep = ""))
+        	   q, " x ", J.w, sep = ""))
       }
-      if (nrow(w.inits) != q | ncol(w.inits) != J) {
+      if (nrow(w.inits) != q | ncol(w.inits) != J.w) {
         stop(paste("error: initial values for w must be a matrix with dimensions ",
-        	   q, " x ", J, sep = ""))
+        	   q, " x ", J.w, sep = ""))
       }
       if (NNGP) {
         w.inits <- w.inits[, ord]
       }
     } else {
-      w.inits <- matrix(0, q, J)
+      w.inits <- matrix(0, q, J.w)
       if (verbose) {
         message("w is not specified in initial values.\nSetting initial value to 0\n")
       }
     }
   } else {
     # Just set initial W values to 0. 
-    w.inits <- rep(0, J)
+    w.inits <- rep(0, J.w)
   }
   # Should initial values be fixed --
   if ("fix" %in% names(inits)) {
@@ -788,7 +811,7 @@ sfJSDM <- function(formula, data, inits, priors,
       cat("----------------------------------------\n");
     }
     
-    indx <- mkUIndx(J, n.neighbors, nn.indx, nn.indx.lu, u.search.type)
+    indx <- mkUIndx(J.w, n.neighbors, nn.indx, nn.indx.lu, u.search.type)
     
     u.indx <- indx$u.indx
     u.indx.lu <- indx$u.indx.lu
@@ -854,8 +877,9 @@ sfJSDM <- function(formula, data, inits, priors,
     storage.mode(X.big) <- "double"
     storage.mode(range.ind) <- 'double'
     storage.mode(coords) <- "double"
-    consts <- c(N, J, p.occ, p.occ.re, n.occ.re, q, ind.betas, shared.spatial)
+    consts <- c(N, J, p.occ, p.occ.re, n.occ.re, q, ind.betas, shared.spatial, J.w)
     storage.mode(consts) <- "integer"
+    storage.mode(grid.index.c) <- "integer"
     storage.mode(beta.inits) <- "double"
     storage.mode(beta.comm.inits) <- "double"
     storage.mode(tau.sq.beta.inits) <- "double"
@@ -959,7 +983,7 @@ sfJSDM <- function(formula, data, inits, priors,
           	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
           		    tuning.c, cov.model.indx, n.batch, 
           	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info, monitors, range.ind)
+          	            samples.info, chain.info, monitors, range.ind, grid.index.c)
         chain.info[1] <- chain.info[1] + 1
 	seeds.list[[i]] <- .Random.seed
       }
@@ -972,12 +996,12 @@ sfJSDM <- function(formula, data, inits, priors,
           if (monitors[beta.comm.monitor]) {
             out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
             					      mcmc(t(a$beta.comm.samples)))), 
-            			     autoburnin = FALSE)$psrf[, 2])
+            			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
           }
           if (monitors[tau.sq.beta.monitor]) {
             out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$tau.sq.beta.samples)))), 
-          			     autoburnin = FALSE)$psrf[, 2])
+          			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
           }
 	} else {
         out$rhat$beta.comm <- rep(NA, p.occ)
@@ -986,26 +1010,26 @@ sfJSDM <- function(formula, data, inits, priors,
         if (monitors[beta.monitor]) {
           out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					         mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
         if (monitors[theta.monitor]) {
           out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$theta.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2]
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         }
         if (monitors[lambda.monitor]) {
           if (!shared.spatial) {
             lambda.mat <- matrix(lambda.inits, N, q)
             out$rhat$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
             					       mcmc(t(a$lambda.samples[c(lower.tri(lambda.mat)), ])))), 
-            					       autoburnin = FALSE)$psrf[, 2])
+            					       autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
 	  }
         }
         if (p.occ.re > 0) {
           if (monitors[sigma.sq.psi.monitor]) {
             out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.psi.samples)))), 
-          			     autoburnin = FALSE)$psrf[, 2])
+          			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
           }
         }
       } else {
@@ -1083,26 +1107,26 @@ sfJSDM <- function(formula, data, inits, priors,
       # Return things back in the original order. 
       if (monitors[w.monitor]) {
         out$w.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$w.samples, 
-          								dim = c(q, J, n.post.samples))))
+          								dim = c(q, J.w, n.post.samples))))
         out$w.samples <- out$w.samples[, order(ord), , drop = FALSE]
         out$w.samples <- aperm(out$w.samples, c(3, 1, 2))
       }
       if (monitors[psi.monitor]) {
         out$psi.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$psi.samples, 
           								dim = c(N, J, n.post.samples))))
-        out$psi.samples <- out$psi.samples[, order(ord), ]
+        out$psi.samples <- out$psi.samples[, order(long.ord), ]
         out$psi.samples <- aperm(out$psi.samples, c(3, 1, 2))
       }
       if (monitors[like.monitor]) {
         out$like.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$like.samples, 
           								dim = c(N, J, n.post.samples))))
-        out$like.samples <- out$like.samples[, order(ord), ]
+        out$like.samples <- out$like.samples[, order(long.ord), ]
         out$like.samples <- aperm(out$like.samples, c(3, 1, 2))
       }
       if (monitors[z.monitor]) {
         out$z.samples <- do.call(abind, lapply(out.tmp, function(a) array(a$z.samples, 
           								dim = c(N, J, n.post.samples))))
-        out$z.samples <- out$z.samples[, order(ord), ]
+        out$z.samples <- out$z.samples[, order(long.ord), ]
         out$z.samples <- aperm(out$z.samples, c(3, 1, 2))
       }
       out$X.re <- X.re[order(ord), , drop = FALSE]
@@ -1175,9 +1199,9 @@ sfJSDM <- function(formula, data, inits, priors,
           out$beta.star.samples <- get.vals(out$beta.star.samples)
         }  
       }
-      out$X <- X[order(ord), , drop = FALSE]
-      out$X.big <- X.big[order(ord), , , drop = FALSE]
-      out$y <- y.big[, order(ord), drop = FALSE]
+      out$X <- X[order(long.ord), , drop = FALSE]
+      out$X.big <- X.big[order(long.ord), , , drop = FALSE]
+      out$y <- y.big[, order(long.ord), drop = FALSE]
       out$call <- cl
       out$n.samples <- n.samples
       out$x.names <- x.names
@@ -1196,7 +1220,7 @@ sfJSDM <- function(formula, data, inits, priors,
       out$species.sds <- species.sds
       out$species.means <- species.means
       out$std.by.sp <- std.by.sp
-      out$range.ind <- range.ind[, order(ord)]
+      out$range.ind <- range.ind[, order(long.ord)]
       out$shared.spatial <- shared.spatial
       # Send out objects needed for updateMCMC 
       update.list <- list()
@@ -1224,6 +1248,7 @@ sfJSDM <- function(formula, data, inits, priors,
       }
     }
 
+    # TODO: need to update.
     # K-fold cross-validation -------
     do.k.fold <- ifelse(sum(range.ind == 0) > 0, FALSE, TRUE)
     if (!missing(k.fold) & !do.k.fold) {
