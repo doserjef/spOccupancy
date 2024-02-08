@@ -165,7 +165,10 @@ svcMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     this will result in the covariates being standardized differently for each species
     based on the sites where \code{range.ind == 1} for that given species. If \code{range.ind} is not specified 
     and \code{std.by.sp = TRUE}, this will simply be equivalent to standardizing 
-    the covariates across all locations prior to fitting the model.}
+    the covariates across all locations prior to fitting the model. Note that the covariates
+    in \code{occ.formula} should still be standardized across all locations. This can be done
+    either outside the function, or can be done by specifying \code{scale()} in the model formula 
+    around the continuous covariates.}
 
   \item{n.factors}{the number of factors to use in the spatial factor model approach. 
     Note this corresponds to the number of factors used for each spatially-varying

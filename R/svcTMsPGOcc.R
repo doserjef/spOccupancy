@@ -466,6 +466,29 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   }
   names(priors) <- tolower(names(priors))
 
+  # Independent beta parameters -----
+  if ('independent.betas' %in% names(priors)) {
+    if (priors$independent.betas == TRUE) {
+      message("beta parameters will be estimated independently\n")
+      ind.betas <- TRUE
+    } else if (priors$independent.betas == FALSE) {
+      ind.betas <- FALSE 
+    }
+  } else {
+    ind.betas <- FALSE
+  }
+  # Independent alpha parameters -----
+  if ('independent.alphas' %in% names(priors)) {
+    if (priors$independent.alphas == TRUE) {
+      message("alpha parameters will be estimated independently\n")
+      ind.alphas <- TRUE
+    } else if (priors$independent.alphas == FALSE) {
+      ind.alphas <- FALSE 
+    }
+  } else {
+    ind.alphas <- FALSE
+  }
+
   # beta.comm -----------------------
   if ("beta.comm.normal" %in% names(priors)) {
     if (!is.list(priors$beta.comm.normal) | length(priors$beta.comm.normal) != 2) {
@@ -499,7 +522,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     Sigma.beta.comm <- sigma.beta.comm * diag(p.occ)
   } else {
-    if (verbose) {
+    if (verbose & !ind.betas) {
       message("No prior specified for beta.comm.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.beta.comm <- rep(0, p.occ)
@@ -540,7 +563,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     }
     Sigma.alpha.comm <- sigma.alpha.comm * diag(p.det)
   } else {
-    if (verbose) {
+    if (verbose & !ind.alphas) {
       message("No prior specified for alpha.comm.normal.\nSetting prior mean to 0 and prior variance to 2.72\n")
     }
     mu.alpha.comm <- rep(0, p.det)
@@ -580,7 +603,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       tau.sq.beta.b <- rep(tau.sq.beta.b, p.occ)
     }
   } else {
-    if (verbose) {	    
+    if (verbose & !ind.betas) {	    
       message("No prior specified for tau.sq.beta.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
     }
     tau.sq.beta.a <- rep(0.1, p.occ)
@@ -619,7 +642,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       tau.sq.alpha.b <- rep(tau.sq.alpha.b, p.det)
     }
   } else {
-    if (verbose) {	    
+    if (verbose & !ind.alphas) {	    
       message("No prior specified for tau.sq.alpha.ig.\nSetting prior shape to 0.1 and prior scale to 0.1\n")
     }
     tau.sq.alpha.a <- rep(0.1, p.det)
@@ -1373,7 +1396,7 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(coords) <- "double"
     storage.mode(range.ind) <- "double"
     consts <- c(N, J, n.obs, p.occ, p.occ.re, n.occ.re, 
-		p.det, p.det.re, n.det.re, q, p.svc, n.years.max, ar1, J.w)
+		p.det, p.det.re, n.det.re, q, p.svc, n.years.max, ar1, J.w, ind.betas, ind.alphas)
     storage.mode(consts) <- "integer"
     storage.mode(grid.index.c) <- "integer"
     storage.mode(beta.inits) <- "double"
@@ -1457,10 +1480,14 @@ svcTMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     for (i in 1:n.chains) {
       # Change initial values if i > 1
       if ((i > 1) & (!fix.inits)) {
-        beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-        alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-        tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
-        tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
+        if (!ind.betas) {
+          beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+          tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+	}
+        if (!ind.alphas) {
+          tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
+          alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+	}
         beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
               		     sqrt(tau.sq.beta.inits)), N, p.occ)
         beta.inits <- c(beta.inits)

@@ -40,9 +40,9 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
 			   'tPGOcc', 'stPGOcc', 'svcTPGBinom', 'svcTPGOcc', 'intMsPGOcc', 
 			   'svcMsPGOcc')) {
     if (!by.sp) {
-    elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
-    pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
-    out <- c(elpd, pD, -2 * (elpd - pD))
+      elpd <- sum(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), na.rm = TRUE)
+      pD <- sum(apply(object$like.samples, c(2, 3), function(a) var(log(a))), na.rm = TRUE)
+      out <- c(elpd, pD, -2 * (elpd - pD))
     names(out) <- c("elpd", "pD", "WAIC")
     } else {
       elpd <- apply(apply(object$like.samples, c(2, 3), function(a) log(mean(a))), 

@@ -1,6 +1,6 @@
 if (!exists("meta") || is.null(meta)) meta <- packageDescription("spOccupancy")
 
-citHeader("To cite package", sQuote(meta$Package), "in publications, please cite the Doser, Finley, Kéry, Zipkin (2022) paper. If using functions lfJSDM, sfJSDM, lfMsPGOcc, or sfMsPGOcc, please also cite the Doser, Finley, Banerjee (2023) paper that introduces this functionality. If using any spatially-varying coefficient function, please cite the Doser, Finley, Saunders, Kéry, Weed, Zipkin (2023) paper:")
+citHeader("To cite package", sQuote(meta$Package), "in publications, please cite the Doser, Finley, Kéry, Zipkin (2022) paper. If using functions lfJSDM, sfJSDM, lfMsPGOcc, or sfMsPGOcc, please also cite the Doser, Finley, Banerjee (2023) paper that introduces this functionality. If using any spatially-varying coefficient function, please cite the Doser, Finley, Saunders, Kéry, Weed, Zipkin (2024) paper:")
 
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
 vers <- paste("R package version", meta$Version)
@@ -42,15 +42,15 @@ bibentry(bibtype = "Article",
 bibentry(bibtype = "Article",
   title        = "Modeling complex species-environment relationships through spatially-varying coefficient occupancy models",
   author       = c(as.person("Jeffrey W. Doser"), as.person("Andrew O. Finley"), as.person("Sarah P. Saunders"), as.person("Marc Kéry"), as.person("Aaron S. Weed"), as.person("Elise F. Zipkin")),
-  journal      = "arXiv preprint",
-  year         = "2023",
+  journal      = "Journal of Agricultural, Biological, and Environmental Statistics",
+  year         = "2024",
   volume       = "",
   number       = "",
   pages        = "",
-  url          = "",
+  url          = "https://doi.org/10.1007/s13253-023-00595-6",
 
   textVersion  =
-  paste("Doser, J. W., Finley A. O., Saunders, S. P., Kéry, M., Weed, A. S., Zipkin, E. F.",
+  paste("Doser, J. W., Finley A. O., Saunders, S. P., Kéry, M., Weed, A. S., Zipkin, E. F. (2024).",
         "Modeling complex species-environment relationships through spatially-varying coefficient occupancy models",
-        "arXiv preprint")
+        "Journal of Agricultural, Biological, and Environmental Statistics. https://doi.org/10.1007/s13253-023-00595-6")
 )
