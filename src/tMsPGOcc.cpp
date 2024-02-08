@@ -69,6 +69,8 @@ extern "C" {
     int pDetRE = INTEGER(consts_r)[7];
     int nDetRE = INTEGER(consts_r)[8];
     int nYearsMax = INTEGER(consts_r)[9];
+    int indBetas = INTEGER(consts_r)[10];
+    int indAlphas = INTEGER(consts_r)[11];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc; 
     double *muBetaComm = REAL(muBetaComm_r); 
@@ -466,103 +468,111 @@ extern "C" {
         /********************************************************************
          Update Community level Occupancy Coefficients
          *******************************************************************/
-        /********************************
-         Compute b.beta.comm
-         *******************************/
-        zeros(tmp_pOcc, pOcc); 
-        for (i = 0; i < N; i++) {
-          F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc FCONE); 
-        } // i
-        for (h = 0; h < pOcc; h++) {
-          tmp_pOcc[h] += SigmaBetaCommInvMuBeta[h];  
-        } // j
+        if (indBetas == 0) {
+          /********************************
+           Compute b.beta.comm
+           *******************************/
+          zeros(tmp_pOcc, pOcc); 
+          for (i = 0; i < N; i++) {
+            F77_NAME(dgemv)(ytran, &pOcc, &pOcc, &one, TauBetaInv, &pOcc, &beta[i], &N, &one, tmp_pOcc, &inc FCONE); 
+          } // i
+          for (h = 0; h < pOcc; h++) {
+            tmp_pOcc[h] += SigmaBetaCommInvMuBeta[h];  
+          } // j
 
-        /********************************
-         Compute A.beta.comm
-         *******************************/
-        for (h = 0; h < ppOcc; h++) {
-          tmp_ppOcc[h] = SigmaBetaCommInv[h] + N * TauBetaInv[h]; 
-        }
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri ABetaComm failed\n");}
-        // A.beta.inv %*% b.beta
-        // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2  = tmp_pOcc2
-        F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
-        // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
-        F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
-        // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
-        mvrnorm(betaComm, tmp_pOcc2, tmp_ppOcc, pOcc);
+          /********************************
+           Compute A.beta.comm
+           *******************************/
+          for (h = 0; h < ppOcc; h++) {
+            tmp_ppOcc[h] = SigmaBetaCommInv[h] + N * TauBetaInv[h]; 
+          }
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
+          F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri ABetaComm failed\n");}
+          // A.beta.inv %*% b.beta
+          // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2  = tmp_pOcc2
+          F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
+          // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
+          F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
+          // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
+          mvrnorm(betaComm, tmp_pOcc2, tmp_ppOcc, pOcc);
+	}
         /********************************************************************
          Update Community level Detection Coefficients
          *******************************************************************/
-        /********************************
-         * Compute b.alpha.comm
-         *******************************/
-         zeros(tmp_pDet, pDet); 
-         for (i = 0; i < N; i++) {
-           F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc FCONE); 
-         } // i
-         for (h = 0; h < pDet; h++) {
-           tmp_pDet[h] += SigmaAlphaCommInvMuAlpha[h];  
-         } // j
-        /********************************
-         * Compute A.alpha.comm
-         *******************************/
-        for (h = 0; h < ppDet; h++) {
-          tmp_ppDet[h] = SigmaAlphaCommInv[h] + N * TauAlphaInv[h]; 
-        }
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri AAlphaComm failed\n");}
-        // A.alpha.inv %*% b.alpha
-        // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2  = tmp_pDet2
-        F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
-        // Computes cholesky of tmp_pp again stored back in tmp_ppDet. This chol(A.alpha.inv)
-        F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
-        // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
-        mvrnorm(alphaComm, tmp_pDet2, tmp_ppDet, pDet);
+	if (indAlphas == 0) {
+          /********************************
+           * Compute b.alpha.comm
+           *******************************/
+           zeros(tmp_pDet, pDet); 
+           for (i = 0; i < N; i++) {
+             F77_NAME(dgemv)(ytran, &pDet, &pDet, &one, TauAlphaInv, &pDet, &alpha[i], &N, &one, tmp_pDet, &inc FCONE); 
+           } // i
+           for (h = 0; h < pDet; h++) {
+             tmp_pDet[h] += SigmaAlphaCommInvMuAlpha[h];  
+           } // j
+          /********************************
+           * Compute A.alpha.comm
+           *******************************/
+          for (h = 0; h < ppDet; h++) {
+            tmp_ppDet[h] = SigmaAlphaCommInv[h] + N * TauAlphaInv[h]; 
+          }
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
+          F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri AAlphaComm failed\n");}
+          // A.alpha.inv %*% b.alpha
+          // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2  = tmp_pDet2
+          F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
+          // Computes cholesky of tmp_pp again stored back in tmp_ppDet. This chol(A.alpha.inv)
+          F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
+          // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
+          mvrnorm(alphaComm, tmp_pDet2, tmp_ppDet, pDet);
+	}
 
         /********************************************************************
          Update Community Occupancy Variance Parameter
         ********************************************************************/
-        for (h = 0; h < pOcc; h++) {
-          tmp_0 = 0.0;  
-          for (i = 0; i < N; i++) {
-            tmp_0 += (beta[h * N + i] - betaComm[h]) * (beta[h * N + i] - betaComm[h]);
+	if (indBetas == 0) {
+          for (h = 0; h < pOcc; h++) {
+            tmp_0 = 0.0;  
+            for (i = 0; i < N; i++) {
+              tmp_0 += (beta[h * N + i] - betaComm[h]) * (beta[h * N + i] - betaComm[h]);
+            } // i
+            tmp_0 *= 0.5;
+            tauSqBeta[h] = rigamma(tauSqBetaA[h] + N / 2.0, tauSqBetaB[h] + tmp_0); 
+          } // h
+          for (h = 0; h < pOcc; h++) {
+            TauBetaInv[h * pOcc + h] = tauSqBeta[h]; 
           } // i
-          tmp_0 *= 0.5;
-          tauSqBeta[h] = rigamma(tauSqBetaA[h] + N / 2.0, tauSqBetaB[h] + tmp_0); 
-        } // h
-        for (h = 0; h < pOcc; h++) {
-          TauBetaInv[h * pOcc + h] = tauSqBeta[h]; 
-        } // i
-        F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
+          F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
+          F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
+	}
         /********************************************************************
          Update Community Detection Variance Parameter
         ********************************************************************/
-        for (h = 0; h < pDet; h++) {
-          tmp_0 = 0.0;  
-          for (i = 0; i < N; i++) {
-            tmp_0 += (alpha[h * N + i] - alphaComm[h]) * (alpha[h * N + i] - alphaComm[h]);
+	if (indAlphas == 0) {
+          for (h = 0; h < pDet; h++) {
+            tmp_0 = 0.0;  
+            for (i = 0; i < N; i++) {
+              tmp_0 += (alpha[h * N + i] - alphaComm[h]) * (alpha[h * N + i] - alphaComm[h]);
+            } // i
+            tmp_0 *= 0.5;
+            tauSqAlpha[h] = rigamma(tauSqAlphaA[h] + N / 2.0, tauSqAlphaB[h] + tmp_0); 
+          } // h
+          for (h = 0; h < pDet; h++) {
+            TauAlphaInv[h * pDet + h] = tauSqAlpha[h]; 
           } // i
-          tmp_0 *= 0.5;
-          tauSqAlpha[h] = rigamma(tauSqAlphaA[h] + N / 2.0, tauSqAlphaB[h] + tmp_0); 
-        } // h
-        for (h = 0; h < pDet; h++) {
-          TauAlphaInv[h * pDet + h] = tauSqAlpha[h]; 
-        } // i
-        F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
-        F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
+          F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
+          F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
+          if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
+	}
 
         /********************************************************************
          *Update Occupancy random effects variance
