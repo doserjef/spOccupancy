@@ -1080,7 +1080,7 @@ extern "C" {
               }
 	    } else {
               psi[t * J + j] = logitInv(F77_NAME(ddot)(&pOcc, &X[t * J + j], 
-					&JnYears, beta, &inc) + w[j] + betaStarSites[t * J + j] + eta[t], zero, one); 
+					&JnYears, beta, &inc) + w[gridIndx[j]] + betaStarSites[t * J + j] + eta[t], zero, one); 
               z[t * J + j] = rbinom(one, psi[t * J + j]);
 	    }
             piProd[t * J + j] = one;
