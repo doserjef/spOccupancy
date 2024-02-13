@@ -3883,6 +3883,7 @@ predict.svcTPGOcc <- function(object, X.0, coords.0, t.cols, weights.0, n.omp.th
     X.w <- object$X.w
     coords <- object$coords
     J <- nrow(X)
+    J.w <- nrow(object$coords)
     J.w.0 <- nrow(coords.0)
     n.years.max <- dim(X.0)[2]
     p.occ <- dim(X)[3]
@@ -3981,7 +3982,7 @@ predict.svcTPGOcc <- function(object, X.0, coords.0, t.cols, weights.0, n.omp.th
     }
     beta.samples <- t(beta.samples)
     # Order: site, svc within site, iteration within svc.
-    w.samples <- matrix(w.samples, n.post, J * p.svc)
+    w.samples <- matrix(w.samples, n.post, J.w * p.svc)
     # Order: iteration, site within iteration, svc within site.
     # Example: site 1, svc 1, iter 1, site 1, svc 2, iter 1, ..., site 2, svc 1, iter 1
     w.samples <- t(w.samples)
