@@ -81,9 +81,23 @@ test_that("out is of class lfJSDM", {
 
 # Check cross-validation --------------
 test_that("cross-validation works", {
-  expect_equal(length(out$k.fold.deviance), N)
-  expect_type(out$k.fold.deviance, "double")
-  expect_equal(sum(out$k.fold.deviance < 0), 0)
+  out.k.fold <- lfJSDM(formula = formula, 
+	      data = data.list, 
+	      inits = inits.list, 
+	      n.samples = n.samples, 
+	      n.factors = 3,
+	      priors = prior.list, 
+              n.omp.threads = 1, 
+	      verbose = FALSE, 
+	      n.report = n.report, 
+	      n.burn = 400,
+	      n.thin = 2, 
+	      n.chains = 2,
+	      k.fold = 2,
+              k.fold.threads = 1, k.fold.only = TRUE)
+  expect_equal(length(out.k.fold$k.fold.deviance), N)
+  expect_type(out.k.fold$k.fold.deviance, "double")
+  expect_equal(sum(out.k.fold$k.fold.deviance < 0), 0)
 })
 
 # Check random effects ----------------
@@ -105,6 +119,16 @@ test_that("default priors, inits, burn, thin work", {
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "lfJSDM")
+})
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- lfJSDM(formula = ~ 1, 
+	       data = data.list, 
+               n.thin = 13,
+               n.factors = 3,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
 })
 
 test_that("verbose prints to the screen", {

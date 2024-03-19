@@ -33,6 +33,7 @@ export(stMsPGOcc)
 export(svcTMsPGOcc)
 export(simTMsOcc)
 export(tMsPGOcc)
+export(updateMCMC)
 
 S3method("predict", "PGOcc")
 S3method("print", "PGOcc")

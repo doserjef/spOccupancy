@@ -80,7 +80,14 @@ sfJSDM(formula, data, inits, priors, tuning,
   which are each specified as vectors of length equal to the number of 
   coefficients to be estimated or a single value if priors are the same for all 
   parameters. If not specified, prior shape and scale 
-  parameters are set to 0.1. The spatial factor model fits \code{n.factors} independent
+  parameters are set to 0.1. If desired, the species-specific regression coefficients
+  (\code{beta}) can also be estimated indepdendently by specifying the 
+  tag \code{independent.betas = TRUE}. If specified, this will not estimate species-specific
+  coefficients as random effects from a common-community-level distribution, and rather
+  the values of \code{beta.comm} and \code{tau.sq.beta} will be fixed at the 
+  specified initial values. This is equivalent to specifying a Gaussian, independent
+  prior for each of the species-specific effects.
+ The spatial factor model fits \code{n.factors} independent
   spatial processes. The spatial decay \code{phi} and smoothness \code{nu} parameters 
   for each latent factor are assumed to follow Uniform distributions. 
   The hyperparameters of the Uniform are passed as a list with two elements, 

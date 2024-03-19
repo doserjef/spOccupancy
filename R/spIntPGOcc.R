@@ -246,6 +246,10 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (n.thin > n.samples) {
       stop("error: n.thin must be less than n.samples")
     }
+    # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+    if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+      stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+    }
     if (!missing(k.fold)) {
       if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
         stop("error: k.fold must be a single integer value >= 2")  
@@ -781,18 +785,18 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (n.chains > 1) {
         out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2]
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2]
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         if (fixed.sigma.sq) {
           out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$theta.samples)))), 
-          			      autoburnin = FALSE)$psrf[, 2]
+          			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         } else {
           out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
-          			      autoburnin = FALSE)$psrf[, 2])
+          			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
 
       } else {
@@ -1220,18 +1224,18 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       if (n.chains > 1) {
         out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2]
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$alpha.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2]
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         if (fixed.sigma.sq) {
           out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$theta.samples)))), 
-          			      autoburnin = FALSE)$psrf[, 2]
+          			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         } else {
           out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
-          			      autoburnin = FALSE)$psrf[, 2])
+          			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
 
       } else {

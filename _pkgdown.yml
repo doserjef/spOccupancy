@@ -139,8 +139,11 @@ articles:
     - randomEffects
     - svcModels
     - integratedMultispecies
-    - modelConsiderations
     - identifiability
+  - title: Guidelines and considerations
+    contents: 
+    - svcInterpretation
+    - modelConsiderations
   - title: MCMC sampler details 
     contents:
     - mcmcSamplers 

@@ -105,9 +105,31 @@ test_that("out is of class spMsPGOcc", {
 
 # Check cross-validation --------------
 test_that("cross-validation works", {
-  expect_equal(length(out$k.fold.deviance), N)
-  expect_type(out$k.fold.deviance, "double")
-  expect_equal(sum(out$k.fold.deviance < 0), 0)
+  out.k.fold <- spMsPGOcc(occ.formula = occ.formula, 
+                 det.formula = det.formula, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "matern", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = FALSE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 100, 
+		 n.thin = 2,
+		 n.chains = 2, 
+                 k.fold = 2, 
+		             k.fold.only = TRUE,
+                 k.fold.threads = 1)
+  expect_equal(length(out.k.fold$k.fold.deviance), N)
+  expect_type(out.k.fold$k.fold.deviance, "double")
+  expect_equal(sum(out.k.fold$k.fold.deviance < 0), 0)
 })
 
 # Check random effects ----------------
@@ -120,7 +142,18 @@ test_that("random effects are correct", {
 test_that("out$y == y", {
   expect_equal(out$y, y)
 })
-
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- spMsPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 # Check default values ----------------
 test_that("default priors, inits, burn, thin work", {
   out <- spMsPGOcc(occ.formula = occ.formula, 

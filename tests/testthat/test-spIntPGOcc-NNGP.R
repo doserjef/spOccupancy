@@ -173,6 +173,18 @@ test_that("default priors and inits work", {
 		    n.chains = 1)  
   expect_s3_class(out, "spIntPGOcc")
 })
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- spIntPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 
 # Check verbose -----------------------
 test_that("verbose prints to the screen", {

@@ -118,7 +118,6 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     ord <- order(coords[,1]) 
     tmp <- lapply(ord, function (a) which(grid.index == a))
     tmp.2 <- sapply(tmp, length)
-    # TODO: this could be a potential problem if you run into issues.
     grid.index.c <- unlist(lapply(1:length(tmp.2), function(a) rep(a, tmp.2[a]))) - 1
     grid.index.r <- grid.index.c + 1
     long.ord <- unlist(lapply(ord, function(a) which(grid.index == a)))
@@ -320,7 +319,10 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
-
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
   # Check SVC columns -----------------------------------------------------
   if (is.character(svc.cols)) {
     # Check if all column names in svc are in occ.covs

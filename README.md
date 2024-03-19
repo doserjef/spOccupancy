@@ -6,7 +6,7 @@
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test
-coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy?branch=main)
+coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
@@ -36,7 +36,7 @@ install.packages("spOccupancy")
 ## Functionality
 
 | `spOccupancy` Function | Description                                                               |
-| ---------------------- | ------------------------------------------------------------------------- |
+|------------------------|---------------------------------------------------------------------------|
 | `PGOcc()`              | Single-species occupancy model                                            |
 | `spPGOcc()`            | Single-species spatial occupancy model                                    |
 | `intPGOcc()`           | Single-species occupancy model with multiple data sources                 |
@@ -147,7 +147,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 1.6487
+#> Run Time (min): 2.1107
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
@@ -252,7 +252,9 @@ al. 2023). For a description and tutorial of multi-season
 (spatio-temporal) occupancy models in `spOccupancy`, see
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
 coefficient models in `spOccupancy`, see `vignette("svcModels")` and
-`vignette(mcmcSVCModels)`.
+`vignette(mcmcSVCModels)` and our associated papers that describe the
+methods (Doser et al. 2024A) and applications to ecology (Doser et
+al. 2024B) in much more detail.
 
 ## References
 
@@ -264,3 +266,15 @@ integrated spatial occupancy models. Methods in Ecology and Evolution.
 Doser, J. W., Finley, A. O., and Banerjee, S. (2023). Joint species
 distribution models with imperfect detection for high-dimensional
 spatial data. Ecology. <https://doi.org/10.1002/ecy.4137>.
+
+Doser, J. W., Finley, A. O., Saunders, S. P., Kéry, M., Weed, A. S., &
+Zipkin, E. F. (2024A). Modeling complex species-environment
+relationships through spatially-varying coefficient occupancy models.
+Journal of Agricultural, Biological and Environmental Statistics.
+<https://doi.org/10.1007/s13253-023-00595-6>.
+
+Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
+Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
+for the use of spatially varying coefficients in species distribution
+models. Global Ecology and Biogeography, e13814.
+<https://doi.org/10.1111/geb.13814>

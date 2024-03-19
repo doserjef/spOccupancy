@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{sfMsPGOcc}(object, X.0, coords.0, n.omp.threads = 1, verbose = TRUE, 
-        n.report = 100, ignore.RE = FALSE, type = 'occupancy', ...)
+        n.report = 100, ignore.RE = FALSE, type = 'occupancy', grid.index.0, ...)
 }
 
 \arguments{
@@ -39,6 +39,8 @@
     levels of the unstructured random effects.}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
+
+  \item{grid.index.0}{an indexing vector used to specify how each row in \code{X.0} corresponds to the coordinates specified in \code{coords.0}. Only relevant if the spatial random effect was estimated at a higher spatial resolution (e.g., grid cells) than point locations.}
 
   \item{...}{currently no additional arguments}
 }

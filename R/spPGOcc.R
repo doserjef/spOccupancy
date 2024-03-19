@@ -121,7 +121,6 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     ord <- order(coords[,1]) 
     tmp <- lapply(ord, function (a) which(grid.index == a))
     tmp.2 <- sapply(tmp, length)
-    # TODO: this could be a potential problem if you run into issues.
     grid.index.c <- unlist(lapply(1:length(tmp.2), function(a) rep(a, tmp.2[a]))) - 1
     grid.index.r <- grid.index.c + 1
     long.ord <- unlist(lapply(ord, function(a) which(grid.index == a)))
@@ -294,7 +293,10 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
-
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
   # Get indices to map z to y -------------------------------------------
   if (!binom) {
     z.long.indx <- rep(1:J, dim(y.big)[2])
@@ -743,6 +745,10 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     if (length(w.inits) != J.w) {
       stop(paste("error: initial values for w must be a vector of length ",
       	   J.w, sep = ""))
+    }
+    # Reorder the user supplied inits values
+    if (NNGP) {
+      w.inits <- w.inits[ord]
     }
   } else {
     w.inits <- rep(0, J.w)

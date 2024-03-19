@@ -19,12 +19,13 @@
 extern "C" {
 
   SEXP spMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, 
-		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
-			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
-			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r){
+                            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
+                            SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                            SEXP thetaSamples_r, SEXP wSamples_r, 
+                            SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
+                            SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+                            SEXP nReport_r, SEXP sitesLink_r, 
+                            SEXP sites0Sampled_r){
 
     int i, j, k, l, s, info, nProtect=0;
     const int inc = 1;
@@ -58,6 +59,8 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
     
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -81,7 +84,7 @@ extern "C" {
 #ifdef _OPENMP
       Rprintf("\nSource compiled with OpenMP support and model fit using %i threads.\n", nThreads);
 #else
-      Rprintf("\n\nSource not compiled with OpenMP support.\n");
+      Rprintf("\nSource not compiled with OpenMP support.\n");
 #endif
     } 
     
@@ -165,39 +168,43 @@ extern "C" {
 #ifdef _OPENMP
 	  threadID = omp_get_thread_num();
 #endif 	
-	  phi = theta[s * nThetaN + phiIndx * N + i];
-	  if(corName == "matern"){
-	    nu = theta[s * nThetaN + nuIndx * N + i];
-	  }
-	  sigmaSq = theta[s * nThetaN + sigmaSqIndx * N + i];
-
-	  for(k = 0; k < m; k++){
-	    d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords0[j], coords0[q+j]);
-	    c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[i]]);
-	    for(l = 0; l < m; l++){
-	      d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords[nnIndx0[j+q*l]], coords[J+nnIndx0[j+q*l]]);
-	      C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[i]]);
+    if (sites0Sampled[j] == 1) {
+      w0[s * qN + j * N + i] = w[s * JN + sitesLink[j] * N + i];
+    } else {
+	    phi = theta[s * nThetaN + phiIndx * N + i];
+	    if(corName == "matern"){
+	      nu = theta[s * nThetaN + nuIndx * N + i];
 	    }
-	  }
+	    sigmaSq = theta[s * nThetaN + sigmaSqIndx * N + i];
 
-	  F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotrf failed\n");}
-	  F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotri failed\n");}
+	    for(k = 0; k < m; k++){
+	      d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords0[j], coords0[q+j]);
+	      c[threadID*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[i]]);
+	      for(l = 0; l < m; l++){
+	        d = dist2(coords[nnIndx0[j+q*k]], coords[J+nnIndx0[j+q*k]], coords[nnIndx0[j+q*l]], coords[J+nnIndx0[j+q*l]]);
+	        C[threadID*mm+l*m+k] = sigmaSq*spCor(d, phi, nu, covModel, &bk[threadID*nb[i]]);
+	      }
+	    }
 
-	  F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
+	    F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	    if(info != 0){error("c++ error: dpotrf failed\n");}
+	    F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
+	    if(info != 0){error("c++ error: dpotri failed\n");}
 
-	  d = 0;
-	  for(k = 0; k < m; k++){
-	    d += tmp_m[threadID*m+k]*w[s*JN+nnIndx0[j+q*k] * N + i];
-	  }
+	    F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
 
-	  #ifdef _OPENMP
-          #pragma omp atomic
-          #endif   
-	  vIndx++;
+	    d = 0;
+	    for(k = 0; k < m; k++){
+	      d += tmp_m[threadID*m+k]*w[s*JN+nnIndx0[j+q*k] * N + i];
+	    }
+
+	    #ifdef _OPENMP
+            #pragma omp atomic
+            #endif   
+	    vIndx++;
 	  
-	  w0[s * qN + j * N + i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
+	    w0[s * qN + j * N + i] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
+    }
 
 	  psi0[s * qN + j * N + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[j], &q, &beta[s*pOccN + i], &N) + w0[s * qN + j * N + i] + betaStarSite[s * qN + j * N + i], zero, one);
 	  
@@ -226,7 +233,6 @@ extern "C" {
     }
       
     // Generate latent occurrence state after the fact.
-    // Temporary fix. Will embed this in the above loop at some point.
     if (verbose) {
       Rprintf("Generating latent occupancy state\n");
     }

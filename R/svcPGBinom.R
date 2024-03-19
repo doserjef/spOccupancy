@@ -163,7 +163,10 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
-
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
   # Check SVC columns -----------------------------------------------------
   if (is.character(svc.cols)) {
     # Check if all column names in svc are in covs
@@ -793,30 +796,30 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
         # as.vector removes the "Upper CI" when there is only 1 variable. 
         out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					         mcmc(t(a$beta.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         if (!fixed.params[which(all.params == 'sigma.sq')] & 
             !fixed.params[which(all.params == 'phi')]) { # none are fixed
           out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					        mcmc(t(a$theta.samples)))), 
-        			      autoburnin = FALSE)$psrf[, 2]
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
         } else if (fixed.params[which(all.params == 'sigma.sq')] & 
           	 !fixed.params[which(all.params == 'phi')]) { # sigma.sq is fixed
           out$rhat$theta <- c(NA, gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					        mcmc(t(a$theta.samples[-1, , drop = FALSE])))), 
-        			      autoburnin = FALSE)$psrf[, 2])
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         } else if (!fixed.params[which(all.params == 'sigma.sq')] & 
           	 fixed.params[which(all.params == 'phi')]) { # phi/nu is fixed
           tmp <- ifelse(cov.model == 'matern', NA, c(NA, NA))
           out$rhat$theta <- c(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					        mcmc(t(a$theta.samples[1, , drop = FALSE])))), 
-        			      autoburnin = FALSE)$psrf[, 2], tmp)
+        			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2], tmp)
         } else { # both are fixed
           out$rhat$theta <- rep(NA, ifelse(cov.model == 'matern', 3, 2))
         } 
         if (p.re > 0) {
           out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					      mcmc(t(a$sigma.sq.psi.samples)))), 
-          			     autoburnin = FALSE)$psrf[, 2])
+          			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
         }
       } else {
         out$rhat$beta <- rep(NA, p)

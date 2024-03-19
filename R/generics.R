@@ -560,16 +560,8 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     coords.indx <- match.indx[!is.na(match.indx)]
     coords.place.indx <- which(!is.na(match.indx))
 
-    if (sp.type == 'GP') {
-      coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-      X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-      if (length(coords.indx) == nrow(X.0)) {
-        stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-      }
-    } else {
-      X.0.new <- X.0
-      coords.0.new <- coords.0
-    }
+    X.0.new <- X.0
+    coords.0.new <- coords.0
 
     if (object$psiRE & !ignore.RE) {
       beta.star.samples <- object$beta.star.samples
@@ -630,6 +622,13 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       obs.pred.D <- iDist(coords, coords.0.new)
       obs.D <- iDist(coords)
       
+      # Indicates whether a site has been sampled. 1 = sampled
+      sites.0.sampled <- ifelse(!is.na(match.indx), 1, 0)
+      sites.link <- rep(NA, J.w.0)
+      sites.link[which(!is.na(match.indx))] <- coords.indx
+      # For C
+      sites.link <- sites.link - 1
+      
       storage.mode(obs.pred.D) <- "double"
       storage.mode(obs.D) <- "double"
       storage.mode(J) <- "integer"
@@ -646,31 +645,18 @@ predict.spPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(verbose) <- "integer"
       storage.mode(n.report) <- "integer"
       storage.mode(n.omp.threads) <- "integer"
-
+      storage.mode(sites.link) <- 'integer'
+      storage.mode(sites.0.sampled) <- 'integer'
+      
       out <- .Call("spPGOccPredict", J, p.occ, X.fix, q, obs.D, 
           	 obs.pred.D, beta.samples, theta.samples, 
           	 w.samples, beta.star.sites.0.samples, 
           	 n.post, cov.model.indx, n.omp.threads, 
-          	 verbose, n.report)
+          	 verbose, n.report, sites.link, sites.0.sampled)
 
-      if (nrow(X.0) == q) {
-        out$z.0.samples <- mcmc(t(out$z.0.samples))
-        out$psi.0.samples <- mcmc(t(out$psi.0.samples))
-        out$w.0.samples <- mcmc(t(out$w.0.samples))
-      } else {
-        tmp <- matrix(NA, n.post, nrow(X.0))
-        tmp[, coords.0.indx] <- t(out$z.0.samples)
-        tmp[, coords.place.indx] <- object$z.samples[, coords.indx]
-        out$z.0.samples <- mcmc(tmp)
-        tmp <- matrix(NA, n.post, nrow(X.0))
-        tmp[, coords.0.indx] <- t(out$psi.0.samples)
-        tmp[, coords.place.indx] <- object$psi.samples[, coords.indx]
-        out$psi.0.samples <- mcmc(tmp)
-        tmp <- matrix(NA, n.post, nrow(X.0))
-        tmp[, coords.0.indx] <- t(out$w.0.samples)
-        tmp[, coords.place.indx] <- object$w.samples[, coords.indx]
-        out$w.0.samples <- mcmc(tmp)
-      }
+      out$z.0.samples <- mcmc(t(out$z.0.samples))
+      out$psi.0.samples <- mcmc(t(out$psi.0.samples))
+      out$w.0.samples <- mcmc(t(out$w.0.samples))
     } else { 
       # Get nearest neighbors 
       # nn2 is a function from RANN. 
@@ -1514,18 +1500,15 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     }
     coords.0 <- as.matrix(coords.0)
 
-    # Eliminate prediction sites that have already been sampled for now
+    # Determine coordinates that have already been sampled
     match.indx <- match(do.call("paste", as.data.frame(coords.0)), do.call("paste", as.data.frame(coords)))
     coords.0.indx <- which(is.na(match.indx))
     coords.indx <- match.indx[!is.na(match.indx)]
     coords.place.indx <- which(!is.na(match.indx))
-    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-
-    if (length(coords.indx) == nrow(X.0)) {
-      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-    }
-
+    
+    X.0.new <- X.0
+    coords.0.new <- coords.0
+    
     if (object$psiRE & !ignore.RE) {
       # Random effects of fitted values
       beta.star.samples <- object$beta.star.samples
@@ -1601,6 +1584,13 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       obs.pred.D <- iDist(coords, coords.0.new)
       obs.D <- iDist(coords)
       
+      # Indicates whether a site has been sampled. 1 = sampled
+      sites.0.sampled <- ifelse(!is.na(match.indx), 1, 0)
+      sites.link <- rep(NA, q)
+      sites.link[which(!is.na(match.indx))] <- coords.indx
+      # For C
+      sites.link <- sites.link - 1
+      
       storage.mode(obs.pred.D) <- "double"
       storage.mode(obs.D) <- "double"
       storage.mode(J) <- "integer"
@@ -1618,19 +1608,34 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(verbose) <- "integer"
       storage.mode(n.report) <- "integer"
       storage.mode(n.omp.threads) <- "integer"
-      
+      storage.mode(sites.link) <- 'integer'
+      storage.mode(sites.0.sampled) <- 'integer'
 
       out <- .Call("spMsPGOccPredict", J, N, p.occ, X.fix, q, obs.D, 
           	 obs.pred.D, beta.samples, theta.samples, 
           	 w.samples, beta.star.sites.0.samples, 
           	 n.post, cov.model.indx, n.omp.threads, 
-          	 verbose, n.report)
-
+          	 verbose, n.report, sites.link, sites.0.sampled)
+      
+      out$z.0.samples <- array(out$z.0.samples, dim = c(N, q, n.post))
+      out$z.0.samples <- aperm(out$z.0.samples, c(3, 1, 2))
+      out$w.0.samples <- array(out$w.0.samples, dim = c(N, q, n.post))
+      out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
+      out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, q, n.post))
+      out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
+      
     } else { 
       # Get nearest neighbors 
       # nn2 is a function from RANN. 
       nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1 
-
+      
+      # Indicates whether a site has been sampled. 1 = sampled
+      sites.0.sampled <- ifelse(!is.na(match.indx), 1, 0)
+      sites.link <- rep(NA, q)
+      sites.link[which(!is.na(match.indx))] <- coords.indx
+      # For C
+      sites.link <- sites.link - 1
+      
       storage.mode(coords) <- "double"
       storage.mode(N) <- "integer"
       storage.mode(J) <- "integer"
@@ -1649,13 +1654,16 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.omp.threads) <- "integer"
       storage.mode(verbose) <- "integer"
       storage.mode(n.report) <- "integer"
+      storage.mode(sites.link) <- 'integer'
+      storage.mode(sites.0.sampled) <- 'integer'
       
       ptm <- proc.time()
 
       out <- .Call("spMsPGOccNNGPPredict", coords, J, N, p.occ, n.neighbors, 
                    X.fix, coords.0.new, q, nn.indx.0, beta.samples, 
                    theta.samples, w.samples, beta.star.sites.0.samples, n.post, 
-                   cov.model.indx, n.omp.threads, verbose, n.report)
+                   cov.model.indx, n.omp.threads, verbose, n.report, sites.link,
+                   sites.0.sampled)
 
     }
     out$z.0.samples <- array(out$z.0.samples, dim = c(N, q, n.post))
@@ -1664,22 +1672,6 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
     out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, q, n.post))
     out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
-
-    # If some of the sites are sampled
-    if (nrow(X.0) != q) {
-      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-      tmp[, , coords.0.indx] <- out$z.0.samples
-      tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
-      out$z.0.samples <- tmp
-      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-      tmp[, , coords.0.indx] <- out$psi.0.samples
-      tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
-      out$psi.0.samples <- tmp
-      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-      tmp[, , coords.0.indx] <- out$w.0.samples
-      tmp[, , coords.place.indx] <- object$w.samples[, , coords.indx]
-      out$w.0.samples <- tmp
-    }
   }
   # Detection predictions -------------------------------------------------
   if (tolower(type) == 'detection') {
@@ -4427,25 +4419,18 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     coords.0.indx <- which(is.na(match.indx))
     coords.indx <- match.indx[!is.na(match.indx)]
     coords.place.indx <- which(!is.na(match.indx))
-    coords.0.new <- coords.0[coords.0.indx, , drop = FALSE]
-    X.0.new <- X.0[coords.0.indx, , drop = FALSE]
-    X.w.0.new <- X.w.0[coords.0.indx, , drop = FALSE]
-
-    if (length(coords.indx) == nrow(X.0)) {
-      stop("error: no new locations to predict at. See object$psi.samples for occurrence probabilities at sampled sites.")
-    }
 
     if (object$psiRE) {
       beta.star.samples <- object$beta.star.samples
       re.level.names <- object$re.level.names
       # Get columns in design matrix with random effects
       x.re.names <- colnames(object$X.re)
-      indx <- which(colnames(X.0.new) %in% x.re.names)
+      indx <- which(colnames(X.0) %in% x.re.names)
       if (length(indx) == 0) {
         stop("error: column names in X.0 must match variable names in data$occ.covs")
       }
-      X.re <- as.matrix(X.0.new[, indx, drop = FALSE])
-      X.fix <- as.matrix(X.0.new[, -indx, drop = FALSE])
+      X.re <- as.matrix(X.0[, indx, drop = FALSE])
+      X.fix <- as.matrix(X.0[, -indx, drop = FALSE])
       n.occ.re <- length(unlist(re.level.names))
       X.re.ind <- matrix(NA, nrow(X.re), p.occ.re)
       if (!ignore.RE) {
@@ -4484,8 +4469,8 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
         } # i
       }
     } else {
-      X.fix <- X.0.new
-      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0.new))
+      X.fix <- X.0
+      beta.star.sites.0.samples <- matrix(0, n.post, N * nrow(X.0))
       p.occ.re <- 0
     }
 
@@ -4497,7 +4482,7 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     w.samples <- aperm(w.samples, c(2, 3, 4, 1))
     beta.star.sites.0.samples <- t(beta.star.sites.0.samples)
 
-    J.str <- nrow(X.0.new)
+    J.str <- nrow(X.0)
 
     X.big <- array(NA, dim = c(J.str, ncol(X.fix), N))
     for (i in 1:N) {
@@ -4517,7 +4502,13 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     } else {
       # Get nearest neighbors
       # nn2 is a function from RANN.
-      nn.indx.0 <- nn2(coords, coords.0.new, k=n.neighbors)$nn.idx-1
+      nn.indx.0 <- nn2(coords, coords.0, k=n.neighbors)$nn.idx-1
+      # Indicates whether a site has been sampled. 1 = sampled
+      sites.0.sampled <- ifelse(!is.na(match.indx), 1, 0)
+      sites.link <- rep(NA, J.str)
+      sites.link[which(!is.na(match.indx))] <- coords.indx
+      # For C
+      sites.link <- sites.link - 1
 
       storage.mode(coords) <- "double"
       storage.mode(N) <- "integer"
@@ -4527,7 +4518,7 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.neighbors) <- "integer"
       storage.mode(X.big) <- "double"
       storage.mode(X.w.big) <- "double"
-      storage.mode(coords.0.new) <- "double"
+      storage.mode(coords.0) <- "double"
       storage.mode(J.str) <- "integer"
       storage.mode(q) <- "integer"
       storage.mode(beta.samples) <- "double"
@@ -4541,12 +4532,15 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
       storage.mode(n.omp.threads) <- "integer"
       storage.mode(verbose) <- "integer"
       storage.mode(n.report) <- "integer"
+      storage.mode(sites.link) <- 'integer'
+      storage.mode(sites.0.sampled) <- 'integer'
 
       out <- .Call("svcMsPGOccNNGPPredict", coords, J, N, q, p.occ, p.svc, n.neighbors,
-                   X.big, X.w.big, coords.0.new, J.str, nn.indx.0, beta.samples,
+                   X.big, X.w.big, coords.0, J.str, nn.indx.0, beta.samples,
                    theta.samples, lambda.samples, w.samples,
           	   beta.star.sites.0.samples, n.post,
-                   cov.model.indx, n.omp.threads, verbose, n.report)
+                   cov.model.indx, n.omp.threads, verbose, n.report, 
+          	       sites.link, sites.0.sampled)
 
     }
     out$z.0.samples <- array(out$z.0.samples, dim = c(N, J.str, n.post))
@@ -4556,21 +4550,6 @@ predict.svcMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
     out$psi.0.samples <- array(out$psi.0.samples, dim = c(N, J.str, n.post))
     out$psi.0.samples <- aperm(out$psi.0.samples, c(3, 1, 2))
 
-    # If some of the sites are sampled
-    if (nrow(X.0) != J.str) {
-      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-      tmp[, , coords.0.indx] <- out$z.0.samples
-      tmp[, , coords.place.indx] <- object$z.samples[, , coords.indx]
-      out$z.0.samples <- tmp
-      tmp <- array(NA, dim = c(n.post, N, nrow(X.0)))
-      tmp[, , coords.0.indx] <- out$psi.0.samples
-      tmp[, , coords.place.indx] <- object$psi.samples[, , coords.indx]
-      out$psi.0.samples <- tmp
-      tmp <- array(NA, dim = c(n.post, q, nrow(X.0), p.svc))
-      tmp[, , coords.0.indx, ] <- out$w.0.samples
-      tmp[, , coords.place.indx, ] <- object$w.samples[, , coords.indx, , drop = FALSE]
-      out$w.0.samples <- tmp
-    }
   } # occurrence predictions
   # Detection predictions -------------------------------------------------
   if (tolower(type) == 'detection') {

@@ -89,7 +89,17 @@ out <- svcTPGBinom(formula = formula,
 test_that("out is of class svcTPGBinom", {
   expect_s3_class(out, "svcTPGBinom")
 })
-
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- svcTPGBinom(formula =formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 # Check cross-validation --------------
 test_that("cross-validation works", {
   expect_equal(length(out$k.fold.deviance), 1)

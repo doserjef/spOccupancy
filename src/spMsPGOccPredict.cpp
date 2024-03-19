@@ -23,8 +23,8 @@ extern "C" {
 		      SEXP thetaSamples_r, SEXP wSamples_r, 
 		      SEXP betaStarSiteSamples_r,
 		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-		      SEXP verbose_r, SEXP nReport_r){
-    
+		      SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
+		      SEXP sites0Sampled_r){
 
     /*****************************************
                 Common variables
@@ -64,7 +64,9 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0]; 
     int verbose = INTEGER(verbose_r)[0]; 
     int nReport = INTEGER(nReport_r)[0];
-
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
+    
     /*****************************************
                      Display
     *****************************************/
@@ -171,7 +173,11 @@ extern "C" {
           
           tmp_one2[0] = sigmaSq - tmp_one2[0];
 
-          w0[s * qN + j * N + i] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
+	        if (sites0Sampled[j] == 1) {
+            w0[s * qN + j * N + i] = wSamples[s * J + sitesLink[j]];
+	        } else {
+            w0[s * qN + j * N + i] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
+	        }
           psi0[s * qN + j * N + i] = logitInv(tmp_q[j] + w0[s * qN + j * N + i] + betaStarSite[s * qN + j * N + i], zero, one); 
           z0[s * qN + j * N + i] = rbinom(one, psi0[s * qN + j * N + i]);
         }

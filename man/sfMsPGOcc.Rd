@@ -29,7 +29,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     intercepts are allowed using lme4 syntax (Bates et al. 2015).}
 
   \item{data}{a list containing data necessary for model fitting.
-    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, \code{coords}. 
+    Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, \code{coords}, 
+    and \code{grid.index}. 
     \code{y} is a three-dimensional array with first dimension equal to the 
     number of species, second dimension equal to the number of sites, and 
     third dimension equal to the maximum number of replicates at a given site. 
@@ -41,9 +42,19 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
     Site-level covariates are specified as a vector of length \eqn{J}{J} while 
     observation-level covariates are specified as a matrix or data frame 
     with the number of rows equal to \eqn{J}{J} and number of columns equal 
-    to the maximum number of replicates at a given site. \code{coords} is a 
-    \eqn{J \times 2}{J x 2} matrix of the observation coordinates. Note that 
-    \code{spOccupancy} assumes coordinates are specified in a projected coordinate system.}
+    to the maximum number of replicates at a given site. 
+    \code{coords} is a matrix of the observation coordinates used
+    to estimate the spatial random effect for each site. \code{coords} has two columns for the 
+easting and northing coordinate, respectively. Typically, each site in the data 
+    set will have it's own coordinate, such that \code{coords} is a \eqn{J \times 2}{J x 2} 
+    matrix and \code{grid.index} should not be specified. 
+    If you desire to estimate spatial random effects at some larger spatial level, 
+    e.g., if points fall within grid cells and you want to estimate a spatial random effect for 
+    each grid cell instead of each point, \code{coords} can be specified as the coordinate for 
+    each grid cell. In such a case, \code{grid.index} is an indexing vector of length J, where each 
+    value of \code{grid.index} indicates the corresponding row in \code{coords} that the given 
+    site corresponds to. Note that \code{spOccupancy} assumes coordinates are specified 
+    in a projected coordinate system.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
     Valid tags are \code{alpha.comm}, \code{beta.comm}, \code{beta}, 

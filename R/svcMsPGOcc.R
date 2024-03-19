@@ -307,7 +307,10 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
-
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
   # Check SVC columns -----------------------------------------------------
   if (is.character(svc.cols)) {
     # Check if all column names in svc are in occ.covs
@@ -1316,42 +1319,42 @@ svcMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # as.vector removes the "Upper CI" when there is only 1 variable. 
       out$rhat$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$beta.comm.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$alpha.comm <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.comm.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$tau.sq.beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$tau.sq.alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$tau.sq.alpha.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					         mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$alpha <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2])
+      			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
-      			      autoburnin = FALSE)$psrf[, 2]
+      			      autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
       out$rhat$lambda.lower.tri <- list()
       for (j in 1:p.svc) {
         lambda.mat <- matrix(0, N, q)
         indx <- (((j - 1) * N * q + 1):(j * N * q))[c(lower.tri(lambda.mat))]
         out$rhat$lambda.lower.tri[[j]] <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
           					       mcmc(t(a$lambda.samples[indx, ])))), 
-          					       autoburnin = FALSE)$psrf[, 2])
+          					       autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$sigma.sq.p.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
       if (p.occ.re > 0) {
         out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					      mcmc(t(a$sigma.sq.psi.samples)))), 
-        			     autoburnin = FALSE)$psrf[, 2])
+        			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
     } else {
       out$rhat$beta.comm <- rep(NA, p.occ)

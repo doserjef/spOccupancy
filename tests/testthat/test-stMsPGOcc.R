@@ -453,6 +453,19 @@ test_that("default priors, inits, burn, thin work", {
 	        verbose = FALSE)
   expect_s3_class(out, "stMsPGOcc")
 })
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- stMsPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+               n.factors = 3,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 
 # Check summary -----------------------
 test_that("summary works", {

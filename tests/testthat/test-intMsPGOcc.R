@@ -139,6 +139,16 @@ test_that("default priors, inits, burn, thin work", {
 	         verbose = FALSE)
   expect_s3_class(out, "intMsPGOcc")
 })
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- intMsPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 
 test_that("verbose prints to the screen", {
   expect_output(intMsPGOcc(occ.formula = occ.formula,

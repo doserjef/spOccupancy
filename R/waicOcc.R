@@ -110,8 +110,8 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
         L <- apply(det.prob.samples[, long.indx, drop = FALSE], 1, prod)  * 
                 psi.samples[, curr.sites[j]] + y.ind[[q]][j] * (1 - psi.samples[, curr.sites[j]])
         elpd[q] <- elpd[q] + log(mean(L))
-	if (is.na(elpd[q])) print(j)
-        pD[q] <- pD[q] + var(log(L))
+        if (is.na(elpd[q])) print(j)
+          pD[q] <- pD[q] + var(log(L))
       }
     }
 

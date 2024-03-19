@@ -116,7 +116,20 @@ test_that("random effects are correct", {
 test_that("out$y == y", {
   expect_equal(out$y, y)
 })
-
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- svcMsPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+               n.factors = 3,
+               svc.cols = svc.cols,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 # Check default values ----------------
 test_that("default priors, inits, burn, thin work", {
   out <- svcMsPGOcc(occ.formula = occ.formula, 

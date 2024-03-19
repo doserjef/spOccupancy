@@ -104,6 +104,14 @@ svcTMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
   coefficients to be estimated or a single value if priors are the same for all 
   parameters. If not specified, prior shape and scale 
   parameters are set to 0.1. 
+  If desired, the species-specific occupancy coefficients
+  (\code{beta}) and/or detection coefficients (\code{alpha}) can also be estimated indepdendently by specifying the 
+  tag \code{independent.betas = TRUE} and/or \code{independent.alphas = TRUE}, respectively. 
+If specified, this will not estimate species-specific
+  coefficients as random effects from a common-community-level distribution, and rather
+  the values of \code{beta.comm}/\code{alpha.comm} and \code{tau.sq.beta}/\code{tau.sq.alpha} will be fixed at the 
+  specified initial values. This is equivalent to specifying a Gaussian, independent
+  prior for each of the species-specific effects.
   The spatial factor model fits \code{n.factors} independent
   spatial processes for each spatially-varying coefficient specified in \code{svc.cols}. 
   The spatial decay \code{phi} and smoothness \code{nu} parameters 

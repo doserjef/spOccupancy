@@ -25,7 +25,7 @@ extern "C" {
 			     SEXP thetaSamples_r, SEXP lambdaSamples_r, 
 			     SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
 			     SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			     SEXP nReport_r){
+			     SEXP nReport_r, SEXP sitesLink_r, SEXP sites0Sampled_r){
 
     int i, j, k, l, s, info, nProtect=0, ll, rr;
     const int inc = 1;
@@ -66,6 +66,8 @@ extern "C" {
     double *lambda = REAL(lambdaSamples_r);
     double *w = REAL(wSamples_r);
     double *betaStarSite = REAL(betaStarSiteSamples_r);
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
     int covModel = INTEGER(covModel_r)[0];
@@ -188,6 +190,9 @@ extern "C" {
 #ifdef _OPENMP
 	    threadID = omp_get_thread_num();
 #endif 	
+     if (sites0Sampled[j] == 1) {
+       w0[s * JStrqpTilde + rr * JStrq + j * q + ll] = w[s * JqpTilde + rr * Jq + sitesLink[j] * q + ll];
+     } else {
 	    phi = theta[s * nThetaqpTilde + phiIndx * qpTilde + rr * q + ll];
 	    if(corName == "matern"){
 	      nu = theta[s * nThetaqpTilde + nuIndx * qpTilde + rr * q + ll];
@@ -221,7 +226,7 @@ extern "C" {
 	    vIndx++;
 
 	    w0[s * JStrqpTilde + rr * JStrq + j * q + ll] = sqrt(sigmaSq - F77_NAME(ddot)(&m, &tmp_m[threadID*m], &inc, &c[threadID*m], &inc))*wV[vIndx] + d;
-
+     }
           } // s (sample)
         } // ll (factor)
       } // rr (svc)

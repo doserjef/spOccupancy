@@ -79,7 +79,16 @@ test_that("default priors, inits, burn, thin work", {
 	       verbose = FALSE)
   expect_s3_class(out, "PGOcc")
 })
-
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- PGOcc(occ.formula = ~ 1, 
+	       det.formula = ~ 1, 
+	       data = data.list, 
+               n.thin = 13,
+	       n.samples = n.samples,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 # Check summary -----------------------
 test_that("summary works", {
   expect_output(summary(out))

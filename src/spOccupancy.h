@@ -54,12 +54,13 @@ extern "C" {
 		   SEXP sigmaSqIG_r, SEXP gridIndx_r);
 
   SEXP spPGOccPredict(SEXP J_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
-		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
-		      SEXP thetaSamples_r, SEXP wSamples_r, 
-		      SEXP betaStarSiteSamples_r,
-		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-		      SEXP verbose_r, SEXP nReport_r);
-
+                      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
+                      SEXP thetaSamples_r, SEXP wSamples_r, 
+                      SEXP betaStarSiteSamples_r,
+                      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+                      SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
+                      SEXP sites0Sampled_r);
+    
   SEXP spPGOccNNGPPredict(SEXP coords_r, SEXP J_r, 
 		          SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
 			  SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
@@ -132,20 +133,22 @@ extern "C" {
 		     SEXP samplesInfo_r, SEXP chainInfo_r, SEXP sigmaSqInfo_r);
 
   SEXP spMsPGOccPredict(SEXP J_r, SEXP N_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
-		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
-		      SEXP thetaSamples_r, SEXP wSamples_r, 
-		      SEXP betaStarSiteSamples_r,
-		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-		      SEXP verbose_r, SEXP nReport_r);
-
+                        SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
+                        SEXP thetaSamples_r, SEXP wSamples_r, 
+                        SEXP betaStarSiteSamples_r,
+                        SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+                        SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
+                        SEXP sites0Sampled_r);
+    
   SEXP spMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, 
-		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
-			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
-			    SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r);
-
+                            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
+                            SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                            SEXP thetaSamples_r, SEXP wSamples_r, 
+                            SEXP betaStarSiteSamples_r, SEXP nSamples_r, 
+                            SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+                            SEXP nReport_r, SEXP sitesLink_r, 
+                            SEXP sites0Sampled_r);
+    
   SEXP intPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP pOcc_r, SEXP pDet_r, SEXP pDetLong_r, 
 	        SEXP J_r, SEXP JLong_r, SEXP K_r, SEXP nObs_r, SEXP nObsLong_r, SEXP nData_r, 
 		SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
@@ -462,14 +465,14 @@ extern "C" {
 		      SEXP samplesInfo_r, SEXP chainInfo_r);
 
   SEXP svcMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, SEXP q_r,
-		             SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, 
-			     SEXP X0_r, SEXP Xw0_r, SEXP coords0_r, 
-			     SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			     SEXP thetaSamples_r, SEXP lambdaSamples_r, 
-			     SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
-			     SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			     SEXP nReport_r);
-
+                             SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, 
+                             SEXP X0_r, SEXP Xw0_r, SEXP coords0_r, 
+                             SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                             SEXP thetaSamples_r, SEXP lambdaSamples_r, 
+                             SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
+                             SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+                             SEXP nReport_r, SEXP sitesLink_r, SEXP sites0Sampled_r);
+    
   SEXP svcTMsPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP Xp_r, 
 		      SEXP coords_r, SEXP XRE_r, SEXP XpRE_r, SEXP rangeInd_r,
 		      SEXP consts_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 

@@ -254,6 +254,10 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if (n.thin > n.samples) {
     stop("error: n.thin must be less than n.samples")
   }
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
 
   # Get indices for mapping different values in Z. 
   z.site.indx <- rep(1:J, n.years.max) - 1
@@ -847,24 +851,24 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     if (n.chains > 1) {
       out$rhat$beta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2]
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
       out$rhat$alpha <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$alpha.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2]
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
       if (p.det.re > 0) {
         out$rhat$sigma.sq.p <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
          					     mcmc(t(a$sigma.sq.p.samples)))), 
-          			         autoburnin = FALSE)$psrf[, 2])
+          			         autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
       if (p.occ.re > 0) {
         out$rhat$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
         					       mcmc(t(a$sigma.sq.psi.samples)))), 
-        			           autoburnin = FALSE)$psrf[, 2])
+        			           autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
       if (ar1) {
         out$rhat$theta <- gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$theta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2]
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2]
       }
 
     } else {

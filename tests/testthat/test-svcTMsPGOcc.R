@@ -124,7 +124,19 @@ out <- svcTMsPGOcc(occ.formula = occ.formula,
 test_that("out is of class svcTMsPGOcc", {
   expect_s3_class(out, "svcTMsPGOcc")
 })
-
+# Check non-integer n.post -------------
+test_that("non-integer n.post", {
+  expect_error(out <- svcTMsPGOcc(occ.formula = occ.formula, 
+	       det.formula = det.formula, 
+	       data = data.list, 
+               n.thin = 13,
+               n.batch = n.batch, 
+               batch.length = batch.length, 
+               accept.rate = 0.43, 
+               n.factors = 3,
+	       n.omp.threads = 1,
+	       verbose = FALSE))
+})
 # Check random effects ----------------
 test_that("random effects are empty", {
   expect_equal(out$pRE, FALSE)

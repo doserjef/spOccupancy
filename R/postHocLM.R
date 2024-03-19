@@ -360,14 +360,14 @@ postHocLM <- function(formula, data, inits, priors, verbose = FALSE,
       # as.vector removes the "Upper CI" when there is only 1 variable. 
       out$rhat$beta <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$beta.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       out$rhat$tau.sq <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$tau.sq.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       if (p.re > 0) {
       out$rhat$sigma.sq <- as.vector(gelman.diag(mcmc.list(lapply(out.tmp, function(a) 
       					      mcmc(t(a$sigma.sq.samples)))), 
-      			     autoburnin = FALSE)$psrf[, 2])
+      			     autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
       }
     } else {
       out$rhat$beta <- rep(NA, p)

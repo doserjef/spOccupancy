@@ -23,7 +23,8 @@ extern "C" {
 		      SEXP thetaSamples_r, SEXP wSamples_r, 
 		      SEXP betaStarSiteSamples_r,
 		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-		      SEXP verbose_r, SEXP nReport_r){
+		      SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
+          SEXP sites0Sampled_r){
     
 
     /*****************************************
@@ -60,6 +61,8 @@ extern "C" {
     int nThreads = INTEGER(nThreads_r)[0]; 
     int verbose = INTEGER(verbose_r)[0]; 
     int nReport = INTEGER(nReport_r)[0];
+    int *sitesLink = INTEGER(sitesLink_r);
+    int *sites0Sampled = INTEGER(sites0Sampled_r);
 
     /*****************************************
                      Display
@@ -155,17 +158,20 @@ extern "C" {
    
       // Predicting each element one at a time, instead of doing joint prediction.  
       for(j = 0; j < q; j++){
-
-	//get Mu
-	F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J FCONE FCONE);
-	F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*J], &inc, &zero, tmp_one, &inc FCONE);
-	
-	//get Sigma
-	F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc FCONE FCONE);
-        tmp_one2[0] = sigmaSq - tmp_one2[0];
-	w0[s * q + j] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
-	psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j] + betaStarSite[s * q + j], zero, one); 
-	z0[s * q + j] = rbinom(one, psi0[s * q + j]);
+	      //get Mu
+	      F77_NAME(dsymm)(lside, lower, &J, &inc, &one, S_obs, &J, &S_obsPred[j*J], &J, &zero, tmp_J, &J FCONE FCONE);
+	      F77_NAME(dgemv)(ytran, &J, &inc, &one, tmp_J, &J, &wSamples[s*J], &inc, &zero, tmp_one, &inc FCONE);
+	      
+	      //get Sigma
+	      F77_NAME(dgemm)(ytran, ntran, &inc, &inc, &J, &one, tmp_J, &J, &S_obsPred[j*J], &J, &zero, tmp_one2, &inc FCONE FCONE);
+              tmp_one2[0] = sigmaSq - tmp_one2[0];
+	      if (sites0Sampled[j] == 1) {
+          w0[s * q + j] = wSamples[s * J + sitesLink[j]];
+	      } else {
+	        w0[s * q + j] = rnorm(tmp_one[0], sqrt(tmp_one2[0])); 
+	      }
+	      psi0[s * q + j] = logitInv(tmp_q[j] + w0[s * q + j] + betaStarSite[s * q + j], zero, one); 
+	      z0[s * q + j] = rbinom(one, psi0[s * q + j]);
       }
 
       //report
