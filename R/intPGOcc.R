@@ -766,7 +766,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     class(out) <- "intPGOcc"
 
     out$run.time <- proc.time() - ptm
-    # TODO: 
+    # TODO: add in random effects eventually
     out$pRE <- FALSE
     out$psiRE <- FALSE
     out

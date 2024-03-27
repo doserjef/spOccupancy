@@ -24,7 +24,7 @@ extern "C" {
 		      SEXP betaStarSiteSamples_r,
 		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
 		      SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
-          SEXP sites0Sampled_r){
+                      SEXP sites0Sampled_r){
     
 
     /*****************************************

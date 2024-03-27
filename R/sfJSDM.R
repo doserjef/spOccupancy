@@ -1242,8 +1242,6 @@ sfJSDM <- function(formula, data, inits, priors,
       	      " thread(s).", sep = ''))
       }
       # Currently implemented without parellization. 
-      # TODO: this doesn't work when using the update functionality, but that
-      #       is fine since the update stuff is not shown to user.
       set.seed(k.fold.seed)
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    

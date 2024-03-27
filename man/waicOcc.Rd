@@ -59,7 +59,11 @@ waicOcc(object, by.sp = FALSE, ...)
 
 \details{
   The effective number of parameters is calculated following the recommendations
-  of Gelman et al. (2014).
+  of Gelman et al. (2014). Note that when fitting multi-species occupancy models with the 
+  \code{range.ind} tag, it is not valid to use WAIC to compare a model that 
+  uses \code{range.ind} (i.e., restricts certain species to a subset of the locations)
+  with a model that does not use \code{range.ind} (i.e., assumes all species can occur at
+  all locations in the data set) or that uses different \code{range.ind} values.
 }
 
 \examples{

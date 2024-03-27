@@ -15,7 +15,6 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  # if (is(object, c('lfJSDM', 'sfJSDM'))) {
   if (class(object) %in% c('lfJSDM', 'sfJSDM', 'svcPGBinom', 'svcTPGBinom')) {
     stop("error: ppcOcc is not implemented for lfJSDM, sfJSDM, svcPGBinom, svcTPGBinom")
   }

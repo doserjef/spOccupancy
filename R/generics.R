@@ -3674,7 +3674,6 @@ predict.svcPGOcc <- function(object, X.0, coords.0, weights.0, n.omp.threads = 1
         out$w.0.samples <- array(out$w.0.samples, dim = c(p.svc, J.w.0, n.post))
         out$w.0.samples <- aperm(out$w.0.samples, c(3, 1, 2))
     }
-    # TODO: need to double check that things work for svcPGBinom
     if (is(object, 'svcPGBinom')) {
         out$y.0.samples <- mcmc(t(out$z.0.samples))
         out$z.0.samples <- NULL

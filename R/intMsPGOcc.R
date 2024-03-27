@@ -142,7 +142,7 @@ intMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
       }
     }
-    # TODO: 
+    # TODO: add in detection random effects eventually
     # Detection -----------------------
     # if (!is.null(findbars(det.formula))) {
     #   det.re.names <- sapply(findbars(det.formula), all.vars)
@@ -1060,7 +1060,7 @@ intMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$N <- N
       out$sites <- sites
       out$species <- data$species
-      # TODO: 
+      # TODO: add in detection random effects eventually
       # if (p.det.re > 0) {
       #   out$pRE <- TRUE
       # } else {

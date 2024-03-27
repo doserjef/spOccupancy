@@ -21,13 +21,6 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
   if (!class(object) %in% c('sfJSDM', 'msAbund')) {
     stop("updateMCMC() is currently only implemented for sfJSDM and msAbund model types.")
   }
-  if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
-                             'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
-                             'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			     'tPGOcc', 'stPGOcc', 'svcPGOcc', 'svcPGBinom', 'svcMsPGBinom', 
-			     'svcTPGOcc', 'svcTPGBinom', 'svcMsPGOcc', 'svcTMsPGOcc', 'msAbund'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcPGBinom, svcMsPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc, svcTMsPGOcc, msAbund\n")
-  }
   if (missing(n.batch)) {
     if (class(object) %in% c('spPGOcc', 'spMsPGOcc', 'spIntPGOcc', 
 			     'sfMsPGOcc', 'sfJSDM', 'tPGOcc', 'stPGOcc', 
@@ -220,10 +213,6 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
                              to = n.batch * object$update$batch.length, 
                              by = as.integer(n.thin)))
     object$n.post <- ifelse(keep.orig, object$n.post + n.post.new, n.post.new)
-    # TODO: note the thinning rate may be different across models. Just ignoring
-    #       this for now, but may want to update for summary. Note these values
-    #       also might not be correct if keep.orig = FALSE, which is something
-    #       you should look into. 
     object$run.time <- object$run.time + run.time.new 
     object$update$tuning <- matrix(NA, nrow(out.tmp[[1]]$update$tuning), n.chains)
     for (i in 1:n.chains) {

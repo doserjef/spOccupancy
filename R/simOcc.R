@@ -144,9 +144,7 @@ simOcc <- function(J.x, J.y, n.rep, n.rep.max, beta, alpha, psi.RE = list(), p.R
   # Matrix of spatial locations
   s.x <- seq(0, 1, length.out = J.x)
   s.y <- seq(0, 1, length.out = J.y)
-  # TODO: for testing, can use runif.
   coords.full <- as.matrix(expand.grid(s.x, s.y))
-  # coords.full <- cbind(runif(J,0,1), runif(J,0,1))
   coords <- cbind(tapply(coords.full[, 1], grid, mean), 
                   tapply(coords.full[, 2], grid, mean)) 
 

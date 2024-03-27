@@ -12,8 +12,9 @@ updateMCMC(object, n.batch, n.samples, n.burn = 0, n.thin,
   additional MCMC iterations. This function is useful for situations where a model
   is run for a long time but convergence/adequate mixing of the MCMC chains is not 
   reached. Instead of re-running the entire model again, this function allows you 
-  to pick up where you left off. This function is currently in development, and only functions
-  with the following spOccupancy and spAbundance model objects: msAbund and sfJSDM. 
+  to pick up where you left off. This function is currently in development, and only currently works 
+  with the following spOccupancy and spAbundance model objects: msAbund and sfJSDM. Note that
+  cross-validation is not possible when updating the model.
 }
 
 \arguments{
@@ -59,4 +60,96 @@ An object of the same class as the original model fit provided in the \code{argu
 }
 
 \examples{
+J.x <- 8
+J.y <- 8
+J <- J.x * J.y
+n.rep<- sample(2:4, size = J, replace = TRUE)
+N <- 6
+# Community-level covariate effects
+# Occurrence
+beta.mean <- c(0.2)
+p.occ <- length(beta.mean)
+tau.sq.beta <- c(0.6)
+# Detection
+alpha.mean <- c(0)
+tau.sq.alpha <- c(1)
+p.det <- length(alpha.mean)
+# Random effects
+psi.RE <- list()
+p.RE <- list()
+# Draw species-level effects from community means.
+beta <- matrix(NA, nrow = N, ncol = p.occ)
+alpha <- matrix(NA, nrow = N, ncol = p.det)
+for (i in 1:p.occ) {
+  beta[, i] <- rnorm(N, beta.mean[i], sqrt(tau.sq.beta[i]))
+}
+for (i in 1:p.det) {
+  alpha[, i] <- rnorm(N, alpha.mean[i], sqrt(tau.sq.alpha[i]))
+}
+alpha.true <- alpha
+n.factors <- 3
+phi <- rep(3 / .7, n.factors)
+sigma.sq <- rep(2, n.factors)
+nu <- rep(2, n.factors)
+
+dat <- simMsOcc(J.x = J.x, J.y = J.y, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+                psi.RE = psi.RE, p.RE = p.RE, sp = TRUE, sigma.sq = sigma.sq,
+                phi = phi, nu = nu, cov.model = 'matern', factor.model = TRUE,
+                n.factors = n.factors)
+
+pred.indx <- sample(1:J, round(J * .25), replace = FALSE)
+y <- dat$y[, -pred.indx, , drop = FALSE]
+# Occupancy covariates
+X <- dat$X[-pred.indx, , drop = FALSE]
+coords <- as.matrix(dat$coords[-pred.indx, , drop = FALSE])
+# Prediction covariates
+X.0 <- dat$X[pred.indx, , drop = FALSE]
+coords.0 <- as.matrix(dat$coords[pred.indx, , drop = FALSE])
+# Detection covariates
+X.p <- dat$X.p[-pred.indx, , , drop = FALSE]
+
+y <- apply(y, c(1, 2), max, na.rm = TRUE)
+data.list <- list(y = y, coords = coords)
+# Priors
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
+                   tau.sq.beta.ig = list(a = 0.1, b = 0.1),
+                   nu.unif = list(0.5, 2.5))
+# Starting values
+inits.list <- list(beta.comm = 0,
+                   beta = 0,
+                   fix = TRUE,
+                   tau.sq.beta = 1)
+# Tuning
+tuning.list <- list(phi = 1, nu = 0.25)
+
+batch.length <- 25
+n.batch <- 2
+n.report <- 100
+formula <- ~ 1
+
+out <- sfJSDM(formula = formula,
+              data = data.list,
+              inits = inits.list,
+              n.batch = n.batch,
+              batch.length = batch.length,
+              accept.rate = 0.43,
+              priors = prior.list,
+              cov.model = "matern",
+              tuning = tuning.list,
+              n.factors = 3,
+              n.omp.threads = 1,
+              verbose = TRUE,
+              NNGP = TRUE,
+              n.neighbors = 5,
+              search.type = 'cb',
+              n.report = 10,
+              n.burn = 0,
+              n.thin = 1,
+              n.chains = 2)
+summary(out)
+
+# Update the initial model fit
+out.new <- updateMCMC(out, n.batch = 1, keep.orig = TRUE, 
+		     verbose = TRUE, n.report = 1) 
+summary(out.new)
 }

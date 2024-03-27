@@ -148,7 +148,7 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
       stop("error: levels must be a tag in psi.RE with the number of random effect levels for each occurrence random intercept.")
     }
   }
-  # TODO: not currently supported.
+  # TODO: detection REs not currently supported.
   # p.RE ----------------------------
   # names(p.RE) <- tolower(names(p.RE))
   # if (!is.list(p.RE)) {
@@ -272,7 +272,7 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
     X.re <- NA
     beta.star <- NA
   }
-  # TODO: need to update
+  # TODO: detection REs not currently supported. 
   # Detection (not yet implemented)
   # if (length(p.RE) > 0) {
   #   p.det.re <- length(p.RE$levels)
@@ -342,7 +342,7 @@ simIntMsOcc <- function(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE =
     for (i in 1:N[t]) {
       for (j in 1:J.obs[t]) {
         # if (length(p.RE) > 0) {
-        #   # TODO: need to update. 
+        #   # TODO: detection REs not currently supported 
         #   p[[t]][i, j, 1:n.rep[[t]][j]] <- logit.inv(X.p[[t]][j, 1:n.rep[[t]][j], ] %*% as.matrix(alpha[[t]][i, ]) + alpha.star.sites[i, j, 1:n.rep[[t]][j]])
         # } else {
           p[[t]][i, j, 1:n.rep[[t]][j]] <- logit.inv(X.p[[t]][j, 1:n.rep[[t]][j], ] %*% as.matrix(alpha[[t]][i, ]))

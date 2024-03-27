@@ -6,10 +6,10 @@
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test
-coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
+coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
-occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit
+occupancy models using Markov chain Monte Carlo (MCMC). Models are fit
 using Pólya-Gamma data augmentation. Spatial models are fit using either
 Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for
 large spatial datasets. The package provides functionality for data
@@ -17,12 +17,11 @@ integration of multiple single-species occupancy data sets using a joint
 likelihood framework. For multi-species models, spOccupancy provides
 functions to account for residual species correlations in a joint
 species distribution model framework while accounting for imperfect
-detection. As of v0.4.0, `spOccupancy` provides functions for
-multi-season (i.e., spatio-temporal) single-species occupancy models.
-Below we provide a very brief introduction to some of the package’s
-functionality, and illustrate just one of the model fitting functions.
-For more information, see the resources referenced at the bottom of this
-page.
+detection. `spOccupancy` also provides functions for multi-season (i.e.,
+spatio-temporal) single-species occupancy models. Below we give a very
+brief introduction to some of the package’s functionality, and
+illustrate just one of the model fitting functions. For more
+information, see the resources referenced at the bottom of this page.
 
 ## Installation
 
@@ -61,6 +60,7 @@ install.packages("spOccupancy")
 | `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit      |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                        |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                    |
+| `updateMCMC()`         | Update an existing model object with more MCMC samples (in development)   |
 | `simOcc()`             | Simulate single-species occupancy data                                    |
 | `simTOcc()`            | Simulate single-species multi-season occupancy data                       |
 | `simBinom()`           | Simulate detection-nondetection data with perfect detection               |
@@ -78,7 +78,7 @@ To get started with `spOccupancy` we load the package and an example
 data set. We use data on twelve foliage-gleaning birds from the [Hubbard
 Brook Experimental Forest](https://hubbardbrook.org/), which is
 available in the `spOccupancy` package as the `hbef2015` object. Here we
-will only work with one bird species, the Black-throated Blue Warbler
+will only work with one bird species, the black-throated blue warbler
 (BTBW), and so we subset the `hbef2015` object to only include this
 species.
 
@@ -95,7 +95,7 @@ btbwHBEF$y <- btbwHBEF$y[sp.names == "BTBW", , ]
 Below we fit a single-species spatial occupancy model to the BTBW data
 using a Nearest Neighbor Gaussian Process. We use the default priors and
 initial values for the occurrence (`beta`) and detection (`alpha`)
-coefficients, the spatial variance (`sigma.sq`), the spatial range
+coefficients, the spatial variance (`sigma.sq`), the spatial decay
 parameter (`phi`), the spatial random effects (`w`), and the latent
 occurrence values (`z`). We assume occurrence is a function of linear
 and quadratic elevation along with a spatial random intercept. We model
@@ -108,7 +108,7 @@ btbw.occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
 btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
-We run the model using an Adaptive MCMC sampler with a target acceptance
+We run the model using an adaptive MCMC sampler with a target acceptance
 rate of 0.43. We run 3 chains of the model each for 10,000 iterations
 split into 400 batches each of length 25. For each chain, we discard the
 first 2000 iterations as burn-in and use a thinning rate of 4 for a
@@ -147,7 +147,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 2.1107
+#> Run Time (min): 0.7788
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
@@ -253,8 +253,10 @@ al. 2023). For a description and tutorial of multi-season
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
 coefficient models in `spOccupancy`, see `vignette("svcModels")` and
 `vignette(mcmcSVCModels)` and our associated papers that describe the
-methods (Doser et al. 2024A) and applications to ecology (Doser et
-al. 2024B) in much more detail.
+[methods](https://www.jeffdoser.com/files/pubs/doser2024JABES.pdf)
+(Doser et al. 2024A) and [applications to
+ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814)
+(Doser et al. 2024B) in much more detail.
 
 ## References
 
@@ -273,7 +275,7 @@ relationships through spatially-varying coefficient occupancy models.
 Journal of Agricultural, Biological and Environmental Statistics.
 <https://doi.org/10.1007/s13253-023-00595-6>.
 
-Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
+Doser, J. W., Kéry, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
 Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
 for the use of spatially varying coefficients in species distribution
 models. Global Ecology and Biogeography, e13814.

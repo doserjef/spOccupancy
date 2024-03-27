@@ -1602,7 +1602,6 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       # Get everything back in the original order
       out$coords <- coords[order(ord), ]
-      # TODO: make sure you confirm this order is all correct and everything
       out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
       out$z.samples <- mcmc(out$z.samples[, order(long.ord), drop = FALSE])
       out$X <- X[order(long.ord), , drop = FALSE]

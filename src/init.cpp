@@ -13,8 +13,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"msPGOcc", (DL_FUNC) &msPGOcc, 43},
     {"spMsPGOcc", (DL_FUNC) &spMsPGOcc, 59},
     {"spMsPGOccNNGP", (DL_FUNC) &spMsPGOccNNGP, 65},
-    {"spMsPGOccPredict", (DL_FUNC) &spMsPGOccPredict, 20},
-    {"spMsPGOccNNGPPredict", (DL_FUNC) &spMsPGOccNNGPPredict, 18},
+    {"spMsPGOccPredict", (DL_FUNC) &spMsPGOccPredict, 18},
+    {"spMsPGOccNNGPPredict", (DL_FUNC) &spMsPGOccNNGPPredict, 20},
     {"intPGOcc", (DL_FUNC) &intPGOcc, 31},
     {"spIntPGOcc", (DL_FUNC) &spIntPGOcc, 48},
     {"spIntPGOccNNGP", (DL_FUNC) &spIntPGOccNNGP, 54},
@@ -22,7 +22,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"sfMsPGOccNNGP", (DL_FUNC) &sfMsPGOccNNGP, 63},
     {"sfMsPGOccNNGPPredict", (DL_FUNC) &sfMsPGOccNNGPPredict, 26},
     {"lfJSDM", (DL_FUNC) &lfJSDM, 25},
-    {"sfJSDMNNGP", (DL_FUNC) &sfJSDMNNGP, 49},
+    {"sfJSDMNNGP", (DL_FUNC) &sfJSDMNNGP, 48},
     {"tPGOcc", (DL_FUNC) &tPGOcc, 44},
     {"stPGOccNNGP", (DL_FUNC) &stPGOccNNGP, 65},
     {"stPGOccNNGPPredict", (DL_FUNC) &stPGOccNNGPPredict, 24},
@@ -37,7 +37,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"svcMsPGOccNNGP", (DL_FUNC) &svcMsPGOccNNGP, 64},
     {"svcMsPGOccNNGPPredict", (DL_FUNC) &svcMsPGOccNNGPPredict, 24},
     {"svcTMsPGOccNNGP", (DL_FUNC) &svcTMsPGOccNNGP, 63},
-    {"svcTMsPGOccNNGPPredict", (DL_FUNC) &svcTMsPGOccNNGPPredict, 26},
+    {"svcTMsPGOccNNGPPredict", (DL_FUNC) &svcTMsPGOccNNGPPredict, 29},
     {"stMsPGOccNNGP", (DL_FUNC) &svcTMsPGOccNNGP, 59},
     {NULL, NULL, 0}
 };

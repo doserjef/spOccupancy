@@ -1822,7 +1822,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     class(out) <- "sfMsPGOcc"
   }
 
-  # TODO: temporary to align with sfJSDM
+  # TODO: temporary to align with sfJSDM until range.ind is embedded within sfMsPGOcc
   out$std.by.sp <- FALSE
   out$species.sds <- NA
   out$species.means <- NA
