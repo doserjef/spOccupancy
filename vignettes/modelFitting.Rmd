@@ -2,7 +2,7 @@
 title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 description: Learn how to get started with the core spOccupancy functionality
-date: "2022 (last update: July 25, 2023)"
+date: "2022 (last update: March 27, 2024)"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -188,13 +188,13 @@ summary(out)
 
 Note that all coefficients are printed on the logit scale. We see OVEN is fairly widespread (at the scale of the survey) in the forest given the large intercept value, which translates to a value of 0.89 on the probability scale (run `plogis(2.13)`). In addition, the negative linear and quadratic terms for `Elevation` suggest occurrence probability peaks at mid-elevations. On average, detection probability is about 0.69.
 
-In principle, before we even look at the parameter summaries, we ought to ensure that the MCMC chains have reached convergence. The `summary` function also returns the Gelman-Rubin diagnostic [@brooks1998] and the effective samples size (ESS) of the posterior samples, which we can use to assess convergence. Here we see all Rhat values are less than 1.1 and the ESS values indicate adequate mixing of the MCMC chains. Additionally, the posterior samples in the `PGOcc` object are `coda::mcmc` objects, which we can quickly assess for convergence visually using trace plots. 
+In principle, before we even look at the parameter summaries, we ought to ensure that the MCMC chains have reached convergence. The `summary` function also returns the Gelman-Rubin diagnostic [@brooks1998] and the effective samples size (ESS) of the posterior samples, which we can use to assess convergence. Here we see all Rhat values are less than 1.1 and the ESS values indicate adequate mixing of the MCMC chains. Additionally, we can use the `plot()` function to plot traceplots of the individual model parameters that are contained in the resulting `PGOcc` object. The `plot()` function takes three arguments: `x` (the model object), `param` (a character string denoting the parameter name), and `density` (logical value indicating whether to also plot the density of MCMC samples along with the traceplot). See `?plot.PGOcc` for more details (similar functions exist for all `spOccupancy` model objects).  
 
 ```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
-plot(out$beta.samples, density = FALSE) # Occupancy parameters.
+plot(out, 'beta', density = FALSE) # Occupancy parameters.
 ```
 ```{r, fig.width = 5, fig.height = 5, fig.align = 'center', units = 'in'}
-plot(out$alpha.samples, density = FALSE) # Detection parameters.
+plot(out, 'alpha', density = FALSE) # Detection parameters.
 ```
 
 ## Posterior predictive checks

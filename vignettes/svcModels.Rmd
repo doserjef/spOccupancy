@@ -33,7 +33,7 @@ This vignette details `spOccupancy` functionality to fit single-species and mult
 
 Here we introduce six functions for fitting SVC models in `spOccupancy`. The function `svcPGOcc()` fits a single-season SVC occupancy model, and is an extension to the basic spatial occupancy model fit by `spPGOcc()`. The function `svcTPGOcc()` fits a multi-season SVC occupancy model, which serves as an extension to the spatio-temporal occupancy model fit by `stPGOcc()` where replicated detection-nondetection data are collected over multiple primary time periods (i.e., breeding seasons, years). Additionally, we include two functions for fitting SVC generalized linear models (GLMs) where we ignore imperfect detection: `svcPGBinom()` fits a single-season SVC GLM and `svcTPGBinom()` fits a multi-species GLM. In these functions, we also allow for modeling binomial data instead of the usual binary detection-nondetection data, which may be applicable for certain species or scenarios where imperfect detection may not be as large of an issue (e.g., modeling tree species distributions using a nested plot/subplot design). Lastly, we introduce two multi-species models, `svcMsPGOcc()` and `svcTMsPGOcc()`, which fit single-season and multi-season multi-species spatially varying coefficient occupancy models, respectively.  
 
-As per usual, we use P&oacute;lya-Gamma data augmentation to yield a computationally efficient Gibbs sampler for GLM-type models with a logit link function [@polson2013], and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in all SVC models to greatly reduce the computational burden encountered when fitting models with spatial random effects formulated as a Gaussian process. The two multi-species models use a spatial factor modeling approach [@lopes2004bayesian] to model the spatially varying effects for each species. This approach implicitly accounts for species correlations in both the residual spatial random effects and the effects of the spatially varying covariates themselves. See @doser2023joint and @doser2023SVC for in depth statistical details on this approach. 
+As per usual, we use P&oacute;lya-Gamma data augmentation to yield a computationally efficient Gibbs sampler for GLM-type models with a logit link function [@polson2013], and use Nearest Neighbor Gaussian Processes [@datta2016hierarchical] in all SVC models to greatly reduce the computational burden encountered when fitting models with spatial random effects formulated as a Gaussian process. The two multi-species models use a spatial factor modeling approach [@lopes2004bayesian] to model the spatially varying effects for each species. This approach implicitly accounts for species correlations in both the residual spatial random effects and the effects of the spatially varying covariates themselves. See @doser2023joint and @doser2024SVC for in depth statistical details on this approach. 
 
 In this vignette, we will walk through each of the four single-species SVC models in `spOccupancy`, detailing how to fit the models, do model comparison using the Widely Available Information Criterion (WAIC) and/or k-fold cross-validation, as well as make predictions across an area of interest to generate maps of the spatially varying coefficients. We will work with simulated data sets and will walk through how to simulate data sets using the `spOccupancy` functions `simOcc()`, `simTOcc()`, `simBinom()`, `simTBinom()`, and `simMsOcc()`. We will not go into explicit detail for some of the model-fitting function arguments (e.g., priors, initial values) as the syntax is nearly identical to other `spOccupancy` functions, so we encourage you to first work through the [spOccupancy introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) if you are not at least vaguely familiar with `spOccupancy` syntax. 
 
@@ -285,7 +285,7 @@ We are now ready to run the model. We set the `verbose` argument equal to `TRUE`
 n.omp.threads <- 1
 verbose <- TRUE
 n.report <- 100 # Report progress at every 100th batch.
-# Approx. run time: 4.2 min
+# Approx. run time: 2.4 min
 out.svc <- svcPGOcc(occ.formula = occ.formula, 
                     det.formula = det.formula, 
                     data = data.list, 
@@ -378,7 +378,7 @@ The `spOccupancy` function `waicOcc()` calculates the Widely Applicable Informat
 
 ```{r}
 # Using default priors and initial values.
-# Approx. run time: 4.2 min
+# Approx. run time: 2.4 min
 out.sp <- spPGOcc(occ.formula = occ.formula, 
                   det.formula = det.formula, 
                   data = data.list, 
@@ -615,7 +615,7 @@ tuning.list <- list(phi = 0.2, sigma.sq = 0.2)
 n.omp.threads <- 1
 verbose <- TRUE
 n.report <- 100 # Report progress at every 100th batch.
-# Approx. run time: 3.7 min
+# Approx. run time: 1.8 min
 out.svc <- svcPGBinom(formula = formula, 
                       data = data.list, 
                       inits = inits.list, 
@@ -967,7 +967,7 @@ n.thin <- 20
 We now run the model with `svcTPGOcc()` and take a look at a summary of the results using `summary()`.
 
 ```{r}
-# Approx. run time: ~ 1.1 min
+# Approx. run time: ~ 0.5 min
 out.svc.trend <- svcTPGOcc(occ.formula = occ.formula,
                            det.formula = det.formula,
                            data = data,
@@ -1280,7 +1280,7 @@ batch.length <- 25
 n.batch * batch.length
 n.burn <- 10000
 n.thin <- 20
-# Approx. run time: ~ 1.5 min
+# Approx. run time: ~ 0.5 min
 out.svc.trend <- svcTPGBinom(formula = formula,
                              data = data,
                              inits = inits,
@@ -1437,7 +1437,7 @@ where $\bm{\lambda}_{i, h}^\top$ is the $i$th row of factor loadings from the $N
 
 Analogous to the single-species case, we model the observed detection-nondetection of each species $i$ at site $j$ during replicate survey $k$, $y_{i, k}(\bm{s}_j)$ conditional on the true presence-absence of each species, $z_{i}(\bm{s}_j)$, following the single-species equations, with all parameters now varying by species. We model the species-specific detection regression coefficients ($\bm{\alpha}_i$) hierarchically, analogous to the non-spatial occupancy regression coefficients.
 
-We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $h$ are required to ensure identifiability [@taylor2019spatial; @doser2023joint]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial decay parameter $\phi_{r, h}$ an independent uniform prior. For full statistical details on these models, see @doser2023joint and @doser2023SVC.
+We assume Gaussian priors for all mean parameters and inverse-Gamma priors for variance parameters. Additional restrictions on the factors loadings matrix $\bm{\Lambda}_h$ for each spatially-varying coefficient $h$ are required to ensure identifiability [@taylor2019spatial; @doser2023joint]. We fix all elements in the upper triangle to 0 and set the diagonal elements to 1. We additionally fix the spatial variance parameters $\sigma^2_h$ of each latent spatial process to 1. We assign standard Gaussian priors for the lower triangular elements in $\bm{\Lambda}$ and assign each spatial decay parameter $\phi_{r, h}$ an independent uniform prior. For full statistical details on these models, see @doser2023joint and @doser2024SVC.
 
 ## Simulating data with `simMsOcc()`
 
@@ -1639,7 +1639,7 @@ NNGP <- TRUE
 n.neighbors <- 5
 # Specify the number of spatial factors to use
 n.factors <- 2
-# Fit the model (Approx. run time: 7.5 min)
+# Fit the model (Approx. run time: 4 min)
 out.ms <- svcMsPGOcc(occ.formula = occ.formula, det.formula = det.formula, 
                      data = data.list, inits = inits.list, 
                      priors = prior.list, tuning = tuning.list, 

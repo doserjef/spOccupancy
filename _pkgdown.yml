@@ -48,6 +48,11 @@ reference:
    - simTBinom
    - simIntMsOcc
    - simTMsOcc
+ - title: "Miscellaneous"
+ - contents: 
+   - postHocLM
+   - getSVCSamples
+   - updateMCMC
  - title: "Summary"
  - contents: 
    - summary.PGOcc
@@ -118,10 +123,6 @@ reference:
    - fitted.tMsPGOcc
    - fitted.stMsPGOcc
    - fitted.svcTMsPGOcc
- - title: "Other"
- - contents: 
-   - postHocLM
-   - getSVCSamples
  - title: "Data"
  - contents: 
    - hbef2015

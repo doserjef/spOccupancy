@@ -4,7 +4,7 @@
 
 \usage{
 postHocLM(formula, data, inits, priors, verbose = FALSE, 
-	  n.report = 100, n.samples, n.chains = 1, ...)
+          n.report = 100, n.samples, n.chains = 1, ...)
 }
 
 \description{
@@ -146,7 +146,7 @@ if (p > 1) {
     X[, i] <- rnorm(N)
   } # i
 }
-mu <- X %*% as.matrix(beta)
+mu <- X[, 1] * beta[1] + X[, 2] * beta[2] + X[, 3] * beta[3]
 y <- rnorm(N, mu, sqrt(tau.sq))
 # Replicate y n.samples times and add a small amount of noise that corresponds
 # to uncertainty from a first stage model.
@@ -156,19 +156,18 @@ y <- y + rnorm(length(y), 0, 0.25)
 
 # Package data for use with postHocLM -------------------------------------
 colnames(X) <- c('int', 'cov.1', 'cov.2')
-data.list <- list(y = y, 
-		  covs = X)
+data.list <- list(y = y, covs = X)
 data <- data.list
 inits <- list(beta = 0, tau.sq = 1)
 priors <- list(beta.normal = list(mean = 0, var = 10000),
-	       tau.sq.ig = c(0.001, 0.001))
+               tau.sq.ig = c(0.001, 0.001))
 
 # Run the model -----------------------------------------------------------
 out <- postHocLM(formula = ~ cov.1 + cov.2, 
-		 inits = inits, 
-		 data = data.list, 
-		 priors = priors, 
-		 verbose = FALSE, 
-		 n.chains = 1)
+                 inits = inits, 
+                 data = data.list, 
+                 priors = priors, 
+                 verbose = FALSE, 
+                 n.chains = 1)
 summary(out)
 }

@@ -154,11 +154,11 @@ The `vignette("modelFitting")` provides a more detailed description and tutorial
 
 Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022a). spOccupancy: An R package for single-species, multi-species, and integrated spatial occupancy models. Methods in Ecology and Evolution. 13(8) 1670-1678. https://doi.org/10.1111/2041-210X.13897.
 
-Doser, J. W., Finley, A. O., and Banerjee, S. (2023). Joint species distribution models with imperfect detection for high-dimensional spatial data. Ecology. https://doi.org/10.1002/ecy.4137. 
+Doser, J. W., Finley, A. O., and Banerjee, S. (2023). Joint species distribution models with imperfect detection for high-dimensional spatial data. Ecology, 104(9), e4137. https://doi.org/10.1002/ecy.4137. 
 
 Doser, J. W., Finley, A. O., Saunders, S. P., Kéry, M., Weed, A. S., & Zipkin, E. F. (2024A). Modeling complex species-environment relationships through spatially-varying coefficient occupancy models. Journal of Agricultural, Biological and Environmental Statistics. https://doi.org/10.1007/s13253-023-00595-6. 
 
-Doser, J. W., Kéry, M., Saunders, S. P., Finley, A. O., Bateman, B. L., Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines for the use of spatially varying coefficients in species distribution models. Global Ecology and Biogeography, e13814. https://doi.org/10.1111/geb.13814
+Doser, J. W., Kéry, M., Saunders, S. P., Finley, A. O., Bateman, B. L., Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines for the use of spatially varying coefficients in species distribution models. Global Ecology and Biogeography, 33, e13814. https://doi.org/10.1111/geb.13814
 
 
 

@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This document provides statistical details on the MCMC algorithms used to fit spatially-varying coefficient (SVC) models in `spOccupancy`. In particular, we discuss the Gibbs samplers for the following two models presented in [@doser2023SVC]:
+This document provides statistical details on the MCMC algorithms used to fit spatially-varying coefficient (SVC) models in `spOccupancy`. In particular, we discuss the Gibbs samplers for the following two models presented in [@doser2024SVC]:
 
 1. A single-species SVC occupancy model using `svcPGOcc()`
 2. A multi-species SVC occupancy model using `svcMsPGOcc()`

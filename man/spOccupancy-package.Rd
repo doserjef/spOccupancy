@@ -16,7 +16,7 @@ joint likelihood framework. Details on data integration are given in
 Miller, Pacifici, Sanderlin, and Reich (2019). Details on single-species and 
 multi-species models are found in MacKenzie et al. (2002) and Dorazio and Royle (2005), 
 respectively. Details on the package functionality is given in Doser et al. (2022), 
-Doser, Finley, Banerjee (2023), and Doser, Finley, Saunders, Kery, Weed, and Zipkin (2023). 
+Doser, Finley, Banerjee (2023), Doser et al. (2024a,b). 
 See \code{citation('spOccupancy')} for how to cite spOccupancy in publications.
 
 \strong{Single-species models}
@@ -89,6 +89,14 @@ See \code{citation('spOccupancy')} for how to cite spOccupancy in publications.
 
 \code{\link{simTMsOcc}} simulates multi-species multi-season occupancy data from multiple data sources. 
 
+\strong{Miscellaneous}
+
+\code{\link{postHocLM}} fits post-hoc linear (mixed) models.
+
+\code{\link{getSVCSamples}} extracts spatially varying coefficient MCMC samples.
+
+\code{\link{updateMCMC}} updates a spOccupancy or spAbundance model object with more MCMC iterations.
+
 All objects from model-fitting functions have support with the \code{summary} function for 
 displaying a concise summary of model results, the \code{fitted} function for extracting 
 model fitted values, and the \code{predict} function for predicting occupancy and/or detection
@@ -100,15 +108,24 @@ across an area of interest.
   Doser, J. W., Finley, A. O., Kery, M., & Zipkin, E. F. (2022). 
   spOccupancy: An R package for single-species, multi-species, and 
   integrated spatial occupancy models. 
-  Methods in Ecology and Evolution, 13, 1670-1678. \doi{10.1111/2041-210X.13897} 
+  Methods in Ecology and Evolution, 13, 1670-1678. \doi{10.1111/2041-210X.13897}.
 
   Doser, J. W., Finley, A. O., & Banerjee, S. (2023). Joint species 
   distribution models with imperfect detection for high-dimensional 
-  spatial data. Ecology e4137. \doi{10.1002/ecy.4137}
+  spatial data. Ecology, 104(9), e4137. \doi{10.1002/ecy.4137}.
 
-  Doser, J. W., Finley, A. O., Saunders, S. P., Kery, M., Weed A. S., Zipkin, E. F. (2023).
-  Modeling complex species-environment relationships through spatially-varying coefficient 
-  occupancy models. arXiv preprint.
+  Doser, J. W., Finley, A. O., Saunders, S. P., Kery, M., Weed, A. S., &
+  Zipkin, E. F. (2024A). Modeling complex species-environment
+  relationships through spatially-varying coefficient occupancy models.
+  Journal of Agricultural, Biological and Environmental Statistics.
+  \doi{10.1007/s13253-023-00595-6}.
+
+  Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
+  Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
+  for the use of spatially varying coefficients in species distribution
+  models. Global Ecology and Biogeography, 33, e13814.
+  \doi{10.1111/geb.13814}.
+ 
 }
 
 \author{

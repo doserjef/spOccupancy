@@ -147,7 +147,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 6000
-#> Run Time (min): 0.7788
+#> Run Time (min): 0.7627
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat ESS
@@ -267,7 +267,8 @@ integrated spatial occupancy models. Methods in Ecology and Evolution.
 
 Doser, J. W., Finley, A. O., and Banerjee, S. (2023). Joint species
 distribution models with imperfect detection for high-dimensional
-spatial data. Ecology. <https://doi.org/10.1002/ecy.4137>.
+spatial data. Ecology, 104(9), e4137.
+<https://doi.org/10.1002/ecy.4137>.
 
 Doser, J. W., Finley, A. O., Saunders, S. P., Kéry, M., Weed, A. S., &
 Zipkin, E. F. (2024A). Modeling complex species-environment
@@ -278,5 +279,5 @@ Journal of Agricultural, Biological and Environmental Statistics.
 Doser, J. W., Kéry, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
 Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
 for the use of spatially varying coefficients in species distribution
-models. Global Ecology and Biogeography, e13814.
+models. Global Ecology and Biogeography, 33, e13814.
 <https://doi.org/10.1111/geb.13814>
