@@ -1235,7 +1235,7 @@ extern "C" {
       if (ar1 == 1) {
         // Only need to do rho since sigmaSqT is not an MH parameter 
         REAL(acceptSamples_r)[s * rhoIndx] = accept[rhoIndx]/batchLength; 
-        REAL(tuningSamples_r)[s * rhoIndx] = tuning[j * rhoIndx]; 
+        REAL(tuningSamples_r)[s * rhoIndx] = tuning[rhoIndx]; 
         if (accept[rhoIndx] / batchLength > acceptRate) {
           tuning[rhoIndx] += std::min(0.01, 1.0/sqrt(static_cast<double>(s)));
         } else{
