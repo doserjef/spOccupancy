@@ -353,7 +353,7 @@ prior.list <- list(beta.normal = list(mean = 0, var = 2.72),
 tuning.list <- list(phi = 0.3) 
 
 # Number of batches
-n.batch <- 10
+n.batch <- 2
 # Batch length
 batch.length <- 25
 
@@ -374,7 +374,7 @@ out <- spIntPGOcc(occ.formula = ~ occ.cov,
                   verbose = TRUE, 
                   NNGP = FALSE, 
                   n.report = 10, 
-                  n.burn = 50, 
+                  n.burn = 10, 
                   n.thin = 1)
 
 summary(out)
