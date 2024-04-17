@@ -1,6 +1,6 @@
 # spOccupancy 0.7.6
 
-+ Fixed a memory problem in the saving of the tuning values for `svcTPGOcc` models that required updating v0.7.3 on CRAN to pass valgrind checks, as well as a memory leak in the calculation of the nearest neighbors, and a small problem with the DESCRIPTION file for including on CRAN.
++ Fixed a memory problem in the saving of the tuning values for `svcTPGOcc` models that required updating v0.7.3 on CRAN to pass valgrind checks, as well as a memory leak in the calculation of the nearest neighbors, and a small problem with the DESCRIPTION file for including on CRAN. 
 
 # spOccupancy 0.7.5
 
