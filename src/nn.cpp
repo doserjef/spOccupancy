@@ -231,8 +231,10 @@ extern "C" {
     
     int i, iNNIndx, iNN;
     
-    int *sIndx = new int[n];
-    double *u = new double[n];
+    // int *sIndx = new int[n];
+    // double *u = new double[n];
+    int *sIndx = (int *) R_alloc(n, sizeof(int));
+    double *u = (double *) R_alloc(n, sizeof(double));
     
     for(i = 0; i < n; i++){
       sIndx[i] = i;
