@@ -7,6 +7,7 @@
 #include <omp.h>
 #endif
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -49,8 +50,8 @@ void updateBF1Int(double *B, double *F, double *c, double *C, double *coords, in
 	    C[mm*threadID+l*nnIndxLU[n+i]+k] = sigmaSq*spCor(e, phi, nu, covModel, &bk[threadID*nb]); 
 	  }
 	}
-	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
-	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}
+	F77_NAME(dpotrf)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){Rf_error("c++ error: dpotrf failed\n");}
+	F77_NAME(dpotri)(&lower, &nnIndxLU[n+i], &C[mm*threadID], &nnIndxLU[n+i], &info FCONE); if(info != 0){Rf_error("c++ error: dpotri failed\n");}
 	F77_NAME(dsymv)(&lower, &nnIndxLU[n+i], &one, &C[mm*threadID], &nnIndxLU[n+i], &c[m*threadID], &inc, &zero, &B[nnIndxLU[i]], &inc FCONE);
 	F[i] = sigmaSq - F77_NAME(ddot)(&nnIndxLU[n+i], &B[nnIndxLU[i]], &inc, &c[m*threadID], &inc);
       }else{
@@ -159,7 +160,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      Rf_warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
       nThreads = 1;
     }
 #endif
@@ -221,15 +222,15 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    PROTECT(alphaSamples_r = Rf_allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    PROTECT(zSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++; 
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    PROTECT(wSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++; 
     
     /**********************************************************************
      * Other initial starting stuff
@@ -264,10 +265,10 @@ extern "C" {
     // Occupancy regression coefficient priors. 
     // Compute cholesky
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaBetaInv failed\n");}
     // Compute inverse
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, 
         	    SigmaBetaInvMuBeta, &inc FCONE);
@@ -297,9 +298,9 @@ extern "C" {
 	// Rprintf("Index: %i\n", alphaSigmaIndx[q] + i * pDetLong[q] + i); 
       } // i
       F77_NAME(dpotrf)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf SigmaAlphaInv failed\n");}
       F77_NAME(dpotri)(lower, &pDetLong[q], &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
-      if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotri SigmaAlphaInv failed\n");}
       F77_NAME(dsymv)(lower, &pDetLong[q], &one, &SigmaAlphaInv[alphaSigmaIndx[q]], &pDetLong[q], &muAlpha[alphaMuIndx[q]], &inc, &zero, 
                      &SigmaAlphaInvMuAlpha[alphaMuIndx[q]], &inc FCONE);
     } // q
@@ -321,11 +322,11 @@ extern "C" {
     double logDet;  
     double phiCand = 0.0, nuCand = 0.0, sigmaSqCand = 0.0;  
     SEXP acceptSamples_r; 
-    PROTECT(acceptSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
+    PROTECT(acceptSamples_r = Rf_allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP tuningSamples_r; 
-    PROTECT(tuningSamples_r = allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
+    PROTECT(tuningSamples_r = Rf_allocMatrix(REALSXP, nTheta, nBatch)); nProtect++; 
     SEXP thetaSamples_r; 
-    PROTECT(thetaSamples_r = allocMatrix(REALSXP, nTheta, nPost)); nProtect++; 
+    PROTECT(thetaSamples_r = Rf_allocMatrix(REALSXP, nTheta, nPost)); nProtect++; 
     double a, v, b, e, mu, var, aij; 
     // Initiate spatial values
     theta[sigmaSqIndx] = REAL(sigmaSqStarting_r)[0]; 
@@ -406,13 +407,13 @@ extern "C" {
           tmp_ppOcc[j] += SigmaBetaInv[j]; 
         } // j
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf here failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri here failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotri here failed\n");}
         // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2 
         F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-	if(info != 0){error("c++ error: dpotrf here failed\n");}
+	if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
         // Args: destination, mu, cholesky of the covariance matrix, dimension
         mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
 
@@ -467,17 +468,17 @@ extern "C" {
           // This gives the Cholesky of A.alpha
           // Computes cholesky of tmp_ppDet. Output stored in tmp_ppOcc
           F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf A.alpha failed\n");}
           // Computes the inverse tmp_ppOcc. Stored in tmp_ppOcc. This is A.beta.inv. 
           F77_NAME(dpotri)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
-          if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotri A.alpha failed\n");}
           // A.alpha.inv %*% b.alpha
           // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
           // (which is currently nothing) = tmp_pDet2
           F77_NAME(dsymv)(lower, &pDetLong[q], &one, &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &tmp_pDet[stAlpha], &inc, &zero, &tmp_pDet2[stAlpha], &inc FCONE);
           // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
           F77_NAME(dpotrf)(lower, &pDetLong[q], &tmp_ppDet[alphaSigmaIndx[q]], &pDetLong[q], &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf here failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(&alpha[stAlpha], &tmp_pDet2[stAlpha], &tmp_ppDet[alphaSigmaIndx[q]], pDetLong[q]);
           // for (j = 0; j < pDetLong[q]; j++) {
@@ -738,8 +739,8 @@ extern "C" {
     SEXP result_r, resultName_r;
     int nResultListObjs = 8;
 
-    PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // Setting the components of the output list.
     SET_VECTOR_ELT(result_r, 0, betaSamples_r);
@@ -750,18 +751,18 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 5, wSamples_r); 
     SET_VECTOR_ELT(result_r, 6, tuningSamples_r); 
     SET_VECTOR_ELT(result_r, 7, acceptSamples_r); 
-    // mkChar turns a C string into a CHARSXP
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("z.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, mkChar("psi.samples"));
-    SET_VECTOR_ELT(resultName_r, 4, mkChar("theta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 5, mkChar("w.samples")); 
-    SET_VECTOR_ELT(resultName_r, 6, mkChar("phi.tune")); 
-    SET_VECTOR_ELT(resultName_r, 7, mkChar("phi.accept")); 
+    // Rf_mkChar turns a C string into a CHARSXP
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("alpha.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z.samples")); 
+    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("psi.samples"));
+    SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("theta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("w.samples")); 
+    SET_VECTOR_ELT(resultName_r, 6, Rf_mkChar("phi.tune")); 
+    SET_VECTOR_ELT(resultName_r, 7, Rf_mkChar("phi.accept")); 
    
     // Set the names of the output list.  
-    namesgets(result_r, resultName_r);
+    Rf_namesgets(result_r, resultName_r);
     
     //unprotect
     UNPROTECT(nProtect);

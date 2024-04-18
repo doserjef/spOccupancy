@@ -100,7 +100,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > 1, but source not compiled with OpenMP support.");
+      Rf_warning("n.omp.threads > 1, but source not compiled with OpenMP support.");
       nThreads = 1;
     }
 #endif

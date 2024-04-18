@@ -6,6 +6,7 @@
 #include <omp.h>
 #endif
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -74,7 +75,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      Rf_warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
       nThreads = 1;
     }
 #endif
@@ -115,12 +116,12 @@ extern "C" {
     
     SEXP w0_r, psi0_r, z0_r;
 
-    PROTECT(w0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
+    PROTECT(w0_r = Rf_allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *w0 = REAL(w0_r);
 
-    PROTECT(psi0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
+    PROTECT(psi0_r = Rf_allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *psi0 = REAL(psi0_r);
-    PROTECT(z0_r = allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
+    PROTECT(z0_r = Rf_allocMatrix(REALSXP, qN, nSamples)); nProtect++; 
     double *z0 = REAL(z0_r);
     
     double *S_obs = (double *) R_alloc(JJ, sizeof(double));
@@ -155,9 +156,9 @@ extern "C" {
         spCov(obsD, JJ, theta, corName, S_obs); 
         spCov(obsPredD, qJ, theta, corName, S_obsPred); 
         F77_NAME(dpotrf)(lower, &J, S_obs, &J, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf failed\n");}
         F77_NAME(dpotri)(lower, &J, S_obs, &J, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri failed\n");}	 
+        if(info != 0){Rf_error("c++ error: dpotri failed\n");}	 
 
         F77_NAME(dgemv)(ntran, &q, &pOcc, &one, X0, &q, beta, &inc, &zero, tmp_q, &inc FCONE);
    
@@ -213,19 +214,19 @@ extern "C" {
      int nResultListObjs = 0;
      nResultListObjs = 3;
      
-     PROTECT(result = allocVector(VECSXP, nResultListObjs)); nProtect++;
-     PROTECT(resultNames = allocVector(VECSXP, nResultListObjs)); nProtect++;
+     PROTECT(result = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+     PROTECT(resultNames = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
           
      SET_VECTOR_ELT(result, 0, w0_r);
-     SET_VECTOR_ELT(resultNames, 0, mkChar("w.0.samples"));
+     SET_VECTOR_ELT(resultNames, 0, Rf_mkChar("w.0.samples"));
 
      SET_VECTOR_ELT(result, 1, psi0_r);
-     SET_VECTOR_ELT(resultNames, 1, mkChar("psi.0.samples"));
+     SET_VECTOR_ELT(resultNames, 1, Rf_mkChar("psi.0.samples"));
 
      SET_VECTOR_ELT(result, 2, z0_r);
-     SET_VECTOR_ELT(resultNames, 2, mkChar("z.0.samples"));
+     SET_VECTOR_ELT(resultNames, 2, Rf_mkChar("z.0.samples"));
      
-     namesgets(result, resultNames);
+     Rf_namesgets(result, resultNames);
      
      //unprotect
      UNPROTECT(nProtect);

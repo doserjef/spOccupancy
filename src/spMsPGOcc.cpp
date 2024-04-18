@@ -7,6 +7,7 @@
 #include <omp.h>
 #endif
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -130,7 +131,7 @@ extern "C" {
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      Rf_warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
       nThreads = 1;
     }
 #endif
@@ -258,55 +259,55 @@ extern "C" {
      * *******************************************************************/
     // Community level
     SEXP betaCommSamples_r; 
-    PROTECT(betaCommSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    PROTECT(betaCommSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     zeros(REAL(betaCommSamples_r), pOcc * nPost);
     SEXP alphaCommSamples_r;
-    PROTECT(alphaCommSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    PROTECT(alphaCommSamples_r = Rf_allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     zeros(REAL(alphaCommSamples_r), pDet * nPost);
     SEXP tauSqBetaSamples_r; 
-    PROTECT(tauSqBetaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    PROTECT(tauSqBetaSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
     zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
     SEXP tauSqAlphaSamples_r; 
-    PROTECT(tauSqAlphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
+    PROTECT(tauSqAlphaSamples_r = Rf_allocMatrix(REALSXP, pDet, nPost)); nProtect++; 
     zeros(REAL(tauSqAlphaSamples_r), pDet * nPost);
     // Species level
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
     zeros(REAL(betaSamples_r), pOccN * nPost);
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDetN, nPost)); nProtect++;
+    PROTECT(alphaSamples_r = Rf_allocMatrix(REALSXP, pDetN, nPost)); nProtect++;
     zeros(REAL(alphaSamples_r), pDetN * nPost);
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    PROTECT(zSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     zeros(REAL(zSamples_r), JN * nPost);
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     zeros(REAL(psiSamples_r), JN * nPost);
     // Spatial parameters
     SEXP wSamples_r; 
-    PROTECT(wSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    PROTECT(wSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
     zeros(REAL(wSamples_r), JN * nPost);
     // Detection random effects
     SEXP sigmaSqPSamples_r;
     SEXP alphaStarSamples_r;
     if (pDetRE > 0) {
-      PROTECT(sigmaSqPSamples_r = allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
+      PROTECT(sigmaSqPSamples_r = Rf_allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
       zeros(REAL(sigmaSqPSamples_r), pDetRE * nPost);
-      PROTECT(alphaStarSamples_r = allocMatrix(REALSXP, nDetREN, nPost)); nProtect++;
+      PROTECT(alphaStarSamples_r = Rf_allocMatrix(REALSXP, nDetREN, nPost)); nProtect++;
       zeros(REAL(alphaStarSamples_r), nDetREN * nPost);
     }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
-      PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      PROTECT(sigmaSqPsiSamples_r = Rf_allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
       zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
-      PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
+      PROTECT(betaStarSamples_r = Rf_allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
       zeros(REAL(betaStarSamples_r), nOccREN * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
-    PROTECT(likeSamples_r = allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    PROTECT(likeSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++;
     zeros(REAL(likeSamples_r), JN * nPost);
     
     /**********************************************************************
@@ -327,18 +328,18 @@ extern "C" {
 
     // For normal priors
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaBetaCommInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaBetaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaCommInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaBetaCommInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaBetaCommInv failed\n");}
     double *SigmaBetaCommInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     // dgemv computes linear combinations of different variables. 
     F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaCommInv, &pOcc, muBetaComm, &inc, &zero, 
         	    SigmaBetaCommInvMuBeta, &inc FCONE);
     // Detection regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaAlphaCommInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaCommInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaAlphaCommInv failed\n");}
     double *SigmaAlphaCommInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pDet, &one, SigmaAlphaCommInv, &pDet, muAlphaComm, &inc, &zero, 
                    SigmaAlphaCommInvMuAlpha, &inc FCONE);
@@ -432,11 +433,11 @@ extern "C" {
     // Get spatial covariance matrix 
     spCovLT(coordsD, J, currTheta, corName, C); 
     F77_NAME(dpotrf)(lower, &J, C, &J, &info FCONE); 
-    if(info != 0){error("c++ error: Cholesky failed in initial covariance matrix\n");}
+    if(info != 0){Rf_error("c++ error: Cholesky failed in initial covariance matrix\n");}
     F77_NAME(dpotri)(lower, &J, C, &J, &info FCONE); 
-    if(info != 0){error("c++ error: Cholesky inverse failed in initial covariance matrix\n");}
+    if(info != 0){Rf_error("c++ error: Cholesky inverse failed in initial covariance matrix\n");}
     SEXP thetaSamples_r; 
-    PROTECT(thetaSamples_r = allocMatrix(REALSXP, nThetaN, nPost)); nProtect++; 
+    PROTECT(thetaSamples_r = Rf_allocMatrix(REALSXP, nThetaN, nPost)); nProtect++; 
     zeros(REAL(thetaSamples_r), nThetaN * nPost);
 
     /**********************************************************************
@@ -451,10 +452,10 @@ extern "C" {
     double bSigmaSqPost = 0.0; 
     // MCMC info if desired
     SEXP acceptSamples_r; 
-    PROTECT(acceptSamples_r = allocMatrix(REALSXP, nThetaN, nBatch)); nProtect++; 
+    PROTECT(acceptSamples_r = Rf_allocMatrix(REALSXP, nThetaN, nBatch)); nProtect++; 
     zeros(REAL(acceptSamples_r), nThetaN * nBatch);
     SEXP tuningSamples_r; 
-    PROTECT(tuningSamples_r = allocMatrix(REALSXP, nThetaN, nBatch)); nProtect++; 
+    PROTECT(tuningSamples_r = Rf_allocMatrix(REALSXP, nThetaN, nBatch)); nProtect++; 
     zeros(REAL(tuningSamples_r), nThetaN * nBatch);
     double *wTRInv = (double *) R_alloc(J, sizeof(double)); 
 
@@ -484,15 +485,15 @@ extern "C" {
           tmp_ppOcc[q] = SigmaBetaCommInv[q] + N * TauBetaInv[q]; 
         }
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf ABetaComm failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri ABetaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotri ABetaComm failed\n");}
         // A.beta.inv %*% b.beta
         // 1 * tmp_ppOcc * tmp_pOcc + 0 * tmp_pOcc2  = tmp_pOcc2
         F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
         // Computes cholesky of tmp_pp again stored back in tmp_ppOcc. This chol(A.beta.inv)
         F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf ABetaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf ABetaComm failed\n");}
         // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
         mvrnorm(betaComm, tmp_pOcc2, tmp_ppOcc, pOcc);
         /********************************************************************
@@ -515,15 +516,15 @@ extern "C" {
           tmp_ppDet[q] = SigmaAlphaCommInv[q] + N * TauAlphaInv[q]; 
         }
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf AAlphaComm failed\n");}
         F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri AAlphaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotri AAlphaComm failed\n");}
         // A.alpha.inv %*% b.alpha
         // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2  = tmp_pDet2
         F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
         // Computes cholesky of tmp_pp again stored back in tmp_ppDet. This chol(A.alpha.inv)
         F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf AAlphaComm failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf AAlphaComm failed\n");}
         // Args: destination, mu, cholesky of the inverse covariance matrix, dimension
         mvrnorm(alphaComm, tmp_pDet2, tmp_ppDet, pDet);
 
@@ -542,9 +543,9 @@ extern "C" {
           TauBetaInv[q * pOcc + q] = tauSqBeta[q]; 
         } // i
         F77_NAME(dpotrf)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauBetaInv failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf TauBetaInv failed\n");}
         F77_NAME(dpotri)(lower, &pOcc, TauBetaInv, &pOcc, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauBetaInv failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotri TauBetaInv failed\n");}
         /********************************************************************
          Update Community Detection Variance Parameter
         ********************************************************************/
@@ -560,9 +561,9 @@ extern "C" {
           TauAlphaInv[q * pDet + q] = tauSqAlpha[q]; 
         } // i
         F77_NAME(dpotrf)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotrf TauAlphaInv failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotrf TauAlphaInv failed\n");}
         F77_NAME(dpotri)(lower, &pDet, TauAlphaInv, &pDet, &info FCONE); 
-        if(info != 0){error("c++ error: dpotri TauAlphaInv failed\n");}
+        if(info != 0){Rf_error("c++ error: dpotri TauAlphaInv failed\n");}
 
         /********************************************************************
          *Update Occupancy random effects variance
@@ -649,13 +650,13 @@ extern "C" {
             tmp_ppOcc[q] += TauBetaInv[q]; 
           } // j
           F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf ABeta failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf ABeta failed\n");}
           F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-          if(info != 0){error("c++ error: dpotri ABeta failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotri ABeta failed\n");}
           // A.beta.inv %*% b.beta
           F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
           F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotrf here failed\n");}
+	  if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(tmp_beta, tmp_pOcc2, tmp_ppOcc, pOcc);
           // Can eventually get rid of this and change order of beta. 
@@ -707,16 +708,16 @@ extern "C" {
             // Rprintf("TauAlphaInv: %f\n", TauAlphaInv[q]); 
           } // q
           F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf A.alpha failed\n");}
           F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-          if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotri A.alpha failed\n");}
           // A.alpha.inv %*% b.alpha
           // 1 * tmp_ppDet * tmp_pDet + 0 * tmp_pDet2 
           // (which is currently nothing) = tmp_pDet2
           F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
           // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
           F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf here failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(tmp_alpha, tmp_pDet2, tmp_ppDet, pDet);
           for (q = 0; q < pDet; q++) {
@@ -738,9 +739,9 @@ extern "C" {
 	  // Save R in tmp_JJ
           F77_NAME(dcopy)(&JJ, R, &inc, tmp_JJ, &inc); 
           F77_NAME(dpotrf)(lower, &J, R, &J, &info FCONE); 
-          if(info != 0){error("c++ error: Cholesky failed in correlation matrix\n");}
+          if(info != 0){Rf_error("c++ error: Cholesky failed in correlation matrix\n");}
           F77_NAME(dpotri)(lower, &J, R, &J, &info FCONE); 
-          if(info != 0){error("c++ error: Cholesky inverse failed in correlation matrix\n");}
+          if(info != 0){Rf_error("c++ error: Cholesky inverse failed in correlation matrix\n");}
 	  fillUTri(R, J); 
 
 	  if (!fixedSigmaSq) {
@@ -795,14 +796,14 @@ extern "C" {
 	  // Invert CCand and log det cov. 
           detCand = 0.0;
 	  F77_NAME(dpotrf)(lower, &J, CCand, &J, &info FCONE); 
-	  if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	  if(info != 0){Rf_error("c++ error: Cholesky failed in covariance matrix\n");}
 	  // Get log of the determinant of the covariance matrix. 
 	  for (k = 0; k < J; k++) {
             // Rprintf("detCand Value: %f\n", 2.0 * log(CCand[k * J + k])); 
 	    detCand += 2.0 * log(CCand[k*J+k]);
 	  } // k
 	  F77_NAME(dpotri)(lower, &J, CCand, &J, &info FCONE); 
-	  if(info != 0){error("c++ error: Cholesky inverse failed in covariance matrix\n");}
+	  if(info != 0){Rf_error("c++ error: Cholesky inverse failed in covariance matrix\n");}
           logPostCand = 0.0; 
 	  // Jacobian and Uniform prior. 
 	  logPostCand += log(phiCand - phiA[i]) + log(phiB[i] - phiCand); 
@@ -824,7 +825,7 @@ extern "C" {
           detCurr = 0.0;
 	  // tmp_JJ has the current covariance matrix
 	  F77_NAME(dpotrf)(lower, &J, tmp_JJ, &J, &info FCONE); 
-	  if(info != 0){error("c++ error: Cholesky failed in covariance matrix\n");}
+	  if(info != 0){Rf_error("c++ error: Cholesky failed in covariance matrix\n");}
 	  // Get log of the determinant of the covariance matrix. 
 	  for (k = 0; k < J; k++) {
 	    detCurr += 2.0 * log(tmp_JJ[k*J+k]);
@@ -882,12 +883,12 @@ extern "C" {
 	    tmp_JJ[k * J + k] += omegaOcc[k]; 
 	  } // k
           F77_NAME(dpotrf)(lower, &J, tmp_JJ, &J, &info FCONE); 
-          if(info != 0){error("c++ error: dpotrf on A.w failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotrf on A.w failed\n");}
           F77_NAME(dpotri)(lower, &J, tmp_JJ, &J, &info FCONE); 
-          if(info != 0){error("c++ error: dpotri on A.w failed\n");}
+          if(info != 0){Rf_error("c++ error: dpotri on A.w failed\n");}
           F77_NAME(dsymv)(lower, &J, &one, tmp_JJ, &J, tmp_JD, &inc, &zero, tmp_JD2, &inc FCONE);
           F77_NAME(dpotrf)(lower, &J, tmp_JJ, &J, &info FCONE); 
-	  if(info != 0){error("c++ error: dpotrf on A.w failed\n");}
+	  if(info != 0){Rf_error("c++ error: dpotrf on A.w failed\n");}
           // Args: destination, mu, cholesky of the covariance matrix, dimension
           mvrnorm(tmp_J1, tmp_JD2, tmp_JJ, J);
           for (j = 0; j < J; j++) {
@@ -1114,8 +1115,8 @@ extern "C" {
       nResultListObjs += 2;
     }
 
-    PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // Setting the components of the output list.
     SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
@@ -1145,31 +1146,31 @@ extern "C" {
       SET_VECTOR_ELT(result_r, tmp_0 + 1, betaStarSamples_r);
     }
 
-    // mkChar turns a C string into a CHARSXP
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.comm.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.comm.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("tau.sq.beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, mkChar("tau.sq.alpha.samples")); 
-    SET_VECTOR_ELT(resultName_r, 4, mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 5, mkChar("alpha.samples")); 
-    SET_VECTOR_ELT(resultName_r, 6, mkChar("z.samples")); 
-    SET_VECTOR_ELT(resultName_r, 7, mkChar("psi.samples")); 
-    SET_VECTOR_ELT(resultName_r, 8, mkChar("theta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 9, mkChar("w.samples")); 
-    SET_VECTOR_ELT(resultName_r, 10, mkChar("tune")); 
-    SET_VECTOR_ELT(resultName_r, 11, mkChar("accept")); 
-    SET_VECTOR_ELT(resultName_r, 12, mkChar("like.samples")); 
+    // Rf_mkChar turns a C string into a CHARSXP
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.comm.samples")); 
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("alpha.comm.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("tau.sq.beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("tau.sq.alpha.samples")); 
+    SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("alpha.samples")); 
+    SET_VECTOR_ELT(resultName_r, 6, Rf_mkChar("z.samples")); 
+    SET_VECTOR_ELT(resultName_r, 7, Rf_mkChar("psi.samples")); 
+    SET_VECTOR_ELT(resultName_r, 8, Rf_mkChar("theta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 9, Rf_mkChar("w.samples")); 
+    SET_VECTOR_ELT(resultName_r, 10, Rf_mkChar("tune")); 
+    SET_VECTOR_ELT(resultName_r, 11, Rf_mkChar("accept")); 
+    SET_VECTOR_ELT(resultName_r, 12, Rf_mkChar("like.samples")); 
     if (pDetRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 13, mkChar("sigma.sq.p.samples")); 
-      SET_VECTOR_ELT(resultName_r, 14, mkChar("alpha.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, 13, Rf_mkChar("sigma.sq.p.samples")); 
+      SET_VECTOR_ELT(resultName_r, 14, Rf_mkChar("alpha.star.samples")); 
     }
     if (pOccRE > 0) {
-      SET_VECTOR_ELT(resultName_r, tmp_0, mkChar("sigma.sq.psi.samples")); 
-      SET_VECTOR_ELT(resultName_r, tmp_0 + 1, mkChar("beta.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, tmp_0, Rf_mkChar("sigma.sq.psi.samples")); 
+      SET_VECTOR_ELT(resultName_r, tmp_0 + 1, Rf_mkChar("beta.star.samples")); 
     }
    
     // Set the names of the output list.  
-    namesgets(result_r, resultName_r);
+    Rf_namesgets(result_r, resultName_r);
     
     //unprotect
     UNPROTECT(nProtect);

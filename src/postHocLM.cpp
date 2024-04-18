@@ -2,6 +2,7 @@
 #include <string>
 #include "util.h"
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -104,17 +105,17 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, p, nSamples)); nProtect++;
+    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
     SEXP tauSqSamples_r;
-    PROTECT(tauSqSamples_r = allocMatrix(REALSXP, 1, nSamples)); nProtect++;
+    PROTECT(tauSqSamples_r = Rf_allocMatrix(REALSXP, 1, nSamples)); nProtect++;
     SEXP yHatSamples_r; 
-    PROTECT(yHatSamples_r = allocMatrix(REALSXP, N, nSamples)); nProtect++; 
+    PROTECT(yHatSamples_r = Rf_allocMatrix(REALSXP, N, nSamples)); nProtect++; 
     // Occurrence random effects
     SEXP sigmaSqSamples_r; 
     SEXP betaStarSamples_r; 
     if (pRE > 0) {
-      PROTECT(sigmaSqSamples_r = allocMatrix(REALSXP, pRE, nSamples)); nProtect++;
-      PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nRE, nSamples)); nProtect++;
+      PROTECT(sigmaSqSamples_r = Rf_allocMatrix(REALSXP, pRE, nSamples)); nProtect++;
+      PROTECT(betaStarSamples_r = Rf_allocMatrix(REALSXP, nRE, nSamples)); nProtect++;
     }
     
     /********************************************************************
@@ -140,9 +141,9 @@ extern "C" {
     // For normal priors
     // Occupancy regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &p, SigmaBetaInv, &p, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaBetaInv failed\n");}
     F77_NAME(dpotri)(lower, &p, SigmaBetaInv, &p, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(p, sizeof(double)); 
     F77_NAME(dsymv)(lower, &p, &one, SigmaBetaInv, &p, muBeta, &inc, &zero, 
         	    SigmaBetaInvMuBeta, &inc FCONE);
@@ -204,12 +205,12 @@ extern "C" {
       }
 
       F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
       F77_NAME(dpotri)(lower, &p, tmp_pp, &p, &info FCONE); 
-      if(info != 0){error("c++ error: dpotri here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotri here failed\n");}
       F77_NAME(dsymv)(lower, &p, &one, tmp_pp, &p, tmp_p, &inc, &zero, tmp_p2, &inc FCONE);
       F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
       mvrnorm(beta, tmp_p2, tmp_pp, p);
       
       /********************************************************************
@@ -322,8 +323,8 @@ extern "C" {
       nResultListObjs += 2;
     }
 
-    PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // Setting the components of the output list.
     SET_VECTOR_ELT(result_r, 0, betaSamples_r);
@@ -334,15 +335,15 @@ extern "C" {
       SET_VECTOR_ELT(result_r, 4, betaStarSamples_r);
     }
 
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("tau.sq.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("y.hat.samples")); 
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("tau.sq.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("y.hat.samples")); 
     if (pRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 3, mkChar("sigma.sq.samples")); 
-      SET_VECTOR_ELT(resultName_r, 4, mkChar("beta.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("sigma.sq.samples")); 
+      SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("beta.star.samples")); 
     }
    
-    namesgets(result_r, resultName_r);
+    Rf_namesgets(result_r, resultName_r);
     
     UNPROTECT(nProtect);
     
