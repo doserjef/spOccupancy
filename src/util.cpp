@@ -7,6 +7,7 @@
 #include <omp.h>
 #endif
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -200,7 +201,7 @@
     }else if(i == 3){
       return "gaussian";
     }else{
-      error("c++ error: cov.model is not correctly specified");
+      Rf_error("c++ error: cov.model is not correctly specified");
     }
     
   }
@@ -214,7 +215,7 @@
       }
     }
   
-    error("c++ error: which failed");
+    Rf_error("c++ error: which failed");
     return -9999;
   }
   
@@ -318,7 +319,7 @@ void spCovLT(double *D, int n, double *theta, std::string &covModel, double *C){
     }
     
  }else{
-    error("c++ error: cov.model is not correctly specified");
+    Rf_error("c++ error: cov.model is not correctly specified");
   }
 }
 
@@ -371,7 +372,7 @@ void spCorLT(double *D, int n, double *theta, std::string &covModel, double *R){
     }
     
  }else{
-    error("c++ error: cov.model is not correctly specified");
+    Rf_error("c++ error: cov.model is not correctly specified");
   }
 }
 
@@ -420,7 +421,7 @@ void spCov(double *D, int n, double *theta, std::string &covModel, double *C){
     }
     
  }else{
-    error("c++ error: cov.model is not correctly specified");
+    Rf_error("c++ error: cov.model is not correctly specified");
   }
 }
 
@@ -465,7 +466,7 @@ double spCor(double D, double *theta, std::string &covModel){
     }
 
   }else{
-    error("c++ error: cov.model is not correctly specified");
+    Rf_error("c++ error: cov.model is not correctly specified");
     return 0;
   }
 }
@@ -505,7 +506,7 @@ double spCor(double &D, double &phi, double &nu, int &covModel, double *bk){
     return exp(-1.0*(pow(phi*D,2)));
 
   }else{
-    error("c++ error: cov.model is not correctly specified");
+    Rf_error("c++ error: cov.model is not correctly specified");
   }
 }
 
