@@ -7,6 +7,7 @@
 #include <omp.h>
 #endif
 
+#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -167,38 +168,38 @@ extern "C" {
      * Return Stuff
      * *******************************************************************/
     SEXP betaSamples_r;
-    PROTECT(betaSamples_r = allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
     zeros(REAL(betaSamples_r), pOcc * nPost);
     SEXP alphaSamples_r; 
-    PROTECT(alphaSamples_r = allocMatrix(REALSXP, pDet, nPost)); nProtect++;
+    PROTECT(alphaSamples_r = Rf_allocMatrix(REALSXP, pDet, nPost)); nProtect++;
     zeros(REAL(alphaSamples_r), pDet * nPost);
     SEXP zSamples_r; 
-    PROTECT(zSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    PROTECT(zSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++; 
     zeros(REAL(zSamples_r), J * nPost);
     SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++; 
+    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++; 
     zeros(REAL(psiSamples_r), J * nPost);
     // Detection random effects
     SEXP sigmaSqPSamples_r; 
     SEXP alphaStarSamples_r; 
     if (pDetRE > 0) {
-      PROTECT(sigmaSqPSamples_r = allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
+      PROTECT(sigmaSqPSamples_r = Rf_allocMatrix(REALSXP, pDetRE, nPost)); nProtect++;
       zeros(REAL(sigmaSqPSamples_r), pDetRE * nPost);
-      PROTECT(alphaStarSamples_r = allocMatrix(REALSXP, nDetRE, nPost)); nProtect++;
+      PROTECT(alphaStarSamples_r = Rf_allocMatrix(REALSXP, nDetRE, nPost)); nProtect++;
       zeros(REAL(alphaStarSamples_r), nDetRE * nPost);
     }
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
-      PROTECT(sigmaSqPsiSamples_r = allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
+      PROTECT(sigmaSqPsiSamples_r = Rf_allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
       zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
-      PROTECT(betaStarSamples_r = allocMatrix(REALSXP, nOccRE, nPost)); nProtect++;
+      PROTECT(betaStarSamples_r = Rf_allocMatrix(REALSXP, nOccRE, nPost)); nProtect++;
       zeros(REAL(betaStarSamples_r), nOccRE * nPost);
     }
     // Likelihood samples for WAIC. 
     SEXP likeSamples_r;
-    PROTECT(likeSamples_r = allocMatrix(REALSXP, J, nPost)); nProtect++;
+    PROTECT(likeSamples_r = Rf_allocMatrix(REALSXP, J, nPost)); nProtect++;
     zeros(REAL(likeSamples_r), J * nPost);
     
     /********************************************************************
@@ -240,17 +241,17 @@ extern "C" {
     // For normal priors
     // Occupancy regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaBetaInv failed\n");}
     F77_NAME(dpotri)(lower, &pOcc, SigmaBetaInv, &pOcc, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaBetaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaBetaInv failed\n");}
     double *SigmaBetaInvMuBeta = (double *) R_alloc(pOcc, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pOcc, &one, SigmaBetaInv, &pOcc, muBeta, &inc, &zero, 
         	    SigmaBetaInvMuBeta, &inc FCONE);
     // Detection regression coefficient priors. 
     F77_NAME(dpotrf)(lower, &pDet, SigmaAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotrf SigmaAlphaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotrf SigmaAlphaInv failed\n");}
     F77_NAME(dpotri)(lower, &pDet, SigmaAlphaInv, &pDet, &info FCONE); 
-    if(info != 0){error("c++ error: dpotri SigmaAlphaInv failed\n");}
+    if(info != 0){Rf_error("c++ error: dpotri SigmaAlphaInv failed\n");}
     double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, 
                    SigmaAlphaInvMuAlpha, &inc FCONE);
@@ -354,12 +355,12 @@ extern "C" {
       } // j
 
       F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
       F77_NAME(dpotri)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-      if(info != 0){error("c++ error: dpotri here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotri here failed\n");}
       F77_NAME(dsymv)(lower, &pOcc, &one, tmp_ppOcc, &pOcc, tmp_pOcc, &inc, &zero, tmp_pOcc2, &inc FCONE);
       F77_NAME(dpotrf)(lower, &pOcc, tmp_ppOcc, &pOcc, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
       mvrnorm(beta, tmp_pOcc2, tmp_ppOcc, pOcc);
       
       /********************************************************************
@@ -403,13 +404,13 @@ extern "C" {
       } // j
 
       F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf A.alpha failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf A.alpha failed\n");}
       F77_NAME(dpotri)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-      if(info != 0){error("c++ error: dpotri A.alpha failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotri A.alpha failed\n");}
       F77_NAME(dsymv)(lower, &pDet, &one, tmp_ppDet, &pDet, tmp_pDet, &inc, &zero, tmp_pDet2, &inc FCONE);
       // Computes cholesky of tmp_ppDet again stored back in tmp_ppDet. This chol(A.alpha.inv)
       F77_NAME(dpotrf)(lower, &pDet, tmp_ppDet, &pDet, &info FCONE); 
-      if(info != 0){error("c++ error: dpotrf here failed\n");}
+      if(info != 0){Rf_error("c++ error: dpotrf here failed\n");}
       mvrnorm(alpha, tmp_pDet2, tmp_ppDet, pDet);
 
       /********************************************************************
@@ -612,8 +613,8 @@ extern "C" {
       nResultListObjs += 2;
     }
 
-    PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // Setting the components of the output list.
     SET_VECTOR_ELT(result_r, 0, betaSamples_r);
@@ -635,21 +636,21 @@ extern "C" {
       SET_VECTOR_ELT(result_r, tmp_0 + 1, betaStarSamples_r);
     }
 
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("alpha.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("z.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, mkChar("psi.samples"));
-    SET_VECTOR_ELT(resultName_r, 4, mkChar("like.samples"));
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("alpha.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z.samples")); 
+    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("psi.samples"));
+    SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("like.samples"));
     if (pDetRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 5, mkChar("sigma.sq.p.samples")); 
-      SET_VECTOR_ELT(resultName_r, 6, mkChar("alpha.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("sigma.sq.p.samples")); 
+      SET_VECTOR_ELT(resultName_r, 6, Rf_mkChar("alpha.star.samples")); 
     }
     if (pOccRE > 0) {
-      SET_VECTOR_ELT(resultName_r, tmp_0, mkChar("sigma.sq.psi.samples")); 
-      SET_VECTOR_ELT(resultName_r, tmp_0 + 1, mkChar("beta.star.samples")); 
+      SET_VECTOR_ELT(resultName_r, tmp_0, Rf_mkChar("sigma.sq.psi.samples")); 
+      SET_VECTOR_ELT(resultName_r, tmp_0 + 1, Rf_mkChar("beta.star.samples")); 
     }
    
-    namesgets(result_r, resultName_r);
+    Rf_namesgets(result_r, resultName_r);
     
     UNPROTECT(nProtect);
     
