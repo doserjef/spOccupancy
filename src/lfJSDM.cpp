@@ -201,7 +201,7 @@ extern "C" {
     zeros(REAL(betaSamples_r), pOccN * nPost);
     SEXP psiSamples_r; 
     PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
-    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    zeros(REAL(psiSamples_r), JN * nPost);
     // Factor model parameters
     SEXP lambdaSamples_r; 
     PROTECT(lambdaSamples_r = Rf_allocMatrix(REALSXP, Nq, nPost)); nProtect++;
