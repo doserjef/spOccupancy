@@ -7,7 +7,7 @@
 }
 
 \usage{
-\method{predict}{intPGOcc}(object, X.0, ...)
+\method{predict}{intPGOcc}(object, X.0, ignore.RE = FALSE, type = 'occupancy', ...)
 }
 
 \arguments{
@@ -15,6 +15,10 @@
   \item{object}{an object of class intPGOcc}
 
   \item{X.0}{the design matrix for prediction locations. This should include a column of 1s for the intercept. Covariates should have the same column names as those used when fitting the model with \code{intPGOcc}.}
+
+  \item{ignore.RE}{logical value that specifies whether or not to remove random occurrence (or detection if \code{type = 'detection'}) effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be generated from the fixed effects.}
+
+  \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
 
   \item{...}{currently no additional arguments}
 }

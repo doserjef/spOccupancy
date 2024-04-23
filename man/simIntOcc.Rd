@@ -8,7 +8,8 @@
 
 \usage{
 simIntOcc(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
-          sp = FALSE, cov.model, sigma.sq, phi, nu, ...)
+          psi.RE = list(), p.RE = list(), sp = FALSE, 
+          cov.model, sigma.sq, phi, nu, ...)
 }
 \arguments{
 
@@ -27,6 +28,10 @@ simIntOcc(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
 \item{beta}{a numeric vector containing the intercept and regression coefficient parameters for the occurrence portion of the single-species occupancy model.}
 
 \item{alpha}{a list of length \code{n.data}. Each element is a numeric vector containing the intercept and regression coefficient parameters for the detection portion of the single-species occupancy model for each data source.}		
+
+\item{psi.RE}{a list used to specify the non-spatial random intercepts included in the occupancy portion of the model. The list must have two tags: \code{levels} and \code{sigma.sq.psi}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.psi} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the occupancy portion of the model.}
+
+\item{p.RE}{a list used to specify the non-spatial random intercepts included in the detection portion of the model. The list must be a list of lists, where the individual lists contain the detection coefficients for each data set in the integrated  model. Each of the lists must have two tags: \code{levels} and \code{sigma.sq.p}. \code{levels} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the number of levels there are in each intercept. \code{sigma.sq.p} is a vector of length equal to the number of distinct random intercepts to include in the model and contains the variances for each random effect. If not specified, no random effects are included in the detection portion of the model.}
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process. By default set to \code{FALSE}.}
 

@@ -1,3 +1,9 @@
+# spOccupancy 0.7.7
+
++ Added in functionality for both occupancy and detection random intercepts in single-species integrated models (`intPGOcc`).
++ `updateMCMC` now works with lfJSDM.
++ Updated `lfJSDM` to give an error more quickly when there are memory limitations.
+
 # spOccupancy 0.7.6
 
 + Fixed a memory problem in the saving of the tuning values for `svcTPGOcc` models that required updating v0.7.3 on CRAN to pass valgrind checks, as well as a memory leak in the calculation of the nearest neighbors, and a small problem with the DESCRIPTION file for including on CRAN. 

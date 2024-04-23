@@ -73,6 +73,7 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
   }
 
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
+    n.data <- length(object$sites)
     J.long <- sapply(object$sites, length)
     indx <- 1
     elpd <- rep(0, n.data)
@@ -82,7 +83,7 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
     		       2, function(a) log(mean(a))), na.rm = TRUE)
       pD[i] <- sum(apply(object$like.samples[, indx:(indx + J.long[i] - 1), drop = FALSE], 
     		     2, function(a) var(log(a))), na.rm = TRUE)
-      indx <- indx + J.obs[i]
+      indx <- indx + J.long[i]
     }
     out <- data.frame(elpd = elpd, 
 		      pD = pD, 

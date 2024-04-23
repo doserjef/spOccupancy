@@ -315,10 +315,10 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     waic.n.obs.indx <- list()
     tmp.start <- 0
     for (i in 1:n.data) {
-      tmp.vals <- rep(1:J.obs[i], K.long.max[i])
+      tmp.vals <- rep(1:J.long[i], K.long.max[i])
       tmp.vals <- tmp.vals[!is.na(c(y[[i]]))]
       waic.n.obs.indx[[i]] <- tmp.vals + tmp.start
-      tmp.start <- tmp.start + J.obs[i]
+      tmp.start <- tmp.start + J.long[i]
     }
     waic.n.obs.indx <- unlist(waic.n.obs.indx) - 1
     y <- unlist(y)
