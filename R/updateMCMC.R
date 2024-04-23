@@ -18,8 +18,8 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
   }
   # TODO: temporary check until the function is implemented for all 
   #.      spOccupancy and spAbundance model types
-  if (!class(object) %in% c('sfJSDM', 'msAbund')) {
-    stop("updateMCMC() is currently only implemented for sfJSDM and msAbund model types.")
+  if (!class(object) %in% c('sfJSDM', 'msAbund', 'lfJSDM')) {
+    stop("updateMCMC() is currently only implemented for sfJSDM, lfJSDM, msAbund model types.")
   }
   if (missing(n.batch)) {
     if (class(object) %in% c('spPGOcc', 'spMsPGOcc', 'spIntPGOcc', 
@@ -406,5 +406,168 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
     object$update$final.seed <- seeds.new
     object$update$n.batch <- n.batch + object$update$n.batch
   } # sfJSDM 
+  # lfJSDM ----------------------------------------------------------------
+  if (is(object, 'lfJSDM')) {
+    for (i in 1:n.chains) {
+      # Set the random seed based on the previous set of the model
+      assign(".Random.seed", object$update$final.seed[[i]], .GlobalEnv)
+      N <- nrow(object$y)
+      p.occ <- ncol(object$beta.comm.samples)
+      q <- object$q
+      # Get initial values
+      curr.inits <- n.post.one.chain * i
+      inits <- list()
+      # beta.comm, tau.sq.beta, beta, phi, lambda, nu, sigma.sq.psi, w
+      inits$beta.comm <- object$beta.comm.samples[curr.inits, ]
+      inits$tau.sq.beta <- object$tau.sq.beta.samples[curr.inits, ]
+      inits$beta <- matrix(object$beta.samples[curr.inits, ], N, p.occ)
+      if (q > 0) {
+        inits$lambda <- matrix(object$lambda.samples[curr.inits, ], N, q)
+      }
+      if (object$psiRE) {
+        inits$sigma.sq.psi <- object$sigma.sq.psi.samples[curr.inits, ]
+        inits$beta.star <- t(matrix(object$beta.star.samples[curr.inits, ], 
+          			  ncol = N))
+      }
+      if (q > 0) {
+        inits$w <- object$w.samples[curr.inits, , ]
+      }
+      if (q == 1) {
+        inits$w <- t(as.matrix(inits$w))
+      }
+      out.tmp[[i]] <- lfJSDM(formula = object$update$formula,
+                             data = object$update$data,
+                             inits = inits,
+                             priors = object$update$priors,
+                             n.factors = object$q,
+                             n.samples = n.samples,
+                             n.omp.threads = object$update$n.omp.threads,
+                             verbose = verbose,
+                             n.report = n.report,
+                             n.burn = n.burn,
+                             n.thin = n.thin,
+                             n.chains = 1) # TODO: will make output look weird.
+      run.time.new <- run.time.new + out.tmp[[i]]$run.time
+      seeds.new[[i]] <- out.tmp[[i]]$update$final.seed[[1]]
+    }
+    # Put everything together
+    beta.samples.new <- list()
+    beta.comm.samples.new <- list()
+    tau.sq.beta.samples.new <- list()
+    theta.samples.new <- list()
+    lambda.samples.new <- list()
+    sigma.sq.psi.samples.new <- list()
+    beta.star.samples.new <- list()
+    w.samples.new <- list()
+    psi.samples.new <- list()
+    z.samples.new <- list()
+    like.samples.new <- list()
+
+    rhat.new <- list()
+    ess.new <- list()
+    n.samples.one.chain <- object$n.post
+    for (i in 1:n.chains) {
+      if (keep.orig) {
+        beta.comm.samples.new[[i]] <- rbind(object$beta.comm.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.comm.samples)
+        beta.samples.new[[i]] <- rbind(object$beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.samples)
+        tau.sq.beta.samples.new[[i]] <- rbind(object$tau.sq.beta.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$tau.sq.beta.samples)
+	if (q > 0) {
+          lambda.samples.new[[i]] <- rbind(object$lambda.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$lambda.samples)
+          w.samples.new[[i]] <- abind(object$w.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$w.samples, along = 1)
+	}
+        if (object$psiRE) {
+          sigma.sq.psi.samples.new[[i]] <- rbind(object$sigma.sq.psi.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$sigma.sq.psi.samples)
+          beta.star.samples.new[[i]] <- rbind(object$beta.star.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , drop = FALSE], out.tmp[[i]]$beta.star.samples)
+        }
+        psi.samples.new[[i]] <- abind(object$psi.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$psi.samples, along = 1)
+        like.samples.new[[i]] <- abind(object$like.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$like.samples, along = 1)
+        z.samples.new[[i]] <- abind(object$z.samples[((i - 1) * n.samples.one.chain + 1):(i * n.samples.one.chain), , , drop = FALSE], out.tmp[[i]]$z.samples, along = 1)
+      } else {
+        beta.comm.samples.new[[i]] <- out.tmp[[i]]$beta.comm.samples
+        beta.samples.new[[i]] <- out.tmp[[i]]$beta.samples
+        tau.sq.beta.samples.new[[i]] <- out.tmp[[i]]$tau.sq.beta.samples
+	if (q > 0) {
+          lambda.samples.new[[i]] <- out.tmp[[i]]$lambda.samples
+          w.samples.new[[i]] <- out.tmp[[i]]$w.samples
+	}
+	if (object$psiRE) {
+          sigma.sq.psi.samples.new[[i]] <- out.tmp[[i]]$sigma.sq.psi.samples
+          beta.star.samples.new[[i]] <- out.tmp[[i]]$beta.star.samples
+	}
+        psi.samples.new[[i]] <- out.tmp[[i]]$psi.samples
+        z.samples.new[[i]] <- out.tmp[[i]]$z.samples
+        like.samples.new[[i]] <- out.tmp[[i]]$like.samples
+      }
+    }
+    # Update Gelman-Rubin diagnostics. 
+    if (n.chains > 1) {
+      # as.vector removes the "Upper CI" when there is only 1 variable. 
+      rhat.new$beta.comm <- as.vector(gelman.diag(mcmc.list(lapply(beta.comm.samples.new, function(a) 
+        					      mcmc(a))), autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+      rhat.new$tau.sq.beta <- as.vector(gelman.diag(mcmc.list(lapply(tau.sq.beta.samples.new, function(a) 
+      					      mcmc(a))), autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+      rhat.new$beta <- as.vector(gelman.diag(mcmc.list(lapply(beta.samples.new, function(a) 
+      					         mcmc(a))), autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+      if (q > 0) {
+        rhat.new$lambda.lower.tri <- as.vector(gelman.diag(mcmc.list(lapply(lambda.samples.new, function(a) 
+          					       mcmc(a[, c(lower.tri(inits$lambda))]))), 
+          					       autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+      }
+      if (object$psiRE) {
+        rhat.new$sigma.sq.psi <- as.vector(gelman.diag(mcmc.list(lapply(sigma.sq.psi.samples.new, function(a) 
+        					      mcmc(a))), autoburnin = FALSE, multivariate = FALSE)$psrf[, 2])
+      }
+    } else {
+      rhat.new$beta.comm <- rep(NA, p.occ)
+      rhat.new$tau.sq.beta <- rep(NA, p.occ)
+      rhat.new$beta <- rep(NA, p.occ * N)
+      if (object$psiRE > 0) {
+        rhat.new$sigma.sq.psi <- rep(NA, ncol(object$sigma.sq.psi.samples))
+      }
+    }
+    object$rhat <- rhat.new
+
+    object$beta.comm.samples <- mcmc(do.call(rbind, beta.comm.samples.new))
+    object$tau.sq.beta.samples <- mcmc(do.call(rbind, tau.sq.beta.samples.new))
+    object$beta.samples <- mcmc(do.call(rbind, beta.samples.new))
+    if (object$psiRE) {
+      object$sigma.sq.psi.samples <- mcmc(do.call(rbind, sigma.sq.psi.samples.new))
+      object$beta.star.samples <- mcmc(do.call(rbind, beta.star.samples.new))
+    }
+    if (q > 0) {
+      object$lambda.samples <- mcmc(do.call(rbind, lambda.samples.new))
+      object$w.samples <- do.call(abind, list('...' = w.samples.new, along = 1))
+    }
+    object$psi.samples <- do.call(abind, list('...' = psi.samples.new, 
+          				  along = 1))
+    object$z.samples <- do.call(abind, list('...' = z.samples.new, 
+          				  along = 1))
+    object$like.samples <- do.call(abind, list('...' = like.samples.new, 
+          				  along = 1))
+    object$ESS <- list()
+    # Calculate effective sample sizes
+    object$ESS$beta.comm <- effectiveSize(object$beta.comm.samples)
+    object$ESS$tau.sq.beta <- effectiveSize(object$tau.sq.beta.samples)
+    object$ESS$beta <- effectiveSize(object$beta.samples)
+    if (q > 0) {
+      object$ESS$lambda <- effectiveSize(object$lambda.samples)
+    }
+    if (object$psiRE) {
+      object$ESS$sigma.sq.psi <- effectiveSize(object$sigma.sq.psi.samples)
+    }
+    object$n.burn <- ifelse(keep.orig, object$n.burn + n.burn, object$n.samples + n.burn)
+    object$n.samples <- object$n.samples + n.samples 
+    n.post.new <- length(seq(from = n.burn + 1, 
+			     to = n.samples,
+                             by = as.integer(n.thin)))
+    object$n.post <- ifelse(keep.orig, object$n.post + n.post.new, n.post.new)
+    # TODO: note the thinning rate may be different across models. Just ignoring
+    #       this for now, but may want to update for summary. Note these values
+    #       also might not be correct if keep.orig = FALSE, which is something
+    #       you should look into. 
+    object$run.time <- object$run.time + run.time.new 
+    object$update$final.seed <- seeds.new
+    object$update$n.samples <- n.samples + object$update$n.samples
+  } # lfJSDM 
   return(object)
 }

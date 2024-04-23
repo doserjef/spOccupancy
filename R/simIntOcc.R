@@ -1,4 +1,5 @@
 simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha, 
+                      psi.RE = list(), p.RE = list(),
 		      sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
@@ -75,6 +76,40 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
   if (!is.list(alpha)) {
     stop(paste("error: alpha must be a list with ", n.data, " vectors", sep = ''))
   }
+  # psi.RE ----------------------------
+  names(psi.RE) <- tolower(names(psi.RE))
+  if (!is.list(psi.RE)) {
+    stop("error: if specified, psi.RE must be a list with tags 'levels' and 'sigma.sq.psi'")
+  }
+  if (length(names(psi.RE)) > 0) {
+    if (!'sigma.sq.psi' %in% names(psi.RE)) {
+      stop("error: sigma.sq.psi must be a tag in psi.RE with values for the occurrence random effect variances")
+    }
+    if (!'levels' %in% names(psi.RE)) {
+      stop("error: levels must be a tag in psi.RE with the number of random effect levels for each occurrence random intercept.")
+    }
+  }
+  # p.RE ----------------------------
+  if (!is.list(p.RE)) {
+    stop(paste("error: if species, p.RE must be a list with ", n.data, " lists", sep = ''))
+  }
+  if (length(p.RE) > 0) {
+    for (q in 1:n.data) {
+      names(p.RE[[q]]) <- tolower(names(p.RE[[q]]))
+      if (!is.list(p.RE[[q]])) {
+        stop("error: if specified, p.RE[[", q, "]] must be a list with tags 'levels' and 'sigma.sq.p'")
+      }
+      if (length(names(p.RE[[q]])) > 0) {
+        if (!'sigma.sq.p' %in% names(p.RE[[q]])) {
+          stop("error: sigma.sq.p must be a tag in p.RE[[", q, "]] with values for the detection random effect variances")
+        }
+        if (!'levels' %in% names(p.RE[[q]])) {
+          stop("error: levels must be a tag in p.RE[[", q, "]] with the number of random effect levels for each detection random intercept.")
+        }
+      }
+    }
+  }
+
   # Spatial parameters ----------------
   if (sp) {
     if(missing(sigma.sq)) {
@@ -155,12 +190,86 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
   } else {
     w <- NA
   }
+  # Random effects --------------------------------------------------------
+  if (length(psi.RE) > 0) {
+    p.occ.re <- length(psi.RE$levels)
+    sigma.sq.psi <- rep(NA, p.occ.re)
+    n.occ.re.long <- psi.RE$levels
+    n.occ.re <- sum(n.occ.re.long)
+    beta.star.indx <- rep(1:p.occ.re, n.occ.re.long)
+    beta.star <- rep(0, n.occ.re)
+    X.re <- matrix(NA, J, p.occ.re)
+    for (i in 1:p.occ.re) {
+      X.re[, i] <- sample(1:psi.RE$levels[i], J, replace = TRUE)         
+      beta.star[which(beta.star.indx == i)] <- rnorm(psi.RE$levels[i], 0, sqrt(psi.RE$sigma.sq.psi[i]))
+    }
+    if (p.occ.re > 1) {
+      for (j in 2:p.occ.re) {
+        X.re[, j] <- X.re[, j] + max(X.re[, j - 1], na.rm = TRUE)
+      }
+    } 
+    beta.star.sites <- apply(X.re, 1, function(a) sum(beta.star[a]))
+  } else {
+    X.re <- NA
+    beta.star <- NA
+  }
+  if (length(p.RE) > 0) {
+    p.det.re <- list()
+    n.det.re.long <- list()
+    n.det.re <- list()
+    alpha.star.indx <- list()
+    alpha.star <- list()
+    alpha.star.sites <- list()
+    X.p.re <- list()
+    for (q in 1:n.data) {
+      if (length(p.RE[[q]]) > 0) {
+      p.det.re[[q]] <- length(p.RE[[q]]$levels)
+      n.det.re.long[[q]] <- p.RE[[q]]$levels
+      n.det.re[[q]] <- sum(n.det.re.long[[q]])
+      alpha.star.indx[[q]] <- rep(1:p.det.re[[q]], n.det.re.long[[q]])
+      alpha.star[[q]] <- rep(0, n.det.re[[q]])
+      X.p.re[[q]] <- array(NA, dim = c(J.obs[[q]], max(n.rep[[q]]), p.det.re[[q]]))
+      for (i in 1:p.det.re[[q]]) {
+        X.p.re[[q]][, , i] <- matrix(sample(1:p.RE[[q]]$levels[i], 
+					    J.obs[[q]] * max(n.rep[[q]]), replace = TRUE), 
+          	              J.obs[[q]], max(n.rep[[q]]))	      
+        alpha.star[[q]][which(alpha.star.indx[[q]] == i)] <- rnorm(p.RE[[q]]$levels[i], 
+								   0, 
+								   sqrt(p.RE[[q]]$sigma.sq.p[i]))
+      }
+      for (j in 1:J.obs[[q]]) {
+        X.p.re[[q]][j, -rep.indx[[q]][[j]], ] <- NA
+      }
+      if (p.det.re[[q]] > 1) {
+        for (j in 2:p.det.re[[q]]) {
+          X.p.re[[q]][, , j] <- X.p.re[[q]][, , j] + max(X.p.re[[q]][, , j - 1], na.rm = TRUE) 
+        }
+      }
+        alpha.star.sites[[q]] <- apply(X.p.re[[q]], c(1, 2), function(a) sum(alpha.star[[q]][a]))
+      } else {
+        X.p.re[[q]] <- NA
+        alpha.star[[q]] <- NA
+	alpha.star.sites[[q]] <- NA
+      }
+    }
+  } else {
+    X.p.re <- NA
+    alpha.star <- NA
+  }
 
   # Latent Occupancy Process ----------------------------------------------
   if (sp) {
-    psi <- logit.inv(X %*% as.matrix(beta) + w)
+    if (length(psi.RE) > 0) {
+      psi <- logit.inv(X %*% as.matrix(beta) + w + beta.star.sites)
+    } else {
+      psi <- logit.inv(X %*% as.matrix(beta) + w)
+    }
   } else {
-      psi <- logit.inv(X %*% as.matrix(beta))
+      if (length(psi.RE) > 0) {
+        psi <- logit.inv(X %*% as.matrix(beta) + beta.star.sites)
+      } else {
+        psi <- logit.inv(X %*% as.matrix(beta))
+      }
     }
   z <- rbinom(J, 1, psi)
 
@@ -175,8 +284,20 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
     sites.curr <- sites[[i]]
     X.p.curr <- X.p[[i]]
     alpha.curr <- as.matrix(alpha[[i]])
+    if (length(p.RE) > 0) {
+      alpha.star.sites.curr <- alpha.star.sites[[i]]
+    }
     for (j in 1:J.curr) {
-      p[[i]][j, rep.indx[[i]][[j]]] <- logit.inv(X.p.curr[j, rep.indx[[i]][[j]], ] %*% alpha.curr)
+      if (length(p.RE) > 0) { # If any detection random effects
+        if (length(p.RE[[i]]) > 0) { # If any detection random effects in this data set
+          p[[i]][j, rep.indx[[i]][[j]]] <- logit.inv(X.p.curr[j, rep.indx[[i]][[j]], ] %*% alpha.curr + 
+                                              alpha.star.sites.curr[j, rep.indx[[i]][[j]]])
+        } else { # Detection random effects, but none in this data set
+          p[[i]][j, rep.indx[[i]][[j]]] <- logit.inv(X.p.curr[j, rep.indx[[i]][[j]], ] %*% alpha.curr)
+	}
+      }	else { # No detection random effects
+        p[[i]][j, rep.indx[[i]][[j]]] <- logit.inv(X.p.curr[j, rep.indx[[i]][[j]], ] %*% alpha.curr)
+      }
       y[[i]][j, rep.indx[[i]][[j]]] <- rbinom(K.curr[j], 1, p[[i]][j, rep.indx[[i]][[j]]] * z[sites.curr[j]])
     } # j
   } # i
@@ -186,6 +307,13 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
   sites.pred <- (1:J)[!(1:J %in% sites.obs)]
   X.obs <- X[sites.obs, , drop = FALSE]
   X.pred <- X[sites.pred, , drop = FALSE]
+  if (length(psi.RE) > 0) {
+    X.re.obs <- X.re[sites.obs, , drop = FALSE]
+    X.re.pred <- X.re[sites.pred, , drop = FALSE]
+  } else {
+    X.re.obs <- NA
+    X.re.pred <- NA
+  }
   z.obs <- z[sites.obs]
   z.pred <- z[sites.pred]
   coords.obs <- coords[sites.obs,, drop = FALSE]
@@ -217,7 +345,10 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
 	 coords.obs = coords.obs, coords.pred = coords.pred, 
 	 w.obs = w.obs, w.pred = w.pred, 
 	 psi.obs = psi.obs, psi.pred = psi.pred, z.obs = z.obs, 
-	 z.pred = z.pred, p = p, y = y, sites = sites.return
+	 z.pred = z.pred, p = p, y = y, sites = sites.return, 
+	 X.re.obs = X.re.obs, X.re.pred = X.re.pred, beta.star = beta.star, 
+	 X.p.re = X.p.re, alpha.star = alpha.star
 	)
   )
 }
+

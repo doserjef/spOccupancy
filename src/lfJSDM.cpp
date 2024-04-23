@@ -188,46 +188,101 @@ extern "C" {
     /**********************************************************************
      * Return Stuff
      * *******************************************************************/
-    // Community level
-    SEXP betaCommSamples_r; 
-    PROTECT(betaCommSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
-    zeros(REAL(betaCommSamples_r), pOcc * nPost);
-    SEXP tauSqBetaSamples_r; 
-    PROTECT(tauSqBetaSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
-    zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
-    // Species level
-    SEXP betaSamples_r;
-    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
-    zeros(REAL(betaSamples_r), pOccN * nPost);
-    SEXP psiSamples_r; 
-    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
-    zeros(REAL(psiSamples_r), JN * nPost);
-    // Factor model parameters
-    SEXP lambdaSamples_r; 
-    PROTECT(lambdaSamples_r = Rf_allocMatrix(REALSXP, Nq, nPost)); nProtect++;
-    zeros(REAL(lambdaSamples_r), Nq * nPost);
-    SEXP wSamples_r; 
-    PROTECT(wSamples_r = Rf_allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
-    zeros(REAL(wSamples_r), Jq * nPost);
+    // Likelihood samples for WAIC. 
+    SEXP likeSamples_r;
+    PROTECT(likeSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++;
+    // zeros(REAL(likeSamples_r), JN * nPost);
+    memset(REAL(likeSamples_r), 0.0, JN * nPost * sizeof(double));
     // Fitted values
     double *z = (double *) R_alloc(JN, sizeof(double)); zeros(z, JN);
     SEXP zSamples_r; 
     PROTECT(zSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
-    zeros(REAL(zSamples_r), JN * nPost);
+    // zeros(REAL(zSamples_r), JN * nPost);
+    memset(REAL(zSamples_r), 0.0, JN * nPost * sizeof(double));
+    SEXP psiSamples_r; 
+    PROTECT(psiSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++; 
+    // zeros(REAL(psiSamples_r), JN * nPost);
+    memset(REAL(psiSamples_r), 0.0, JN * nPost * sizeof(double));
+    SEXP wSamples_r; 
+    PROTECT(wSamples_r = Rf_allocMatrix(REALSXP, Jq, nPost)); nProtect++; 
+    // zeros(REAL(wSamples_r), Jq * nPost);
+    memset(REAL(wSamples_r), 0.0, Jq * nPost * sizeof(double));
+    // Species level
+    SEXP betaSamples_r;
+    PROTECT(betaSamples_r = Rf_allocMatrix(REALSXP, pOccN, nPost)); nProtect++;
+    // zeros(REAL(betaSamples_r), pOccN * nPost);
+    memset(REAL(betaSamples_r), 0.0, pOccN * nPost * sizeof(double));
+    // Factor model parameters
+    SEXP lambdaSamples_r; 
+    PROTECT(lambdaSamples_r = Rf_allocMatrix(REALSXP, Nq, nPost)); nProtect++;
+    // zeros(REAL(lambdaSamples_r), Nq * nPost);
+    memset(REAL(lambdaSamples_r), 0.0, Nq * nPost * sizeof(double));
+    // Community level
+    SEXP betaCommSamples_r; 
+    PROTECT(betaCommSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++;
+    // zeros(REAL(betaCommSamples_r), pOcc * nPost);
+    memset(REAL(betaCommSamples_r), 0.0, pOcc * nPost * sizeof(double));
+    SEXP tauSqBetaSamples_r; 
+    PROTECT(tauSqBetaSamples_r = Rf_allocMatrix(REALSXP, pOcc, nPost)); nProtect++; 
+    // zeros(REAL(tauSqBetaSamples_r), pOcc * nPost);
+    memset(REAL(tauSqBetaSamples_r), 0.0, pOcc * nPost * sizeof(double));
     // Occurrence random effects
     SEXP sigmaSqPsiSamples_r; 
     SEXP betaStarSamples_r; 
     if (pOccRE > 0) {
       PROTECT(sigmaSqPsiSamples_r = Rf_allocMatrix(REALSXP, pOccRE, nPost)); nProtect++;
-      zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
+      // zeros(REAL(sigmaSqPsiSamples_r), pOccRE * nPost);
+      memset(REAL(sigmaSqPsiSamples_r), 0.0, pOccRE * nPost * sizeof(double));
       PROTECT(betaStarSamples_r = Rf_allocMatrix(REALSXP, nOccREN, nPost)); nProtect++;
-      zeros(REAL(betaStarSamples_r), nOccREN * nPost);
+      // zeros(REAL(betaStarSamples_r), nOccREN * nPost);
+      memset(REAL(betaStarSamples_r), 0.0, nOccREN * nPost * sizeof(double));
     }
-    // Likelihood samples for WAIC. 
-    SEXP likeSamples_r;
-    PROTECT(likeSamples_r = Rf_allocMatrix(REALSXP, JN, nPost)); nProtect++;
-    zeros(REAL(likeSamples_r), JN * nPost);
     
+    /**********************************************************************
+     * Make final return object 
+     * *******************************************************************/
+    // make return object (which is a list)
+    SEXP result_r, resultName_r;
+    int nResultListObjs = 8;
+    if (pOccRE > 0) {
+      nResultListObjs += 2;
+    }
+
+    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+    // Setting the components of the output list.
+    SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
+    SET_VECTOR_ELT(result_r, 1, tauSqBetaSamples_r);
+    SET_VECTOR_ELT(result_r, 2, betaSamples_r);
+    SET_VECTOR_ELT(result_r, 3, zSamples_r);
+    SET_VECTOR_ELT(result_r, 4, psiSamples_r);
+    SET_VECTOR_ELT(result_r, 5, lambdaSamples_r);
+    SET_VECTOR_ELT(result_r, 6, wSamples_r); 
+    SET_VECTOR_ELT(result_r, 7, likeSamples_r); 
+    if (pOccRE > 0) {
+      SET_VECTOR_ELT(result_r, 8, sigmaSqPsiSamples_r);
+      SET_VECTOR_ELT(result_r, 9, betaStarSamples_r);
+    }
+
+
+    // Rf_mkChar turns a C string into a CHARSXP
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.comm.samples")); 
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("tau.sq.beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("beta.samples")); 
+    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("z.samples")); 
+    SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("psi.samples")); 
+    SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("lambda.samples")); 
+    SET_VECTOR_ELT(resultName_r, 6, Rf_mkChar("w.samples")); 
+    SET_VECTOR_ELT(resultName_r, 7, Rf_mkChar("like.samples")); 
+    if (pOccRE > 0) {
+      SET_VECTOR_ELT(resultName_r, 8, Rf_mkChar("sigma.sq.psi.samples")); 
+      SET_VECTOR_ELT(resultName_r, 9, Rf_mkChar("beta.star.samples")); 
+    }
+   
+    // Set the names of the output list.  
+    Rf_namesgets(result_r, resultName_r);
+
     /**********************************************************************
      * Additional Sampler Prep
      * *******************************************************************/
@@ -650,18 +705,8 @@ extern "C" {
     }
 
     PutRNGstate();
-  
-    // make return object (which is a list)
-    SEXP result_r, resultName_r;
-    int nResultListObjs = 8;
-    if (pOccRE > 0) {
-      nResultListObjs += 2;
-    }
-
-    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-    // Setting the components of the output list.
+    
+    // Setting components of the final output list after filling all the arrays in.
     SET_VECTOR_ELT(result_r, 0, betaCommSamples_r);
     SET_VECTOR_ELT(result_r, 1, tauSqBetaSamples_r);
     SET_VECTOR_ELT(result_r, 2, betaSamples_r);
@@ -674,24 +719,7 @@ extern "C" {
       SET_VECTOR_ELT(result_r, 8, sigmaSqPsiSamples_r);
       SET_VECTOR_ELT(result_r, 9, betaStarSamples_r);
     }
-
-
-    // Rf_mkChar turns a C string into a CHARSXP
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta.comm.samples")); 
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("tau.sq.beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("beta.samples")); 
-    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("z.samples")); 
-    SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("psi.samples")); 
-    SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("lambda.samples")); 
-    SET_VECTOR_ELT(resultName_r, 6, Rf_mkChar("w.samples")); 
-    SET_VECTOR_ELT(resultName_r, 7, Rf_mkChar("like.samples")); 
-    if (pOccRE > 0) {
-      SET_VECTOR_ELT(resultName_r, 8, Rf_mkChar("sigma.sq.psi.samples")); 
-      SET_VECTOR_ELT(resultName_r, 9, Rf_mkChar("beta.star.samples")); 
-    }
-   
-    // Set the names of the output list.  
-    Rf_namesgets(result_r, resultName_r);
+  
     
     //unprotect
     UNPROTECT(nProtect);

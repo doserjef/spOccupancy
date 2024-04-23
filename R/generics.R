@@ -1689,50 +1689,18 @@ predict.spMsPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
 }
 
 # intPGOcc ----------------------------------------------------------------
-predict.intPGOcc <- function(object, X.0, ...) {
-  # Check for unused arguments ------------------------------------------
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-      if(! i %in% formal.args)
-          warning("'",i, "' is not an argument")
-  }
-  # Call ----------------------------------------------------------------
-  cl <- match.call()
-
-  # Functions ---------------------------------------------------------------
-  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
-  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
-
-  # Some initial checks ---------------------------------------------------
-  if (missing(object)) {
-    stop("error: predict expects object\n")
-  }
-  if (!is(object, 'intPGOcc')) {
-  # if (object != 'intPGOcc') {
-    stop("error: requires an output object of class intPGOcc\n")
+predict.intPGOcc <- function(object, X.0, ignore.RE = FALSE, 
+			     type = 'occupancy', ...) {
+  # Occupancy predictions -------------------------------------------------
+  if (tolower(type == 'occupancy')) {	
+    out <- predict.PGOcc(object, X.0, ignore.RE, type)
   }
 
-  # Check X.0 -------------------------------------------------------------
-  if (missing(X.0)) {
-    stop("error: X.0 must be specified\n")
+  # Detection predictions -------------------------------------------------
+  if (tolower(type == 'detection')) {
+    stop("detection prediction is not currently implemented.")
+    out <- list()
   }
-  if (!any(is.data.frame(X.0), is.matrix(X.0))) {
-    stop("error: X.0 must be a data.frame or matrix\n")
-  }
-  p.occ <- ncol(object$X)
-  if (ncol(X.0) != p.occ) {
-    stop(paste("error: X.0 must have ", p.occ, " columns\n", sep = ''))
-  }
-
-  # Composition sampling --------------------------------------------------
-  n.post <- object$n.post * object$n.chains
-  beta.samples <- as.matrix(object$beta.samples)
-  out <- list()
-  out$psi.0.samples <- mcmc(logit.inv(t(as.matrix(X.0) %*% t(beta.samples))))
-  out$z.0.samples <- mcmc(matrix(rbinom(length(out$psi.0.samples), 1, c(out$psi.0.samples)),
-		      nrow = n.post, ncol = nrow(X.0)))
-  out$call <- cl
 
   class(out) <- "predict.intPGOcc"
   out
@@ -1753,16 +1721,12 @@ fitted.intPGOcc <- function(object, ...) {
   }
   # Call ----------------------------------------------------------------
   cl <- match.call()
-  # Functions -------------------------------------------------------------
-  logit <- function(theta, a = 0, b = 1) {log((theta-a)/(b-theta))}
-  logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
   # Some initial checks -------------------------------------------------
   # Object ----------------------------
   if (missing(object)) {
     stop("error: object must be specified")
   }
-  #if (!is(object, c('intPGOcc', 'spIntPGOcc'))) {
   if (!(class(object) %in% c('intPGOcc', 'spIntPGOcc'))) {
     stop("error: object must be one of class intPGOcc or spIntPGOcc\n")
   }
@@ -1771,13 +1735,11 @@ fitted.intPGOcc <- function(object, ...) {
   n.data <- length(y)
   sites <- object$sites
   X.p <- object$X.p
-  p.det.long <- sapply(X.p, function(a) dim(a)[2])
-  J.long <- sapply(y, nrow)
-  det.prob <- list()
   y.rep.samples <- list()
+  for (i in 1:n.data) {
+    y.rep.samples[[i]] <- array(NA, dim = dim(object$p.samples[[i]]))
+  }
   n.post <- object$n.post * object$n.chains
-  # Max number of repeat visits for each data set
-  K.long.max <- sapply(y, function(a) dim(a)[2])
   z.long.indx.r <- list()
   for (i in 1:n.data) {
     z.long.indx.r[[i]] <- rep(sites[[i]], dim(y[[i]])[2])
@@ -1785,26 +1747,20 @@ fitted.intPGOcc <- function(object, ...) {
   }
 
   for (q in 1:n.data) {
-    z.samples <- object$z.samples[, z.long.indx.r[[q]], drop = FALSE]
-    alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
-    alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
-    # Get detection probability
-    det.prob.samples <- t(logit.inv(X.p[[q]] %*% t(alpha.samples)))
-    y.rep <- t(apply(det.prob.samples * z.samples, 2,
-	       function(a) rbinom(n.post, 1, a)))
-    tmp <- array(NA, dim = c(J.long[[q]] * K.long.max[q], n.post))
-    names.long <- which(!is.na(c(y[[q]])))
-    tmp[names.long, ] <- y.rep
-    y.rep.samples[[q]] <- array(tmp, dim = c(J.long[[q]], K.long.max[q], n.post))
-    y.rep.samples[[q]] <- aperm(y.rep.samples[[q]], c(3, 1, 2))
-    tmp <- array(NA, dim = c(J.long[[q]] * K.long.max[q], n.post))
-    tmp[names.long, ] <- t(det.prob.samples)
-    det.prob[[q]] <- array(tmp, dim = c(J.long[[q]], K.long.max[q], n.post))
-    det.prob[[q]] <- aperm(det.prob[[q]], c(3, 1, 2))
+    for (j in 1:ncol(y.rep.samples[[q]])) {
+      for (k in 1:dim(y.rep.samples[[q]])[3]) {
+        if (sum(!is.na(object$p.samples[[q]][, j, k])) != 0) {
+          y.rep.samples[[q]][, j, k] <- rbinom(n.post, 1, 
+	  				     object$z.samples[, sites[[q]][j]] * 
+                                               object$p.samples[[q]][, j, k])
+	}
+      }
+    }
   }
+
   out <- list()
   out$y.rep.samples <- y.rep.samples
-  out$p.samples <- det.prob
+  out$p.samples <- object$p.samples
   return(out)
 }
 
@@ -1829,9 +1785,13 @@ summary.intPGOcc <- function(object,
 
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
+  p.det.re.long <- sapply(object$X.p.re, function(a) dim(a)[[2]])
 
   # Occurrence ------------------------
-  cat("Occurrence (logit scale): \n")
+  cat("----------------------------------------\n")
+  cat("Occurrence (logit scale)\n")
+  cat("----------------------------------------\n")
+  cat("Fixed Effects:\n")
   tmp.1 <- t(apply(object$beta.samples, 2, 
 		   function(x) c(mean(x), sd(x))))
   colnames(tmp.1) <- c("Mean", "SD")
@@ -1842,13 +1802,28 @@ summary.intPGOcc <- function(object,
 
   print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
 
+  if (object$psiRE) {
+    cat("\n")
+    cat("Random Effects:\n")
+    tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq.psi, round(object$ESS$sigma.sq.psi, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+  }
   cat("\n")
   # Detection -------------------------
-
-
   indx <- 1
+  indx.re <- 1
   for (i in 1:n.data) {
-    cat(paste("Data source ", i, " Detection (logit scale): \n", sep = ""))
+    cat("----------------------------------------\n")
+    cat(paste("Data source ", i, " Detection (logit scale)\n", sep = ""))
+    cat("----------------------------------------\n")
+    cat("Fixed Effects:\n")
     tmp.1 <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
 		     function(x) c(mean(x), sd(x))))
     colnames(tmp.1) <- c("Mean", "SD")
@@ -1860,6 +1835,22 @@ summary.intPGOcc <- function(object,
     print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
+    if (object$pRELong[i]) {
+      tmp.samples <- object$sigma.sq.p.samples[, indx.re:(indx.re+p.det.re.long[i] - 1), 
+					       drop = FALSE]
+      cat("Random Effects:\n")
+      tmp.1 <- t(apply(tmp.samples, 2, function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(tmp.samples, 2, function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.p[indx.re:(indx.re+p.det.re.long[i] - 1)], 
+			round(object$ESS$sigma.sq.p[indx.re:(indx.re+p.det.re.long[i] - 1)],
+			      0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      cat("\n")
+      indx.re <- indx.re + p.det.re.long[i]
+    }
   }
 }
 

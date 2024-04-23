@@ -39,6 +39,7 @@ lfJSDM <- function(formula, data, inits, priors,
     stop("error: data must be a list")
   }
   names(data) <- tolower(names(data))
+  data.orig <- data
   if (!'y' %in% names(data)) {
     stop("error: detection-nondetection data y must be specified in data")
   }
@@ -482,9 +483,14 @@ lfJSDM <- function(formula, data, inits, priors,
   storage.mode(sigma.sq.psi.b) <- "double"
   storage.mode(beta.star.inits) <- "double"
   storage.mode(beta.star.indx) <- "integer"
+  # Initial seed
+  if (! exists(".Random.seed")) runif(1)
+  init.seed <- .Random.seed
 
   # Fit the model ---------------------------------------------------------
   out.tmp <- list()
+  # Random seed information for each chain of the model. 
+  seeds.list <- list()
   out <- list()
   if (!k.fold.only) {
     for (i in 1:n.chains) {
@@ -520,6 +526,7 @@ lfJSDM <- function(formula, data, inits, priors,
           		  n.samples, n.omp.threads, verbose, n.report, 
         	                  samples.info, chain.info)
       chain.info[1] <- chain.info[1] + 1
+      seeds.list[[i]] <- .Random.seed
     }
     # Calculate R-Hat ---------------
     out$rhat <- list()
@@ -629,6 +636,16 @@ lfJSDM <- function(formula, data, inits, priors,
     } else {
       out$psiRE <- FALSE
     }
+    # Send out objects needed for updateMCMC 
+    update.list <- list()
+    update.list$n.samples <- n.samples
+    update.list$n.omp.threads <- n.omp.threads
+    update.list$data <- data.orig
+    update.list$priors <- priors
+    update.list$formula <- formula
+    # Random seed to have for updating. 
+    update.list$final.seed <- seeds.list
+    out$update <- update.list
   }
   # K-fold cross-validation -------
   if (!missing(k.fold)) {
