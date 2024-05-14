@@ -208,7 +208,6 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$sp.names <- object$sp.names
   }
   # Integrated models -----------------------------------------------------
-  # if (is(object, c('intPGOcc', 'spIntPGOcc'))) {
   if (class(object) %in% c('intPGOcc', 'spIntPGOcc')) {
     y <- object$y
     n.data <- length(y)

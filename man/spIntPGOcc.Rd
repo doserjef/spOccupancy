@@ -21,13 +21,14 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
 
   \item{occ.formula}{a symbolic description of the model to be fit
   for the occurrence portion of the model using R's model syntax. Only
-  right-hand side of formula is specified. See example below.}
+  right-hand side of formula is specified. See example below. Random 
+  intercepts are allowed using lme4 syntax (Bates et al. 2015).}
 
  \item{det.formula}{a list of symbolic descriptions of the models to be fit
   for the detection portion of the model using R's model syntax for 
   each data set. Each element in the list is a formula for the detection 
   model of a given data set. Only right-hand side of formula is specified. 
-  See example below.}
+  See example below. Random intercepts are allowed using lme4 syntax (Bates et al. 2015).}
  
   \item{data}{a list containing data necessary for model fitting.
   Valid tags are \code{y}, \code{occ.covs}, \code{det.covs}, \code{sites} and \code{coords}. 
@@ -48,7 +49,13 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   with the number of rows equal to the number of observed sites of that data source
   and number of columns equal to the maximum number of replicates at a given site. 
   \code{coords} is a matrix of the observation site coordinates. Note that \code{spOccupancy} assumes coordinates are specified 
-  in a projected coordinate system.}
+  in a projected coordinate system. \code{sites}
+  is a list of site indices with number of elements equal to the number of data sources being 
+  modeled. Each element contains a vector of length equal to the number of 
+  sites that specific data source contains. Each value in the vector indicates
+  the row in \code{occ.covs} that corresponds with the specific row of the 
+  detection-nondetection data for the data source. This is used to properly link sites across
+  data sets.}
 
   \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 

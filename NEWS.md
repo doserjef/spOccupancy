@@ -1,8 +1,10 @@
 # spOccupancy 0.7.7
 
-+ Added in functionality for both occupancy and detection random intercepts in single-species integrated models (`intPGOcc`).
-+ `updateMCMC` now works with lfJSDM.
-+ Updated `lfJSDM` to give an error more quickly when there are memory limitations.
++ Added in functionality for both occupancy and detection random intercepts in single-species integrated models (`intPGOcc()` and `spIntPGOcc()`) using `lme4` syntax (e.g., `(1 | observer)` for a random effect of observer).
++ Fixed a bug in the k-fold cross-validation for spatial integrated occupancy models (NNGP models only) that could lead to incorrect model deviance results under certain situations depending on how the spatial coordinates were ordered on the user-side relative to how they are re-ordered when fitting the model. If using `spIntPGOcc()` with `NNGP = TRUE` and using cross-validation, I suggest re-running the analysis. Apologies for the inconvenience.
++ `waicOcc()` for integrated single-species models is now substantially faster.
++ `updateMCMC()` now works with lfJSDM.
++ Updated `lfJSDM()` to give an error more quickly when there are memory limitations.
 
 # spOccupancy 0.7.6
 

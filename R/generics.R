@@ -1711,6 +1711,7 @@ print.intPGOcc <- function(x, ...) {
       "", sep = "\n")
 }
 
+# TODO: should check this a bit more.
 fitted.intPGOcc <- function(object, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -1789,9 +1790,9 @@ summary.intPGOcc <- function(object,
 
   # Occurrence ------------------------
   cat("----------------------------------------\n")
-  cat("Occurrence (logit scale)\n")
+  cat("Occurrence\n")
   cat("----------------------------------------\n")
-  cat("Fixed Effects:\n")
+  cat("Fixed Effects (logit scale):\n")
   tmp.1 <- t(apply(object$beta.samples, 2, 
 		   function(x) c(mean(x), sd(x))))
   colnames(tmp.1) <- c("Mean", "SD")
@@ -1804,7 +1805,7 @@ summary.intPGOcc <- function(object,
 
   if (object$psiRE) {
     cat("\n")
-    cat("Random Effects:\n")
+    cat("Random Effect Variances (logit scale):\n")
     tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2, 
           	   function(x) c(mean(x), sd(x))))
     colnames(tmp.1) <- c("Mean", "SD")
@@ -1821,9 +1822,9 @@ summary.intPGOcc <- function(object,
   indx.re <- 1
   for (i in 1:n.data) {
     cat("----------------------------------------\n")
-    cat(paste("Data source ", i, " Detection (logit scale)\n", sep = ""))
+    cat(paste("Data source ", i, " Detection\n", sep = ""))
     cat("----------------------------------------\n")
-    cat("Fixed Effects:\n")
+    cat("Fixed Effects (logit scale):\n")
     tmp.1 <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
 		     function(x) c(mean(x), sd(x))))
     colnames(tmp.1) <- c("Mean", "SD")
@@ -1838,7 +1839,7 @@ summary.intPGOcc <- function(object,
     if (object$pRELong[i]) {
       tmp.samples <- object$sigma.sq.p.samples[, indx.re:(indx.re+p.det.re.long[i] - 1), 
 					       drop = FALSE]
-      cat("Random Effects:\n")
+      cat("Random Effect Variances (logit scale):\n")
       tmp.1 <- t(apply(tmp.samples, 2, function(x) c(mean(x), sd(x))))
       colnames(tmp.1) <- c("Mean", "SD")
       tmp <- t(apply(tmp.samples, 2, function(x) quantile(x, prob = quantiles)))
@@ -1885,9 +1886,13 @@ summary.spIntPGOcc <- function(object,
 
   n.data <- length(object$y)
   p.det.long <- sapply(object$X.p, function(a) dim(a)[[2]])
+  p.det.re.long <- sapply(object$X.p.re, function(a) dim(a)[[2]])
 
   # Occurrence ------------------------
-  cat("Occurrence (logit scale): \n")
+  cat("----------------------------------------\n")
+  cat("Occurrence\n")
+  cat("----------------------------------------\n")
+  cat("Fixed Effects (logit scale):\n")
   tmp.1 <- t(apply(object$beta.samples, 2, 
 		   function(x) c(mean(x), sd(x))))
   colnames(tmp.1) <- c("Mean", "SD")
@@ -1897,11 +1902,29 @@ summary.spIntPGOcc <- function(object,
   colnames(diags) <- c('Rhat', 'ESS')
 
   print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+
+  if (object$psiRE) {
+    cat("\n")
+    cat("Random Effect Variances (logit scale):\n")
+    tmp.1 <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	   function(x) c(mean(x), sd(x))))
+    colnames(tmp.1) <- c("Mean", "SD")
+    tmp <- t(apply(object$sigma.sq.psi.samples, 2, 
+          	 function(x) quantile(x, prob = quantiles)))
+    diags <- matrix(c(object$rhat$sigma.sq.psi, round(object$ESS$sigma.sq.psi, 0)), ncol = 2)
+    colnames(diags) <- c('Rhat', 'ESS')
+
+    print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+  }
   cat("\n")
   # Detection -------------------------
   indx <- 1
+  indx.re <- 1
   for (i in 1:n.data) {
-    cat(paste("Data source ", i, " Detection (logit scale): \n", sep = ""))
+    cat("----------------------------------------\n")
+    cat(paste("Data source ", i, " Detection\n", sep = ""))
+    cat("----------------------------------------\n")
+    cat("Fixed Effects (logit scale):\n")
     tmp.1 <- t(apply(object$alpha.samples[,indx:(indx+p.det.long[i] - 1), drop = FALSE], 2, 
 		     function(x) c(mean(x), sd(x))))
     colnames(tmp.1) <- c("Mean", "SD")
@@ -1913,9 +1936,27 @@ summary.spIntPGOcc <- function(object,
     print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
     indx <- indx + p.det.long[i]
     cat("\n")
+    if (object$pRELong[i]) {
+      tmp.samples <- object$sigma.sq.p.samples[, indx.re:(indx.re+p.det.re.long[i] - 1), 
+					       drop = FALSE]
+      cat("Random Effect Variances (logit scale):\n")
+      tmp.1 <- t(apply(tmp.samples, 2, function(x) c(mean(x), sd(x))))
+      colnames(tmp.1) <- c("Mean", "SD")
+      tmp <- t(apply(tmp.samples, 2, function(x) quantile(x, prob = quantiles)))
+      diags <- matrix(c(object$rhat$sigma.sq.p[indx.re:(indx.re+p.det.re.long[i] - 1)], 
+			round(object$ESS$sigma.sq.p[indx.re:(indx.re+p.det.re.long[i] - 1)],
+			      0)), ncol = 2)
+      colnames(diags) <- c('Rhat', 'ESS')
+
+      print(noquote(round(cbind(tmp.1, tmp, diags), digits)))
+      cat("\n")
+      indx.re <- indx.re + p.det.re.long[i]
+    }
   }
   # Covariance ------------------------
-  cat("Spatial Covariance: \n")
+  cat("----------------------------------------\n")
+  cat("Spatial Covariance\n")
+  cat("----------------------------------------\n")
   tmp.1 <- t(apply(object$theta.samples, 2, 
 		   function(x) c(mean(x), sd(x))))
   colnames(tmp.1) <- c("Mean", "SD")
@@ -1927,9 +1968,19 @@ summary.spIntPGOcc <- function(object,
 }
 
 predict.spIntPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
-			       verbose = TRUE, n.report = 100, ...) {
-  out <- predict.spPGOcc(object, X.0, coords.0, n.omp.threads, 
-			 verbose, n.report)
+			       verbose = TRUE, n.report = 100, 
+			       ignore.RE = FALSE, type = 'occupancy', ...) {
+  # Occupancy predictions -------------------------------------------------
+  if (tolower(type == 'occupancy')) {	
+    out <- predict.spPGOcc(object, X.0, coords.0, n.omp.threads, 
+			   verbose, n.report, ignore.RE, type)
+  }
+  # Detection predictions -------------------------------------------------
+  if (tolower(type == 'detection')) {
+    stop("detection prediction is not currently implemented.")
+    out <- list()
+  }
+
   class(out) <- "predict.spIntPGOcc"
   out
 }

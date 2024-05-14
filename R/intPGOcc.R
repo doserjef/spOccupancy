@@ -861,22 +861,22 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       colnames(out$alpha.samples) <- x.p.names
       out$z.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$z.samples))))
       out$psi.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$psi.samples))))
-    # p.samples is returned as a list, where each element 
-    out$p.samples <- do.call(rbind, lapply(out.tmp, function(a) a$p.samples))
-    # corresponds to a different data set. 
-    tmp <- list()
-    indx <- 1
-    for (q in 1:n.data) {
-      tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples * n.chains))
-      tmp[[q]][names.long[[q]], ] <- out$p.samples[indx:(indx + n.obs.long[q] - 1), ] 
-      tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples * n.chains))
-      tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
-      indx <- indx + n.obs.long[q]
-    }
-    out$p.samples <- tmp
-    # Likelihood samples for WAIC calculation. 
-    out$like.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$like.samples))))
-    if (p.occ.re > 0) {
+      # p.samples is returned as a list, where each element 
+      out$p.samples <- do.call(rbind, lapply(out.tmp, function(a) a$p.samples))
+      # corresponds to a different data set. 
+      tmp <- list()
+      indx <- 1
+      for (q in 1:n.data) {
+        tmp[[q]] <- array(NA, dim = c(J.long[q] * K.long.max[q], n.post.samples * n.chains))
+        tmp[[q]][names.long[[q]], ] <- out$p.samples[indx:(indx + n.obs.long[q] - 1), ] 
+        tmp[[q]] <- array(tmp[[q]], dim = c(J.long[q], K.long.max[q], n.post.samples * n.chains))
+        tmp[[q]] <- aperm(tmp[[q]], c(3, 1, 2))
+        indx <- indx + n.obs.long[q]
+      }
+      out$p.samples <- tmp
+      # Likelihood samples for WAIC calculation. 
+      out$like.samples <- mcmc(do.call(rbind, lapply(out.tmp, function(a) t(a$like.samples))))
+      if (p.occ.re > 0) {
       out$sigma.sq.psi.samples <- mcmc(
         do.call(rbind, lapply(out.tmp, function(a) t(a$sigma.sq.psi.samples))))
       colnames(out$sigma.sq.psi.samples) <- x.re.names
@@ -950,7 +950,6 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	}
 	sites.random <- sample(sites[[k.fold.data]])
       } else {
-        # Number of sites in each hold out data set. 
         sites.random <- sample(1:J)    
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
@@ -960,6 +959,8 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         curr.set.pred <- curr.set
 	curr.set.fit <- (1:J)[-curr.set]
 	if (!is.null(k.fold.data)) {
+	  # Only drop out data for the k.fold.data data source if multiple data sources
+          # exist at a given site.
           curr.set.fit <- sort(unique(c(curr.set.fit, unlist(sites[-k.fold.data]))))
         }
         y.indx <- !((z.long.indx.r) %in% curr.set)
@@ -1053,30 +1054,61 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	sites.fit <- sapply(sites, 
 			    function(a) which(as.numeric(row.names(X.fit)) %in% a[a %in% curr.set.fit]))
 	tmp <- sapply(sites, function(a) a %in% curr.set.fit)
+        # This is needed to ensure that you don't pull the data from data source k.fold.data at sites where there 
+	# is another data source.
 	if (!is.null(k.fold.data)) {
-          # TODO: check
           sites.fit[[k.fold.data]] <- which(as.numeric(row.names(X.fit)) %in% sites[[k.fold.data]][sites[[k.fold.data]] %in% (1:J)[-curr.set]])
           tmp[[k.fold.data]] <- sites[[k.fold.data]] %in% (1:J)[-curr.set]
         }
         K.fit <- K[unlist(tmp)]
-	z.long.indx.fit <- list()
-	tmp.indx <- 1
+	y.big.fit <- y.big
 	for (q in 1:n.data) {
-          z.long.indx.fit[[q]] <- matrix(NA, length(sites.fit[[q]]), K.long.max[q])
-          for (j in 1:length(sites.fit[[q]])) {
-            z.long.indx.fit[[q]][j, 1:K.fit[tmp.indx]] <- sites.fit[[q]][j]
-	    tmp.indx <- tmp.indx + 1
-          }
-          z.long.indx.fit[[q]] <- c(z.long.indx.fit[[q]])
-          z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(z.long.indx.fit[[q]])] - 1
-        }
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (sites[[q]][j] %in% curr.set) {
+                y.big.fit[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (sites[[q]][j] %in% curr.set) {
+                  y.big.fit[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.fit[[q]] <- y.big.fit[[q]][which(apply(y.big.fit[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+	y.big.0 <- y.big
+	for (q in 1:n.data) {
+          for (j in 1:J.long[q]) {
+            if (is.null(k.fold.data)) {
+              if (! sites[[q]][j] %in% curr.set) {
+                y.big.0[[q]][j, ] <- NA
+	      }
+	    } else {
+              if (q == k.fold.data) {
+                if (! sites[[q]][j] %in% curr.set) {
+                  y.big.0[[q]][j, ] <- NA
+	        }
+	      }
+	    }
+	  }
+	  y.big.0[[q]] <- y.big.0[[q]][which(apply(y.big.0[[q]], 
+						       1, function(a) sum(!is.na(a)) > 0)), ]
+	}
+	z.long.indx.fit <- list()
+	for (q in 1:n.data) {
+          z.long.indx.fit[[q]] <- rep(sites.fit[[q]], K.long.max[q])
+	  z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(c(y.big.fit[[q]]))]
+	}
 	z.long.indx.fit <- unlist(z.long.indx.fit)
+        z.long.indx.fit <- z.long.indx.fit - 1
 	
 	# Site indices for hold out data
 	sites.0 <- sapply(sites, 
 			    function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% curr.set.pred]))
 	tmp <- sapply(sites, function(a) a %in% curr.set.pred)
-        # TODO: check
 	if (!is.null(k.fold.data)) {
           sites.0[-k.fold.data] <- NA
 	  for (q in 1:n.data) {
@@ -1086,20 +1118,17 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           }
         }
         K.0 <- K[unlist(tmp)]
-	z.long.indx.0 <- list()
-	tmp.indx <- 1
-	for (q in 1:n.data) {
-          if (!is.na(sites.0[[q]][1])) {
-            z.long.indx.0[[q]] <- matrix(NA, length(sites.0[[q]]), K.long.max[q])
-            for (j in 1:length(sites.0[[q]])) {
-              z.long.indx.0[[q]][j, 1:K.0[tmp.indx]] <- sites.0[[q]][j]
-	      tmp.indx <- tmp.indx + 1
-            }
-            z.long.indx.0[[q]] <- c(z.long.indx.0[[q]])
-            z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(z.long.indx.0[[q]])] - 1
+	if (is.null(k.fold.data)) {
+	  z.long.indx.0 <- list()
+	  for (q in 1:n.data) {
+            z.long.indx.0[[q]] <- rep(sites.0[[q]], K.long.max[q])
+	    z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(c(y.big.0[[q]]))]
 	  }
-        }
-	z.long.indx.0 <- unlist(z.long.indx.0)
+	  z.long.indx.0 <- unlist(z.long.indx.0) - 1
+	} else {
+          z.long.indx.0 <- rep(sites.0[[k.fold.data]], K.long.max[k.fold.data])
+	  z.long.indx.0 <- z.long.indx.0[!is.na(c(y.big.0[[k.fold.data]]))] - 1
+	}
         verbose.fit <- FALSE
         n.omp.threads.fit <- 1
 	n.obs.fit <- length(y.fit)
@@ -1148,7 +1177,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 	storage.mode(chain.info) <- "integer"
 	waic.calc.fit <- FALSE
 	storage.mode(waic.calc.fit) <- "integer"
-    
+
 	out.fit <- .Call("intPGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.all.fit, 
 			 consts.fit, p.det.long, J.long.fit, n.obs.long.fit, K.fit, 
 			 n.occ.re.long.fit, n.det.re.long.fit,
@@ -1195,6 +1224,12 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         class(out.fit) <- "intPGOcc"
 
+	# Get RE levels correct for when they aren't supplied at values starting at 1.
+	if (p.occ.re > 0) {
+	  tmp <- unlist(re.level.names)
+	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+	  colnames(X.re.0) <- x.re.names
+	}
         # Predict occurrence at new sites. 
 	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
 	out.pred <- predict.intPGOcc(out.fit, X.0)

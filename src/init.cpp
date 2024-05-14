@@ -18,7 +18,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"spMsPGOccNNGPPredict", (DL_FUNC) &spMsPGOccNNGPPredict, 20},
     {"intPGOcc", (DL_FUNC) &intPGOcc, 31},
     {"spIntPGOcc", (DL_FUNC) &spIntPGOcc, 48},
-    {"spIntPGOccNNGP", (DL_FUNC) &spIntPGOccNNGP, 54},
+    {"spIntPGOccNNGP", (DL_FUNC) &spIntPGOccNNGP, 65},
     {"lfMsPGOcc", (DL_FUNC) &lfMsPGOcc, 44},
     {"sfMsPGOccNNGP", (DL_FUNC) &sfMsPGOccNNGP, 63},
     {"sfMsPGOccNNGPPredict", (DL_FUNC) &sfMsPGOccNNGPPredict, 26},
