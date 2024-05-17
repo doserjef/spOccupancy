@@ -5,6 +5,7 @@
 + `waicOcc()` for integrated single-species models is now substantially faster.
 + `updateMCMC()` now works with lfJSDM.
 + Updated `lfJSDM()` to give an error more quickly when there are memory limitations.
++ Fixed a bug in all multi-season, multi-species models that caused the model to crash upon initialization of the MCMC algorithm when data were supplied in a way such that for a given data set, the maximum number of times a specific site was sampled was less than the total number of "replicate periods" (i.e., the fourth dimension of the data list). This may happen when the "replicates" are structured as specific time periods (i.e., weeks, years) instead of a specific "replicate". Thanks to José Ribeiro for bringing this to my attention. 
 
 # spOccupancy 0.7.6
 

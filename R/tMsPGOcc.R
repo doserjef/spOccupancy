@@ -230,7 +230,7 @@ tMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (p.det.re == 0) n.det.re.long <- 0
   # Number of repeat visits
   n.rep <- apply(y.big[1, , , , drop = FALSE], c(2, 3), function(a) sum(!is.na(a)))
-  K.max <- max(n.rep)
+  K.max <- dim(y.big)[4]
   # Because I like K better than n.rep
   K <- n.rep
   if (missing(n.batch)) {
