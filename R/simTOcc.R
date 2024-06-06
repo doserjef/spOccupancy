@@ -1,8 +1,8 @@
 simTOcc <- function(J.x, J.y, n.time, n.rep, n.rep.max, beta, alpha, sp.only = 0, 
-		    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
-		    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
+                    trend = TRUE, psi.RE = list(), p.RE = list(), sp = FALSE, 
+                    svc.cols = 1, cov.model, sigma.sq, phi, nu, ar1 = FALSE, 
                     rho, sigma.sq.t, x.positive = FALSE, mis.spec.type = 'none', 
-		    scale.param = 1, avail, grid, ...) {
+                    scale.param = 1, avail, grid, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))

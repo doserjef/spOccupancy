@@ -63,27 +63,27 @@ void updateBFSVCT(double *B, double *F, double *c, double *C, double *coords, in
 
 extern "C" {
   SEXP svcTPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
-		     SEXP XpRE_r, SEXP consts_r, 
-	             SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
-		     SEXP m_r, SEXP nnIndx_r, SEXP nnIndxLU_r, 
-		     SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r,
-		     SEXP betaStarting_r, SEXP alphaStarting_r, 
-		     SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r,
-		     SEXP betaStarStarting_r, SEXP alphaStarStarting_r,
-	             SEXP phiStarting_r, SEXP sigmaSqStarting_r, SEXP nuStarting_r, 
-		     SEXP wStarting_r, SEXP zStarting_r, 
-	             SEXP zLongIndx_r, SEXP zYearIndx_r, SEXP zDatIndx_r, 
-		     SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
-		     SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
-		     SEXP muBeta_r, SEXP SigmaBeta_r, 
-		     SEXP muAlpha_r, SEXP SigmaAlpha_r, 
-		     SEXP phiA_r, SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r,
-		     SEXP nuA_r, SEXP nuB_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
-		     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, SEXP ar1Vals_r,
-		     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
-	             SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
-	             SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
-		     SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r, SEXP gridIndx_r){
+                     SEXP XpRE_r, SEXP consts_r, 
+                     SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
+                     SEXP m_r, SEXP nnIndx_r, SEXP nnIndxLU_r, 
+                     SEXP uIndx_r, SEXP uIndxLU_r, SEXP uiIndx_r,
+                     SEXP betaStarting_r, SEXP alphaStarting_r, 
+                     SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r,
+                     SEXP betaStarStarting_r, SEXP alphaStarStarting_r,
+                     SEXP phiStarting_r, SEXP sigmaSqStarting_r, SEXP nuStarting_r, 
+                     SEXP wStarting_r, SEXP zStarting_r, 
+                     SEXP zLongIndx_r, SEXP zYearIndx_r, SEXP zDatIndx_r, 
+                     SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+                     SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
+                     SEXP muBeta_r, SEXP SigmaBeta_r, 
+                     SEXP muAlpha_r, SEXP SigmaAlpha_r, 
+                     SEXP phiA_r, SEXP phiB_r, SEXP sigmaSqA_r, SEXP sigmaSqB_r,
+                     SEXP nuA_r, SEXP nuB_r, SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+                     SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, SEXP ar1Vals_r,
+                     SEXP tuning_r, SEXP covModel_r, SEXP nBatch_r, 
+                     SEXP batchLength_r, SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, 
+                     SEXP nReport_r, SEXP nBurn_r, SEXP nThin_r, SEXP nPost_r, 
+                     SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r, SEXP gridIndx_r){
    
     /**********************************************************************
      * Initial constants
@@ -122,6 +122,7 @@ extern "C" {
     int pTilde = INTEGER(consts_r)[9];
     int Jw = INTEGER(consts_r)[10];
     int ar1 = INTEGER(consts_r)[11];
+    int multiStage = INTEGER(consts_r)[12];
     int ppDet = pDet * pDet;
     int ppOcc = pOcc * pOcc;
     int ppTilde = pTilde * pTilde;
@@ -188,6 +189,7 @@ extern "C" {
     int nReport = INTEGER(nReport_r)[0];
     int thinIndx = 0; 
     int sPost = 0; 
+    int sPostBinary = 0;
 
     // Some constants
     int JnYears = J * nYearsMax;
@@ -393,6 +395,15 @@ extern "C" {
     double *SigmaAlphaInvMuAlpha = (double *) R_alloc(pDet, sizeof(double)); 
     F77_NAME(dsymv)(lower, &pDet, &one, SigmaAlphaInv, &pDet, muAlpha, &inc, &zero, 
                    SigmaAlphaInvMuAlpha, &inc FCONE);
+    
+    // Stuff for multi-stage covariates
+    int msIndx = 0; 
+    int JnYearsnPost = 0;
+    if (multiStage == 1) {
+      JnYearsnPost = JnYears * nPost;
+    } else {
+      JnYearsnPost = JnYears;
+    }
 
     /**********************************************************************
      * Prep for random effects
@@ -545,26 +556,47 @@ extern "C" {
      * *******************************************************************/
     for (s = 0, rr = 0; s < nBatch; s++) {
       for (r = 0; r < batchLength; r++, rr++) {
-        
+        // Keep track of if you're currently saving this sample or not.
+        if (rr >= nBurn) {
+          thinIndx++; 
+          if (thinIndx == nThin) {
+            sPostBinary = 1; 
+          } else {
+            sPostBinary = 0;
+          }
+        }
+        // Sample the multi-stage index if necessary
+        if (multiStage) {
+          if (sPostBinary == 0) {
+            msIndx = runif(0.0, static_cast<double>(nPost)); 
+          } else {
+            msIndx = sPost;
+          }
+        }
+        // TODO: well, the ordering isn't correct here. X is ordered by variable, 
+        // MCMC sample, year, then site. The current way this is written assumes
+        // it is sample, variable, year, then site. I think you'll need to rewrite
+        // the R code to get it in the correct order, which will be a substantial undertaking. 
+        // But first check the C
         /********************************************************************
          *Update Occupancy Auxiliary Variables 
          *******************************************************************/
-	zeros(tmp_JnYears, JnYears);
-	for (t = 0; t < nYearsMax; t++) {
+        zeros(tmp_JnYears, JnYears);
+        for (t = 0; t < nYearsMax; t++) {
           for (j = 0; j < J; j++) {
             // Only calculate omegaOcc when there are observations at that 
-	    // site/year combo. Otherwise, you're just wasting time. 
-	    if (zDatIndx[t * J + j] == 1) { 
-              tmp_JnYears[t * J + j] = F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, 
-	         	                      beta, &inc);
-	      omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + wSites[t * J + j] + betaStarSites[t * J + j] + eta[t]);
-	      // Update kappa values along the way. 
+            // site/year combo. Otherwise, you're just wasting time. 
+            if (zDatIndx[t * J + j] == 1) { 
+              tmp_JnYears[t * J + j] = F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + t * J + j], &JnYearsnPost, 
+                                                      beta, &inc);
+              omegaOcc[t * J + j] = rpg(1.0, tmp_JnYears[t * J + j] + wSites[t * J + j] + betaStarSites[t * J + j] + eta[t]);
+              // Update kappa values along the way. 
               kappaOcc[t * J + j] = z[t * J + j] - 1.0 / 2.0; 
-	      zStar[t * J + j] = kappaOcc[t * J + j] / omegaOcc[t * J + j];
-	    }
-	  } // j 
-	} // t
-	zeros(kappaDet, nObs);
+              zStar[t * J + j] = kappaOcc[t * J + j] / omegaOcc[t * J + j];
+            }
+          } // j 
+        } // t
+        zeros(kappaDet, nObs);
         /********************************************************************
          *Update Detection Auxiliary Variables 
          *******************************************************************/
@@ -602,7 +634,7 @@ extern "C" {
          *******************************/
 	// This is fine, because the elements in tmp_JnYears corresponding
 	// to unobserve site/time locations is set to 0 and not changed. 
-        F77_NAME(dgemv)(ytran, &JnYears, &pOcc, &one, X, &JnYears, 
+        F77_NAME(dgemv)(ytran, &JnYears, &pOcc, &one, &X[msIndx * JnYears], &JnYearsnPost, 
 			tmp_JnYears, &inc, &zero, tmp_pOcc, &inc FCONE); 	 
         for (j = 0; j < pOcc; j++) {
           tmp_pOcc[j] += SigmaBetaInvMuBeta[j]; 
@@ -618,13 +650,13 @@ extern "C" {
           for (j = 0; j < J; j++) {
             if (zDatIndx[t * J + j] == 1) {
               for(i = 0; i < pOcc; i++){
-                tmp_JnYearspOcc[i * JnYears + t * J + j] = X[i * JnYears + t * J + j] * omegaOcc[t * J + j];
+                tmp_JnYearspOcc[i * JnYears + t * J + j] = X[i * JnYearsnPost + msIndx * JnYears + t * J + j] * omegaOcc[t * J + j];
               } // i
 	    }
 	  } // j
 	} // t
 
-        F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &JnYears, &one, X, &JnYears, tmp_JnYearspOcc, &JnYears, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
+        F77_NAME(dgemm)(ytran, ntran, &pOcc, &pOcc, &JnYears, &one, &X[msIndx * JnYears], &JnYearsnPost, tmp_JnYearspOcc, &JnYears, &zero, tmp_ppOcc, &pOcc FCONE FCONE);
         for (j = 0; j < ppOcc; j++) {
           tmp_ppOcc[j] += SigmaBetaInv[j]; 
         } // j
@@ -720,13 +752,13 @@ extern "C" {
             // of a random effect. 
 	    for (t = 0; t < nYearsMax; t++) {
               for (j = 0; j < J; j++) {
-                if (XRE[betaStarIndx[l] * JnYears + t * J + j] == betaLevelIndx[l]) {
+                if (XRE[betaStarIndx[l] * JnYearsnPost + msIndx * JnYears + t * J + j] == betaLevelIndx[l]) {
                    if (zDatIndx[t * J + j] == 1) {
                     tmp_02 = 0.0;
                     for (ll = 0; ll < pOccRE; ll++) {
                       tmp_02 += betaStar[betaStarLongIndx[ll * JnYears + t * J + j]];
 	            } 
-                    tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + 
+                    tmp_one[0] += kappaOcc[t * J + j] - (F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + t * J + j], &JnYearsnPost, beta, &inc) + 
                   	          tmp_02 - betaStar[l] + wSites[t * J + j] + eta[t]) * omegaOcc[t * J + j];
                     tmp_0 += omegaOcc[t * J + j];
 		  }
@@ -827,9 +859,9 @@ extern "C" {
               for (ll = 0; ll < pTilde; ll++) {
                 for (t = 0; t < nYearsMax; t++) {
                   if (zDatIndx[t * J + j] == 1) {
-                    tmp_0 = Xw[ll * JnYears + t * J + j] * omegaOcc[t * J + j];
+                    tmp_0 = Xw[ll * JnYearsnPost + msIndx * JnYears + t * J + j] * omegaOcc[t * J + j];
 	            for (k = 0; k < pTilde; k++) {
-                      tmp_ppTilde[ll * pTilde + k] += tmp_0 * Xw[k * JnYears + t * J + j];
+                      tmp_ppTilde[ll * pTilde + k] += tmp_0 * Xw[k * JnYearsnPost + msIndx * JnYears + t * J + j];
 	            }
 	          }
 	        } // t
@@ -846,6 +878,7 @@ extern "C" {
           if(info != 0){Rf_error("c++ error: dpotrf var failed\n");}
 	  F77_NAME(dpotri)(lower, &pTilde, var, &pTilde, &info FCONE);
           if(info != 0){Rf_error("c++ error: dpotri var failed\n");}
+// [[Rcpp::export]]
 
 	  // mu
 	  zeros(mu, pTilde);
@@ -854,7 +887,7 @@ extern "C" {
 	     for (k = 0; k < pTilde; k++) {
 	       for (t = 0; t < nYearsMax; t++) {
                  if (zDatIndx[t * J + j] == 1) {
-                   mu[k] += (zStar[t * J + j] - F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) - betaStarSites[t * J + j] - eta[t]) * omegaOcc[t * J + j] * Xw[k * JnYears + t * J + j];
+                   mu[k] += (zStar[t * J + j] - F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + t * J + j], &JnYearsnPost, beta, &inc) - betaStarSites[t * J + j] - eta[t]) * omegaOcc[t * J + j] * Xw[k * JnYearsnPost + msIndx * JnYears + t * J + j];
 	         }
 	       } // t
 	     } // k
@@ -876,7 +909,7 @@ extern "C" {
           for (j = 0; j < J; j++) {
             wSites[t * J + j] = 0.0;
             for (ll = 0; ll < pTilde; ll++) {
-              wSites[t * J + j] += w[gridIndx[j] * pTilde + ll] * Xw[ll * JnYears + t * J + j];
+              wSites[t * J + j] += w[gridIndx[j] * pTilde + ll] * Xw[ll * JnYearsnPost + msIndx * JnYears + t * J + j];
 	    }
           }
         }
@@ -949,8 +982,6 @@ extern "C" {
           
           // Candidate
           phiCand = logitInv(rnorm(logit(theta[phiIndx * pTilde + ll], phiA[ll], phiB[ll]), exp(tuning[phiIndx * pTilde + ll])), phiA[ll], phiB[ll]);
-	  // Rprintf("SVC: %i, phiCand: %f\n", ll, phiCand);
-	  // Rprintf("SVC: %i, tuning: %f\n", ll, exp(tuning[phiIndx * pTilde + ll]));
           if (corName == "matern"){
       	    nuCand = logitInv(rnorm(logit(theta[nuIndx * pTilde + ll], nuA[ll], nuB[ll]), exp(tuning[nuIndx * pTilde + ll])), nuA[ll], nuB[ll]);
           }
@@ -1100,7 +1131,7 @@ extern "C" {
           for (j = 0; j < J; j++) {
             for (t = 0; t < nYearsMax; t++) {
               if (zDatIndx[t * J + j] == 1) {
-                tmp_nYearsMax[t] += kappaOcc[t * J + j] - omegaOcc[t * J + j] * (F77_NAME(ddot)(&pOcc, &X[t * J + j], &JnYears, beta, &inc) + betaStarSites[t * J + j] + wSites[t * J + j]);
+                tmp_nYearsMax[t] += kappaOcc[t * J + j] - omegaOcc[t * J + j] * (F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + t * J + j], &JnYearsnPost, beta, &inc) + betaStarSites[t * J + j] + wSites[t * J + j]);
 	      }
 	    }
           }
@@ -1139,7 +1170,7 @@ extern "C" {
         for (i = 0; i < nObs; i++) {
           detProb[i] = logitInv(F77_NAME(ddot)(&pDet, &Xp[i], &nObs, alpha, &inc) + alphaStarObs[i], zero, one);
           if (tmp_JnYearsInt[zLongIndx[i]] == 0) {
-            psi[zLongIndx[i]] = logitInv(F77_NAME(ddot)(&pOcc, &X[zLongIndx[i]], &JnYears, 
+            psi[zLongIndx[i]] = logitInv(F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + zLongIndx[i]], &JnYearsnPost, 
 	  			                      beta, &inc) + 
 	    			         wSites[zLongIndx[i]] + betaStarSites[zLongIndx[i]] + 
 					 eta[zYearIndx[zLongIndx[i]]], 
@@ -1165,8 +1196,8 @@ extern "C" {
                 yWAIC[t * J + j] = psi[t * J + j] * piProdWAIC[t * J + j];
               }
 	    } else {
-              psi[t * J + j] = logitInv(F77_NAME(ddot)(&pOcc, &X[t * J + j], 
-					&JnYears, beta, &inc) + wSites[t * J + j] + 
+              psi[t * J + j] = logitInv(F77_NAME(ddot)(&pOcc, &X[msIndx * JnYears + t * J + j], 
+					&JnYearsnPost, beta, &inc) + wSites[t * J + j] + 
 			                betaStarSites[t * J + j] + eta[t], zero, one); 
               z[t * J + j] = rbinom(one, psi[t * J + j]);
 	    }
@@ -1181,19 +1212,18 @@ extern "C" {
         /********************************************************************
          *Save samples
          *******************************************************************/
-	if (rr >= nBurn) {
-          thinIndx++; 
-	  if (thinIndx == nThin) {
+        if (rr >= nBurn) {
+          if (thinIndx == nThin) {
             F77_NAME(dcopy)(&pOcc, beta, &inc, &REAL(betaSamples_r)[sPost*pOcc], &inc);
             F77_NAME(dcopy)(&pDet, alpha, &inc, &REAL(alphaSamples_r)[sPost*pDet], &inc);
             F77_NAME(dcopy)(&JnYears, psi, &inc, &REAL(psiSamples_r)[sPost*JnYears], &inc); 
             F77_NAME(dcopy)(&JwpTilde, w, &inc, &REAL(wSamples_r)[sPost*JwpTilde], &inc); 
-	    F77_NAME(dcopy)(&nThetaSave, theta, &inc, 
-			    &REAL(thetaSamples_r)[sPost*nThetaSave], &inc); 
-	    F77_NAME(dcopy)(&JnYears, z, &inc, &REAL(zSamples_r)[sPost*JnYears], &inc); 
-	    if (ar1) {
-	      F77_NAME(dcopy)(&nYearsMax, eta, &inc, &REAL(etaSamples_r)[sPost*nYearsMax], &inc);
-	    }
+            F77_NAME(dcopy)(&nThetaSave, theta, &inc, 
+                            &REAL(thetaSamples_r)[sPost*nThetaSave], &inc); 
+            F77_NAME(dcopy)(&JnYears, z, &inc, &REAL(zSamples_r)[sPost*JnYears], &inc); 
+            if (ar1) {
+              F77_NAME(dcopy)(&nYearsMax, eta, &inc, &REAL(etaSamples_r)[sPost*nYearsMax], &inc);
+            }
             if (pOccRE > 0) {
               F77_NAME(dcopy)(&pOccRE, sigmaSqPsi, &inc, 
                   	    &REAL(sigmaSqPsiSamples_r)[sPost*pOccRE], &inc);
@@ -1208,10 +1238,10 @@ extern "C" {
             }
             F77_NAME(dcopy)(&JnYears, yWAIC, &inc, 
         		    &REAL(likeSamples_r)[sPost*JnYears], &inc);
-	    sPost++; 
-	    thinIndx = 0; 
-	  }
-	}
+            sPost++; 
+            thinIndx = 0; 
+          }
+        }
 
         R_CheckUserInterrupt();
       } // r (end batch)
@@ -1248,27 +1278,27 @@ extern "C" {
        *Report 
        *******************************************************************/
       if (verbose) {
-	if (status == nReport) {
-	  Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
+        if (status == nReport) {
+          Rprintf("Batch: %i of %i, %3.2f%%\n", s, nBatch, 100.0*s/nBatch);
           Rprintf("\tCoefficient\tParameter\tAcceptance\tTuning\n");	  
           for (ll = 0; ll < pTilde; ll++) {
             Rprintf("\t%i\t\tphi\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetapTilde + phiIndx * pTilde + ll], exp(tuning[phiIndx * pTilde + ll]));
-	    if (corName == "matern") {
+            if (corName == "matern") {
               Rprintf("\t%i\t\tnu\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetapTilde + nuIndx * pTilde + ll], exp(tuning[nuIndx * pTilde + ll]));
-	    }
-	    if (sigmaSqIG == 0) {
-	      Rprintf("\t%i\t\tsigmaSq\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetapTilde + sigmaSqIndx * pTilde + ll], exp(tuning[sigmaSqIndx * pTilde + ll]));
-	    }
+            }
+            if (sigmaSqIG == 0) {
+              Rprintf("\t%i\t\tsigmaSq\t\t%3.1f\t\t%1.5f\n", ll + 1, 100.0*REAL(acceptSamples_r)[s * nThetapTilde + sigmaSqIndx * pTilde + ll], exp(tuning[sigmaSqIndx * pTilde + ll]));
+            }
           } // ll
-	  if (ar1) {
-	    Rprintf("\t1\t\trho\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * rhoIndx], exp(tuning[rhoIndx]));
-	  }
-	  Rprintf("-------------------------------------------------\n");
+          if (ar1) {
+            Rprintf("\t1\t\trho\t\t%3.1f\t\t%1.5f\n", 100.0*REAL(acceptSamples_r)[s * rhoIndx], exp(tuning[rhoIndx]));
+          }
+          Rprintf("-------------------------------------------------\n");
           #ifdef Win32
-	  R_FlushConsole();
+          R_FlushConsole();
           #endif
-	  status = 0;
-	}
+          status = 0;
+        }
       }
       status++;        
     } // all batches

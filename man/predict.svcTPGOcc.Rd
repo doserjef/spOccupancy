@@ -10,7 +10,7 @@
 \method{predict}{svcTPGOcc}(object, X.0, coords.0, t.cols, weights.0, n.omp.threads = 1, 
         verbose = TRUE, n.report = 100, 
         ignore.RE = FALSE, type = 'occupancy', forecast = FALSE, 
-        grid.index.0, ...)
+        grid.index.0, multi.stage = FALSE, ...)
 }
 
 \arguments{
@@ -46,6 +46,8 @@
   \item{grid.index.0}{an indexing vector used to specify how each row in \code{X.0} corresponds to the coordinates specified in \code{coords.0}. Only relevant if the spatial random effect was estimated at a higher spatial resolution (e.g., grid cells) than point locations.}
   
   \item{forecast}{a logical value indicating whether prediction is occurring at non-sampled primary time periods (e.g., forecasting).}
+  
+  \item{multi.stage}{a logical value indicating whether prediction is being done for a multi-stage model where at least one of the covariates in \code{X.0} has it's own posterior distribution. By default set to \code{FALSE}. If \code{TRUE}, \code{X.0} must be a four dimensional array with dimensions corresponding to posterior sample, site, primary time period, and covariate.}
 
   \item{...}{currently no additional arguments}
 

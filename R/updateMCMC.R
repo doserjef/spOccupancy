@@ -170,7 +170,7 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
     } else {
       rhat.new$beta.comm <- rep(NA, p.abund)
       rhat.new$tau.sq.beta <- rep(NA, p.abund)
-      rhat.new$beta <- rep(NA, p.occ * n.sp)
+      rhat.new$beta <- rep(NA, p.abund * n.sp)
       if (object$dist == 'NB') {
         rhat.new$kappa <- rep(NA, n.sp)
       }

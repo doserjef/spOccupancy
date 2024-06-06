@@ -20,15 +20,15 @@
 extern "C" {
 
   SEXP svcTPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
-		            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
-			    SEXP coords0_r, SEXP weights0_r, 
-			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+                            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
+                            SEXP coords0_r, SEXP weights0_r, 
+                            SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                            SEXP thetaSamples_r, SEXP wSamples_r, 
+                            SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
                             SEXP sitesLink_r, SEXP sites0Sampled_r, 
-			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-			    SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
-			    SEXP gridIndx0_r){
+                            SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+                            SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
+                            SEXP gridIndx0_r, SEXP multiStage_r){
 
     int i, j, k, l, ll, s, t, info, nProtect=0;
     const int inc = 1;
@@ -66,11 +66,13 @@ extern "C" {
     double *eta = REAL(etaSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
+    int qnYearsnSamples = nSamples * qnYears;
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
+    int multiStage = INTEGER(multiStage_r)[0];
     
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
@@ -251,10 +253,18 @@ extern "C" {
     for(i = 0; i < q; i++){
       for(s = 0; s < nSamples; s++){
         for (t = 0; t < nYears; t++) {
-          wSites = F77_NAME(ddot)(&pTilde, &Xw0[t * q + i], &qnYears, 
-        		          &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
-          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
-          z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
+          if (multiStage) {
+            wSites = F77_NAME(ddot)(&pTilde, &Xw0[s * qnYears + t * q + i], &qnYearsnSamples, 
+                                    &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
+            psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[s * qnYears + t * q + i], &qnYearsnSamples, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
+            z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
+          } else {
+            wSites = F77_NAME(ddot)(&pTilde, &Xw0[t * q + i], &qnYears, 
+                                    &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
+            psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
+            z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
+            
+          }
         } // s
       } // t
     } // i

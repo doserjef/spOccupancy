@@ -1,11 +1,11 @@
 svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		      tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
-		      n.neighbors = 15, search.type = 'cb', n.batch, 
-		      batch.length, accept.rate = 0.43, n.omp.threads = 1, 
-		      verbose = TRUE, ar1 = FALSE, n.report = 100, 
-		      n.burn = round(.10 * n.batch * batch.length), 
-		      n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		      k.fold.seed = 100, k.fold.only = FALSE, ...){
+                      tuning, svc.cols = 1, cov.model = 'exponential', NNGP = TRUE, 
+                      n.neighbors = 15, search.type = 'cb', n.batch, 
+                      batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+                      verbose = TRUE, ar1 = FALSE, n.report = 100, 
+                      n.burn = round(.10 * n.batch * batch.length), 
+                      n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+                      k.fold.seed = 100, k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -110,6 +110,44 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       stop("error: k.fold must be a single integer value >= 2")  
     }
   }
+  if (missing(n.batch)) {
+    stop("error: must specify number of MCMC batches")
+  }
+  if (missing(batch.length)) {
+    stop("error: must specify length of each MCMC batch")
+  }
+  n.samples <- n.batch * batch.length
+  if (n.burn > n.samples) {
+    stop("error: n.burn must be less than n.samples")
+  }
+  if (n.thin > n.samples) {
+    stop("error: n.thin must be less than n.samples")
+  }
+  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
+  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
+    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
+  }
+  n.post.full <- length(seq(from = n.burn + 1, to = n.samples, 
+                            by = as.integer(n.thin))) * n.chains
+  # Check multi-stage covariates
+  if (!'multi.stage' %in% names(data)) {
+    multi.stage <- NULL
+  } else {
+    multi.stage <- data$multi.stage 
+  }
+  
+  if (!is.null(multi.stage)) {
+    multi.stage.params <- which(names(data$occ.covs) %in% data$multi.stage)
+    if (length(multi.stage.params) == 0) {
+      stop("multi-stage covariates in data$multi.stage do not match any covariate names in data$occ.covs")  
+    } else {
+      for (i in multi.stage.params) {
+        if (nrow(data$occ.covs[[i]]) != n.post.full) {
+          stop(paste0("multi-stage covariates must have ", n.post.full, " rows (posterior MCMC samples). At least one of the multi-stage covariates has ", nrow(data$occ.covs[[i]]), " rows. Either change n.batch, n.burn, and n.thin to match the number of posterior samples for the covariates or get the correct number of MCMC samples for the multi-stage covariates.")) 
+        }    
+      }
+    }
+  }
 
   # Neighbors and Ordering ----------------------------------------------
   if (NNGP) {
@@ -127,7 +165,18 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     # Occupancy covariates
     for (i in 1:length(data$occ.covs)) {
       if (!is.null(dim(data$occ.covs[[i]]))) { # Time/space varying
-        data$occ.covs[[i]] <- data$occ.covs[[i]][long.ord, , drop = FALSE]
+        # Two-stage space-varying
+        if (length(dim(data$occ.covs[[i]])) == 2 & names(data$occ.covs)[i] %in% multi.stage) {
+          data$occ.covs[[i]] <- data$occ.covs[[i]][, long.ord, drop = FALSE]
+        } 
+        # Time-varying
+        if (length(dim(data$occ.covs[[i]])) == 2 & !(names(data$occ.covs)[i] %in% multi.stage)) {
+          data$occ.covs[[i]] <- data$occ.covs[[i]][long.ord, , drop = FALSE] 
+        } 
+        # Two-stage space-time-varying
+        if (length(dim(data$occ.covs[[i]])) == 3) {
+          data$occ.covs[[i]] <- data$occ.covs[[i]][, long.ord, , drop = FALSE]
+        }
       } else { # Space-varying
         data$occ.covs[[i]] <- data$occ.covs[[i]][long.ord]
       }
@@ -172,8 +221,49 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (length(data$occ.covs) == 0) {
     data$occ.covs <- list(int = matrix(1, nrow = dim(y)[1], ncol = dim(y)[2]))
   }
+  # Need to do a different, slower approach if fitting a multi-stage model.
   # Ordered by year, then site within year. 
-  data$occ.covs <- data.frame(lapply(data$occ.covs, function(a) unlist(c(a))))
+  if (is.null(multi.stage)) {
+    data$occ.covs <- data.frame(lapply(data$occ.covs, function(a) unlist(c(a))))
+  } else {
+    # Determine the type of each covariate supplied by the user.
+    occ.cov.type <- vector('character', length(data$occ.covs))
+    for (i in 1:length(data$occ.covs)) {
+      if (is.null(dim(data$occ.covs[[i]]))) {
+        occ.cov.type[i] <- 'spatial'
+      } else if (length(dim(data$occ.covs[[i]])) == 2 & nrow(data$occ.covs[[i]]) == nrow(data$y)) {
+        occ.cov.type[i] <- 'spatio-temporal'
+      } else if (length(dim(data$occ.covs[[i]])) == 2 & nrow(data$occ.covs[[i]]) == n.post.full) {
+        occ.cov.type[i] <- 'multi-stage-spatial'
+      } else if (length(dim(data$occ.covs[[i]])) == 3) {
+        occ.cov.type[i] <- 'multi-stage-spatio-temporal'
+      }
+    }
+    # Ordered by MCMC sample, year, then site within year
+    new.occ.covs <- matrix(NA, nrow = n.post.full * nrow(data$y) * ncol(data$y), 
+                           ncol = length(occ.cov.type)) 
+    for (i in 1:length(occ.cov.type)) {
+      if (occ.cov.type[i] == 'spatio-temporal') {
+        new.occ.covs[, i] <- rep(c(data$occ.covs[[i]]), times = n.post.full)
+      }
+      if (occ.cov.type[i] == 'spatial') {
+        new.occ.covs[, i] <- rep(data$occ.covs[[i]], 
+                                 times = n.post.full * ncol(data$y))
+      }
+      if (occ.cov.type[i] == 'multi-stage-spatial') {
+        tmp <- array(NA, dim = c(n.post.full, nrow(data$y), ncol(data$y)))
+        for (j in 1:nrow(data$y)) {
+          tmp[, j, ] <- data$occ.covs[[i]][, j]  
+        }
+        new.occ.covs[, i] <- c(aperm(tmp, c(2, 3, 1)))
+      }
+      if (occ.cov.type[i] == 'multi-stage-spatio-temporal') {
+        new.occ.covs[, i] <- c(aperm(data$occ.covs[[i]], c(2, 3, 1)))
+      }
+    }
+    colnames(new.occ.covs) <- names(data$occ.covs)
+    data$occ.covs <- as.data.frame(new.occ.covs)
+  }
   # Check if only site-level covariates are included
   if (nrow(data$occ.covs) == dim(y)[1]) {
     data$occ.covs <- as.data.frame(mapply(rep, data$occ.covs, dim(y)[2]))
@@ -306,23 +396,6 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   K.max <- dim(y.big)[3]
   # Because I like K better than n.rep
   K <- n.rep
-  if (missing(n.batch)) {
-    stop("error: must specify number of MCMC batches")
-  }
-  if (missing(batch.length)) {
-    stop("error: must specify length of each MCMC batch")
-  }
-  n.samples <- n.batch * batch.length
-  if (n.burn > n.samples) {
-    stop("error: n.burn must be less than n.samples")
-  }
-  if (n.thin > n.samples) {
-    stop("error: n.thin must be less than n.samples")
-  }
-  # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
-  if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
-    stop("the number of posterior samples to save ((n.samples - n.burn) / n.thin) is not a whole number. Please respecify the MCMC criteria such that the number of posterior samples saved is a whole number.")
-  }
   # Check SVC columns -----------------------------------------------------
   if (is.character(svc.cols)) {
     # Check if all column names in svc are in occ.covs
@@ -1140,6 +1213,13 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     u.indx.lu <- indx$u.indx.lu
     ui.indx <- indx$ui.indx
     u.indx.run.time <- indx$run.time
+    
+    # Set up stuff for multi-stage models
+    if (length(multi.stage) > 0) {
+      multi.stage.logic <- TRUE 
+    } else {
+      multi.stage.logic <- FALSE
+    }
 
     # Set storage for all variables ---------------------------------------
     storage.mode(y) <- "double"
@@ -1148,7 +1228,7 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(X) <- "double"
     storage.mode(X.w) <- "double"
     consts <- c(J, n.obs, p.occ, p.occ.re, n.occ.re, p.det, p.det.re, 
-		n.det.re, n.years.max, p.svc, J.w, ar1)
+                n.det.re, n.years.max, p.svc, J.w, ar1, multi.stage.logic)
     storage.mode(consts) <- "integer"
     storage.mode(grid.index.c) <- "integer"
     storage.mode(K) <- "double"
@@ -1193,8 +1273,8 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     storage.mode(n.chains) <- "integer"
     storage.mode(fixed.params) <- "integer"
     n.post.samples <- length(seq(from = n.burn + 1, 
-				 to = n.samples, 
-				 by = as.integer(n.thin)))
+                             to = n.samples, 
+                             by = as.integer(n.thin)))
     storage.mode(n.post.samples) <- "integer"
     # For detection random effects
     storage.mode(X.p.re) <- "integer"
@@ -1230,11 +1310,11 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if ((i > 1) & (!fix.inits)) {
           beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
           alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-	  if (sigma.sq.ig) {
+          if (sigma.sq.ig) {
             sigma.sq.inits <- rigamma(p.svc, sigma.sq.a, sigma.sq.b)
-	  } else {
+          } else {
             sigma.sq.inits <- runif(p.svc, sigma.sq.a, sigma.sq.b)
-	  }
+          }
           phi.inits <- runif(p.svc, phi.a, phi.b)
           if (cov.model == 'matern') {
             nu.inits <- runif(p.svc, nu.a, nu.b)
@@ -1247,31 +1327,38 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
             sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
             beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
           }
-	  if (ar1) {
+          if (ar1) {
             ar1.vals[5] <- runif(1, rho.a, rho.b)
             ar1.vals[6] <- runif(1, 0.5, 10)	
-	  }
+          }
+        }
+        if (n.chains > 1 & multi.stage.logic) {
+          curr.indx <- ((i - 1) * (n.post.samples * J * n.years.max) + 1):(n.post.samples * J * n.years.max * i)
+        } else {
+          curr.indx <- 1:nrow(X)
         }
         storage.mode(curr.chain) <- "integer"
         # Note that the upper limit on the number of arguments is 65, which 
         # you're getting close to. 
-        out.tmp[[i]] <- .Call("svcTPGOccNNGP", y, X, X.w, X.p, coords, X.re, X.p.re, 
+        out.tmp[[i]] <- .Call("svcTPGOccNNGP", y, X[curr.indx, , drop = FALSE], 
+                              X.w[curr.indx, , drop = FALSE], X.p, coords, 
+                              X.re[curr.indx, , drop = FALSE], X.p.re, 
                               consts, K, n.occ.re.long, n.det.re.long,
                               n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
                               beta.inits, alpha.inits, sigma.sq.psi.inits, 
                               sigma.sq.p.inits, beta.star.inits, alpha.star.inits, 
-          		      phi.inits, sigma.sq.inits, nu.inits,
+                              phi.inits, sigma.sq.inits, nu.inits,
                               w.inits, z.inits, z.long.indx, z.year.indx,
                               z.dat.indx, beta.star.indx, beta.level.indx,
                               alpha.star.indx, alpha.level.indx,
                               mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 
                               phi.a, phi.b, sigma.sq.a, sigma.sq.b, nu.a, nu.b,
                               sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b,
-			      ar1.vals, tuning.c, cov.model.indx, 
-			      n.batch, batch.length, accept.rate, 
+                              ar1.vals, tuning.c, cov.model.indx, 
+                              n.batch, batch.length, accept.rate, 
                               n.omp.threads, verbose, n.report,  
                               n.burn, n.thin, n.post.samples, curr.chain, 
-			      n.chains, sigma.sq.ig, grid.index.c)
+                              n.chains, sigma.sq.ig, grid.index.c)
         curr.chain <- curr.chain + 1
       }
       out <- list()
@@ -1338,15 +1425,29 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       colnames(out$theta.samples) <- theta.names
       # Return things back in the original order
       out$coords <- coords[order(ord), ]
-      out$X <- array(X, dim = c(J, n.years.max, p.occ))
-      out$X <- out$X[order(long.ord), , , drop = FALSE]
-      dimnames(out$X)[[3]] <- x.names
-      out$X.re <- array(X.re, dim = c(J, n.years.max, p.occ.re))
-      out$X.re <- out$X.re[order(long.ord), , , drop = FALSE]
-      dimnames(out$X.re)[[3]] <- x.re.names
-      out$X.w <- array(X.w, dim = c(J, n.years.max, p.svc))
-      out$X.w <- out$X.w[order(long.ord), , , drop = FALSE]
-      dimnames(out$X.w)[[3]] <- x.names[svc.cols]
+      if (!is.null(multi.stage)) {
+        out$X <- array(X, dim = c(J, n.years.max, p.occ))
+        out$X <- out$X[order(long.ord), , , drop = FALSE]
+        dimnames(out$X)[[3]] <- x.names
+        out$X.re <- array(X.re, dim = c(J, n.years.max, p.occ.re))
+        out$X.re <- out$X.re[order(long.ord), , , drop = FALSE]
+        dimnames(out$X.re)[[3]] <- x.re.names
+        out$X.w <- array(X.w, dim = c(J, n.years.max, p.svc))
+        out$X.w <- out$X.w[order(long.ord), , , drop = FALSE]
+        dimnames(out$X.w)[[3]] <- x.names[svc.cols]
+      } else {
+        # Note that this isn't used for anything, and only the first iteration 
+        # of the multi-stage covariates is sent out. 
+        out$X <- array(X[1:(J * n.years.max), ], dim = c(J, n.years.max, p.occ))
+        out$X <- out$X[order(long.ord), , , drop = FALSE]
+        dimnames(out$X)[[3]] <- x.names
+        out$X.re <- array(X.re[1:(J * n.years.max), ], dim = c(J, n.years.max, p.occ.re))
+        out$X.re <- out$X.re[order(long.ord), , , drop = FALSE]
+        dimnames(out$X.re)[[3]] <- x.re.names
+        out$X.w <- array(X.w[1:(J * n.years.max), ], dim = c(J, n.years.max, p.svc))
+        out$X.w <- out$X.w[order(long.ord), , , drop = FALSE]
+        dimnames(out$X.w)[[3]] <- x.names[svc.cols]
+      }
       # Account for case when intercept only spatial model. 
       if (p.svc == 1) {
         tmp <- do.call(rbind, lapply(out.tmp, function(a) t(a$w.samples)))
@@ -1444,6 +1545,7 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         out$psiRE <- FALSE
       }
     }
+    # TODO: needs updating.
     # K-fold cross-validation ---------
     if (!missing(k.fold)) {
       if (verbose) {

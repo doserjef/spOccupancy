@@ -1,6 +1,6 @@
 simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha, 
                       psi.RE = list(), p.RE = list(),
-		      sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
+                      sp = FALSE, cov.model, sigma.sq, phi, nu, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -109,7 +109,6 @@ simIntOcc <- function(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, beta, alpha,
       }
     }
   }
-
   # Spatial parameters ----------------
   if (sp) {
     if(missing(sigma.sq)) {

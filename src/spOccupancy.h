@@ -390,16 +390,16 @@ extern "C" {
 		       SEXP currChain_r, SEXP nChain_r, SEXP sigmaSqIG_r);
 
   SEXP svcTPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
-		            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
-			    SEXP coords0_r, SEXP weights0_r, 
-			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP wSamples_r, 
-			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+                            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
+                            SEXP coords0_r, SEXP weights0_r, 
+                            SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                            SEXP thetaSamples_r, SEXP wSamples_r, 
+                            SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
                             SEXP sitesLink_r, SEXP sites0Sampled_r, 
-			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-			    SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
-			    SEXP gridIndx0_r);
-
+                            SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+                            SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
+                            SEXP gridIndx0_r, SEXP multiStage_r);
+    
   SEXP svcTPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP Xp_r, SEXP coords_r, SEXP XRE_r, 
 		     SEXP XpRE_r, SEXP consts_r, 
 	             SEXP K_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 

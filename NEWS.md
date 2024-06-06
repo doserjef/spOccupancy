@@ -1,11 +1,16 @@
-# spOccupancy 0.7.7
+# spOccupancy 0.8.0
 
 + Added in functionality for both occupancy and detection random intercepts in single-species integrated models (`intPGOcc()` and `spIntPGOcc()`) using `lme4` syntax (e.g., `(1 | observer)` for a random effect of observer).
++ `simTIntPGOcc()` is a new function that allows simulation of single-species multi-season detection-nondetection data from multiple data sources.
 + Fixed a bug in the k-fold cross-validation for spatial integrated occupancy models (NNGP models only) that could lead to incorrect model deviance results under certain situations depending on how the spatial coordinates were ordered on the user-side relative to how they are re-ordered when fitting the model. If using `spIntPGOcc()` with `NNGP = TRUE` and using cross-validation, I suggest re-running the analysis. Apologies for the inconvenience.
++ Added in a `residuals()` function to extract occupancy and detection residuals following the approach of [Wilson et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1002/ecy.2703) for single-season, single-species occupancy models (functions `PGOcc()`, `spPGOcc()`, and `svcPGOcc()`). 
 + `waicOcc()` for integrated single-species models is now substantially faster.
 + `updateMCMC()` now works with lfJSDM.
++ Fixed a bug in `updateMCMC()` that prevented it from working with `spAbundance::msAbund()` when there were random effects in the model.
++ Added the `include.w` argument in the `predict()` function for `lfMsPGOcc()` models that enables predicting without the latent factors. This also allows prediction to occur without needing to supply the coordinates, which is useful when generating conditional probability plots.
 + Updated `lfJSDM()` to give an error more quickly when there are memory limitations.
 + Fixed a bug in all multi-season, multi-species models that caused the model to crash upon initialization of the MCMC algorithm when data were supplied in a way such that for a given data set, the maximum number of times a specific site was sampled was less than the total number of "replicate periods" (i.e., the fourth dimension of the data list). This may happen when the "replicates" are structured as specific time periods (i.e., weeks, years) instead of a specific "replicate". Thanks to José Ribeiro for bringing this to my attention. 
++ Added in functionality for fitting "multi-stage" integrated models with `svcTPGOcc()`. In other words, the function now allows covariates that are included in the occupancy portion of the model to have their own posterior distribution (i.e., estimates of some variable that come from a previous model). In such a scenario, one needs to specify the `multi.stage` tage in the `data` list that is supplied to `svcTPGOcc()` and give the specific names of the variables in `data$occ.covs` that have a full posterior distribution associated with them. For covariates that come from a previous model fit, the first dimension of the covariate should be the posterior samples. This approach can be a useful data integration method. I will be documenting such an approach in much more depth over the next few months, but please do let me know if you want to use this functionality and I can help you get going.
 
 # spOccupancy 0.7.6
 

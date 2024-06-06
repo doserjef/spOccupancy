@@ -126,7 +126,7 @@ extern "C" {
 	Rprintf("Number of Chains: %i \n", nChain);
         Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
 #ifdef _OPENMP
-        Rprintf("\nSource compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
+        Rprintf("Source compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);
 #else
         Rprintf("Source not compiled with OpenMP support.\n\n");
 #endif

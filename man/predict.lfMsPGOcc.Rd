@@ -8,7 +8,7 @@
 
 \usage{
 \method{predict}{lfMsPGOcc}(object, X.0, coords.0, 
-        ignore.RE = FALSE, type = 'occupancy', ...)
+        ignore.RE = FALSE, type = 'occupancy', include.w = TRUE, ...)
 }
 
 \arguments{
@@ -25,6 +25,8 @@
   \item{...}{currently no additional arguments}
 
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), or 'detection' to predict detection probability given new values of detection covariates.}
+  
+  \item{include.w}{a logical value used to indicate whether the latent factors should be included in the predictions. By default, this is set to \code{TRUE}. If set to \code{FALSE}, predictions are given using the covariates and any unstructured random effects in the model. If \code{FALSE}, the \code{coords.0} argument is not required.}
 
 }
 
