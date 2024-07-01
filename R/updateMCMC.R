@@ -1,5 +1,6 @@
 updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin, 
-		       keep.orig = TRUE, verbose = TRUE, n.report = 100, ...) {
+                       keep.orig = TRUE, verbose = TRUE, n.report = 100, 
+                       save.fitted = TRUE, ...) {
 
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -98,7 +99,7 @@ updateMCMC <- function(object, n.batch, n.samples, n.burn = 0, n.thin,
                               n.report = n.report,
                               n.burn = n.burn,
                               n.thin = n.thin,
-                              save.fitted = TRUE,
+                              save.fitted = save.fitted,
                               n.chains = 1) # TODO: will make output look weird.
       run.time.new <- run.time.new + out.tmp[[i]]$run.time
       seeds.new[[i]] <- out.tmp[[i]]$update$final.seed[[1]]

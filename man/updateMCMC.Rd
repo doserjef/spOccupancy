@@ -4,7 +4,8 @@
 
 \usage{
 updateMCMC(object, n.batch, n.samples, n.burn = 0, n.thin, 
-           keep.orig = TRUE, verbose = TRUE, n.report = 100, ...)
+           keep.orig = TRUE, verbose = TRUE, n.report = 100, 
+           save.fitted = TRUE, ...)
 }
 
 \description{
@@ -47,6 +48,17 @@ updateMCMC(object, n.batch, n.samples, n.burn = 0, n.thin,
 
   \item{n.report}{the interval to report Metropolis sampler acceptance and
     MCMC progress.}
+    
+  \item{save.fitted}{logical value indicating whether or not fitted values 
+    and likelihood values should be saved in the resulting model object. This is only
+    relevant for models of class \code{msAbund}. If \code{save.fitted = FALSE}, 
+    the components \code{y.rep.samples}, \code{mu.samples}, and \code{like.samples} 
+    will not be included in the model object, and subsequent functions for 
+    calculating WAIC, fitted values, and posterior predictive checks will not work, 
+    although they all can be calculated manually if desired. Setting 
+    \code{save.fitted = FALSE} can be useful when working with very large 
+    data sets to minimize the amount of RAM needed when fitting and storing 
+    the model object in memory.}
 
   \item{...}{currently no additional arguments}
 }
