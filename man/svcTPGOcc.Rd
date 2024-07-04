@@ -238,20 +238,18 @@ of neighbors using WAIC or k-fold cross-validation.}
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
   Statistical Software, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 
-  Kery, M., & Royle, J. A. (2021). Applied hierarchical modeling in ecology: 
-  Analysis of distribution, abundance and species richness in R and BUGS: 
-  Volume 2: Dynamic and advanced models. Academic Press. Section 4.6.
+  Doser, J. W., Finley, A. O., Saunders, S. P., Kery, M., Weed, A. S., &
+  Zipkin, E. F. (2024). Modeling complex species-environment
+  relationships through spatially-varying coefficient occupancy models.
+  Journal of Agricultural, Biological and Environmental Statistics.
+  \doi{10.1007/s13253-023-00595-6}.
 
-  Finley, A. O., and  Banerjee, S. (2020). Bayesian spatially varying coefficient 
-  models in the spBayes R package. \emph{Environmental Modelling and Software}, 
-  125, 104608.
+  Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
+  Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024). Guidelines
+  for the use of spatially varying coefficients in species distribution
+  models. Global Ecology and Biogeography, 33(4), e13814.
+  \doi{10.1111/geb.13814}.
 
-  Hooten, M. B., and Hobbs, N. T. (2015). A guide to Bayesian model 
-  selection for ecologists. Ecological monographs, 85(1), 3-28.
-
-  MacKenzie, D. I., J. D. Nichols, G. B. Lachman, S. Droege, 
-  J. Andrew Royle, and C. A. Langtimm. 2002. Estimating Site Occupancy 
-  Rates When Detection Probabilities Are Less Than One. Ecology 83: 2248-2255.
 }
 
 \author{

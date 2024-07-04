@@ -21,9 +21,10 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'tPGOcc', 'stPGOcc', 
-			     'svcPGOcc', 'svcTPGOcc', 'tMsPGOcc', 'svcMsPGOcc', 
-			     'svcTMsPGOcc', 'stMsPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc, tMsPGOcc, svcMsPGOcc, svcTMsPGOcc, stMsPGOcc\n")
+                             'svcPGOcc', 'svcTPGOcc', 'tMsPGOcc', 'svcMsPGOcc', 
+                             'svcTMsPGOcc', 'stMsPGOcc', 'tIntPGOcc', 
+                             'stIntPGOcc', 'svcTIntPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, tPGOcc, stPGOcc, svcPGOcc, svcTPGOcc, tMsPGOcc, svcMsPGOcc, svcTMsPGOcc, stMsPGOcc, tIntPGOcc, stIntPGOcc, svcTIntPGOcc\n")
   }
   # Fit statistic ---------------------
   if (missing(fit.stat)) {
@@ -73,7 +74,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
+          fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       } else if (fit.stat == 'freeman-tukey') {
@@ -81,7 +82,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 2, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
+          fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       }
@@ -95,7 +96,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
           fit.big.y[, i] <- (y.grouped - E.grouped)^2 / (E.grouped + e)
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
+          fit.big.y.rep[, i] <- (y.rep.grouped[i,] - E.grouped)^2 / (E.grouped + e)
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       } else if (fit.stat == 'freeman-tukey') {
@@ -103,7 +104,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
           E.grouped <- apply(det.prob[i, , , drop = FALSE] * z.samples[i, ], 3, sum, na.rm = TRUE)
           fit.big.y[, i] <- (sqrt(y.grouped) - sqrt(E.grouped))^2 
           fit.y[i] <- sum(fit.big.y[, i])
-	  fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
+          fit.big.y.rep[, i] <- (sqrt(y.rep.grouped[i,]) - sqrt(E.grouped))^2 
           fit.y.rep[i] <- sum(fit.big.y.rep[, i])
         }
       }
@@ -125,8 +126,7 @@ ppcOcc <- function(object, fit.stat, group, ...) {
   } 
   # Multispecies models ---------------------------------------------------
   # if (is(object, c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc'))) {
-  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 
-			   'svcMsPGOcc')) {
+  if (class(object) %in% c('msPGOcc', 'spMsPGOcc', 'lfMsPGOcc', 'sfMsPGOcc', 'svcMsPGOcc')) {
     y <- object$y
     J <- dim(y)[2]
     N <- dim(y)[1]
@@ -470,6 +470,119 @@ ppcOcc <- function(object, fit.stat, group, ...) {
     out$n.post <- object$n.post
     out$n.chains <- object$n.chains
     out$sp.names <- object$sp.names
+  }
+  # Integrated multi-season models ----------------------------------------
+  if (class(object) %in% c('tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc')) {
+    y <- object$y
+    n.data <- length(y)
+    sites <- object$sites
+    seasons <- object$seasons
+    X.p <- object$X.p
+    p.det.long <- sapply(X.p, function(a) dim(a)[2])
+    J.long <- sapply(y, nrow)
+    n.years.long <- sapply(y, ncol)
+    fitted.out <- fitted.tIntPGOcc(object)
+    y.rep.all <- fitted.out$y.rep.samples
+    det.prob.all <- fitted.out$p.samples
+    fit.y.list <- list()
+    fit.y.rep.list <- list()
+    fit.y.group.quants.list <- list()
+    fit.y.rep.group.quants.list <- list()
+
+    for (q in 1:n.data) {
+      y.rep.samples <- y.rep.all[[q]] 
+      z.samples <- object$z.samples[, sites[[q]], seasons[[q]], drop = FALSE]
+      alpha.indx.r <- unlist(sapply(1:n.data, function(a) rep(a, p.det.long[a])))
+      alpha.samples <- object$alpha.samples[, alpha.indx.r == q, drop = FALSE]
+      # Get detection probability
+      det.prob <- det.prob.all[[q]]
+      n.samples <- object$n.post * object$n.chains
+      fit.y <- matrix(NA, n.samples, n.years.long[q])
+      fit.y.rep <- matrix(NA, n.samples, n.years.long[q])
+      e <- 0.0001
+      # Do the stuff 
+      if (group == 1) {
+        y.grouped <- apply(y[[q]], c(1, 2), sum, na.rm = TRUE)
+        y.rep.grouped <- apply(y.rep.samples, c(1, 2, 3), sum, na.rm = TRUE)
+        fit.big.y.rep <- array(NA, dim = c(n.samples, J.long[q], n.years.long[q]))
+        fit.big.y <- array(NA, dim = c(n.samples, J.long[q], n.years.long[q]))
+        for (t in 1:n.years.long[q]) {
+          message(noquote(paste("Currently on time period ", t, " out of ", n.years.long[q], 
+                                ' for data set ', q, sep = '')))
+          if (fit.stat %in% c('chi-squared', 'chi-square')) {
+            for (j in 1:n.samples) {
+              p.curr <- matrix(det.prob[j, , t, ], nrow = J.long[q])
+              z.curr <- z.samples[j, , t]
+              E.grouped <- apply(p.curr * z.curr, 1, sum, na.rm = TRUE)
+              fit.big.y[j, , t] <- (y.grouped[, t] - E.grouped)^2 / (E.grouped + e)
+              fit.y[j, t] <- sum(fit.big.y[j, , t])
+              fit.big.y.rep[j, , t] <- (y.rep.grouped[j, , t] - E.grouped)^2 / (E.grouped + e)
+              fit.y.rep[j, t] <- sum(fit.big.y.rep[j, , t])
+            }
+          } else if (fit.stat == 'freeman-tukey') {
+            for (j in 1:n.samples) {
+              p.curr <- matrix(det.prob[j, , t, ], nrow = J.long[q])
+              z.curr <- z.samples[j, , t]
+              E.grouped <- apply(p.curr * z.curr, 1, sum, na.rm = TRUE)
+              fit.big.y[j, , t] <- (sqrt(y.grouped[, t]) - sqrt(E.grouped))^2 
+              fit.y[j, t] <- sum(fit.big.y[j, , t])
+              fit.big.y.rep[j, , t] <- (sqrt(y.rep.grouped[j, , t]) - sqrt(E.grouped))^2 
+              fit.y.rep[j, t] <- sum(fit.big.y.rep[j, , t])
+            }
+          }
+        }
+      } else if (group == 2) { # Group by visit
+        y.grouped <- apply(y[[q]], c(2, 3), sum, na.rm = TRUE)
+        y.rep.grouped <- apply(y.rep.samples, c(1, 3, 4), sum, na.rm = TRUE)
+        fit.big.y <- array(NA, dim = c(n.samples, n.years.long[q], dim(y[[q]])[3]))
+        fit.big.y.rep <- array(NA, dim = c(n.samples, n.years.long[q], dim(y[[q]])[3]))
+        for (t in 1:n.years.long[q]) {
+          message(noquote(paste("Currently on time period ", t, " out of ", n.years.long[q], 
+                                ' for data set ', q, sep = '')))
+          if (fit.stat %in% c('chi-squared', 'chi-square')) {
+            for (j in 1:n.samples) {
+              p.curr <- matrix(det.prob[j, , t, ], nrow = J.long[q])
+              z.curr <- z.samples[j, , t]
+              E.grouped <- apply(p.curr * z.curr, 2, sum, na.rm = TRUE)
+              fit.big.y[j, t, ] <- (y.grouped[t, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y[j, t] <- sum(fit.big.y[j, t, ])
+              fit.big.y.rep[j, t, ] <- (y.rep.grouped[j, t, ] - E.grouped)^2 / (E.grouped + e)
+              fit.y.rep[j, t] <- sum(fit.big.y.rep[j, t, ])
+            }
+          } else if (fit.stat == 'freeman-tukey') {
+            for (j in 1:n.samples) {
+              p.curr <- matrix(det.prob[j, , t, ], nrow = J.long[q])
+              z.curr <- z.samples[j, , t]
+              E.grouped <- apply(p.curr * z.curr, 2, sum, na.rm = TRUE)
+              fit.big.y[j, t, ] <- (sqrt(y.grouped[t, ]) - sqrt(E.grouped))^2 
+              fit.y[j, t] <- sum(fit.big.y[j, t, ])
+              fit.big.y.rep[j, t, ] <- (sqrt(y.rep.grouped[j, t, ]) - sqrt(E.grouped))^2 
+              fit.y.rep[j, t] <- sum(fit.big.y.rep[j, t, ])
+            }
+          }
+        }
+      }
+      fit.y.list[[q]] <- fit.y
+      fit.y.rep.list[[q]] <- fit.y.rep
+      fit.y.group.quants.list[[q]] <- apply(fit.big.y, c(2, 3), quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+      fit.y.rep.group.quants.list[[q]] <- apply(fit.big.y.rep, c(2, 3), 
+                                                quantile, c(0.025, 0.25, 0.5, 0.75, 0.975))
+    }
+    out$fit.y <- fit.y.list
+    out$fit.y.rep <- fit.y.rep.list
+    out$fit.y.group.quants <- fit.y.group.quants.list
+    out$fit.y.rep.group.quants <- fit.y.rep.group.quants.list
+    # For summaries
+    out$group <- group
+    out$seasons <- object$seasons
+    out$fit.stat <- fit.stat
+    out$class <- class(object)
+    out$call <- cl
+    out$n.samples <- object$n.samples
+    out$n.burn <- object$n.burn
+    out$n.thin <- object$n.thin
+    out$n.post <- object$n.post
+    out$n.chains <- object$n.chains
   }
 
   class(out) <- 'ppcOcc'

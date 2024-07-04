@@ -123,7 +123,7 @@ across an area of interest.
   Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
   Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
   for the use of spatially varying coefficients in species distribution
-  models. Global Ecology and Biogeography, 33, e13814.
+  models. Global Ecology and Biogeography, 33(4), e13814.
   \doi{10.1111/geb.13814}.
  
 }

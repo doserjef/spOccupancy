@@ -209,6 +209,17 @@ svcTPGBinom(formula, data, inits, priors,
 }
 
 \references{
+  Doser, J. W., Finley, A. O., Saunders, S. P., Kery, M., Weed, A. S., &
+  Zipkin, E. F. (2024A). Modeling complex species-environment
+  relationships through spatially-varying coefficient occupancy models.
+  Journal of Agricultural, Biological and Environmental Statistics.
+  \doi{10.1007/s13253-023-00595-6}.
+
+  Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
+  Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
+  for the use of spatially varying coefficients in species distribution
+  models. Global Ecology and Biogeography, 33(4), e13814.
+  \doi{10.1111/geb.13814}.
 
   Bates, Douglas, Martin Maechler, Ben Bolker, Steve Walker (2015).
   Fitting Linear Mixed-Effects Models Using lme4. Journal of
@@ -223,10 +234,6 @@ svcTPGBinom(formula, data, inits, priors,
   S. Banerjee. (2019) Efficient algorithms for Bayesian Nearest Neighbor
   Gaussian Processes. \emph{Journal of Computational and Graphical
     Statistics}, \doi{10.1080/10618600.2018.1537924}.
-
-  Finley, A. O., and  Banerjee, S. (2020). Bayesian spatially varying coefficient 
-  models in the spBayes R package. \emph{Environmental Modelling and Software}, 
-  125, 104608.
 
   Polson, N.G., J.G. Scott, and J. Windle. (2013) Bayesian Inference for
   Logistic Models Using Polya-Gamma Latent Variables. 

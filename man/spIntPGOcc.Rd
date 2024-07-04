@@ -84,7 +84,7 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
     and variance hyperparameters are themselves passed in as lists, with each 
     element of the list corresponding to the specific hyperparameters for the 
     detection parameters in a given data source. If not specified, prior means 
-    are set to 0 and prior variances set to 2.73 for normal priors. The 
+    are set to 0 and prior variances set to 2.72 for normal priors. The 
     spatial variance parameter, \code{sigma.sq}, is assumed to follow an 
     inverse-Gamma distribution or a uniform distribution (default is 
     inverse-Gamma). \code{sigma.sq} can also be fixed at its 

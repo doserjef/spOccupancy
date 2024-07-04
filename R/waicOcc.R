@@ -18,10 +18,11 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
   if (!(class(object) %in% c('PGOcc', 'spPGOcc', 'msPGOcc', 
                              'spMsPGOcc', 'intPGOcc', 'spIntPGOcc', 
                              'lfMsPGOcc', 'sfMsPGOcc', 'lfJSDM', 'sfJSDM', 
-			     'tPGOcc', 'stPGOcc', 'svcPGBinom', 'svcPGOcc', 
-			     'svcTPGBinom', 'svcTPGOcc', 'tMsPGOcc', 'intMsPGOcc', 
-			     'svcMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc, stMsPGOcc, svcTMsPGOcc\n")
+                             'tPGOcc', 'stPGOcc', 'svcPGBinom', 'svcPGOcc', 
+                             'svcTPGBinom', 'svcTPGOcc', 'tMsPGOcc', 'intMsPGOcc', 
+                             'svcMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc', 
+                             'tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc, stMsPGOcc, svcTMsPGOcc, tIntPGOcc, stIntPGOcc, svcTIntPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -84,6 +85,26 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
       pD[i] <- sum(apply(object$like.samples[, indx:(indx + J.long[i] - 1), drop = FALSE], 
     		     2, function(a) var(log(a))), na.rm = TRUE)
       indx <- indx + J.long[i]
+    }
+    out <- data.frame(elpd = elpd, 
+		      pD = pD, 
+		      WAIC = -2 * (elpd - pD))
+  }
+  if (class(object) %in% c('tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc')) {
+    n.data <- length(object$sites)
+    n.waic.long <- rep(0, n.data)
+    for (q in 1:n.data) {
+      n.waic.long[q] <- length(object$sites[[q]]) * length(object$seasons[[q]])
+    }
+    indx <- 1
+    elpd <- rep(0, n.data)
+    pD <- rep(0, n.data)
+    for (i in 1:n.data) {
+      elpd[i] <- sum(apply(object$like.samples[, indx:(indx + n.waic.long[i] - 1), drop = FALSE],
+                           2, function(a) log(mean(a))), na.rm = TRUE)
+      pD[i] <- sum(apply(object$like.samples[, indx:(indx + n.waic.long[i] - 1), drop = FALSE], 
+                         2, function(a) var(log(a))), na.rm = TRUE)
+      indx <- indx + n.waic.long[i]
     }
     out <- data.frame(elpd = elpd, 
 		      pD = pD, 

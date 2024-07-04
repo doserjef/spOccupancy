@@ -19,21 +19,21 @@
 
 extern "C" {
   SEXP intPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
-		SEXP consts_r, SEXP pDetLong_r, 
-	        SEXP JLong_r, SEXP nObsLong_r, SEXP K_r, SEXP nOccRELong_r,
-		SEXP nDetRELong_r, 
-		SEXP betaStarting_r, SEXP alphaStarting_r, SEXP sigmaSqPsiStarting_r, 
-		SEXP sigmaSqPStarting_r, SEXP betaStarStarting_r, 
-		SEXP alphaStarStarting_r, SEXP zStarting_r, 
-		SEXP zLongIndx_r, SEXP dataIndx_r, SEXP alphaIndx_r, 
-		SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
-		SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, SEXP alphaNREIndx_r,
-		SEXP alphaColIndx_r, SEXP waicJIndx_r, SEXP waicNObsIndx_r, SEXP WAIC_r,
-		SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP sigmaAlpha_r, 
-		SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
-		SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
-		SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		SEXP samplesInfo_r, SEXP chainInfo_r){
+                SEXP consts_r, SEXP pDetLong_r, 
+                SEXP JLong_r, SEXP nObsLong_r, SEXP K_r, SEXP nOccRELong_r,
+                SEXP nDetRELong_r, 
+                SEXP betaStarting_r, SEXP alphaStarting_r, SEXP sigmaSqPsiStarting_r, 
+                SEXP sigmaSqPStarting_r, SEXP betaStarStarting_r, 
+                SEXP alphaStarStarting_r, SEXP zStarting_r, 
+                SEXP zLongIndx_r, SEXP dataIndx_r, SEXP alphaIndx_r, 
+                SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+                SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, SEXP alphaNREIndx_r,
+                SEXP alphaColIndx_r, SEXP waicJIndx_r, SEXP waicNObsIndx_r, SEXP WAIC_r,
+                SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP sigmaAlpha_r, 
+                SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+                SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+                SEXP nSamples_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+                SEXP samplesInfo_r, SEXP chainInfo_r){
    
     /**********************************************************************
      * Initial constants
@@ -142,7 +142,7 @@ extern "C" {
         Rprintf("Samples per Chain: %i \n", nSamples);
         Rprintf("Burn-in: %i \n", nBurn); 
         Rprintf("Thinning Rate: %i \n", nThin); 
-	Rprintf("Number of Chains: %i \n", nChain);
+        Rprintf("Number of Chains: %i \n", nChain);
         Rprintf("Total Posterior Samples: %i \n\n", nPost * nChain); 
 #ifdef _OPENMP
         Rprintf("Source compiled with OpenMP support and model fit using %i thread(s).\n\n", nThreads);

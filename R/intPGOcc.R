@@ -1,8 +1,8 @@
 intPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		     n.samples, n.omp.threads = 1, verbose = TRUE, 
-		     n.report = 1000, n.burn = round(.10 * n.samples), 
-		     n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		     k.fold.seed = 100, k.fold.data, k.fold.only = FALSE, ...){
+                     n.samples, n.omp.threads = 1, verbose = TRUE, 
+                     n.report = 1000, n.burn = round(.10 * n.samples), 
+                     n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
+                     k.fold.seed = 100, k.fold.data, k.fold.only = FALSE, ...){
 
     ptm <- proc.time()
 
@@ -812,14 +812,14 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       storage.mode(chain.info) <- "integer" 
       # Run the model in C
       out.tmp[[i]] <- .Call("intPGOcc", y, X, X.p.all, X.re, X.p.re.all, consts, p.det.long, 
-		            J.long, n.obs.long, K, n.occ.re.long, n.det.re.long, beta.inits, alpha.inits, 
-			    sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits, alpha.star.inits, z.inits,
-		            z.long.indx.c, data.indx.c, alpha.indx.c, beta.star.indx, 
-			    beta.level.indx, alpha.star.indx, alpha.level.indx, alpha.n.re.indx, 
-			    alpha.col.indx, waic.J.indx, waic.n.obs.indx, waic.calc, 
-			    mu.beta, mu.alpha, Sigma.beta, sigma.alpha, 
-			    sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, 
-		            n.omp.threads, verbose, n.report, samples.info, chain.info)
+                            J.long, n.obs.long, K, n.occ.re.long, n.det.re.long, beta.inits, alpha.inits, 
+                            sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits, alpha.star.inits, z.inits,
+                            z.long.indx.c, data.indx.c, alpha.indx.c, beta.star.indx, 
+                            beta.level.indx, alpha.star.indx, alpha.level.indx, alpha.n.re.indx, 
+                            alpha.col.indx, waic.J.indx, waic.n.obs.indx, waic.calc, 
+                            mu.beta, mu.alpha, Sigma.beta, sigma.alpha, 
+                            sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b, n.samples, 
+                            n.omp.threads, verbose, n.report, samples.info, chain.info)
       chain.info[1] <- chain.info[1] + 1
     } # i
 

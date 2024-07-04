@@ -63,7 +63,7 @@ overallPlot <- function(x, param, density = TRUE, ...) {
     if (!(class(x) %in% c('spPGOcc', 'spIntPGOcc', 'tPGOcc', 'stPGOcc', 
 			  'svcPGOcc', 'svcPGBinom', 'svcTPGOcc', 'svcTPGBinom', 
 			  'spMsPGOcc', 'sfJSDM', 'sfMsPGOcc', 'stMsPGOcc', 'svcMsPGOcc', 
-			  'svcTMsPGOcc'))) {
+			  'svcTMsPGOcc', 'tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc'))) {
       stop("theta is not a parameter in the fitted model")
     }
     for (i in 1:n.chains) {
@@ -195,4 +195,12 @@ plot.svcMsPGOcc <- function(x, param, density = TRUE, ...) {
 plot.svcTMsPGOcc <- function(x, param, density = TRUE, ...) {
   overallPlot(x, param, density)
 }
-
+plot.tIntPGOcc <- function(x, param, density = TRUE, ...) {
+  overallPlot(x, param, density)
+}
+plot.stIntPGOcc <- function(x, param, density = TRUE, ...) {
+  overallPlot(x, param, density)
+}
+plot.svcTIntPGOcc <- function(x, param, density = TRUE, ...) {
+  overallPlot(x, param, density)
+}

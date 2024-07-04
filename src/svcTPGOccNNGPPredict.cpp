@@ -6,7 +6,6 @@
 #include <omp.h>
 #endif
 
-#define R_NO_REMAP
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -20,15 +19,15 @@
 extern "C" {
 
   SEXP svcTPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP nYearsMax_r,
-                            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
-                            SEXP coords0_r, SEXP weights0_r, 
-                            SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-                            SEXP thetaSamples_r, SEXP wSamples_r, 
-                            SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
+		            SEXP pOcc_r, SEXP pTilde_r, SEXP m_r, SEXP X0_r, SEXP Xw0_r, 
+			    SEXP coords0_r, SEXP weights0_r, 
+			    SEXP q_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+			    SEXP thetaSamples_r, SEXP wSamples_r, 
+			    SEXP betaStarSiteSamples_r, SEXP etaSamples_r, 
                             SEXP sitesLink_r, SEXP sites0Sampled_r, 
-                            SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-                            SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
-                            SEXP gridIndx0_r, SEXP multiStage_r){
+			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+			    SEXP verbose_r, SEXP nReport_r, SEXP Jw0_r, SEXP Jw_r,
+			    SEXP gridIndx0_r){
 
     int i, j, k, l, ll, s, t, info, nProtect=0;
     const int inc = 1;
@@ -66,19 +65,17 @@ extern "C" {
     double *eta = REAL(etaSamples_r);
     
     int nSamples = INTEGER(nSamples_r)[0];
-    int qnYearsnSamples = nSamples * qnYears;
     int covModel = INTEGER(covModel_r)[0];
     std::string corName = getCorName(covModel);
     int nThreads = INTEGER(nThreads_r)[0];
     int verbose = INTEGER(verbose_r)[0];
     int nReport = INTEGER(nReport_r)[0];
-    int multiStage = INTEGER(multiStage_r)[0];
     
 #ifdef _OPENMP
     omp_set_num_threads(nThreads);
 #else
     if(nThreads > 1){
-      Rf_warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
+      warning("n.omp.threads > %i, but source not compiled with OpenMP support.", nThreads);
       nThreads = 1;
     }
 #endif
@@ -148,9 +145,9 @@ extern "C" {
     int threadID = 0, status = 0;
 
     SEXP z0_r, w0_r, psi0_r;
-    PROTECT(z0_r = Rf_allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
-    PROTECT(psi0_r = Rf_allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
-    PROTECT(w0_r = Rf_allocMatrix(REALSXP, Jw0pTilde, nSamples)); nProtect++;
+    PROTECT(z0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
+    PROTECT(psi0_r = allocMatrix(REALSXP, qnYears, nSamples)); nProtect++; 
+    PROTECT(w0_r = allocMatrix(REALSXP, Jw0pTilde, nSamples)); nProtect++;
     double *z0 = REAL(z0_r);
     double *psi0 = REAL(psi0_r); 
     double *w0 = REAL(w0_r);
@@ -204,9 +201,9 @@ extern "C" {
 	    }
 
 	    F77_NAME(dpotrf)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	    if(info != 0){Rf_error("c++ error: dpotrf failed\n");}
+	    if(info != 0){error("c++ error: dpotrf failed\n");}
 	    F77_NAME(dpotri)(lower, &m, &C[threadID*mm], &m, &info FCONE); 
-	    if(info != 0){Rf_error("c++ error: dpotri failed\n");}
+	    if(info != 0){error("c++ error: dpotri failed\n");}
 
 	    F77_NAME(dsymv)(lower, &m, &one, &C[threadID*mm], &m, &c[threadID*m], &inc, &zero, &tmp_m[threadID*m], &inc FCONE);
 
@@ -253,18 +250,10 @@ extern "C" {
     for(i = 0; i < q; i++){
       for(s = 0; s < nSamples; s++){
         for (t = 0; t < nYears; t++) {
-          if (multiStage) {
-            wSites = F77_NAME(ddot)(&pTilde, &Xw0[s * qnYears + t * q + i], &qnYearsnSamples, 
-                                    &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
-            psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[s * qnYears + t * q + i], &qnYearsnSamples, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
-            z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
-          } else {
-            wSites = F77_NAME(ddot)(&pTilde, &Xw0[t * q + i], &qnYears, 
-                                    &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
-            psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
-            z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
-            
-          }
+          wSites = F77_NAME(ddot)(&pTilde, &Xw0[t * q + i], &qnYears, 
+        		          &w0[s * Jw0pTilde + gridIndx0[i] * pTilde], &inc);
+          psi0[s * qnYears + t * q + i] = logitInv(F77_NAME(ddot)(&pOcc, &X0[t * q + i], &qnYears, &beta[s*pOcc], &inc) + wSites + betaStarSite[s * qnYears + t * q + i] + eta[s * nYears + t], zero, one);
+          z0[s * qnYears + t * q + i] = rbinom(weights0[t * q + i], psi0[s * qnYears + t * q + i]);
         } // s
       } // t
     } // i
@@ -276,19 +265,19 @@ extern "C" {
     SEXP result_r, resultName_r;
     int nResultListObjs = 3;
 
-    PROTECT(result_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    PROTECT(resultName_r = Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(result_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
+    PROTECT(resultName_r = allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     SET_VECTOR_ELT(result_r, 0, z0_r);
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("z.0.samples")); 
+    SET_VECTOR_ELT(resultName_r, 0, mkChar("z.0.samples")); 
     
     SET_VECTOR_ELT(result_r, 1, w0_r);
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("w.0.samples"));
+    SET_VECTOR_ELT(resultName_r, 1, mkChar("w.0.samples"));
 
     SET_VECTOR_ELT(result_r, 2, psi0_r);
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("psi.0.samples")); 
+    SET_VECTOR_ELT(resultName_r, 2, mkChar("psi.0.samples")); 
 
-    Rf_namesgets(result_r, resultName_r);
+    namesgets(result_r, resultName_r);
     
     //unprotect
     UNPROTECT(nProtect);
@@ -297,6 +286,4 @@ extern "C" {
   
   }
 }
-
-    
 
