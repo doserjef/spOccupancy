@@ -1,5 +1,5 @@
-\name{predict.tIntPGocc}
-\alias{predict.tIntPGocc}
+\name{predict.tIntPGOcc}
+\alias{predict.tIntPGOcc}
 \title{Function for prediction at new locations for multi-season single-species integrated occupancy models}
 
 \description{
@@ -36,7 +36,7 @@
 }
 
 \value{
-  A list object of class \code{predict.tIntPGocc}. When \code{type = 'occupancy'}, the list consists of: 
+  A list object of class \code{predict.tIntPGOcc}. When \code{type = 'occupancy'}, the list consists of: 
 
   \item{psi.0.samples}{a three-dimensional object of posterior predictive samples for the
     latent occupancy probability values with dimensions corresponding to posterior predictive
