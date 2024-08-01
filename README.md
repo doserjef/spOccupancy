@@ -113,14 +113,14 @@ btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
 We run the model using an adaptive MCMC sampler with a target acceptance
-rate of 0.43. We run 3 chains of the model each for 10,000 iterations
-split into 400 batches each of length 25. For each chain, we discard the
-first 2000 iterations as burn-in and use a thinning rate of 4 for a
-resulting 6000 samples from the joint posterior. We fit the model using
-5 nearest neighbors and an exponential correlation function. We also
-specify the `k.fold` argument to perform 2-fold cross-validation after
-fitting the full model. Run `?spPGOcc` for more detailed information on
-all function arguments.
+rate of 0.43. We run 3 chains of the model in parallel each for 20,000
+iterations split into 800 batches each of length 25. For each chain, we
+discard the first 8000 iterations as burn-in and use a thinning rate of
+4 for a resulting 9000 samples from the joint posterior. We fit the
+model using 5 nearest neighbors and an exponential correlation function.
+We also specify the `k.fold` argument to perform 2-fold cross-validation
+after fitting the full model. Run `?spPGOcc` for more detailed
+information on all function arguments.
 
 ``` r
 # Run the model
@@ -152,25 +152,25 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 9000
-#> Run Time (min): 0.6389
+#> Run Time (min): 0.648
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            4.0148 0.5837  3.0631  3.9522  5.3461 1.0062  364
-#> scale(Elevation)      -0.5247 0.2103 -0.9668 -0.5169 -0.1298 1.0046 2269
-#> I(scale(Elevation)^2) -1.1569 0.2099 -1.6143 -1.1379 -0.7957 1.0041  552
+#> (Intercept)            3.9819 0.5888  3.0184  3.9144  5.2920 1.0199  298
+#> scale(Elevation)      -0.5278 0.2167 -0.9750 -0.5218 -0.1174 1.0042 2148
+#> I(scale(Elevation)^2) -1.1603 0.2145 -1.6386 -1.1399 -0.7961 1.0133  447
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6622 0.1132  0.4398  0.6608 0.8839 1.0003 9000
-#> scale(day)       0.2908 0.0715  0.1515  0.2906 0.4322 1.0011 9000
-#> scale(tod)      -0.0303 0.0688 -0.1648 -0.0298 0.1075 1.0018 9000
-#> I(scale(day)^2) -0.0744 0.0853 -0.2414 -0.0750 0.0949 1.0001 9000
+#> (Intercept)      0.6626 0.1140  0.4390  0.6626 0.8868 0.9999 8178
+#> scale(day)       0.2902 0.0708  0.1528  0.2902 0.4278 1.0002 9054
+#> scale(tod)      -0.0326 0.0692 -0.1669 -0.0331 0.1061 1.0003 9897
+#> I(scale(day)^2) -0.0754 0.0862 -0.2451 -0.0758 0.0965 1.0004 9000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.0996 0.9515 0.2222 0.8214 3.5784 1.0533 139
-#> phi      0.0086 0.0078 0.0008 0.0053 0.0275 1.0324 113
+#> sigma.sq 1.1206 1.0169 0.1908 0.8124 3.8735 1.0230 137
+#> phi      0.0090 0.0083 0.0007 0.0055 0.0281 1.0456  66
 ```
 
 ### Posterior predictive check
@@ -196,7 +196,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 9000
 #> 
-#> Bayesian p-value:  0.4851 
+#> Bayesian p-value:  0.4939 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -209,7 +209,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -681.47638   21.48585 1405.92448
+#> -681.77267   21.27419 1406.09372
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -222,7 +222,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1413.365
+#> [1] 1415.012
 ```
 
 ### Prediction
@@ -265,7 +265,7 @@ ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814)
 
 ## References
 
-Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022a).
+Doser, J. W., Finley, A. O., Kery, M., and Zipkin, E. F. (2022).
 spOccupancy: An R package for single-species, multi-species, and
 integrated spatial occupancy models. Methods in Ecology and Evolution.
 13(8) 1670-1678. <https://doi.org/10.1111/2041-210X.13897>.
