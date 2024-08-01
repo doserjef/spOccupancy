@@ -44,7 +44,7 @@ where $\psi(\boldsymbol{s}_j)$ is the occurrence probability at site $j$. For si
 
 where $\beta_0$ is an intercept, $\text{w}_0(\boldsymbol{s}_j)$ is a spatial random effect to account for unmodeled spatial variation in occurrence probability, $\beta_1$ is the non-spatial effect of the covariate $x_1(\boldsymbol{s}_j)$, and $\text{w}_1(\boldsymbol{s}_j)$ is the spatially varying effect of the covariate at each spatial location $\boldsymbol{s}_j$. The spatially varying component of the covariate effect, $\text{w}_1(\boldsymbol{s}_j)$ serves as a local adjustment of the species-environment relationship from the overall effect $\beta_1$. We model SVCs in `spOccupancy` using Nearest Neighbor Gaussian Processes [@datta2016hierarchical; @doser2024SVC].
 
-The sub-model for detection probability in an SVC occupancy model in `spOccupancy` is identical to a normal occupancy model (i.e., there are no spatially-varying coefficients on detection). See [the intro vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for details. 
+The sub-model for detection probability in an SVC occupancy model in `spOccupancy` is identical to a normal occupancy model (i.e., there are no spatially-varying coefficients on detection). See [the intro vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for details. 
 
 # Guidelines and suggestions for making inference with SVC occupancy models
 

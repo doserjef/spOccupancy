@@ -11,7 +11,7 @@ knitr::opts_chunk$set(
   out.width = "100%")
 ```
 
-# spOccupancy <a href='https://www.jeffdoser.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
+# spOccupancy <a href='https://www.doserlab.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
@@ -56,6 +56,9 @@ install.packages("spOccupancy")
 | `tMsPGOcc()`           | Multi-species, multi-season occupancy model                              |
 | `stMsPGOcc()`          | Multi-species, multi-season spatial occupancy model                      |
 | `svcTMsPGOcc()`        | Multi-species, multi-season spatially-varying coefficient occupancy model|
+| `tIntPGOcc()`          | Multi-season occupancy model with multiple data sources                  |
+| `stIntPGOcc()`         | Spatial multi-season occupancy model with multiple data sources          |
+| `svcTIntPGOcc()`       | SVC multi-season occupancy model with multiple data sources              |
 | `postHocLM()`          | Fit a linear (mixed) model using estimates from a previous model fit     |
 | `ppcOcc()`             | Posterior predictive check using Bayesian p-values                       |
 | `waicOcc()`            | Compute Widely Applicable Information Criterion (WAIC)                   |
@@ -68,6 +71,7 @@ install.packages("spOccupancy")
 | `simTMsOcc()`          | Simulate multi-species, multi-season occupancy data                      |
 | `simIntOcc()`          | Simulate single-species occupancy data from multiple data sources        |
 | `simIntMsOcc()`        | Simulate multi-species occupancy data from multiple data sources         |
+| `simTIntOcc()`         | Simulate multi-season occupancy data from multiple data sources          |
 
 ## Example usage
 
@@ -99,10 +103,11 @@ We run the model using an adaptive MCMC sampler with a target acceptance rate of
 # Run the model
 out <- spPGOcc(occ.formula = btbw.occ.formula,
                det.formula = btbw.det.formula,
-               data = btbwHBEF, n.batch = 400, batch.length = 25,
+               data = btbwHBEF, n.batch = 800, batch.length = 25,
                accept.rate = 0.43, cov.model = "exponential", 
-               NNGP = TRUE, n.neighbors = 5, n.burn = 2000, 
-               n.thin = 4, n.chains = 3, verbose = FALSE, k.fold = 2)
+               NNGP = TRUE, n.neighbors = 5, n.burn = 8000, 
+               n.thin = 4, n.chains = 3, verbose = FALSE, 
+               parallel.chains = TRUE, k.fold = 2, k.fold.threads = 2)
 ```
 
 This will produce a large output object, and you can use `str(out)` to get an overview of what's in there. Here we use the `summary()` function to print a concise but informative summary of the model fit.
@@ -148,7 +153,7 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [the introductory spOccupancy paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, `vignette("mcmcFactorModels")`, and our [open-access paper](https://doi.org/10.1002/ecy.4137) (Doser et al. 2023). For a description and tutorial of multi-season (spatio-temporal) occupancy models in `spOccupancy`, see `vignette("spaceTimeModels")`. For a tutorial on spatially-varying coefficient models in `spOccupancy`, see `vignette("svcModels")` and `vignette(mcmcSVCModels)` and our associated papers that describe the [methods](https://www.jeffdoser.com/files/pubs/doser2024JABES.pdf) (Doser et al. 2024A) and [applications to ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814) (Doser et al. 2024B) in much more detail.
+The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [the introductory spOccupancy paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, `vignette("mcmcFactorModels")`, and our [open-access paper](https://doi.org/10.1002/ecy.4137) (Doser et al. 2023). For a description and tutorial of multi-season (spatio-temporal) occupancy models in `spOccupancy`, see `vignette("spaceTimeModels")`. For a tutorial on spatially-varying coefficient models in `spOccupancy`, see `vignette("svcModels")` and `vignette(mcmcSVCModels)` and our associated papers that describe the [methods](https://www.doserlab.com/files/pubs/doser2024JABES.pdf) (Doser et al. 2024A) and [applications to ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814) (Doser et al. 2024B) in much more detail.
 
 ## References
 

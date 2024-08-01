@@ -7,9 +7,9 @@
 }
 
 \usage{
-simIntMsOcc(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE = list(),
-            p.RE = list(), sp = FALSE, cov.model, sigma.sq, phi, nu,
-            factor.model = FALSE, n.factors, ...)
+simIntMsOcc(n.data, J.x, J.y, J.obs, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(),
+            p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, sigma.sq, phi, nu,
+            factor.model = FALSE, n.factors, range.probs, ...)
 }
 \arguments{
 
@@ -23,6 +23,8 @@ simIntMsOcc(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE = list(),
 
 \item{n.rep}{a list of length \code{n.data}. Each element is a numeric vector with length corresponding to the number of sites that given data source is observed at (in \code{J.obs}). Each vector indicates the number of repeat visits at each of the sites for a given data source.}
 
+\item{n.rep.max}{a vector of numeric values indicating the maximum number of replicate surveys for each data set. This is an optional argument, with its default value set to \code{max(n.rep)} for each data set. This can be used to generate data sets with different types of missingness (e.g., simulate data across 20 days (replicate surveys) but sites are only sampled a maximum of ten times each).}
+
 \item{N}{a numeric vector of length \code{N} containing the number of species each data source samples. These can be the same if both data sets sample the same species, or can be different.}
 
 \item{beta}{a numeric matrix with \code{max(N)} rows containing the intercept and regression coefficient parameters for the occurrence portion of the multi-species occupancy model. Each row corresponds to the regression coefficients for a given species.} 
@@ -35,6 +37,11 @@ simIntMsOcc(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE = list(),
 
 \item{sp}{a logical value indicating whether to simulate a spatially-explicit occupancy model with a Gaussian process. By default set to \code{FALSE}.}
 
+\item{svc.cols}{a vector indicating the variables whose effects will be
+  estimated as spatially-varying coefficients. \code{svc.cols} is an
+  integer vector with values indicating the order of covariates specified
+  in the model formula (with 1 being the intercept if specified).}
+
 \item{cov.model}{a quoted keyword that specifies the covariance function used to model the spatial dependence structure among the latent occurrence values.  Supported covariance model key words are: \code{"exponential"}, \code{"matern"}, \code{"spherical"}, and \code{"gaussian"}.}
 
 \item{sigma.sq}{a numeric vector of length \code{max(N)} containing the spatial variance parameter for each species. Ignored when \code{sp = FALSE} or when \code{factor.model = TRUE}.}
@@ -46,6 +53,8 @@ simIntMsOcc(n.data, J.x, J.y, J.obs, n.rep, N, beta, alpha, psi.RE = list(),
 \item{factor.model}{a logical value indicating whether to simulate data following a factor modeling approach that explicitly incoporates species correlations. If \code{sp = TRUE}, the latent factors are simulated from independent spatial processes. If \code{sp = FALSE}, the latent factors are simulated from standard normal distributions.}
 
 \item{n.factors}{a single numeric value specifying the number of latent factors to use to simulate the data if \code{factor.model = TRUE}.}
+
+\item{range.probs}{a numeric vector of length \code{N} where each value should fall between 0 and 1, and indicates the probability that one of the \code{J} spatial locations simulated is within the simulated range of the given species. If set to 1, every species has the potential of being present at each location.}
 
 \item{...}{currently no additional arguments}
 }

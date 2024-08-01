@@ -128,7 +128,7 @@ df %>%
 We can model the site-level effect in two ways: 
 
 1. Model $\text{w}_j$ as a basic, unstructured random effect, where $\text{w}_j \sim \text{Normal}(0, \sigma^2_{\text{site}})$. The `spOccupancy` function `tPGOcc()` can fit such a model by including a random site-level intercept using `lme4` syntax [@bates2015] for the random effects in the model formula. 
-2. Model $\text{w}_j$ as a spatial random effect. When there are a sufficient number of sites sampled in the data set, modeling the site-level effects as spatial random effects will likely improve both inference and prediction of species distributions [@guelat2018]. The `spOccupancy` function `stPGOcc()` fits such a model with spatially-structured random effects. We model the spatial random effects using Nearest Neighbor Gaussian Processes [@datta2016hierarchical] to yield a computationally efficient implementation of these spatially-explicit models. See the [`spOccupancy` introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) and @doser2022spoccupancy for specific details.  
+2. Model $\text{w}_j$ as a spatial random effect. When there are a sufficient number of sites sampled in the data set, modeling the site-level effects as spatial random effects will likely improve both inference and prediction of species distributions [@guelat2018]. The `spOccupancy` function `stPGOcc()` fits such a model with spatially-structured random effects. We model the spatial random effects using Nearest Neighbor Gaussian Processes [@datta2016hierarchical] to yield a computationally efficient implementation of these spatially-explicit models. See the [`spOccupancy` introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) and @doser2022spoccupancy for specific details.  
 
 Similarly, we can model the temporal random effect in two ways: 
 
@@ -164,7 +164,7 @@ tPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
        k.fold, k.fold.threads = 1, k.fold.seed, k.fold.only = FALSE, ...)
 ```
 
-The arguments for `tPGOcc()` are very similar to other `spOccupancy` functions, and so we won't go into too much detail on each argument and will focus on fitting the models (see [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more specific details on function arguments). The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to specify the covariates to include in the occurrence and detection portions of the model, respectively. We only specify the right side of the formulas. We can include random (unstructured) intercepts in the occurrence and detection portion of the models using `lme4` syntax [@bates2015]. The `data` argument contains the necessary data for fitting the multi-season occupancy model. This should be a list object of the form previously described with our `revi.data` object. As a reminder, let's take a look at the structure of `revi.data`
+The arguments for `tPGOcc()` are very similar to other `spOccupancy` functions, and so we won't go into too much detail on each argument and will focus on fitting the models (see [the introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for more specific details on function arguments). The first two arguments, `occ.formula` and `det.formula`, use standard R model syntax to specify the covariates to include in the occurrence and detection portions of the model, respectively. We only specify the right side of the formulas. We can include random (unstructured) intercepts in the occurrence and detection portion of the models using `lme4` syntax [@bates2015]. The `data` argument contains the necessary data for fitting the multi-season occupancy model. This should be a list object of the form previously described with our `revi.data` object. As a reminder, let's take a look at the structure of `revi.data`
 
 ```{r}
 str(revi.data)
@@ -209,7 +209,7 @@ revi.priors <- list(beta.normal = list(mean = 0, var = 2.72),
                     sigma.sq.psi.ig = list(a = 0.1, b = 0.1))
 ```
 
-Finally, we set the arguments that control how long we run the MCMC. Instead of specifying an argument with the total number of MCMC samples (e.g., as in `PGOcc()`), we split the samples into a set of `n.batch` batches, each comprised of a length of `batch.length`. This is because we use an adaptive algorithm to improve mixing of the MCMC chains of the temporal range parameter when we fit multi-season occupancy models with an AR(1) temporal random effect. We will run the model for 5000 iterations, comprised of 200 batches each of length 25. We specify a burn-in period of 2000 iterations and a thinning rate of 12. See [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details on the adaptive algorithm. 
+Finally, we set the arguments that control how long we run the MCMC. Instead of specifying an argument with the total number of MCMC samples (e.g., as in `PGOcc()`), we split the samples into a set of `n.batch` batches, each comprised of a length of `batch.length`. This is because we use an adaptive algorithm to improve mixing of the MCMC chains of the temporal range parameter when we fit multi-season occupancy models with an AR(1) temporal random effect. We will run the model for 5000 iterations, comprised of 200 batches each of length 25. We specify a burn-in period of 2000 iterations and a thinning rate of 12. See [the introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for more details on the adaptive algorithm. 
 
 ```{r}
 n.chains <- 3
@@ -392,7 +392,7 @@ stPGOcc(occ.formula, det.formula, data, inits, priors,
          k.fold.seed = 100, k.fold.only = FALSE, ...)
 ```
 
-Because the arguments of `stPGOcc()` are identical to other spatially-explicit functions in `spOccupancy`, we won't go into all that much detail on them here, and rather encourage you to look at [the introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more specific details, in particular the section on single-species spatial occupancy models. 
+Because the arguments of `stPGOcc()` are identical to other spatially-explicit functions in `spOccupancy`, we won't go into all that much detail on them here, and rather encourage you to look at [the introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for more specific details, in particular the section on single-species spatial occupancy models. 
 
 The `occ.formula`, `det.formula`, and `data` arguments all take the same form as what we saw previously for `tPGOcc()`, with the exception that we are now required to include the spatial coordinates in the `data` object as a matrix with rows corresponding to sites and columns containing the easting and northing coordinates of each site. Notice in `occ.formula` we remove the non-spatial random effect for site (`(1 | site.effect)`), as `stPGOcc()` will incorporate a spatial random effect into the model instead. 
 

@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette details how to include random intercepts when fitting single-species or multi-species occupancy models in `spOccupancy`. For an introduction to the basic `spOccupancy` functionality, see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). `spOccupancy` supports random intercepts in the occurrence and detection portions of all single-species and multi-species occupancy models, with the exception that we have yet to implement random intercepts in any integrated occupancy models. Adding random intercepts to integrated models and random slopes to all models is part of future planned development. Here I show how to simulate data for a spatially explicit single-species occupancy model with random intercepts in occurrence and detection using `simOcc()`, and subsequently show how to include random intercepts using `lme4` syntax [@bates2015] with `spPGOcc()`. Random intercepts are included in all other single-species and multi-species models in an analogous manner. 
+This vignette details how to include random intercepts when fitting single-species or multi-species occupancy models in `spOccupancy`. For an introduction to the basic `spOccupancy` functionality, see the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting). `spOccupancy` supports random intercepts in the occurrence and detection portions of all single-species and multi-species occupancy models, with the exception that we have yet to implement random intercepts in any integrated occupancy models. Adding random intercepts to integrated models and random slopes to all models is part of future planned development. Here I show how to simulate data for a spatially explicit single-species occupancy model with random intercepts in occurrence and detection using `simOcc()`, and subsequently show how to include random intercepts using `lme4` syntax [@bates2015] with `spPGOcc()`. Random intercepts are included in all other single-species and multi-species models in an analogous manner. 
 
 # Simulating data with `simOcc()`
 
@@ -99,7 +99,7 @@ plot(coords, type = "n", xlab = "", ylab = "", asp = TRUE, main = "Simulated Occ
 points(coords, pch=15, cex = 2.1, col = rgb(0,0,0,(psi-min(psi))/diff(range(psi))))
 ```
 
-We see there is clear variation in occurrence probability across the simulated spatial region. The final step before we can fit the model is to package up the data in a list for use in `spOccupancy` model fitting functions. This requires creating a list that consists of the detection-nondetection data (`y`), occurrence covariates (`occ.covs`), detection covariates (`det.covs`), and coordinates (`coords`). See the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details. 
+We see there is clear variation in occurrence probability across the simulated spatial region. The final step before we can fit the model is to package up the data in a list for use in `spOccupancy` model fitting functions. This requires creating a list that consists of the detection-nondetection data (`y`), occurrence covariates (`occ.covs`), detection covariates (`det.covs`), and coordinates (`coords`). See the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for more details. 
 
 ```{r}
 # Package all data into a list

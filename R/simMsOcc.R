@@ -1,6 +1,6 @@
 simMsOcc <- function(J.x, J.y, n.rep, n.rep.max, N, beta, alpha, psi.RE = list(), 
-		     p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
-		     sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
+                     p.RE = list(), sp = FALSE, svc.cols = 1, cov.model, 
+                     sigma.sq, phi, nu, factor.model = FALSE, n.factors, 
                      range.probs, shared.spatial = FALSE, grid, ...) {
 
   # Check for unused arguments ------------------------------------------

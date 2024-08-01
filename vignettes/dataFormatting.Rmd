@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette gives an example of how to take raw data and format it for use in `spOccupancy` model fitting functions. This is not an exhaustive example, as data can be recorded and stored in a variety of ways, which requires different approaches to wrangle the data into the necessary format for `spOccupancy`. However, I hope this vignette can help provide some guidance on how to take raw data and efficiently reformat it for use in `spOccupancy`. Here I will focus solely on data preparation. For full details on the basic `spOccupancy` functionality, please see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). 
+This vignette gives an example of how to take raw data and format it for use in `spOccupancy` model fitting functions. This is not an exhaustive example, as data can be recorded and stored in a variety of ways, which requires different approaches to wrangle the data into the necessary format for `spOccupancy`. However, I hope this vignette can help provide some guidance on how to take raw data and efficiently reformat it for use in `spOccupancy`. Here I will focus solely on data preparation. For full details on the basic `spOccupancy` functionality, please see the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting). 
 
 First we load `spOccupancy` as well as two `tidyverse` packages that we will use for manipulating our data sets into the necessary format for `spOccupancy` (`dplyr` and `lubridate`). 
 
@@ -250,7 +250,7 @@ data.msom <- list(y = y.msom,
                   coords = coords)
 ```
 
-Notice how we explicitly specify the name of each object (`y`, `occ.covs`, `det.covs`, and `coords`). The data are now ready to go, and below I fit a spatially-explicit multi-species occupancy model to verify that (see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for more details on model-fitting functions).  
+Notice how we explicitly specify the name of each object (`y`, `occ.covs`, `det.covs`, and `coords`). The data are now ready to go, and below I fit a spatially-explicit multi-species occupancy model to verify that (see the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for more details on model-fitting functions).  
 
 ```{r}
 out.msom <- spMsPGOcc(occ.formula = ~ scale(elev) + I(scale(elev)^2), 

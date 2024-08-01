@@ -1,8 +1,9 @@
 tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
-		   n.batch, batch.length, accept.rate = 0.43, n.omp.threads = 1, verbose = TRUE, ar1 = FALSE,
-		   n.report = 100, n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-		   n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed = 100, 
-		   k.fold.only = FALSE, ...){
+                   n.batch, batch.length, accept.rate = 0.43, n.omp.threads = 1, 
+                   verbose = TRUE, ar1 = FALSE, n.report = 100, 
+                   n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
+                   n.chains = 1, parallel.chains = FALSE, k.fold, 
+                   k.fold.threads = 1, k.fold.seed = 100, k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -808,42 +809,106 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 
   # tPGOcc
   out <- list()
+  out.tmp <- list()
   if (!k.fold.only) {
-    out.tmp <- list()
-    for (i in 1:n.chains) {
-      # Change initial values if i > 1
-      if ((i > 1) & (!fix.inits)) {
-        beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-        alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-        if (p.det.re > 0) {
-          sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-          alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
-        }
-        if (p.occ.re > 0) {
-          sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-          beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-        }
-	if (ar1) {
-          ar1.vals[5] <- runif(1, rho.a, rho.b)
-          ar1.vals[6] <- runif(1, 0.5, 10)	
-	}
+    if (parallel.chains) {
+      if (verbose) {
+        cat("\n----------------------------------------\n");
+        cat("\tRunning the model\n");
+        cat("----------------------------------------\n");
+        message("MCMC chains are running in parallel. Model progress output is suppressed.")
       }
-      storage.mode(curr.chain) <- "integer"
-      out.tmp[[i]] <- .Call("tPGOcc", y, X, X.p, X.re, X.p.re, 
-                            consts, n.occ.re.long, n.det.re.long,
-                            beta.inits, alpha.inits, sigma.sq.psi.inits, 
-                            sigma.sq.p.inits, beta.star.inits, alpha.star.inits, 
-                            z.inits, z.long.indx, z.year.indx,
-                            z.dat.indx, 
-                            beta.star.indx, beta.level.indx,
-                            alpha.star.indx, alpha.level.indx,
-                            mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 
-                            sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b,
-			    ar1, ar1.vals, tuning.c,
-                            n.batch, batch.length, accept.rate, 
-			    n.omp.threads, verbose, n.report,  
-                            n.burn, n.thin, n.post.samples, curr.chain, n.chains)
-      curr.chain <- curr.chain + 1
+      beta.inits.list <- list()
+      alpha.inits.list <- list()
+      sigma.sq.psi.inits.list <- list()
+      beta.star.inits.list <- list()
+      sigma.sq.p.inits.list <- list()
+      alpha.star.inits.list <- list()
+      ar1.vals.list <- list()
+      for (i in 1:n.chains) {
+        beta.inits.list[[i]] <- beta.inits
+        alpha.inits.list[[i]] <- alpha.inits
+        sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
+        beta.star.inits.list[[i]] <- beta.star.inits
+        sigma.sq.p.inits.list[[i]] <- sigma.sq.p.inits
+        alpha.star.inits.list[[i]] <- alpha.star.inits
+        ar1.vals.list[[i]] <- ar1.vals
+      }
+      for (i in 2:n.chains) {
+        if ((!fix.inits)) {
+          beta.inits.list[[i]] <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+          alpha.inits.list[[i]] <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+          if (p.det.re > 0) {
+            sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+            alpha.star.inits.list[[i]] <- rnorm(n.det.re, 
+                                                sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+          }
+          if (p.occ.re > 0) {
+            sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+            beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+                                               sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+          }
+          if (ar1) {
+            ar1.vals.list[[i]][5] <- runif(1, rho.a, rho.b)
+            ar1.vals.list[[i]][6] <- runif(1, 0.5, 10)	
+          }
+        }
+      }
+      par.cl <- parallel::makePSOCKcluster(n.chains)
+      registerDoParallel(par.cl)
+      out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        .Call("tPGOcc", y, X, X.p, X.re, X.p.re, 
+              consts, n.occ.re.long, n.det.re.long,
+              beta.inits.list[[i]], alpha.inits.list[[i]], sigma.sq.psi.inits.list[[i]], 
+              sigma.sq.p.inits.list[[i]], beta.star.inits.list[[i]], alpha.star.inits.list[[i]], 
+              z.inits, z.long.indx, z.year.indx,
+              z.dat.indx, 
+              beta.star.indx, beta.level.indx,
+              alpha.star.indx, alpha.level.indx,
+              mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 
+              sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b,
+              ar1, ar1.vals.list[[i]], tuning.c,
+              n.batch, batch.length, accept.rate, 
+              n.omp.threads, verbose, n.report,  
+              n.burn, n.thin, n.post.samples, curr.chain, n.chains)
+      }
+      parallel::stopCluster(par.cl)
+    } else {
+      for (i in 1:n.chains) {
+        # Change initial values if i > 1
+        if ((i > 1) & (!fix.inits)) {
+          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+          if (p.det.re > 0) {
+            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+          }
+          if (p.occ.re > 0) {
+            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+          }
+          if (ar1) {
+            ar1.vals[5] <- runif(1, rho.a, rho.b)
+            ar1.vals[6] <- runif(1, 0.5, 10)	
+          }
+        }
+        storage.mode(curr.chain) <- "integer"
+        out.tmp[[i]] <- .Call("tPGOcc", y, X, X.p, X.re, X.p.re, 
+                              consts, n.occ.re.long, n.det.re.long,
+                              beta.inits, alpha.inits, sigma.sq.psi.inits, 
+                              sigma.sq.p.inits, beta.star.inits, alpha.star.inits, 
+                              z.inits, z.long.indx, z.year.indx,
+                              z.dat.indx, 
+                              beta.star.indx, beta.level.indx,
+                              alpha.star.indx, alpha.level.indx,
+                              mu.beta, Sigma.beta, mu.alpha, Sigma.alpha, 
+                              sigma.sq.psi.a, sigma.sq.psi.b, sigma.sq.p.a, sigma.sq.p.b,
+                              ar1, ar1.vals, tuning.c,
+                              n.batch, batch.length, accept.rate, 
+                              n.omp.threads, verbose, n.report,  
+                              n.burn, n.thin, n.post.samples, curr.chain, n.chains)
+        curr.chain <- curr.chain + 1
+      }
     }
 
     # Calculate R-Hat ---------------

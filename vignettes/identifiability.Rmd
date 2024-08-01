@@ -41,7 +41,7 @@ library(splines) # For creating spline basis of covariates
 
 To diagnose a weak form of identifiability, we need to see how a model performs on data from a data-generating process that does not match the model. We will want to generate these data under a variety of sample sizes including sizes larger than we expect to see in practice.
 
-An updated version of the `simTOcc` function introduced in [v0.6.0](https://www.jeffdoser.com/files/spoccupancy-web/news/index.html) allows us to simulate data from two different classes of data-generating processes: 
+An updated version of the `simTOcc` function introduced in [v0.6.0](https://www.doserlab.com/files/spoccupancy-web/news/index.html) allows us to simulate data from two different classes of data-generating processes: 
 
 - a scaled logistic where occurrence and detection probabilities still are related to covariates via a logit link but the occurrence probabilities level off at a value less than one, and
 - a linear specification where occurrence and detection probabilities are linearly related to covariates (while the values respect the probability range within the range of covariate values observed).
@@ -589,8 +589,8 @@ save(X.p.sp_SV, file = "data-for-vignette/basisPSV_largeScaleEx.RData")
 ```
 
 ```{r, echo = FALSE}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/occurSV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPSiSV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/occurSV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPSiSV_largeScaleEx.RData"))
 ```
 
 ```{r, fig.width = 8, fig.height = 5}
@@ -664,8 +664,8 @@ mtext(
 ```
 
 ```{r, echo = FALSE}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/detectSV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPSV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/detectSV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPSV_largeScaleEx.RData"))
 ```
 
 ```{r, fig.width = 8, fig.height = 5}
@@ -830,8 +830,8 @@ save(X.p.sp, file = "data-for-vignette/basisPDV_largeScaleEx.RData")
 
 
 ```{r, echo = FALSE}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/occurDV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPSiDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/occurDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPSiDV_largeScaleEx.RData"))
 ```
 
 ```{r, fig.width = 8, fig.height = 5}
@@ -905,8 +905,8 @@ mtext(
 ```
 
 ```{r, echo = FALSE}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/detectDV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/detectDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPDV_largeScaleEx.RData"))
 ```
 
 ```{r, fig.width = 8, fig.height = 5}
@@ -990,7 +990,7 @@ In contrast, with double visit data, there is a much narrower range, and the sha
 This seems like a lot of pre-processing code. Is there an easier way to investigate weak identifiability? Here are some helper functions for pre-processing the data for input into a `spOcc` model fitting procedure and for plotting the results. The plot functions can be further adapted for different number of knots.
 
 ```{r}
-source(url("https://www.jeffdoser.com/files/misc/id-vignette/helper-fns.R"))
+source(url("https://www.doserlab.com/files/misc/id-vignette/helper-fns.R"))
 ```
 
 ```{r, eval = F}
@@ -1034,16 +1034,16 @@ detect_est <- apply(out_sv$alpha.samples, 2, mean) ## detection coeffs
 Below we load in the results from the double visit simulations, which you can download yourself if you don't want to run the full code (which can take a couple of hours). Note the single-visit results can also be downloaded by chaing the dv/DV to sv/SV in the file names below.
 
 ```{r, fig.width = 8, fig.height = 5}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/dv_dat_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/occurDV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPSiDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/dv_dat_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/occurDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPSiDV_largeScaleEx.RData"))
 
 plot_occur(dv_dat_large, X.sp, occur_estDV)
 ```
 
 ```{r, fig.width = 8, fig.height = 5}
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/detectDV_largeScaleEx.RData"))
-load(file = url("https://www.jeffdoser.com/files/misc/id-vignette/basisPDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/detectDV_largeScaleEx.RData"))
+load(file = url("https://www.doserlab.com/files/misc/id-vignette/basisPDV_largeScaleEx.RData"))
 
 plot_detect(dv_dat_large, X.p.sp, detect_estDV)
 ```

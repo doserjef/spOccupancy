@@ -2,18 +2,18 @@ Package: spOccupancy
 Type: Package
 Title: Single-Species, Multi-Species, and Integrated Spatial Occupancy Models
 Version: 0.8.0
-Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="doserjef@msu.edu"), person("Andrew", "Finley", role = c("aut")), person("Marc", "Kery", role = c('ctb')))
+Authors@R: c(person("Jeffrey", "Doser", role=c("aut", "cre"), email="jwdoser@ncsu.edu"), person("Andrew", "Finley", role = c("aut")), person("Marc", "Kery", role = c('ctb')))
 Author: Jeffrey Doser [aut, cre], Andrew Finley [aut], Marc Kery [ctb]
-Maintainer: Jeffrey Doser <doserjef@msu.edu>
+Maintainer: Jeffrey Doser <jwdoser@ncsu.edu>
 Description: Fits single-species, multi-species, and integrated non-spatial and spatial occupancy models using Markov Chain Monte Carlo (MCMC). Models are fit using Polya-Gamma data augmentation detailed in Polson, Scott, and Windle (2013) <doi:10.1080/01621459.2013.829001>. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. Details on NNGP models are given in Datta, Banerjee, Finley, and Gelfand (2016) <doi:10.1080/01621459.2015.1044091> and Finley, Datta, and Banerjee (2022) <doi:10.18637/jss.v103.i05>. Provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. Details on data integration are given in Miller, Pacifici, Sanderlin, and Reich (2019) <doi:10.1111/2041-210X.13110>. Details on single-species and multi-species models are found in MacKenzie, Nichols, Lachman, Droege, Royle, and Langtimm (2002) <doi:10.1890/0012-9658(2002)083[2248:ESORWD]2.0.CO;2> and Dorazio and Royle <doi:10.1198/016214505000000015>, respectively. 
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-URL: https://www.jeffdoser.com/files/spoccupancy-web, https://github.com/doserjef/spOccupancy
+URL: https://www.doserlab.com/files/spoccupancy-web, https://groups.google.com/g/spocc-spabund-users, https://github.com/doserjef/spOccupancy
 BugReports: https://github.com/doserjef/spOccupancy/issues
 Depends: R (>= 3.5.0)
 Imports: 
-    stats, coda, abind, RANN, lme4, foreach, doParallel, spAbundance, methods
+    stats, coda, abind, RANN, lme4, foreach, doParallel, parallel, spAbundance, methods
 Suggests:
     testthat

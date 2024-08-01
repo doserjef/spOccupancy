@@ -1,8 +1,8 @@
 PGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		  n.samples, n.omp.threads = 1, verbose = TRUE,
-		  n.report = 100, n.burn = round(.10 * n.samples), n.thin = 1, 
-		  n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed = 100, 
-		  k.fold.only = FALSE, ...){
+                  n.samples, n.omp.threads = 1, verbose = TRUE,
+                  n.report = 100, n.burn = round(.10 * n.samples), n.thin = 1, 
+                  n.chains = 1, parallel.chains = FALSE, k.fold, k.fold.threads = 1, 
+                  k.fold.seed = 100, k.fold.only = FALSE, ...){
 
     ptm <- proc.time()
 
@@ -652,32 +652,95 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out.tmp <- list()
     out <- list()
     if (!k.fold.only) {
-      for (i in 1:n.chains) {
-        # Change initial values if i > 1
-        if ((i > 1) & (!fix.inits)) {
-          beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-          alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+      if (parallel.chains) {
+        if (verbose) {
+          cat("----------------------------------------\n");
+          cat("\tRunning the model\n");
+          cat("----------------------------------------\n");
+          message("MCMC chains are running in parallel. Model progress output is suppressed.")
+        }
+        beta.inits.list <- list()
+        beta.inits.list[[1]] <- beta.inits
+        alpha.inits.list <- list()
+        alpha.inits.list[[1]] <- alpha.inits
+        sigma.sq.psi.inits.list <- list()
+        sigma.sq.psi.inits.list[[1]] <- sigma.sq.psi.inits
+        beta.star.inits.list <- list()
+        beta.star.inits.list[[1]] <- beta.star.inits
+        sigma.sq.p.inits.list <- list()
+        sigma.sq.p.inits.list[[1]] <- sigma.sq.p.inits
+        alpha.star.inits.list <- list()
+        alpha.star.inits.list[[1]] <- alpha.star.inits
+        if (!fix.inits) {
+          for (i in 2:n.chains) {
+            beta.inits.list[[i]] <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+            alpha.inits.list[[i]] <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+            } else {
+              sigma.sq.psi.inits.list[[i]] <- 1
+              beta.star.inits.list[[i]] <- 1
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+            } else {
+              sigma.sq.p.inits.list[[i]] <- 1
+              alpha.star.inits.list[[i]] <- 1
+            }
           }
-          if (p.det.re > 0) {
-            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+        } else {
+          for (i in 2:n.chains) {
+            beta.inits.list[[i]] <- beta.inits.list[[1]]
+            alpha.inits.list[[i]] <- alpha.inits.list[[1]]
+            sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits.list[[1]]
+            beta.star.inits.list[[i]] <- beta.star.inits.list[[1]]
+            sigma.sq.p.inits.list[[i]] <- sigma.sq.p.inits.list[[1]]
+            alpha.star.inits.list[[i]] <- alpha.star.inits.list[[1]]
           }
         }
-        storage.mode(chain.info) <- "integer"
-        # Run the model in C
-        out.tmp[[i]] <- .Call("PGOcc", y, X, X.p, X.re, X.p.re, consts, 
-          		    K, n.occ.re.long, n.det.re.long, beta.inits, alpha.inits, 
-          		    sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits, 
-          		    alpha.star.inits, z.inits, z.long.indx, beta.star.indx, 
-          		    beta.level.indx, alpha.star.indx, alpha.level.indx, mu.beta, 
-          		    mu.alpha, Sigma.beta, Sigma.alpha, sigma.sq.psi.a, sigma.sq.psi.b, 
-          		    sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, verbose, 
-          		    n.report, samples.info, chain.info)
-        chain.info[1] <- chain.info[1] + 1
-      } # i   
+        par.cl <- parallel::makePSOCKcluster(n.chains)
+        registerDoParallel(par.cl)
+        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+          .Call("PGOcc", y, X, X.p, X.re, X.p.re, consts, 
+                K, n.occ.re.long, n.det.re.long, beta.inits.list[[i]], alpha.inits.list[[i]], 
+                sigma.sq.psi.inits.list[[i]], sigma.sq.p.inits.list[[i]], beta.star.inits.list[[i]], 
+                alpha.star.inits.list[[i]], z.inits, z.long.indx, beta.star.indx, 
+                beta.level.indx, alpha.star.indx, alpha.level.indx, mu.beta, 
+                mu.alpha, Sigma.beta, Sigma.alpha, sigma.sq.psi.a, sigma.sq.psi.b, 
+                sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, verbose, 
+                n.report, samples.info, chain.info)
+        }
+        parallel::stopCluster(par.cl)
+      } else {
+        for (i in 1:n.chains) {
+          # Change initial values if i > 1
+          if ((i > 1) & (!fix.inits)) {
+            beta.inits <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+            alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+            }
+          }
+          storage.mode(chain.info) <- "integer"
+          # Run the model in C
+          out.tmp[[i]] <- .Call("PGOcc", y, X, X.p, X.re, X.p.re, consts, 
+            		    K, n.occ.re.long, n.det.re.long, beta.inits, alpha.inits, 
+            		    sigma.sq.psi.inits, sigma.sq.p.inits, beta.star.inits, 
+            		    alpha.star.inits, z.inits, z.long.indx, beta.star.indx, 
+            		    beta.level.indx, alpha.star.indx, alpha.level.indx, mu.beta, 
+            		    mu.alpha, Sigma.beta, Sigma.alpha, sigma.sq.psi.a, sigma.sq.psi.b, 
+            		    sigma.sq.p.a, sigma.sq.p.b, n.samples, n.omp.threads, verbose, 
+            		    n.report, samples.info, chain.info)
+          chain.info[1] <- chain.info[1] + 1
+        } # i   
+      }
       # Calculate R-Hat ---------------
       out <- list()
       out$rhat <- list()

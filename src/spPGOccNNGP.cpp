@@ -700,7 +700,7 @@ extern "C" {
 	if (!fixedParams[3]) {
           if (sigmaSqIG) {
 #ifdef _OPENMP
-#pragma omp parallel for private (e, i, b) reduction(+:a, logDet)
+#pragma omp parallel for private (e, i, b) reduction(+:a)
 #endif
             for (j = 0; j < Jw; j++){
               if(nnIndxLU[Jw+j] > 0){

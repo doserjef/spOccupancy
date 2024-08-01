@@ -110,7 +110,7 @@ We assign normal priors for the occurrence and data-set specific detection regre
 
 ## Fitting integrated multi-species occupancy models with `intMsPGOcc()`
 
-The function `intMsPGOcc()` fits multi-species integrated occupancy models in `spOccupancy`. The function follows the standard `spOccupancy` syntax, and more details on this syntax are available in the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting). 
+The function `intMsPGOcc()` fits multi-species integrated occupancy models in `spOccupancy`. The function follows the standard `spOccupancy` syntax, and more details on this syntax are available in the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting). 
 
 ```{r, eval = FALSE}
 intMsPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
@@ -165,7 +165,7 @@ data.list <- list(y = y.full,
 str(data.list)
 ```
 
-We will now go ahead and run the integrated multi-species occupancy model. We will first fit a model with a linear and quadratic effect of elevation on occurrence, and effects of day (linear and quadratic) of the year and time of day (linear) on the detection process for each data source. Note that there is no requirement to have the same covariates on the detection models for each individual data source. The function `intMsPGOcc()` also allows the user to specify the priors and initial values, which follow the same format as other `spOccupancy` functions (see the [introductory vignette](https://www.jeffdoser.com/files/spoccupancy-web/articles/modelfitting) for details), but here we will just use the default values, which we see below are printed to the screen. The last thing we need to do is specify the formulas for occurrence and detection (note we need a separate formula for each data source for the detection models in `det.formula`, which are supplied as a list). We also specify all the criteria of the MCMC sampler, where here we run three chains of the model for 20,000 iterations with a burn-in period of 12,000 and a thinning rate of 8, resulting in a total of 3000 posterior samples.
+We will now go ahead and run the integrated multi-species occupancy model. We will first fit a model with a linear and quadratic effect of elevation on occurrence, and effects of day (linear and quadratic) of the year and time of day (linear) on the detection process for each data source. Note that there is no requirement to have the same covariates on the detection models for each individual data source. The function `intMsPGOcc()` also allows the user to specify the priors and initial values, which follow the same format as other `spOccupancy` functions (see the [introductory vignette](https://www.doserlab.com/files/spoccupancy-web/articles/modelfitting) for details), but here we will just use the default values, which we see below are printed to the screen. The last thing we need to do is specify the formulas for occurrence and detection (note we need a separate formula for each data source for the detection models in `det.formula`, which are supplied as a list). We also specify all the criteria of the MCMC sampler, where here we run three chains of the model for 20,000 iterations with a burn-in period of 12,000 and a thinning rate of 8, resulting in a total of 3000 posterior samples.
 
 ```{r}
 # Approx. run time: 3 minutes
