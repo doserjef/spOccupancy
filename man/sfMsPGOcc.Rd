@@ -12,7 +12,8 @@ sfMsPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
           batch.length, accept.rate = 0.43, n.omp.threads = 1, 
           verbose = TRUE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, 
-          n.chains = 1, k.fold, k.fold.threads = 1, k.fold.seed, 
+          n.chains = 1, parallel.chains = FALSE, 
+          k.fold, k.fold.threads = 1, k.fold.seed, 
           k.fold.only = FALSE, ...)
 }
 
@@ -171,7 +172,7 @@ easting and northing coordinate, respectively. Typically, each site in the data
     0.43. See Roberts and Rosenthal (2009) for details.}
   
   \item{n.omp.threads}{a positive integer indicating
-   the number of threads to use for SMP parallel processing. The package must
+   the number of threads to use for SMP parallel processing within chains. The package must
    be compiled for OpenMP support. For most Intel-based machines, we
    recommend setting \code{n.omp.threads} up to the number of
    hyperthreaded cores. Note, \code{n.omp.threads} > 1 might not
@@ -193,6 +194,11 @@ easting and northing coordinate, respectively. Typically, each site in the data
     value is set to 1.}
 
   \item{n.chains}{the number of chains to run in sequence.}
+
+  \item{parallel.chains}{a logical value indicating whether the \code{n.chains} 
+    chains will be run in parallel. Note this is distinct from the \code{n.omp.threads}
+    arugment, which implements \emph{within-chain} parallelization for spatially-explicit
+    models. Note if set to \code{TRUE}, all model progress output will be suppressed.}
 
   \item{k.fold}{specifies the number of \emph{k} folds for cross-validation. 
     If not specified as an argument, then cross-validation is not performed

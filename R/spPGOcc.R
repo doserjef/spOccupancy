@@ -1046,7 +1046,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
          }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           .Call("spPGOcc", y, X, X.p, coords.D, X.re, X.p.re, consts, 
           	    K, n.occ.re.long, n.det.re.long, 
                 beta.inits.list[[i]], alpha.inits.list[[i]], 
@@ -1244,7 +1244,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
@@ -1656,7 +1656,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
          }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           .Call("spPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, consts, 
           	    K, n.occ.re.long, n.det.re.long, 
                 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
@@ -1881,7 +1881,7 @@ spPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sites.random <- sample(1:J.w)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
         curr.set.small <- sort(sites.random[sites.k.fold[[i]]])
         curr.set <- which(grid.index.r %in% curr.set.small)
         if (binom) {

@@ -1006,7 +1006,7 @@ tIntPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     }
     par.cl <- parallel::makePSOCKcluster(n.chains)
     registerDoParallel(par.cl)
-    out.tmp <- foreach(i = 1:n.chains) %dopar% {
+    out.tmp <- foreach(i = 1:n.chains) %dorng% {
       .Call("tIntPGOcc", y, X, X.p.all, X.re, X.p.re.all, 
             consts, p.det.long, J.long, n.obs.long, 
             n.occ.re.long, n.det.re.long,

@@ -798,7 +798,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
         }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           out.tmp[[i]] <- .Call("svcPGBinomNNGP", y, X, X.w, coords, X.re, consts, 
                                 weights, n.re.long, 
                                 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
@@ -974,7 +974,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         y.fit <- y[-curr.set]
 	y.0 <- y[curr.set]

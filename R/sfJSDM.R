@@ -1,13 +1,14 @@
 sfJSDM <- function(formula, data, inits, priors, 
-		   tuning, cov.model = 'exponential', NNGP = TRUE, 
-		   n.neighbors = 15, search.type = "cb", 
-		   std.by.sp = FALSE, n.factors, 
-		   n.batch, batch.length, accept.rate = 0.43,
-		   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-		   n.burn = round(.10 * n.batch * batch.length), 
-		   n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		   k.fold.seed = 100, k.fold.only = FALSE, monitors, 
-		   keep.only.mean.95, shared.spatial = FALSE, ...){
+                   tuning, cov.model = 'exponential', NNGP = TRUE, 
+                   n.neighbors = 15, search.type = "cb", 
+                   std.by.sp = FALSE, n.factors, 
+                   n.batch, batch.length, accept.rate = 0.43,
+                   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+                   n.burn = round(.10 * n.batch * batch.length), 
+                   n.thin = 1, n.chains = 1, parallel.chains = FALSE, 
+                   k.fold, k.fold.threads = 1, k.fold.seed = 100, 
+                   k.fold.only = FALSE, monitors, 
+                   keep.only.mean.95, shared.spatial = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -922,50 +923,124 @@ sfJSDM <- function(formula, data, inits, priors,
     seeds.list <- list()
     out <- list()
     if (!k.fold.only) {
-      for (i in 1:n.chains) {
-        # Change initial values if i > 1
-        if ((i > 1) & (!fix.inits)) {
-          if (!ind.betas) {
-            beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-            tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
-	  }
-          beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                		     sqrt(tau.sq.beta.inits)), N, p.occ)
-          beta.inits <- c(beta.inits)
-	  if (!shared.spatial) {
-            lambda.inits <- matrix(0, N, q)
-            diag(lambda.inits) <- 1
-            lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
-            lambda.inits <- c(lambda.inits)
-	  } else {
-            sigma.sq.inits <- rep(1, 0.1, 5)
-	  }
-          phi.inits <- runif(q, phi.a, phi.b)
-          if (cov.model == 'matern') {
-            nu.inits <- runif(q, nu.a, nu.b)
-          }
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-            beta.star.inits <- rep(beta.star.inits, N)
+      if (parallel.chains) {
+        if (verbose) {
+          cat("\n----------------------------------------\n");
+          cat("\tRunning the model\n");
+          cat("----------------------------------------\n");
+          message("MCMC chains are running in parallel. Model progress output is suppressed.")
+        }
+        beta.comm.inits.list <- list()
+        tau.sq.beta.inits.list <- list()
+        beta.inits.list <- list()
+        sigma.sq.psi.inits.list <- list()
+        beta.star.inits.list <- list()
+        lambda.inits.list <- list()
+        phi.inits.list <- list()
+        sigma.sq.inits.list <- list()
+        nu.inits.list <- list()
+        for (i in 1:n.chains) {
+          beta.comm.inits.list[[i]] <- beta.comm.inits
+          tau.sq.beta.inits.list[[i]] <- tau.sq.beta.inits
+          beta.inits.list[[i]] <- beta.inits
+          sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
+          beta.star.inits.list[[i]] <- beta.star.inits
+          lambda.inits.list[[i]] <- lambda.inits
+          phi.inits.list[[i]] <- phi.inits
+          sigma.sq.inits.list[[i]] <- sigma.sq.inits
+          nu.inits.list[[i]] <- nu.inits
+        }
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            if (!ind.betas) {
+              beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+            }
+            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+            }
+            if (!shared.spatial) {
+              lambda.inits.list[[i]] <- matrix(0, N, q)
+              diag(lambda.inits.list[[i]]) <- 1
+              lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
+              lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+            } else {
+              sigma.sq.inits.list[[i]] <- rep(1, 0.1, 5)
+            }
+            phi.inits.list[[i]] <- runif(q, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits.list[[i]] <- runif(q, nu.a, nu.b)
+            }
           }
         }
+        par.cl <- parallel::makePSOCKcluster(n.chains)
+        registerDoParallel(par.cl)
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
+          .Call("sfJSDMNNGP", y, X.big, coords, X.re, consts, n.occ.re.long, 
+                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
+                beta.inits.list[[i]], beta.comm.inits.list[[i]], 
+                tau.sq.beta.inits.list[[i]], phi.inits.list[[i]], 
+                lambda.inits.list[[i]], sigma.sq.inits.list[[i]], nu.inits.list[[i]], 
+                sigma.sq.psi.inits.list[[i]], beta.star.inits.list[[i]], w.inits,
+                beta.star.indx, beta.level.indx, mu.beta.comm, Sigma.beta.comm, 
+                tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b,
+                nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                tuning.c, cov.model.indx, n.batch, 
+                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                samples.info, chain.info, monitors, range.ind)
+        }
+        parallel::stopCluster(par.cl)
+      } else {
+        for (i in 1:n.chains) {
+          # Change initial values if i > 1
+          if ((i > 1) & (!fix.inits)) {
+            if (!ind.betas) {
+              beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+            }
+            beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                       sqrt(tau.sq.beta.inits)), N, p.occ)
+            beta.inits <- c(beta.inits)
+            if (!shared.spatial) {
+              lambda.inits <- matrix(0, N, q)
+              diag(lambda.inits) <- 1
+              lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+              lambda.inits <- c(lambda.inits)
+            } else {
+              sigma.sq.inits <- rep(1, 0.1, 5)
+            }
+            phi.inits <- runif(q, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits <- runif(q, nu.a, nu.b)
+            }
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rep(beta.star.inits, N)
+            }
+          }
 
-        storage.mode(chain.info) <- "integer"
-        # Run the model in C
-        out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X.big, coords, X.re, consts, n.occ.re.long, 
-          	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-          	            beta.inits, beta.comm.inits, tau.sq.beta.inits, phi.inits, 
-          	            lambda.inits, sigma.sq.inits, nu.inits, 
-			    sigma.sq.psi.inits, beta.star.inits, w.inits,
-          		    beta.star.indx, beta.level.indx, mu.beta.comm, Sigma.beta.comm, 
-          	            tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b,
-          	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
-          		    tuning.c, cov.model.indx, n.batch, 
-          	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info, monitors, range.ind)
-        chain.info[1] <- chain.info[1] + 1
-	seeds.list[[i]] <- .Random.seed
+          storage.mode(chain.info) <- "integer"
+          # Run the model in C
+          out.tmp[[i]] <- .Call("sfJSDMNNGP", y, X.big, coords, X.re, consts, n.occ.re.long, 
+                                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
+                                beta.inits, beta.comm.inits, tau.sq.beta.inits, phi.inits, 
+                                lambda.inits, sigma.sq.inits, nu.inits, 
+                                sigma.sq.psi.inits, beta.star.inits, w.inits,
+                                beta.star.indx, beta.level.indx, mu.beta.comm, Sigma.beta.comm, 
+                                tau.sq.beta.a, tau.sq.beta.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b,
+                                nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                                tuning.c, cov.model.indx, n.batch, 
+                                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                                samples.info, chain.info, monitors, range.ind)
+          chain.info[1] <- chain.info[1] + 1
+          seeds.list[[i]] <- .Random.seed
+        }
       }
       # Calculate R-Hat ---------------
       out <- list()
@@ -1219,7 +1294,12 @@ sfJSDM <- function(formula, data, inits, priors,
       update.list$search.type <- search.type
       update.list$formula <- formula
       # Random seed to have for updating. 
-      update.list$final.seed <- seeds.list
+      if (!parallel.chains) {
+        update.list$final.seed <- seeds.list
+      }
+      else {
+        update.list$final.seed <- attr(out.tmp, 'rng')
+      }
       out$update <- update.list
       if (p.occ.re > 0) {
         out$psiRE <- TRUE
@@ -1247,7 +1327,7 @@ sfJSDM <- function(formula, data, inits, priors,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         y.fit <- c(y.big[, -curr.set, drop = FALSE])
         y.fit <- y.fit[!is.na(y.fit)]

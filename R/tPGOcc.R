@@ -856,7 +856,7 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
       par.cl <- parallel::makePSOCKcluster(n.chains)
       registerDoParallel(par.cl)
-      out.tmp <- foreach(i = 1:n.chains) %dopar% {
+      out.tmp <- foreach(i = 1:n.chains) %dorng% {
         .Call("tPGOcc", y, X, X.p, X.re, X.p.re, 
               consts, n.occ.re.long, n.det.re.long,
               beta.inits.list[[i]], alpha.inits.list[[i]], sigma.sq.psi.inits.list[[i]], 
@@ -1048,7 +1048,7 @@ tPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     sites.random <- sample(1:J)    
     sites.k.fold <- split(sites.random, sites.random %% k.fold)
     registerDoParallel(k.fold.threads)
-    model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
+    model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
       curr.set <- sort(sites.random[sites.k.fold[[i]]])
       y.indx <- !((z.long.site.indx + 1) %in% curr.set)
       year.indx <- !((z.site.indx + 1) %in% curr.set)

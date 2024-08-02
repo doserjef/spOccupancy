@@ -1,11 +1,12 @@
 spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors, 
-		      tuning, cov.model = 'exponential', NNGP = TRUE, 
-		      n.neighbors = 15, search.type = "cb", n.batch, 
-		      batch.length, accept.rate = 0.43,
-		      n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-		      n.burn = round(.10 * n.batch * batch.length), 
-		      n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		      k.fold.seed = 100, k.fold.only = FALSE, ...){
+                      tuning, cov.model = 'exponential', NNGP = TRUE, 
+                      n.neighbors = 15, search.type = "cb", n.batch, 
+                      batch.length, accept.rate = 0.43,
+                      n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+                      n.burn = round(.10 * n.batch * batch.length), 
+                      n.thin = 1, n.chains = 1, parallel.chains = FALSE, 
+                      k.fold, k.fold.threads = 1, 
+                      k.fold.seed = 100, k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -1169,59 +1170,154 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out.tmp <- list()
     out <- list()
     if (!k.fold.only) {
-      for (i in 1:n.chains) {
-        # Change initial values if i > 1
-        if ((i > 1) & (!fix.inits)) {
-          beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-          alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-          tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
-          tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
-          beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                		     sqrt(tau.sq.beta.inits)), N, p.occ)
-          alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                		      sqrt(tau.sq.alpha.inits)), N, p.det)
-          if (!fixed.sigma.sq) {
-            if (sigma.sq.ig) {
-              sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-            } else {
-              sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+      if (parallel.chains) {
+        if (verbose) {
+          cat("\n----------------------------------------\n");
+          cat("\tRunning the model\n");
+          cat("----------------------------------------\n");
+          message("MCMC chains are running in parallel. Model progress output is suppressed.")
+        }
+        beta.comm.inits.list <- list()
+        alpha.comm.inits.list <- list()
+        tau.sq.beta.inits.list <- list()
+        tau.sq.alpha.inits.list <- list()
+        beta.inits.list <- list()
+        alpha.inits.list <- list()
+        sigma.sq.psi.inits.list <- list()
+        beta.star.inits.list <- list()
+        sigma.sq.p.inits.list <- list()
+        alpha.star.inits.list <- list()
+        sigma.sq.inits.list <- list()
+        phi.inits.list <- list()
+        nu.inits.list <- list()
+        for (i in 1:n.chains) {
+          beta.comm.inits.list[[i]] <- beta.comm.inits
+          alpha.comm.inits.list[[i]] <- alpha.comm.inits
+          tau.sq.beta.inits.list[[i]] <- tau.sq.beta.inits
+          tau.sq.alpha.inits.list[[i]] <- tau.sq.alpha.inits
+          beta.inits.list[[i]] <- beta.inits
+          alpha.inits.list[[i]] <- alpha.inits
+          sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
+          beta.star.inits.list[[i]] <- beta.star.inits
+          sigma.sq.p.inits.list[[i]] <- sigma.sq.p.inits
+          alpha.star.inits.list[[i]] <- alpha.star.inits
+          sigma.sq.inits.list[[i]] <- sigma.sq.inits
+          phi.inits.list[[i]] <- phi.inits
+          nu.inits.list[[i]] <- nu.inits
+        }
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 
+                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+            }
+            if (!fixed.sigma.sq) {
+              if (sigma.sq.ig) {
+                sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
+              } else {
+                sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+              }
+            }
+            phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
             }
           }
-          phi.inits <- runif(N, phi.a, phi.b)
-          if (cov.model == 'matern') {
-            nu.inits <- runif(N, nu.a, nu.b)
-          }
-          if (p.det.re > 0) {
-            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
-            alpha.star.inits <- rep(alpha.star.inits, N)
-          }
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-            beta.star.inits <- rep(beta.star.inits, N)
-          }
         }
+        par.cl <- parallel::makePSOCKcluster(n.chains)
+        registerDoParallel(par.cl)
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
+          .Call("spMsPGOcc", y, X, X.p, coords.D, X.re, X.p.re, consts, 
+          	    K, n.occ.re.long, n.det.re.long, 
+                beta.inits.list[[i]], alpha.inits.list[[i]], z.inits,
+                beta.comm.inits.list[[i]], alpha.comm.inits.list[[i]], tau.sq.beta.inits.list[[i]], 
+                tau.sq.alpha.inits.list[[i]], w.inits, phi.inits.list[[i]], 
+                sigma.sq.inits.list[[i]], nu.inits.list[[i]], 
+                sigma.sq.psi.inits.list[[i]], sigma.sq.p.inits.list[[i]], 
+          	    beta.star.inits.list[[i]], alpha.star.inits.list[[i]], z.long.indx, 
+                beta.star.indx, beta.level.indx, alpha.star.indx, 
+                alpha.level.indx, mu.beta.comm, 
+            	  mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+            	  tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+            	  tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
+            	  nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                sigma.sq.p.a, sigma.sq.p.b, 
+                tuning.c, cov.model.indx, n.batch, 
+                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                samples.info, chain.info, sigma.sq.info)
+        }
+        parallel::stopCluster(par.cl)
+      } else {
+        for (i in 1:n.chains) {
+          # Change initial values if i > 1
+          if ((i > 1) & (!fix.inits)) {
+            beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+            tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+            tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
+            beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                 sqrt(tau.sq.beta.inits)), N, p.occ)
+            alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                  sqrt(tau.sq.alpha.inits)), N, p.det)
+            if (!fixed.sigma.sq) {
+              if (sigma.sq.ig) {
+                sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+              } else {
+                sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+              }
+            }
+            phi.inits <- runif(N, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits <- runif(N, nu.a, nu.b)
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+              alpha.star.inits <- rep(alpha.star.inits, N)
+            }
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rep(beta.star.inits, N)
+            }
+          }
 
-        storage.mode(chain.info) <- "integer"
-        out.tmp[[i]] <- .Call("spMsPGOcc", y, X, X.p, coords.D, X.re, X.p.re, consts, 
-        	                    K, n.occ.re.long, n.det.re.long, 
-          	            beta.inits, alpha.inits, z.inits,
-          	            beta.comm.inits, alpha.comm.inits, tau.sq.beta.inits, 
-          	            tau.sq.alpha.inits, w.inits, phi.inits, 
-          	            sigma.sq.inits, nu.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
-        	                    beta.star.inits, alpha.star.inits, z.long.indx, 
-          		    beta.star.indx, beta.level.indx, alpha.star.indx, 
-          		    alpha.level.indx, mu.beta.comm, 
-          	            mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	            tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
-          	            tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
-          	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
-          		    sigma.sq.p.a, sigma.sq.p.b, 
-        		            tuning.c, cov.model.indx, n.batch, 
-          	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info, sigma.sq.info)
-        chain.info[1] <- chain.info[1] + 1
+          storage.mode(chain.info) <- "integer"
+          out.tmp[[i]] <- .Call("spMsPGOcc", y, X, X.p, coords.D, X.re, X.p.re, consts, 
+          	                    K, n.occ.re.long, n.det.re.long, 
+                                beta.inits, alpha.inits, z.inits,
+                                beta.comm.inits, alpha.comm.inits, tau.sq.beta.inits, 
+                                tau.sq.alpha.inits, w.inits, phi.inits, 
+                                sigma.sq.inits, nu.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
+          	                    beta.star.inits, alpha.star.inits, z.long.indx, 
+                                beta.star.indx, beta.level.indx, alpha.star.indx, 
+                                alpha.level.indx, mu.beta.comm, 
+            	                  mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+            	                  tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+            	                  tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
+            	                  nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                                sigma.sq.p.a, sigma.sq.p.b, 
+                                tuning.c, cov.model.indx, n.batch, 
+                                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                                samples.info, chain.info, sigma.sq.info)
+          chain.info[1] <- chain.info[1] + 1
+        }
       }
       # Calculate R-Hat ---------------
       out <- list()
@@ -1405,7 +1501,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
@@ -1779,60 +1875,156 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
     out.tmp <- list()
     out <- list()
     if (!k.fold.only) {
-      for (i in 1:n.chains) {
-        # Change initial values if i > 1
-        if ((i > 1) & (!fix.inits)) {
-          beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-          alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-          tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
-          tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
-          beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                		     sqrt(tau.sq.beta.inits)), N, p.occ)
-          alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                		      sqrt(tau.sq.alpha.inits)), N, p.det)
-          if (!fixed.sigma.sq) {
-            if (sigma.sq.ig) {
-              sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
-            } else {
-              sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+      if (parallel.chains) {
+        if (verbose) {
+          cat("\n----------------------------------------\n");
+          cat("\tRunning the model\n");
+          cat("----------------------------------------\n");
+          message("MCMC chains are running in parallel. Model progress output is suppressed.")
+        }
+        beta.comm.inits.list <- list()
+        alpha.comm.inits.list <- list()
+        tau.sq.beta.inits.list <- list()
+        tau.sq.alpha.inits.list <- list()
+        beta.inits.list <- list()
+        alpha.inits.list <- list()
+        sigma.sq.psi.inits.list <- list()
+        beta.star.inits.list <- list()
+        sigma.sq.p.inits.list <- list()
+        alpha.star.inits.list <- list()
+        sigma.sq.inits.list <- list()
+        phi.inits.list <- list()
+        nu.inits.list <- list()
+        for (i in 1:n.chains) {
+          beta.comm.inits.list[[i]] <- beta.comm.inits
+          alpha.comm.inits.list[[i]] <- alpha.comm.inits
+          tau.sq.beta.inits.list[[i]] <- tau.sq.beta.inits
+          tau.sq.alpha.inits.list[[i]] <- tau.sq.alpha.inits
+          beta.inits.list[[i]] <- beta.inits
+          alpha.inits.list[[i]] <- alpha.inits
+          sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
+          beta.star.inits.list[[i]] <- beta.star.inits
+          sigma.sq.p.inits.list[[i]] <- sigma.sq.p.inits
+          alpha.star.inits.list[[i]] <- alpha.star.inits
+          sigma.sq.inits.list[[i]] <- sigma.sq.inits
+          phi.inits.list[[i]] <- phi.inits
+          nu.inits.list[[i]] <- nu.inits
+        }
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 
+                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+            }
+            if (!fixed.sigma.sq) {
+              if (sigma.sq.ig) {
+                sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
+              } else {
+                sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+              }
+            }
+            phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
             }
           }
-          phi.inits <- runif(N, phi.a, phi.b)
-          if (cov.model == 'matern') {
-            nu.inits <- runif(N, nu.a, nu.b)
-          }
-          if (p.det.re > 0) {
-            sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-            alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
-            alpha.star.inits <- rep(alpha.star.inits, N)
-          }
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-            beta.star.inits <- rep(beta.star.inits, N)
-          }
         }
+        par.cl <- parallel::makePSOCKcluster(n.chains)
+        registerDoParallel(par.cl)
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
+          .Call("spMsPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, consts, 
+          	    K, n.occ.re.long, n.det.re.long, 
+                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
+                beta.inits.list[[i]], alpha.inits.list[[i]], z.inits,
+                beta.comm.inits.list[[i]], alpha.comm.inits.list[[i]], tau.sq.beta.inits.list[[i]], 
+                tau.sq.alpha.inits.list[[i]], w.inits, phi.inits.list[[i]], 
+                sigma.sq.inits.list[[i]], nu.inits.list[[i]], 
+                sigma.sq.psi.inits.list[[i]], sigma.sq.p.inits.list[[i]], 
+          	    beta.star.inits.list[[i]], alpha.star.inits.list[[i]], z.long.indx, 
+                beta.star.indx, beta.level.indx, alpha.star.indx, 
+                alpha.level.indx, mu.beta.comm, 
+                mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+                tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+                tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
+                nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                sigma.sq.p.a, sigma.sq.p.b, 
+                tuning.c, cov.model.indx, n.batch, 
+                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                samples.info, chain.info, sigma.sq.info)
+        }
+        parallel::stopCluster(par.cl)
+      } else {
+        for (i in 1:n.chains) {
+          # Change initial values if i > 1
+          if ((i > 1) & (!fix.inits)) {
+            beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            alpha.comm.inits <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+            tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+            tau.sq.alpha.inits <- runif(p.det, 0.5, 10)
+            beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                       sqrt(tau.sq.beta.inits)), N, p.occ)
+            alpha.inits <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                        sqrt(tau.sq.alpha.inits)), N, p.det)
+            if (!fixed.sigma.sq) {
+              if (sigma.sq.ig) {
+                sigma.sq.inits <- rigamma(N, sigma.sq.a, sigma.sq.b)
+              } else {
+                sigma.sq.inits <- runif(N, sigma.sq.a, sigma.sq.b)
+              }
+            }
+            phi.inits <- runif(N, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits <- runif(N, nu.a, nu.b)
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+              alpha.star.inits <- rep(alpha.star.inits, N)
+            }
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rep(beta.star.inits, N)
+            }
+          }
 
-        storage.mode(chain.info) <- "integer"
-        out.tmp[[i]] <- .Call("spMsPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, consts, 
-        	                    K, n.occ.re.long, n.det.re.long, 
-          	            n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-          	            beta.inits, alpha.inits, z.inits,
-          	            beta.comm.inits, alpha.comm.inits, tau.sq.beta.inits, 
-          	            tau.sq.alpha.inits, w.inits, phi.inits, 
-          	            sigma.sq.inits, nu.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
-        	                    beta.star.inits, alpha.star.inits, z.long.indx, 
-          		    beta.star.indx, beta.level.indx, alpha.star.indx, 
-          		    alpha.level.indx, mu.beta.comm, 
-          	            mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
-          	            tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
-          	            tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
-          	            nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
-          		    sigma.sq.p.a, sigma.sq.p.b, 
-        		            tuning.c, cov.model.indx, n.batch, 
-          	            batch.length, accept.rate, n.omp.threads, verbose, n.report, 
-          	            samples.info, chain.info, sigma.sq.info)
-        chain.info[1] <- chain.info[1] + 1
+          storage.mode(chain.info) <- "integer"
+          out.tmp[[i]] <- .Call("spMsPGOccNNGP", y, X, X.p, coords, X.re, X.p.re, consts, 
+          	                    K, n.occ.re.long, n.det.re.long, 
+                                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
+                                beta.inits, alpha.inits, z.inits,
+                                beta.comm.inits, alpha.comm.inits, tau.sq.beta.inits, 
+                                tau.sq.alpha.inits, w.inits, phi.inits, 
+                                sigma.sq.inits, nu.inits, sigma.sq.psi.inits, sigma.sq.p.inits, 
+          	                    beta.star.inits, alpha.star.inits, z.long.indx, 
+                                beta.star.indx, beta.level.indx, alpha.star.indx, 
+                                alpha.level.indx, mu.beta.comm, 
+                                mu.alpha.comm, Sigma.beta.comm, Sigma.alpha.comm, 
+                                tau.sq.beta.a, tau.sq.beta.b, tau.sq.alpha.a, 
+                                tau.sq.alpha.b, phi.a, phi.b, sigma.sq.a, sigma.sq.b, 
+                                nu.a, nu.b, sigma.sq.psi.a, sigma.sq.psi.b, 
+                                sigma.sq.p.a, sigma.sq.p.b, 
+                                tuning.c, cov.model.indx, n.batch, 
+                                batch.length, accept.rate, n.omp.threads, verbose, n.report, 
+                                samples.info, chain.info, sigma.sq.info)
+          chain.info[1] <- chain.info[1] + 1
+        }
       }
       # Calculate R-Hat ---------------
       out <- list()
@@ -2040,7 +2232,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)

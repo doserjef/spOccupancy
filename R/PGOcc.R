@@ -702,7 +702,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           .Call("PGOcc", y, X, X.p, X.re, X.p.re, consts, 
                 K, n.occ.re.long, n.det.re.long, beta.inits.list[[i]], alpha.inits.list[[i]], 
                 sigma.sq.psi.inits.list[[i]], sigma.sq.p.inits.list[[i]], beta.star.inits.list[[i]], 
@@ -849,7 +849,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)

@@ -1105,7 +1105,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           .Call("spIntPGOcc", y, X, X.p.all, coords.D, X.re, X.p.re.all, 
                 consts, p.det.long, J.long, n.obs.long, n.occ.re.long, 
                 n.det.re.long, beta.inits.list[[i]], alpha.inits.list[[i]], 
@@ -1318,7 +1318,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
 	# curr.set.fit are the rows of X.fit that are included in the fitted model
@@ -1848,7 +1848,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         par.cl <- parallel::makePSOCKcluster(n.chains)
         registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dopar% {
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
           .Call("spIntPGOccNNGP", y, X, X.p.all, coords, X.re, X.p.re.all, 
                 consts, p.det.long, J.long, n.obs.long, n.occ.re.long, n.det.re.long, 
                 n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx, 
@@ -2067,7 +2067,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
       registerDoParallel(k.fold.threads)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
 	# curr.set.fit are the rows of X.fit that are included in the fitted model

@@ -1,9 +1,9 @@
-lfJSDM <- function(formula, data, inits, priors, 
-		   n.factors, n.samples,
-		   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
-		   n.burn = round(.10 * n.samples), 
-		   n.thin = 1, n.chains = 1, k.fold, k.fold.threads = 1, 
-		   k.fold.seed = 100, k.fold.only = FALSE, ...){
+lfJSDM <- function(formula, data, inits, priors, n.factors, n.samples,
+                   n.omp.threads = 1, verbose = TRUE, n.report = 100, 
+                   n.burn = round(.10 * n.samples), 
+                   n.thin = 1, n.chains = 1, parallel.chains = FALSE, 
+                   k.fold, k.fold.threads = 1, k.fold.seed = 100, 
+                   k.fold.only = FALSE, ...){
 
   ptm <- proc.time()
 
@@ -493,40 +493,97 @@ lfJSDM <- function(formula, data, inits, priors,
   seeds.list <- list()
   out <- list()
   if (!k.fold.only) {
-    for (i in 1:n.chains) {
-      # Change initial values if i > 1
-      if ((i > 1) & (!fix.inits)) {
-        beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-        tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
-        beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-              		     sqrt(tau.sq.beta.inits)), N, p.occ)
-        beta.inits <- c(beta.inits)
-	if (q != 0) {
-          lambda.inits <- matrix(0, N, q)
-          diag(lambda.inits) <- 1
-          lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
-          lambda.inits <- c(lambda.inits)
-	}
-        if (p.occ.re > 0) {
-          sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-          beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-          beta.star.inits <- rep(beta.star.inits, N)
+    if (parallel.chains) {
+        if (verbose) {
+          cat("\n----------------------------------------\n");
+          cat("\tRunning the model\n");
+          cat("----------------------------------------\n");
+          message("MCMC chains are running in parallel. Model progress output is suppressed.")
         }
+        beta.comm.inits.list <- list()
+        tau.sq.beta.inits.list <- list()
+        beta.inits.list <- list()
+        sigma.sq.psi.inits.list <- list()
+        beta.star.inits.list <- list()
+        lambda.inits.list <- list()
+        for (i in 1:n.chains) {
+          beta.comm.inits.list[[i]] <- beta.comm.inits
+          tau.sq.beta.inits.list[[i]] <- tau.sq.beta.inits
+          beta.inits.list[[i]] <- beta.inits
+          sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
+          beta.star.inits.list[[i]] <- beta.star.inits
+          lambda.inits.list[[i]] <- lambda.inits
+        }
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+            }
+            if (q != 0) {
+              lambda.inits.list[[i]] <- matrix(0, N, q)
+              diag(lambda.inits.list[[i]]) <- 1
+              lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
+              lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+            }
+          }
+        }
+        par.cl <- parallel::makePSOCKcluster(n.chains)
+        registerDoParallel(par.cl)
+        out.tmp <- foreach(i = 1:n.chains) %dorng% {
+          .Call("lfJSDM", y, X, X.re, consts, n.occ.re.long, beta.inits.list[[i]],
+                beta.comm.inits.list[[i]], tau.sq.beta.inits.list[[i]], 
+                lambda.inits.list[[i]], 
+                sigma.sq.psi.inits.list[[i]], beta.star.inits.list[[i]], 
+                beta.star.indx, beta.level.indx, 
+                mu.beta.comm, Sigma.beta.comm,
+          	    tau.sq.beta.a, tau.sq.beta.b, 
+                sigma.sq.psi.a, sigma.sq.psi.b, 
+                n.samples, n.omp.threads, verbose, n.report, 
+          	    samples.info, chain.info)
+        }
+        parallel::stopCluster(par.cl)
+    } else {
+      for (i in 1:n.chains) {
+        # Change initial values if i > 1
+        if ((i > 1) & (!fix.inits)) {
+          beta.comm.inits <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+          tau.sq.beta.inits <- runif(p.occ, 0.5, 10)
+          beta.inits <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                     sqrt(tau.sq.beta.inits)), N, p.occ)
+          beta.inits <- c(beta.inits)
+          if (q != 0) {
+            lambda.inits <- matrix(0, N, q)
+            diag(lambda.inits) <- 1
+            lambda.inits[lower.tri(lambda.inits)] <- rnorm(sum(lower.tri(lambda.inits)))
+            lambda.inits <- c(lambda.inits)
+          }
+          if (p.occ.re > 0) {
+            sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
+            beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+            beta.star.inits <- rep(beta.star.inits, N)
+          }
+        }
+        storage.mode(chain.info) <- "integer"
+        # Run the model in C
+        out.tmp[[i]] <- .Call("lfJSDM", y, X, X.re, consts, n.occ.re.long, beta.inits,
+                              beta.comm.inits, tau.sq.beta.inits, lambda.inits, 
+                              sigma.sq.psi.inits, beta.star.inits, 
+                              beta.star.indx, beta.level.indx, 
+                              mu.beta.comm, Sigma.beta.comm,
+          	                  tau.sq.beta.a, tau.sq.beta.b, 
+                              sigma.sq.psi.a, sigma.sq.psi.b, 
+                              n.samples, n.omp.threads, verbose, n.report, 
+          	                  samples.info, chain.info)
+        chain.info[1] <- chain.info[1] + 1
+        seeds.list[[i]] <- .Random.seed
       }
-
-      storage.mode(chain.info) <- "integer"
-      # Run the model in C
-      out.tmp[[i]] <- .Call("lfJSDM", y, X, X.re, consts, n.occ.re.long, beta.inits,
-          		  beta.comm.inits, tau.sq.beta.inits, lambda.inits, 
-          		  sigma.sq.psi.inits, beta.star.inits, 
-          		  beta.star.indx, beta.level.indx, 
-          		  mu.beta.comm, Sigma.beta.comm,
-        	                  tau.sq.beta.a, tau.sq.beta.b, 
-          		  sigma.sq.psi.a, sigma.sq.psi.b, 
-          		  n.samples, n.omp.threads, verbose, n.report, 
-        	                  samples.info, chain.info)
-      chain.info[1] <- chain.info[1] + 1
-      seeds.list[[i]] <- .Random.seed
     }
     # Calculate R-Hat ---------------
     out$rhat <- list()
@@ -644,7 +701,12 @@ lfJSDM <- function(formula, data, inits, priors,
     update.list$priors <- priors
     update.list$formula <- formula
     # Random seed to have for updating. 
-    update.list$final.seed <- seeds.list
+    if (!parallel.chains) {
+      update.list$final.seed <- seeds.list
+    }
+    else {
+      update.list$final.seed <- attr(out.tmp, 'rng')
+    }
     out$update <- update.list
   }
   # K-fold cross-validation -------
@@ -662,7 +724,7 @@ lfJSDM <- function(formula, data, inits, priors,
     sites.random <- sample(1:J)    
     sites.k.fold <- split(sites.random, sites.random %% k.fold)
     registerDoParallel(k.fold.threads)
-    model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
+    model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
       curr.set <- sort(sites.random[sites.k.fold[[i]]])
       y.fit <- c(y.big[, -curr.set, drop = FALSE])
       y.fit <- y.fit[!is.na(y.fit)]
