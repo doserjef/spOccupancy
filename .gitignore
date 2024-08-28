@@ -32,6 +32,8 @@ vignettes/svcModels_cache
 vignettes/svcModels_files
 vignettes/identifiability_cache
 vignettes/identifiability_files
+vignettes/parallelization_cache
+vignettes/parallelization_files
 *.swp
 vignettes/modelConsiderations_cache
 vignettes/modelConsiderations_files

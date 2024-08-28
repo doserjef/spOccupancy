@@ -162,25 +162,26 @@ inits.list <- list(alpha.comm = 0,
 		      z = apply(y, c(1, 2), max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- spMsPGOcc(occ.formula = ~ occ.cov, 
-		 det.formula = ~ det.cov.1 + det.cov.2, 
-		 data = data.list,
-		 inits = inits.list, 
-		 n.batch = n.batch, 
-		 batch.length = batch.length, 
-		 accept.rate = 0.43, 
-	         priors = prior.list, 
-		 cov.model = "exponential", 
-		 tuning = tuning.list, 
-	         n.omp.threads = 1, 
-	         verbose = TRUE, 
-		 NNGP = TRUE, 
-		 n.neighbors = 5, 
-		 search.type = 'cb', 
-	         n.report = 10, 
-		 n.burn = 500, 
-		 n.thin = 1)
+                 det.formula = ~ det.cov.1 + det.cov.2, 
+                 data = data.list,
+                 inits = inits.list, 
+                 n.batch = n.batch, 
+                 batch.length = batch.length, 
+                 accept.rate = 0.43, 
+                 priors = prior.list, 
+                 cov.model = "exponential", 
+                 tuning = tuning.list, 
+                 n.omp.threads = 1, 
+                 verbose = TRUE, 
+                 NNGP = TRUE, 
+                 n.neighbors = 5, 
+                 search.type = 'cb', 
+                 n.report = 10, 
+                 n.burn = 500, 
+                 n.thin = 1)
 
 summary(out, level = 'both')
 

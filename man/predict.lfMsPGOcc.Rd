@@ -130,7 +130,8 @@ inits.list <- list(alpha.comm = 0,
                    tau.sq.alpha = 1, 
                    lambda = lambda.inits, 
                    z = apply(y, c(1, 2), max, na.rm = TRUE))
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- lfMsPGOcc(occ.formula = ~ occ.cov, 
                  det.formula = ~ det.cov.1 + det.cov.2, 
                  data = data.list, 

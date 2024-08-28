@@ -655,7 +655,7 @@ sfJSDM <- function(formula, data, inits, priors,
     }
     beta.star.inits <- t(beta.star.inits)
   } else {
-      beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+      beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
       beta.star.inits <- rep(beta.star.inits, N)
       if (verbose) {
         message('beta.star is not specified in initial values.\nSetting initial values to random values from the random effects variance\n')
@@ -960,7 +960,7 @@ sfJSDM <- function(formula, data, inits, priors,
                                                  sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
             if (p.occ.re > 0) {
               sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
                                                  sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
               beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
             }
@@ -1020,7 +1020,7 @@ sfJSDM <- function(formula, data, inits, priors,
             }
             if (p.occ.re > 0) {
               sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
               beta.star.inits <- rep(beta.star.inits, N)
             }
           }
@@ -1360,7 +1360,7 @@ sfJSDM <- function(formula, data, inits, priors,
         if (p.occ.re > 0) {	
           beta.star.indx.fit <- rep(0:(p.occ.re - 1), n.occ.re.long.fit)
 	  beta.level.indx.fit <- sort(unique(c(X.re.fit)))
-          beta.star.inits.fit <- rnorm(n.occ.re.fit, 
+          beta.star.inits.fit <- rnorm(n.occ.re.fit, 0,
 	  			      sqrt(sigma.sq.psi.inits[beta.star.indx.fit + 1]))
           beta.star.inits.fit <- rep(beta.star.inits.fit, N)
           re.level.names.fit <- list()

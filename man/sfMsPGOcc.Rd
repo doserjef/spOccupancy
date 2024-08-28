@@ -438,6 +438,8 @@ inits.list <- list(alpha.comm = 0,
 # Tuning
 tuning.list <- list(phi = 1) 
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- sfMsPGOcc(occ.formula = ~ occ.cov + (1 | occ.re), 
                  det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.re), 
                  data = data.list,

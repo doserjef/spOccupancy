@@ -551,7 +551,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
       }
       beta.star.indx <- rep(0:(p.occ.re - 1), n.occ.re.long)
-      beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+      beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
     } else {
       sigma.sq.psi.inits <- 0
       beta.star.indx <- 0
@@ -581,7 +581,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
       }
       alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
-      alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+      alpha.star.inits <- rnorm(n.det.re, 0, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
     } else {
       sigma.sq.p.inits <- 0
       alpha.star.indx <- 0
@@ -677,14 +677,14 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
             alpha.inits.list[[i]] <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
             if (p.occ.re > 0) {
               sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
             } else {
               sigma.sq.psi.inits.list[[i]] <- 1
               beta.star.inits.list[[i]] <- 1
             }
             if (p.det.re > 0) {
               sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits.list[[i]] <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
             } else {
               sigma.sq.p.inits.list[[i]] <- 1
               alpha.star.inits.list[[i]] <- 1
@@ -721,11 +721,11 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
             alpha.inits <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
             if (p.occ.re > 0) {
               sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
             }
             if (p.det.re > 0) {
               sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+              alpha.star.inits <- rnorm(n.det.re, 0, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
             }
           }
           storage.mode(chain.info) <- "integer"
@@ -880,7 +880,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if (p.det.re > 0) {	
           alpha.star.indx.fit <- rep(0:(p.det.re - 1), n.det.re.long.fit)
           alpha.level.indx.fit <- sort(unique(c(X.p.re.fit)))
-          alpha.star.inits.fit <- rnorm(n.det.re.fit, 
+          alpha.star.inits.fit <- rnorm(n.det.re.fit, 0,
           			      sqrt(sigma.sq.p.inits[alpha.star.indx.fit + 1]))
           p.re.level.names.fit <- list()
           for (t in 1:p.det.re) {
@@ -900,7 +900,7 @@ PGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if (p.occ.re > 0) {	
           beta.star.indx.fit <- rep(0:(p.occ.re - 1), n.occ.re.long.fit)
           beta.level.indx.fit <- sort(unique(c(X.re.fit)))
-          beta.star.inits.fit <- rnorm(n.occ.re.fit, 
+          beta.star.inits.fit <- rnorm(n.occ.re.fit, 0,
           			      sqrt(sigma.sq.psi.inits[beta.star.indx.fit + 1]))
           re.level.names.fit <- list()
           for (t in 1:p.occ.re) {

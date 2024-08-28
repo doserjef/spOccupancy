@@ -266,6 +266,8 @@ data.list <- list(y = y[, , 1],
 prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.72),
                    tau.sq.beta.ig = list(a = 0.1, b = 0.1)) 
 inits.list <- list(beta.comm = 0, beta = 0, tau.sq.beta = 1) 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- lfJSDM(formula = ~ occ.cov.1 + occ.cov.2 + (1 | occ.re.1), 
               data = data.list, 
               inits = inits.list, 

@@ -176,18 +176,20 @@ n.burn <- 0
 n.thin <- 1
 n.samples <- n.batch * batch.length
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 +
                                   occ.cov.4,
                   det.formula = ~ det.cov.1 + det.cov.2,
                   data = data.list,
                   inits = inits.list,
                   n.batch = n.batch,
-		  n.factors = n.factors,
+                  n.factors = n.factors,
                   batch.length = batch.length,
-		  std.by.sp = TRUE,
+                  std.by.sp = TRUE,
                   accept.rate = 0.43,
                   priors = prior.list,
-		  svc.cols = svc.cols,
+                  svc.cols = svc.cols,
                   cov.model = "spherical",
                   tuning = tuning.list,
                   n.omp.threads = 1,
@@ -197,8 +199,8 @@ out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 +
                   search.type = 'cb',
                   n.report = 10,
                   n.burn = n.burn,
-		  n.thin = n.thin,
-		  n.chains = 1)
+                  n.thin = n.thin,
+                  n.chains = 1)
 
 summary(out)
 # Predict at new locations ------------------------------------------------

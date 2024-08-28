@@ -292,6 +292,8 @@ n.samples <- 3000
 n.burn <- 2000
 n.thin <- 1
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- msPGOcc(occ.formula = ~ occ.cov, 
                det.formula = ~ det.cov.1 + det.cov.2, 
                data = data.list, 

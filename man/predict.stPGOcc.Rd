@@ -162,6 +162,8 @@ batch.length <- 25
 n.iter <- n.batch * batch.length
 
 # Run the model
+# Note that this is just a test case and more iterations/chains may need to
+# be run to ensure convergence.
 out <- stPGOcc(occ.formula = ~ trend + occ.cov.1, 
                det.formula = ~ det.cov.1 + det.cov.2, 
                data = data.list, 

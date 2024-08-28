@@ -100,6 +100,8 @@ inits.list <- list(alpha = list(0, 0, 0, 0),
 prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
                    alpha.normal = list(mean = list(0, 0, 0, 0), 
                                        var = list(2.72, 2.72, 2.72, 2.72)))
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 n.samples <- 5000
 out <- intPGOcc(occ.formula = ~ occ.cov, 
                 det.formula = list(f.1 = ~ det.cov.1.1, 

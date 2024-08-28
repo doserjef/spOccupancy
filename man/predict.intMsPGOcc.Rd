@@ -94,8 +94,8 @@ sp <- FALSE
 factor.model <- FALSE
 # Simulate occupancy data
 dat <- simIntMsOcc(n.data = n.data, J.x = J.x, J.y = J.y,
-		   J.obs = J.obs, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
-	           psi.RE = psi.RE, p.RE = p.RE, sp = sp, factor.model = factor.model,
+                   J.obs = J.obs, n.rep = n.rep, N = N, beta = beta, alpha = alpha,
+                   psi.RE = psi.RE, p.RE = p.RE, sp = sp, factor.model = factor.model,
                    n.factors = n.factors)
 J <- nrow(dat$coords.obs)
 y <- dat$y
@@ -113,49 +113,49 @@ colnames(occ.covs) <- c('int', 'occ.cov.1')
 det.covs <- list()
 # Add covariates one by one
 det.covs[[1]] <- list(det.cov.1.1 = X.p[[1]][, , 2],
-		      det.cov.1.2 = X.p[[1]][, , 3],
-		      det.cov.1.3 = X.p[[1]][, , 4])
+                      det.cov.1.2 = X.p[[1]][, , 3],
+                      det.cov.1.3 = X.p[[1]][, , 4])
 det.covs[[2]] <- list(det.cov.2.1 = X.p[[2]][, , 2],
-		      det.cov.2.2 = X.p[[2]][, , 3])
+                      det.cov.2.2 = X.p[[2]][, , 3])
 
 data.list <- list(y = y,
-		  occ.covs = occ.covs,
-		  det.covs = det.covs,
+                  occ.covs = occ.covs,
+                  det.covs = det.covs,
                   sites = sites,
                   species = species)
 # Take a look at the data.list structure for integrated multi-species
 # occupancy models.
 # Priors
-prior.list <- list(beta.comm.normal = list(mean = 0,
-				      var = 2.73),
-
-		   alpha.comm.normal = list(mean = list(0, 0),
-			                    var = list(2.72, 2.72)),
+prior.list <- list(beta.comm.normal = list(mean = 0, var = 2.73),
+                   alpha.comm.normal = list(mean = list(0, 0),
+                                            var = list(2.72, 2.72)),
                    tau.sq.beta.ig = list(a = 0.1, b = 0.1),
                    tau.sq.alpha.ig = list(a = list(0.1, 0.1),
-					  b = list(0.1, 0.1)))
+                                          b = list(0.1, 0.1)))
 inits.list <- list(alpha.comm = list(0, 0),
-		   beta.comm = 0,
-		   tau.sq.beta = 1,
-		   tau.sq.alpha = list(1, 1),
+                   beta.comm = 0,
+                   tau.sq.beta = 1,
+                   tau.sq.alpha = list(1, 1),
                    alpha = list(a = matrix(rnorm(p.det.long[1] * N[1]), N[1], p.det.long[1]),
- 				b = matrix(rnorm(p.det.long[2] * N[2]), N[2], p.det.long[2])),
-		   beta = 0)
+                                b = matrix(rnorm(p.det.long[2] * N[2]), N[2], p.det.long[2])),
+                   beta = 0)
 
-# Fit the model.
+# Fit the model. 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- intMsPGOcc(occ.formula = ~ occ.cov.1,
                   det.formula = list(f.1 = ~ det.cov.1.1 + det.cov.1.2 + det.cov.1.3,
                                      f.2 = ~ det.cov.2.1 + det.cov.2.2),
-		 inits = inits.list,
-		 priors = prior.list,
-	         data = data.list,
-	         n.samples = 100,
-                 n.omp.threads = 1,
-	         verbose = TRUE,
-	         n.report = 10,
-	         n.burn = 50,
-	         n.thin = 1,
-	         n.chains = 1)
+                  inits = inits.list,
+                  priors = prior.list,
+                  data = data.list,
+                  n.samples = 100,
+                  n.omp.threads = 1,
+                  verbose = TRUE,
+                  n.report = 10,
+                  n.burn = 50,
+                  n.thin = 1,
+                  n.chains = 1)
 #Predict at new locations. 
 X.0 <- dat$X.pred
 psi.0 <- dat$psi.pred
@@ -164,7 +164,7 @@ out.pred <- predict(out, X.0, ignore.RE = TRUE)
 # Create prediction for one species. 
 curr.sp <- 2
 psi.hat.quants <- apply(out.pred$psi.0.samples[,curr.sp, ], 
-			2, quantile, c(0.025, 0.5, 0.975))
+                        2, quantile, c(0.025, 0.5, 0.975))
 plot(psi.0[curr.sp, ], psi.hat.quants[2, ], pch = 19, xlab = 'True',
      ylab = 'Predicted', ylim = c(min(psi.hat.quants), max(psi.hat.quants)), 
      main = paste("Species ", curr.sp, sep = ''))

@@ -787,5 +787,3 @@ extern "C" {
     return(result_r);
   }
 }
-
-

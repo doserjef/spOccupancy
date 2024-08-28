@@ -11,8 +11,7 @@ Function for fitting integrated multi-species occupancy models using Polya-Gamma
 intMsPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
            n.omp.threads = 1, verbose = TRUE, n.report = 100, 
            n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-           parallel.chains = FALSE, k.fold, k.fold.threads = 1, 
-           k.fold.seed, k.fold.only = FALSE, ...)
+           parallel.chains = FALSE, ...)
 }
 
 \arguments{
@@ -131,24 +130,8 @@ intMsPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
   arugment, which implements \emph{within-chain} parallelization for spatially-explicit
   models. Note if set to \code{TRUE}, all model progress output will be suppressed.}
 
-\item{k.fold}{cross-validation is not currently supported for integrated 
-  multi-species occupancy models.}
-
-\item{k.fold.threads}{cross-validation is not currently supported for 
-  integrated multi-species occupancy models.} 
-
-\item{k.fold.seed}{cross-validation is not currently supported for integrated
-  multi-species occupancy models.}
-
-\item{k.fold.only}{cross-validation is not currently supported for integrated
-  multi-species occupancy models.} 
-
 \item{...}{currently no additional arguments}
 
-}
-
-\note{
-  Basic functionality of this function is stable, but some components are still in development and not currently available. Please create a GitHub issue on the package GitHub page if you use this function and encounter an error. 
 }
 
 \references{
@@ -324,6 +307,8 @@ inits.list <- list(alpha.comm = list(0, 0),
                    beta = 0)
 
 # Fit the model. 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- intMsPGOcc(occ.formula = ~ occ.cov.1,
                   det.formula = list(f.1 = ~ det.cov.1.1 + det.cov.1.2 + det.cov.1.3,
                                      f.2 = ~ det.cov.2.1 + det.cov.2.2),

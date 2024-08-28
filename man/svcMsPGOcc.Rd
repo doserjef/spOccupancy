@@ -435,6 +435,8 @@ n.burn <- 0
 n.thin <- 1
 n.samples <- n.batch * batch.length
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- svcMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2 + occ.cov.3 + 
                                   occ.cov.4 + (1 | occ.factor.1),
                   det.formula = ~ det.cov.1 + det.cov.2 + (1 | det.factor.1),

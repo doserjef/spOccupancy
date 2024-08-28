@@ -555,7 +555,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
       }
     }
     beta.star.indx <- rep(0:(p.re - 1), n.re.long)
-    beta.star.inits <- rnorm(n.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+    beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
   } else {
     sigma.sq.psi.inits <- 0
     beta.star.indx <- 0
@@ -780,7 +780,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
             beta.inits.list[[i]] <- rnorm(p, mu.beta, sqrt(sigma.beta))
             if (p.re > 0) {
               sigma.sq.psi.inits.list[[i]] <- runif(p.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.re, 
+              beta.star.inits.list[[i]] <- rnorm(n.re, 0,
                                                  sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
             }
             if (!fixed.params[which(all.params == 'sigma.sq')]) {
@@ -834,7 +834,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
             }
             if (p.re > 0) {
               sigma.sq.psi.inits <- runif(p.re, 0.5, 10)
-              beta.star.inits <- rnorm(n.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
             }
           }
           storage.mode(chain.info) <- "integer"
@@ -996,7 +996,7 @@ svcPGBinom <- function(formula, data, inits, priors, tuning,
         if (p.re > 0) {	
           beta.star.indx.fit <- rep(0:(p.re - 1), n.re.long.fit)
           beta.level.indx.fit <- sort(unique(c(X.re.fit)))
-          beta.star.inits.fit <- rnorm(n.re.fit, 
+          beta.star.inits.fit <- rnorm(n.re.fit, 0,
           			      sqrt(sigma.sq.psi.inits[beta.star.indx.fit + 1]))
           re.level.names.fit <- list()
           for (t in 1:p.re) {

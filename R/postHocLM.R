@@ -284,7 +284,7 @@ postHocLM <- function(formula, data, inits, priors, verbose = FALSE,
         }
       }
       beta.star.indx <- rep(0:(p.re - 1), n.re.long)
-      beta.star.inits <- rnorm(n.re, sqrt(sigma.sq.inits[beta.star.indx + 1]))
+      beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.inits[beta.star.indx + 1]))
     } else {
       sigma.sq.inits <- 0
       beta.star.indx <- 0
@@ -341,7 +341,7 @@ postHocLM <- function(formula, data, inits, priors, verbose = FALSE,
         tau.sq.inits <- runif(1, 0.5, 10)
 	if (p.re > 0) {
           sigma.sq.inits <- runif(p.re, 0.5, 10)
-          beta.star.inits <- rnorm(n.re, sqrt(sigma.sq.inits[beta.star.indx + 1]))
+          beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.inits[beta.star.indx + 1]))
 	}
       }
       storage.mode(chain.info) <- "integer"

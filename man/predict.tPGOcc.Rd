@@ -122,6 +122,8 @@ n.burn <- 2000
 n.thin <- 1
 
 # Run the model
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- tPGOcc(occ.formula = ~ trend + occ.cov.1, 
               det.formula = ~ det.cov.1 + det.cov.2, 
               data = data.list,

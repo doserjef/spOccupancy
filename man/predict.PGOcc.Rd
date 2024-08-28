@@ -92,7 +92,8 @@ inits.list <- list(alpha = rep(0, p.det),
 
 n.samples <- 5000
 n.report <- 1000
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- PGOcc(occ.formula = ~ occ.cov, 
              det.formula = ~ det.cov,
              data = data.list, 

@@ -1020,7 +1020,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
     }
     beta.star.indx <- rep(0:(p.occ.re - 1), n.occ.re.long)
-    beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+    beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
     beta.star.inits <- rep(beta.star.inits, N)
   } else {
     sigma.sq.psi.inits <- 0
@@ -1052,7 +1052,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       }
     }
     alpha.star.indx <- rep(0:(p.det.re - 1), n.det.re.long)
-    alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+    alpha.star.inits <- rnorm(n.det.re, 0, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
     alpha.star.inits <- rep(alpha.star.inits, N)
   } else {
     sigma.sq.p.inits <- 0
@@ -1298,13 +1298,13 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
                                                   sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
             if (p.occ.re > 0) {
               sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
                                                  sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
               beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
             }
             if (p.det.re > 0) {
               sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
                                                   sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
               alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
             }
@@ -1367,12 +1367,12 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
             }
             if (p.det.re > 0) {
               sigma.sq.p.inits <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits <- rnorm(n.det.re, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
+              alpha.star.inits <- rnorm(n.det.re, 0, sqrt(sigma.sq.p.inits[alpha.star.indx + 1]))
               alpha.star.inits <- rep(alpha.star.inits, N)
             }
             if (p.occ.re > 0) {
               sigma.sq.psi.inits <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits <- rnorm(n.occ.re, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+              beta.star.inits <- rnorm(n.occ.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
               beta.star.inits <- rep(beta.star.inits, N)
             }
           }
@@ -1667,7 +1667,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if (p.det.re > 0) {	
           alpha.star.indx.fit <- rep(0:(p.det.re - 1), n.det.re.long.fit)
 	  alpha.level.indx.fit <- sort(unique(c(X.p.re.fit)))
-          alpha.star.inits.fit <- rnorm(n.det.re.fit, 
+          alpha.star.inits.fit <- rnorm(n.det.re.fit, 0,
 	  			      sqrt(sigma.sq.p.inits[alpha.star.indx.fit + 1]))
           alpha.star.inits.fit <- rep(alpha.star.inits.fit, N)
           p.re.level.names.fit <- list()
@@ -1688,7 +1688,7 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if (p.occ.re > 0) {	
           beta.star.indx.fit <- rep(0:(p.occ.re - 1), n.occ.re.long.fit)
 	  beta.level.indx.fit <- sort(unique(c(X.re.fit)))
-          beta.star.inits.fit <- rnorm(n.occ.re.fit, 
+          beta.star.inits.fit <- rnorm(n.occ.re.fit, 0,
 	  			      sqrt(sigma.sq.psi.inits[beta.star.indx.fit + 1]))
           beta.star.inits.fit <- rep(beta.star.inits.fit, N)
           re.level.names.fit <- list()

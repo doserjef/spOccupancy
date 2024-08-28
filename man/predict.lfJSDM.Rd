@@ -112,7 +112,8 @@ inits.list <- list(alpha.comm = 0,
                    beta = 0, 
                    tau.sq.beta = 1, 
                    lambda = lambda.inits)
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- lfJSDM(formula = ~ occ.cov, 
               data = data.list, 
               inits = inits.list, 

@@ -140,6 +140,8 @@ batch.length <- 25
 n.burn <- 100
 n.thin <- 1
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- svcPGBinom(formula = ~ cov.1 + cov.2 + cov.3, 
                   svc.cols = c(1, 2),
                   data = data.list, 

@@ -141,7 +141,8 @@ inits.list <- list(alpha = 0, beta = 0,
                    z = apply(y, 1, max, na.rm = TRUE))
 # Tuning
 tuning.list <- list(phi = 1) 
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- spPGOcc(occ.formula = ~ occ.cov, 
                det.formula = ~ det.cov.1, 
                data = data.list, 

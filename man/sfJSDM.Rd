@@ -419,6 +419,8 @@ n.batch <- 5
 n.report <- 100
 formula <- ~ 1
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- sfJSDM(formula = formula,
               data = data.list,
               inits = inits.list,

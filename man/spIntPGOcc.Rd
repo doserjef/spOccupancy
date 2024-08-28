@@ -370,6 +370,8 @@ n.batch <- 2
 # Batch length
 batch.length <- 25
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- spIntPGOcc(occ.formula = ~ occ.cov, 
                   det.formula = list(f.1 = ~ det.cov.1.1, 
                                      f.2 = ~ det.cov.2.1 + det.cov.2.2, 

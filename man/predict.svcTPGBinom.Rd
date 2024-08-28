@@ -154,6 +154,8 @@ n.burn <- 0
 n.thin <- 1
 
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- svcTPGBinom(formula = ~ trend + cov.1 + cov.2,
                    svc.cols = svc.cols,
                    data = data.list,

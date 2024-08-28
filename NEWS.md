@@ -4,9 +4,9 @@
 + New functionality for fitting multi-season, single-species integrated occupancy models. The function `tIntPGOcc()` fits a non-spatial multi-season integrated occupancy model, `stIntPGOcc()` fits a spatial multi-season integrated occupancy model, and `svcTIntPGOcc()` fits a spatially-varying coefficient multi-season occupancy model. Random intercepts are supported in both the occurrence and detection formulas for both model types.  
 + Added in functionality for both occupancy and detection random intercepts in single-species single-season integrated models (`intPGOcc()` and `spIntPGOcc()`) using `lme4` syntax (e.g., `(1 | observer)` for a random effect of observer).
 + `simTIntPGOcc()` is a new function that allows simulation of single-species multi-season detection-nondetection data from multiple data sources.
-+ Update `simMsIntPGOcc()` to now include simulation of data sets with spatially-varying coefficients and unstructured random effects on both occurrence and detection.
++ Updated `simMsIntPGOcc()` to now include simulation of data sets with spatially-varying coefficients and unstructured random effects on both occurrence and detection.
 + Fixed a bug in the k-fold cross-validation for spatial integrated occupancy models (NNGP models only) that could lead to incorrect model deviance results under certain situations depending on how the spatial coordinates were ordered on the user-side relative to how they are re-ordered when fitting the model. If using `spIntPGOcc()` with `NNGP = TRUE` and using cross-validation, I suggest re-running the analysis. Apologies for the inconvenience.
-+ Added in a `residuals()` function to extract occupancy and detection residuals following the approach of [Wilson et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1002/ecy.2703) for single-season, single-species occupancy models (functions `PGOcc()`, `spPGOcc()`, and `svcPGOcc()`). 
++ Added in a `residuals()` function to extract occupancy and detection residuals following the approach of [Wilson et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1002/ecy.2703) for single-season, single-species occupancy models (functions `PGOcc()`, `spPGOcc()`, and `svcPGOcc()`). I'm hoping to implement this for all model functions and improve GoF functionality. If anyone has any interest in helping out with this, then please let me know!
 + `waicOcc()` for integrated single-species models is now substantially faster.
 + `updateMCMC()` now works with lfJSDM.
 + Fixed a bug in `updateMCMC()` that prevented it from working with `spAbundance::msAbund()` when there were random effects in the model. Also added the `save.fitted` argument to `updateMCMC()` to allow it to work with `msAbund()` and not save the replicate/fitted data values in cases where the amount of RAM is an important consideration.
@@ -37,6 +37,7 @@
 + Wrote a new "vignette" (really more of a blog post) on some recommendations to help improve interpretability of inferences in SVC models.
 + Fixed a few typos in the MCMC sampler vignettes for factor models and SVC models.
 + Fixed a bug that prevented cross-validation from working properly in multi-species models when setting `k.fold.only = TRUE`. Thanks to Zack Steel for pointing this out.
++ Fixed a typo in the generation of initial values for latent unstructured random effects in all model functions. The typo had no major ramifications, if anything it would have just led to slower convergence, as it resulted in very large (or very small) initial values for the latent random effects that are not really viable on the logit scale.
 
 # spOccupancy 0.7.2
 

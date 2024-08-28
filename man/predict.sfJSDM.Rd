@@ -145,7 +145,8 @@ inits.list <- list(beta.comm = 0,
                    lambda = lambda.inits)
 # Tuning
 tuning.list <- list(phi = 1) 
-
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- sfJSDM(formula = ~ occ.cov, 
               data = data.list,
               inits = inits.list, 

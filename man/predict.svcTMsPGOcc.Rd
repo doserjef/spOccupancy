@@ -182,6 +182,8 @@ n.burn <- 25
 n.thin <- 1
 n.samples <- n.batch * batch.length
 
+# Note that this is just a test case and more iterations/chains may need to 
+# be run to ensure convergence.
 out <- svcTMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
                 det.formula = ~ det.cov.1 + det.cov.2,
                 data = data.list,
@@ -189,20 +191,20 @@ out <- svcTMsPGOcc(occ.formula = ~ occ.cov.1 + occ.cov.2,
                 n.batch = n.batch,
                 batch.length = batch.length,
                 accept.rate = 0.43,
-		ar1 = TRUE,
-		svc.cols = svc.cols,
-		NNGP = TRUE,
-		n.neighbors = 5,
-		n.factors = n.factors,
-		cov.model = 'exponential',
+                ar1 = TRUE,
+                svc.cols = svc.cols,
+                NNGP = TRUE,
+                n.neighbors = 5,
+                n.factors = n.factors,
+                cov.model = 'exponential',
                 priors = prior.list,
                 tuning = tuning.list,
                 n.omp.threads = 1,
                 verbose = TRUE,
                 n.report = 1,
                 n.burn = n.burn,
-		n.thin = n.thin,
-		n.chains = 1)
+                n.thin = n.thin,
+                n.chains = 1)
 
 summary(out)
 
