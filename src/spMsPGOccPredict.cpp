@@ -20,12 +20,12 @@
 extern "C" {
 
   SEXP spMsPGOccPredict(SEXP J_r, SEXP N_r, SEXP pOcc_r, SEXP X0_r, SEXP q_r, 
-		      SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
-		      SEXP thetaSamples_r, SEXP wSamples_r, 
-		      SEXP betaStarSiteSamples_r,
-		      SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
-		      SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
-		      SEXP sites0Sampled_r){
+                        SEXP obsD_r, SEXP obsPredD_r, SEXP betaSamples_r, 
+                        SEXP thetaSamples_r, SEXP wSamples_r, 
+                        SEXP betaStarSiteSamples_r,
+                        SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, 
+                        SEXP verbose_r, SEXP nReport_r, SEXP sitesLink_r, 
+                        SEXP sites0Sampled_r){
 
     /*****************************************
                 Common variables

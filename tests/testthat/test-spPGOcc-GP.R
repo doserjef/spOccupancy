@@ -126,6 +126,7 @@ test_that("all correlation functions work", {
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
+           parallel.chains = TRUE,
 	         batch.length = batch.length, 
 	         cov.model = "gaussian", 
 	         tuning = list(phi = 0.5), 
@@ -177,6 +178,7 @@ test_that("verbose prints to the screen", {
 	       det.formula = det.formula, 
 	       data = data.list, 
 	       inits = inits.list, 
+         parallel.chains = TRUE,
 	       n.batch = n.batch, 
 	       batch.length = batch.length, 
 	       priors = prior.list,
@@ -403,6 +405,7 @@ test_that("all correlation functions work", {
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
+           parallel.chains = TRUE,
 	         batch.length = batch.length, 
 	         cov.model = "matern", 
 		 priors = list(nu.unif = c(0.5, 2)),
@@ -653,6 +656,7 @@ test_that("default priors and inits work", {
   out <- spPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
+           parallel.chains = TRUE,
 	         n.batch = 40, 
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
@@ -5721,5 +5725,12 @@ test_that("posterior predictive checks work for spPGOcc", {
   expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, n.rep.max))
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, n.rep.max))
+})
+
+# Test residuals ----------------------
+test_that("residuals works", {
+  out.resids <- residuals(out, n.post.samples = 10)
+  expect_type(out.resids, 'list')
+  expect_equal(length(out.resids), 2)
 })
 

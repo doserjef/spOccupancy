@@ -188,6 +188,7 @@ test_that("default priors and inits work", {
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
+           parallel.chains = TRUE,
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
 		 svc.cols = svc.cols,
@@ -198,7 +199,7 @@ test_that("default priors and inits work", {
 	         search.type = 'cb', 
 	         n.report = 10, 
 	         n.burn = 100, 
-	         n.chains = 1)
+	         n.chains = 3)
   expect_s3_class(out, "svcTPGOcc")
 })
 
@@ -245,6 +246,7 @@ test_that("verbose prints to the screen", {
 	       inits = inits.list, 
 	       n.batch = n.batch, 
 	       batch.length = batch.length, 
+         parallel.chains = TRUE,
 	       priors = prior.list,
 	       svc.cols = svc.cols,
 	       cov.model = "exponential", 
@@ -457,6 +459,7 @@ out <- svcTPGOcc(occ.formula = occ.formula,
 	       inits = inits.list,
 	       batch.length = batch.length,
 	       n.batch = n.batch,
+         parallel.chains = TRUE,
 	       priors = prior.list,
 	       accept.rate = 0.43,
 	       svc.cols = svc.cols,

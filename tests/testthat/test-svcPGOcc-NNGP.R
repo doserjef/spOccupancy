@@ -109,6 +109,7 @@ test_that("default priors and inits work", {
   out <- svcPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
+           parallel.chains = TRUE,
 	         n.batch = 40, 
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
@@ -161,6 +162,7 @@ test_that("all correlation functions work", {
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
+           parallel.chains = TRUE,
 	         batch.length = batch.length, 
 	         cov.model = "matern", 
 		 priors = list(nu.unif = list(0.5, 2)),
@@ -358,6 +360,7 @@ test_that("default priors and inits work", {
   out <- svcPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
+           parallel.chains = TRUE,
 	         n.batch = 40, 
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
@@ -411,6 +414,7 @@ test_that("all correlation functions work", {
   out <- svcPGOcc(occ.formula = occ.formula, 
 	         det.formula = det.formula, 
 	         data = data.list, 
+           parallel.chains = TRUE,
 	         n.batch = 40, 
 	         batch.length = batch.length, 
 	         cov.model = "matern", 
@@ -668,6 +672,7 @@ test_that("default priors and inits work", {
 	         det.formula = det.formula, 
 	         data = data.list, 
 	         n.batch = 40, 
+           parallel.chains = TRUE,
 	         batch.length = batch.length, 
 	         cov.model = "exponential", 
 	         tuning = tuning.list, 
@@ -5841,5 +5846,12 @@ test_that("posterior predictive checks work for svcPGOcc", {
   expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, n.rep.max))
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, n.rep.max))
+})
+
+# Test residuals ----------------------
+test_that("residuals works", {
+  out.resids <- residuals(out, n.post.samples = 10)
+  expect_type(out.resids, 'list')
+  expect_equal(length(out.resids), 2)
 })
 

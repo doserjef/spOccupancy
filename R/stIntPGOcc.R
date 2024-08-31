@@ -52,8 +52,6 @@ stIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
   if (!is.list(det.formula)) {
     stop(paste("error: det.formula must be a list of ", n.data, " formulas", sep = ''))
   }
-  # TODO: be sure to note in the documentation that all elements of y should be 
-  #       specified as three-dimensional arrays.
   for (q in 1:n.data) {
     if (length(dim(y[[q]])) != 3) {
       stop('Each individual data source in data$y must be specified as a three-dimensional array with dimensions corresponding to site, seasons, and replicate within season. Note that even if a data source is sampled only for one season or only one visit within a season, it still must be specified as a three-dimensional array')
@@ -1263,32 +1261,34 @@ stIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         phi.inits.list[[i]] <- phi.inits
         nu.inits.list[[i]] <- nu.inits
       }
-      for (i in 2:n.chains) {
-        if ((!fix.inits)) {
-          beta.inits.list[[i]] <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
-          alpha.inits.list[[i]] <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
-          if (p.det.re > 0) {
-            sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-            alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
-                                                sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
-          }
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0, 
-                                               sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-          }
-          if (ar1) {
-            ar1.vals.list[[i]][5] <- runif(1, rho.a, rho.b)
-            ar1.vals.list[[i]][6] <- runif(1, 0.5, 10)	
-          }
-          if (sigma.sq.ig) {
-            sigma.sq.inits.list[[i]] <- runif(1, 0.1, 10)
-          } else {
-            sigma.sq.inits.list[[i]] <- runif(1, sigma.sq.a, sigma.sq.b)
-          }
-          phi.inits.list[[i]] <- runif(1, phi.a, phi.b)
-          if (cov.model == 'matern') {
-            nu.inits.list[[i]] <- runif(1, nu.a, nu.b)
+      if (n.chains > 1) {
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            beta.inits.list[[i]] <- rnorm(p.occ, mu.beta, sqrt(sigma.beta))
+            alpha.inits.list[[i]] <- rnorm(p.det, mu.alpha, sqrt(sigma.alpha))
+            if (p.det.re > 0) {
+              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
+                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+            }
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0, 
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+            }
+            if (ar1) {
+              ar1.vals.list[[i]][5] <- runif(1, rho.a, rho.b)
+              ar1.vals.list[[i]][6] <- runif(1, 0.5, 10)	
+            }
+            if (sigma.sq.ig) {
+              sigma.sq.inits.list[[i]] <- runif(1, 0.1, 10)
+            } else {
+              sigma.sq.inits.list[[i]] <- runif(1, sigma.sq.a, sigma.sq.b)
+            }
+            phi.inits.list[[i]] <- runif(1, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits.list[[i]] <- runif(1, nu.a, nu.b)
+            }
           }
         }
       }

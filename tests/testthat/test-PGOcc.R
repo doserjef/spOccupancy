@@ -243,6 +243,8 @@ test_that("default priors, inits, burn, thin work", {
 	       det.formula = ~ 1, 
 	       data = data.list, 
 	       n.samples = n.samples,
+         parallel.chains = TRUE, 
+         n.chains = 3,
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "PGOcc")
@@ -454,6 +456,7 @@ test_that("verbose prints to the screen", {
 	       data = data.list, 
 	       n.samples = 100,
 	       n.omp.threads = 1,
+         parallel.chains = TRUE,
 	       verbose = TRUE,
 	       n.report = n.report, 
 	       n.burn = 1, 
@@ -3818,4 +3821,11 @@ test_that("posterior predictive checks work for PGOcc", {
   expect_equal(length(ppc.out$fit.y.rep), n.post.samples)
   expect_equal(dim(ppc.out$fit.y.group.quants), c(5, max(n.rep)))
   expect_equal(dim(ppc.out$fit.y.rep.group.quants), c(5, max(n.rep)))
+})
+
+# Test residuals ----------------------
+test_that("residuals works", {
+  out.resids <- residuals(out, n.post.samples = 10)
+  expect_type(out.resids, 'list')
+  expect_equal(length(out.resids), 2)
 })

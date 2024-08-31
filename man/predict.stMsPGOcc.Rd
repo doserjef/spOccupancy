@@ -175,7 +175,7 @@ inits.list <- list(alpha.comm = 0, beta.comm = 0, beta = 0,
 tuning.list <- list(phi = 1, rho = 0.5)
 
 # Number of batches
-n.batch <- 5
+n.batch <- 2
 # Batch length
 batch.length <- 25
 n.burn <- 25

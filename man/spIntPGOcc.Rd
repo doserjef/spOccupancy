@@ -60,8 +60,11 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
 
   \item{inits}{a list with each tag corresponding to a parameter name.
   Valid tags are \code{z}, \code{beta}, \code{alpha}, \code{sigma.sq}, \code{phi}, 
-  \code{w}, and \code{nu}. The value portion of all tags except \code{alpha} 
-  is the parameter's initial value. The tag \code{alpha} is a list comprised 
+  \code{w}, \code{nu}, \code{sigma.sq.psi}, \code{sigma.sq.p}. 
+  The value portion of all tags except \code{alpha} 
+  is the parameter's initial value. \code{sigma.sq.psi} and \code{sigma.sq.p}
+  are only relevant when including random effects in the occurrence and 
+  detection portion of the occupancy model, respectively. The tag \code{alpha} is a list comprised 
   of the initial values for the detection parameters for each data source. 
   Each element of the list should be a vector of initial values for all detection 
   parameters in the given data source or a single value for each data source to 
@@ -73,8 +76,8 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
   
   \item{priors}{a list with each tag corresponding to a parameter name. 
     Valid tags are \code{beta.normal}, \code{alpha.normal}, \code{phi.unif}, 
-    \code{sigma.sq.ig}, \code{sigma.sq.unif}, and \code{nu.unif}. 
-    Occurrence (\code{beta}) and detection 
+    \code{sigma.sq.ig}, \code{sigma.sq.unif}, \code{nu.unif}, \code{sigma.sq.psi.ig}, 
+    and \code{sigma.sq.p.ig}. Occurrence (\code{beta}) and detection 
     (\code{alpha}) regression coefficients are assumed to follow a normal 
     distribution. For \code{beta} hyperparameters of the normal distribution 
     are passed as a list of length two with the first and second elements 
@@ -97,7 +100,14 @@ spIntPGOcc(occ.formula, det.formula, data, inits, priors,
     to the \emph{shape} and \emph{scale}, respectively. The hyperparameters
     of the Uniform are also passed as a vector of length two with the first 
     and second elements corresponding to the lower and upper support, 
-    respectively.}
+    respectively. \code{sigma.sq.psi} and 
+    \code{sigma.sq.p} are the random effect variances for any occurrence or 
+    detection random effects, respectively, and are assumed to follow an inverse
+    Gamma distribution. The hyperparameters of the inverse-Gamma distribution
+    are passed as a list of length two with first and second elements corresponding
+    to the shape and scale parameters, respectively, which are each specified as
+    vectors of length equal to the number of random intercepts or of length one 
+    if priors are the same for all random effect variances.}
 
   \item{tuning}{a list with each tag corresponding to a parameter
     name. Valid tags are \code{phi} and \code{nu}. The value portion of each

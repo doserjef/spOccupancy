@@ -19,11 +19,11 @@ extern "C" {
                  SEXP betaStarting_r, SEXP tauSqStarting_r,  
                  SEXP sigmaSqStarting_r, SEXP betaStarStarting_r, 
                  SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
-	         SEXP muBeta_r, SEXP SigmaBeta_r, 
-		 SEXP tauSqA_r, SEXP tauSqB_r, 
+                 SEXP muBeta_r, SEXP SigmaBeta_r, 
+                 SEXP tauSqA_r, SEXP tauSqB_r, 
                  SEXP sigmaSqA_r, SEXP sigmaSqB_r, SEXP nSamples_r, 
                  SEXP verbose_r, SEXP nReport_r, 
-	         SEXP chainInfo_r){
+                 SEXP chainInfo_r){
    
     /**********************************************************************
      * Initial constants

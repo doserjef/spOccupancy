@@ -1365,41 +1365,43 @@ stMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         phi.inits.list[[i]] <- phi.inits
         nu.inits.list[[i]] <- nu.inits
       }
-      for (i in 2:n.chains) {
-        if ((!fix.inits)) {
-          beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-          tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
-          alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-          tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
-          beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                                               sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
-          alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                                                sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
-          if (p.occ.re > 0) {
-            sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-            beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
-                                               sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-            beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
-          }
-          if (p.det.re > 0) {
-            sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-            alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
-                                                sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
-            alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
-          }
-          if (ar1) {
-            rho.inits <- runif(N, rho.a, rho.b)
-            sigma.sq.t.inits <- runif(N, 0.5, 5)
-            ar1.vals.list[[i]] <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
-                                    rho.inits, sigma.sq.t.inits)
-          }
-          lambda.inits.list[[i]] <- matrix(0, N, q)
-          diag(lambda.inits.list[[i]]) <- 1
-          lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
-          lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
-          phi.inits.list[[i]] <- runif(q, phi.a, phi.b)
-          if (cov.model == 'matern') {
-            nu.inits.list[[i]] <- runif(q, nu.a, nu.b)
+      if (n.chains > 1) {
+        for (i in 2:n.chains) {
+          if ((!fix.inits)) {
+            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+            if (p.occ.re > 0) {
+              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
+                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+            }
+            if (p.det.re > 0) {
+              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
+                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+            }
+            if (ar1) {
+              rho.inits <- runif(N, rho.a, rho.b)
+              sigma.sq.t.inits <- runif(N, 0.5, 5)
+              ar1.vals.list[[i]] <- c(rho.a, rho.b, sigma.sq.t.a, sigma.sq.t.b, 
+                                      rho.inits, sigma.sq.t.inits)
+            }
+            lambda.inits.list[[i]] <- matrix(0, N, q)
+            diag(lambda.inits.list[[i]]) <- 1
+            lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
+            lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+            phi.inits.list[[i]] <- runif(q, phi.a, phi.b)
+            if (cov.model == 'matern') {
+              nu.inits.list[[i]] <- runif(q, nu.a, nu.b)
+            }
           }
         }
       }

@@ -1538,7 +1538,8 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J.w)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      registerDoParallel(k.fold.threads)
+      par.k <- parallel::makePSOCKcluster(k.fold.threads)
+      registerDoParallel(par.k)
       model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
         curr.set.small <- sort(sites.random[sites.k.fold[[i]]])
         curr.set <- which(grid.index.r %in% curr.set.small)
@@ -1820,7 +1821,10 @@ svcTPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      stopImplicitCluster()
+      parallel::stopCluster(par.k)
+      # Remove attributes from doRNG
+      attr(out$k.fold.deviance, 'rng') <- NULL
+      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
     } # cross-validation
   } # NNGP
   class(out) <- "svcTPGOcc"

@@ -26,12 +26,12 @@ extern "C" {
              SEXP betaStarStarting_r, SEXP alphaStarStarting_r, 
              SEXP zStarting_r, SEXP zLongIndx_r, 
              SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
-	     SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
-	     SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP SigmaAlpha_r, 
+             SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r, 
+             SEXP muBeta_r, SEXP muAlpha_r, SEXP SigmaBeta_r, SEXP SigmaAlpha_r, 
              SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, SEXP sigmaSqPA_r, 
              SEXP sigmaSqPB_r, SEXP nSamples_r, SEXP nThreads_r, 
              SEXP verbose_r, SEXP nReport_r, SEXP samplesInfo_r,
-	     SEXP chainInfo_r){
+             SEXP chainInfo_r){
    
     /**********************************************************************
      * Initial constants

@@ -514,23 +514,25 @@ lfJSDM <- function(formula, data, inits, priors, n.factors, n.samples,
           beta.star.inits.list[[i]] <- beta.star.inits
           lambda.inits.list[[i]] <- lambda.inits
         }
-        for (i in 2:n.chains) {
-          if ((!fix.inits)) {
-            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
-            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
-            if (p.occ.re > 0) {
-              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
-                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
-            }
-            if (q != 0) {
-              lambda.inits.list[[i]] <- matrix(0, N, q)
-              diag(lambda.inits.list[[i]]) <- 1
-              lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
-              lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+        if (n.chains > 1) {
+          for (i in 2:n.chains) {
+            if ((!fix.inits)) {
+              beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+              beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                   sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+              if (p.occ.re > 0) {
+                sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+                beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
+                                                   sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+                beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+              }
+              if (q != 0) {
+                lambda.inits.list[[i]] <- matrix(0, N, q)
+                diag(lambda.inits.list[[i]]) <- 1
+                lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
+                lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+              }
             }
           }
         }
@@ -723,7 +725,8 @@ lfJSDM <- function(formula, data, inits, priors, n.factors, n.samples,
     # Number of sites in each hold out data set. 
     sites.random <- sample(1:J)    
     sites.k.fold <- split(sites.random, sites.random %% k.fold)
-    registerDoParallel(k.fold.threads)
+    par.k <- parallel::makePSOCKcluster(k.fold.threads)
+    registerDoParallel(par.k)
     model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
       curr.set <- sort(sites.random[sites.k.fold[[i]]])
       y.fit <- c(y.big[, -curr.set, drop = FALSE])
@@ -848,18 +851,21 @@ lfJSDM <- function(formula, data, inits, priors, n.factors, n.samples,
       if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
       out.pred <- predict.lfJSDM(out.fit, X.0, coords.0, ignore.RE = FALSE)
       like.samples <- matrix(NA, N, J.0)
-      for (q in 1:N) {
+      for (r in 1:N) {
         for (j in 1:J.0) {
-          like.samples[q, j] <- mean(dbinom(y.big.0[q, j], 1, out.pred$psi.0.samples[, q, j]))
+          like.samples[r, j] <- mean(dbinom(y.big.0[r, j], 1, out.pred$psi.0.samples[, r, j]))
         } # j
-      } # q
+      } # r
 
       apply(like.samples, 1, function(a) sum(log(a), na.rm = TRUE))
     }
     model.deviance <- -2 * model.deviance
     # Return objects from cross-validation
     out$k.fold.deviance <- model.deviance
-    stopImplicitCluster()
+    parallel::stopCluster(par.k)
+    # Remove attributes from doRNG
+    attr(out$k.fold.deviance, 'rng') <- NULL
+    attr(out$k.fold.deviance, 'doRNG_version') <- NULL
   }
   
   class(out) <- "lfJSDM"

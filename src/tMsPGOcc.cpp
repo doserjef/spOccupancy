@@ -20,24 +20,24 @@
 
 extern "C" {
   SEXP tMsPGOcc(SEXP y_r, SEXP X_r, SEXP Xp_r, SEXP XRE_r, SEXP XpRE_r, 
-		SEXP consts_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
-		SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
-		SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
-		SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
-		SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
-		SEXP betaStarStarting_r, SEXP alphaStarStarting_r, SEXP zLongIndx_r,
-		SEXP zYearIndx_r, SEXP zDatIndx_r, SEXP zSiteIndx_r,
-		SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
-		SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r,
-		SEXP muBetaComm_r, SEXP muAlphaComm_r, 
-	        SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
-	        SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r,  
-		SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
-		SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
-		SEXP ar1_r, SEXP ar1Vals_r,
-		SEXP tuning_r, SEXP nBatch_r, SEXP batchLength_r, 
-		SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
-		SEXP samplesInfo_r, SEXP chainInfo_r){
+                SEXP consts_r, SEXP nOccRELong_r, SEXP nDetRELong_r, 
+                SEXP betaStarting_r, SEXP alphaStarting_r, SEXP zStarting_r, 
+                SEXP betaCommStarting_r, SEXP alphaCommStarting_r, 
+                SEXP tauSqBetaStarting_r, SEXP tauSqAlphaStarting_r, 
+                SEXP sigmaSqPsiStarting_r, SEXP sigmaSqPStarting_r, 
+                SEXP betaStarStarting_r, SEXP alphaStarStarting_r, SEXP zLongIndx_r,
+                SEXP zYearIndx_r, SEXP zDatIndx_r, SEXP zSiteIndx_r,
+                SEXP betaStarIndx_r, SEXP betaLevelIndx_r, 
+                SEXP alphaStarIndx_r, SEXP alphaLevelIndx_r,
+                SEXP muBetaComm_r, SEXP muAlphaComm_r, 
+                SEXP SigmaBetaComm_r, SEXP SigmaAlphaComm_r, SEXP tauSqBetaA_r, 
+                SEXP tauSqBetaB_r, SEXP tauSqAlphaA_r, SEXP tauSqAlphaB_r,  
+                SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, 
+                SEXP sigmaSqPA_r, SEXP sigmaSqPB_r, 
+                SEXP ar1_r, SEXP ar1Vals_r,
+                SEXP tuning_r, SEXP nBatch_r, SEXP batchLength_r, 
+                SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
+                SEXP samplesInfo_r, SEXP chainInfo_r){
    
     /**********************************************************************
      * Initial constants

@@ -1205,38 +1205,40 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           phi.inits.list[[i]] <- phi.inits
           nu.inits.list[[i]] <- nu.inits
         }
-        for (i in 2:n.chains) {
-          if ((!fix.inits)) {
-            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
-            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
-            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
-            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
-            if (p.occ.re > 0) {
-              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
-                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
-            }
-            if (p.det.re > 0) {
-              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
-                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
-              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
-            }
-            if (!fixed.sigma.sq) {
-              if (sigma.sq.ig) {
-                sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
-              } else {
-                sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+        if (n.chains > 1) {
+          for (i in 2:n.chains) {
+            if ((!fix.inits)) {
+              beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+              tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+              tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+              beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                   sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+              alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                    sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+              if (p.occ.re > 0) {
+                sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+                beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
+                                                   sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+                beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
               }
-            }
-            phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
-            if (cov.model == 'matern') {
-              nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
+              if (p.det.re > 0) {
+                sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+                alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
+                                                    sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+                alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+              }
+              if (!fixed.sigma.sq) {
+                if (sigma.sq.ig) {
+                  sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
+                } else {
+                  sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+                }
+              }
+              phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
+              if (cov.model == 'matern') {
+                nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
+              }
             }
           }
         }
@@ -1470,7 +1472,6 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$type <- "GP"
       out$coords <- coords
       out$cov.model.indx <- cov.model.indx
-      out$q <- q
       out$n.post <- n.post.samples
       out$n.thin <- n.thin
       out$n.burn <- n.burn
@@ -1500,7 +1501,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      registerDoParallel(k.fold.threads)
+      par.k <- parallel::makePSOCKcluster(k.fold.threads)
+      registerDoParallel(par.k)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
@@ -1748,7 +1750,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      stopImplicitCluster()
+      parallel::stopCluster(par.k)
+      # Remove attributes from doRNG
+      attr(out$k.fold.deviance, 'rng') <- NULL
+      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
     } # Cross-validation
   } else {
 
@@ -1910,38 +1915,40 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           phi.inits.list[[i]] <- phi.inits
           nu.inits.list[[i]] <- nu.inits
         }
-        for (i in 2:n.chains) {
-          if ((!fix.inits)) {
-            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
-            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
-            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
-            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
-            if (p.occ.re > 0) {
-              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
-                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
-            }
-            if (p.det.re > 0) {
-              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
-                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
-              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
-            }
-            if (!fixed.sigma.sq) {
-              if (sigma.sq.ig) {
-                sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
-              } else {
-                sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+        if (n.chains > 1) {
+          for (i in 2:n.chains) {
+            if ((!fix.inits)) {
+              beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+              tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+              tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+              beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                   sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+              alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                    sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+              if (p.occ.re > 0) {
+                sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+                beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
+                                                   sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+                beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
               }
-            }
-            phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
-            if (cov.model == 'matern') {
-              nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
+              if (p.det.re > 0) {
+                sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+                alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
+                                                    sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+                alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+              }
+              if (!fixed.sigma.sq) {
+                if (sigma.sq.ig) {
+                  sigma.sq.inits.list[[i]] <- rigamma(N, sigma.sq.a, sigma.sq.b)
+                } else {
+                  sigma.sq.inits.list[[i]] <- runif(N, sigma.sq.a, sigma.sq.b)
+                }
+              }
+              phi.inits.list[[i]] <- runif(N, phi.a, phi.b)
+              if (cov.model == 'matern') {
+                nu.inits.list[[i]] <- runif(N, nu.a, nu.b)
+              }
             }
           }
         }
@@ -2201,7 +2208,6 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       out$coords <- coords[order(ord), ]
       out$cov.model.indx <- cov.model.indx
       out$n.neighbors <- n.neighbors
-      out$q <- q
       out$n.post <- n.post.samples
       out$n.thin <- n.thin
       out$n.burn <- n.burn
@@ -2231,7 +2237,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      registerDoParallel(k.fold.threads)
+      par.k <- parallel::makePSOCKcluster(k.fold.threads)
+      registerDoParallel(par.k)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
@@ -2505,7 +2512,10 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      stopImplicitCluster()
+      parallel::stopCluster(par.k)
+      # Remove attributes from doRNG
+      attr(out$k.fold.deviance, 'rng') <- NULL
+      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
     } # Cross-validation
   } # NNGP
   class(out) <- "spMsPGOcc"

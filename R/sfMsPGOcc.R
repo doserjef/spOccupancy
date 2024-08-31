@@ -1286,35 +1286,37 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           phi.inits.list[[i]] <- phi.inits
           nu.inits.list[[i]] <- nu.inits
         }
-        for (i in 2:n.chains) {
-          if ((!fix.inits)) {
-            beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
-            alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
-            tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
-            tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
-            beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
-                                                 sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
-            alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
-                                                  sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
-            if (p.occ.re > 0) {
-              sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
-              beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
-                                                 sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-              beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
-            }
-            if (p.det.re > 0) {
-              sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
-              alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
-                                                  sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
-              alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
-            }
-            lambda.inits.list[[i]] <- matrix(0, N, q)
-            diag(lambda.inits.list[[i]]) <- 1
-            lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
-            lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
-            phi.inits.list[[i]] <- runif(q, phi.a, phi.b)
-            if (cov.model == 'matern') {
-              nu.inits.list[[i]] <- runif(q, nu.a, nu.b)
+        if (n.chains > 1) {
+          for (i in 2:n.chains) {
+            if ((!fix.inits)) {
+              beta.comm.inits.list[[i]] <- rnorm(p.occ, mu.beta.comm, sqrt(sigma.beta.comm))
+              alpha.comm.inits.list[[i]] <- rnorm(p.det, mu.alpha.comm, sqrt(sigma.alpha.comm))
+              tau.sq.beta.inits.list[[i]] <- runif(p.occ, 0.5, 10)
+              tau.sq.alpha.inits.list[[i]] <- runif(p.det, 0.5, 10)
+              beta.inits.list[[i]] <- matrix(rnorm(N * p.occ, beta.comm.inits, 
+                                                   sqrt(tau.sq.beta.inits.list[[i]])), N, p.occ)
+              alpha.inits.list[[i]] <- matrix(rnorm(N * p.det, alpha.comm.inits, 
+                                                    sqrt(tau.sq.alpha.inits.list[[i]])), N, p.det)
+              if (p.occ.re > 0) {
+                sigma.sq.psi.inits.list[[i]] <- runif(p.occ.re, 0.5, 10)
+                beta.star.inits.list[[i]] <- rnorm(n.occ.re, 0,
+                                                   sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
+                beta.star.inits.list[[i]] <- rep(beta.star.inits.list[[i]], N)
+              }
+              if (p.det.re > 0) {
+                sigma.sq.p.inits.list[[i]] <- runif(p.det.re, 0.5, 10)
+                alpha.star.inits.list[[i]] <- rnorm(n.det.re, 0,
+                                                    sqrt(sigma.sq.p.inits.list[[i]][alpha.star.indx + 1]))
+                alpha.star.inits.list[[i]] <- rep(alpha.star.inits.list[[i]], N)
+              }
+              lambda.inits.list[[i]] <- matrix(0, N, q)
+              diag(lambda.inits.list[[i]]) <- 1
+              lambda.inits.list[[i]][lower.tri(lambda.inits.list[[i]])] <- rnorm(sum(lower.tri(lambda.inits.list[[i]])))
+              lambda.inits.list[[i]] <- c(lambda.inits.list[[i]])
+              phi.inits.list[[i]] <- runif(q, phi.a, phi.b)
+              if (cov.model == 'matern') {
+                nu.inits.list[[i]] <- runif(q, nu.a, nu.b)
+              }
             }
           }
         }
@@ -1614,7 +1616,8 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J.w)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      registerDoParallel(k.fold.threads)
+      par.k <- parallel::makePSOCKcluster(k.fold.threads)
+      registerDoParallel(par.k)
       model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
         curr.set.small <- sort(sites.random[sites.k.fold[[i]]])
         curr.set <- which(grid.index.r %in% curr.set.small)
@@ -1888,21 +1891,21 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
 
         if (binom) {
           like.samples <- array(NA, c(N, nrow(X.p.0), dim(y.big.0)[3]))
-          for (q in 1:N) {
+          for (r in 1:N) {
             for (j in 1:nrow(X.p.0)) {
               for (k in rep.indx.0[[j]]) {
-                like.samples[q, j, k] <- mean(dbinom(y.big.0[q, j, k], 1,
-                			         out.p.pred$p.0.samples[, q, j] * out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+                like.samples[r, j, k] <- mean(dbinom(y.big.0[r, j, k], 1,
+                			         out.p.pred$p.0.samples[, r, j] * out.pred$z.0.samples[, r, z.0.long.indx[j]]))
               }
             }
           }
         } else {
           like.samples <- matrix(NA, N, nrow(X.p.0))
-          for (q in 1:N) {
+          for (r in 1:N) {
             for (j in 1:nrow(X.p.0)) {
-              like.samples[q, j] <- mean(dbinom(y.0[N * (j - 1) + q], 1,  
-                				out.p.pred$p.0.samples[, q, j] * 
-                			        out.pred$z.0.samples[, q, z.0.long.indx[j]]))
+              like.samples[r, j] <- mean(dbinom(y.0[N * (j - 1) + r], 1,  
+                				out.p.pred$p.0.samples[, r, j] * 
+                			        out.pred$z.0.samples[, r, z.0.long.indx[j]]))
             }
           }
         }
@@ -1911,7 +1914,10 @@ sfMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      stopImplicitCluster()
+      parallel::stopCluster(par.k)
+      # Remove attributes from doRNG
+      attr(out$k.fold.deviance, 'rng') <- NULL
+      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
     }
    
     class(out) <- "sfMsPGOcc"

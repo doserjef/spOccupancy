@@ -256,6 +256,7 @@ out <- msPGOcc(occ.formula = occ.formula,
 	       inits = inits.list, 
 	       n.samples = n.samples, 
 	       priors = prior.list, 
+         parallel.chains = TRUE,
                n.omp.threads = 1, 
 	       verbose = FALSE, 
 	       n.report = n.report, 
@@ -324,6 +325,7 @@ test_that("default priors, inits, burn, thin work", {
 	         data = data.list, 
 	         n.samples = n.samples,
 	         n.omp.threads = 1,
+           parallel.chains = TRUE,
 	         verbose = FALSE)
   expect_s3_class(out, "msPGOcc")
 })
@@ -517,6 +519,7 @@ test_that("missing value error handling works", {
   expect_error(msPGOcc(occ.formula = occ.formula,
                det.formula = det.formula,
                data = tmp.data,
+               parallel.chains = TRUE,
                n.samples = n.samples,
                n.omp.threads = 1,
                verbose = FALSE))
@@ -681,6 +684,7 @@ out <- msPGOcc(occ.formula = occ.formula,
 	       data = data.list, 
 	       inits = inits.list, 
 	       n.samples = n.samples, 
+         parallel.chains = TRUE,
 	       priors = prior.list, 
                n.omp.threads = 1, 
 	       verbose = FALSE, 

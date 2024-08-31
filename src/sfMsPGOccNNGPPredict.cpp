@@ -20,13 +20,13 @@
 extern "C" {
 
   SEXP sfMsPGOccNNGPPredict(SEXP coords_r, SEXP J_r, SEXP N_r, SEXP q_r,
-		            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
-			    SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
-			    SEXP thetaSamples_r, SEXP lambdaSamples_r, 
-			    SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
-			    SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
-			    SEXP nReport_r, SEXP sharedSpatial_r, SEXP sitesLink_r, 
-			    SEXP sites0Sampled_r, SEXP Jw0_r, SEXP Jw_r, SEXP gridIndx0_r){
+                            SEXP pOcc_r, SEXP m_r, SEXP X0_r, SEXP coords0_r, 
+                            SEXP JStr_r, SEXP nnIndx0_r, SEXP betaSamples_r, 
+                            SEXP thetaSamples_r, SEXP lambdaSamples_r, 
+                            SEXP wSamples_r, SEXP betaStarSiteSamples_r, 
+                            SEXP nSamples_r, SEXP covModel_r, SEXP nThreads_r, SEXP verbose_r, 
+                            SEXP nReport_r, SEXP sharedSpatial_r, SEXP sitesLink_r, 
+                            SEXP sites0Sampled_r, SEXP Jw0_r, SEXP Jw_r, SEXP gridIndx0_r){
 
     int i, j, k, l, s, info, nProtect=0, ll;
     const int inc = 1;

@@ -272,6 +272,7 @@ test_that("default priors, inits, burn, thin work", {
 	        data = data.list, 
 		n.factors = 3,
 	        n.samples = n.samples,
+          parallel.chains = TRUE,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "lfJSDM")
@@ -636,6 +637,7 @@ test_that("default priors, inits, burn, thin work", {
 	        data = data.list, 
 		n.factors = 3,
 	        n.samples = n.samples,
+          parallel.chains = TRUE,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "lfJSDM")
@@ -750,6 +752,7 @@ out <- lfJSDM(formula = formula,
 	      n.samples = n.samples, 
 	      n.factors = 3,
 	      priors = prior.list, 
+        parallel.chains = TRUE,
               n.omp.threads = 1, 
 	      verbose = FALSE, 
 	      n.report = n.report, 
