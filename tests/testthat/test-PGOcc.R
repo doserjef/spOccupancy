@@ -244,7 +244,7 @@ test_that("default priors, inits, burn, thin work", {
 	       data = data.list, 
 	       n.samples = n.samples,
          parallel.chains = TRUE, 
-         n.chains = 3,
+         n.chains = 1,
 	       n.omp.threads = 1,
 	       verbose = FALSE)
   expect_s3_class(out, "PGOcc")

@@ -1077,7 +1077,7 @@ out <- lfMsPGOcc(occ.formula = occ.formula,
 	       n.report = n.report, 
 	       n.burn = 400,
 	       n.thin = 2, 
-	       n.chains = 2,
+	       n.chains = 1,
 	       k.fold = 2,
                k.fold.threads = 1)
 

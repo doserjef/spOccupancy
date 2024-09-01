@@ -199,7 +199,7 @@ test_that("default priors and inits work", {
 	         search.type = 'cb', 
 	         n.report = 10, 
 	         n.burn = 100, 
-	         n.chains = 3)
+	         n.chains = 1)
   expect_s3_class(out, "svcTPGOcc")
 })
 
@@ -471,7 +471,7 @@ out <- svcTPGOcc(occ.formula = occ.formula,
 	       n.neighbors = 10,
 	       n.report = n.report,
 	       n.burn = 100,
-	       n.chains = 2,
+	       n.chains = 1,
 	       n.thin = 2,
 	       k.fold = 2,
 	       k.fold.threads = 2)

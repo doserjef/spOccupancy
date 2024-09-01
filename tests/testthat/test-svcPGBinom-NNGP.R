@@ -525,7 +525,6 @@ test_that("default priors and inits work", {
 	            n.batch = 40, 
 	            batch.length = batch.length, 
               parallel.chains = TRUE,
-              parallel.chains = TRUE,
 	            cov.model = "exponential", 
 	            tuning = tuning.list, 
 	            NNGP = TRUE,

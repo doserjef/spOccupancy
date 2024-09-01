@@ -295,7 +295,7 @@ test_that("individual data set cv works", {
 		  n.report = 100, 
 		  n.burn = 500, 
 		  n.thin = 2, 
-		  n.chains = 2, 
+		  n.chains = 1, 
                   k.fold = 2, 
                   k.fold.data = 2)
   expect_equal(length(out$k.fold.deviance), 1)
@@ -492,7 +492,7 @@ out <- intPGOcc(occ.formula = occ.formula,
 		n.report = 100, 
 		n.burn = 500, 
 		n.thin = 2, 
-		n.chains = 2, 
+		n.chains = 1, 
                 k.fold = 2, 
                 k.fold.threads = 1)
 

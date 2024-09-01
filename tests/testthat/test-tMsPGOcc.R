@@ -127,6 +127,7 @@ test_that("default priors, inits, burn, thin work", {
 	        n.batch = n.batch,
 		ar1 = FALSE,
 	        batch.length = batch.length,
+          parallel.chains = TRUE,
 	        n.omp.threads = 1,
 	        verbose = FALSE)
   expect_s3_class(out, "tMsPGOcc")

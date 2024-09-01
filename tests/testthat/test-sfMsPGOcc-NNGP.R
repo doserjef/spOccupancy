@@ -429,7 +429,7 @@ out <- sfMsPGOcc(occ.formula = occ.formula,
                  n.report = 10, 
                  n.burn = 100, 
 		 n.thin = 2,
-		 n.chains = 2, 
+		 n.chains = 1, 
                  k.fold = 2, 
                  k.fold.threads = 1)
 

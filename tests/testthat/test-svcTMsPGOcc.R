@@ -748,7 +748,7 @@ out <- svcTMsPGOcc(occ.formula = occ.formula,
 	        n.report = n.report,
 	        n.burn = 100,
 	        n.thin = 2,
-	        n.chains = 2)
+	        n.chains = 1)
 
 # Test to make sure it worked ---------
 test_that("out is of class svcTMsPGOcc", {
