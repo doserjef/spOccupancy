@@ -243,7 +243,6 @@ test_that("default priors, inits, burn, thin work", {
 	       det.formula = ~ 1, 
 	       data = data.list, 
 	       n.samples = n.samples,
-         parallel.chains = TRUE, 
          n.chains = 1,
 	       n.omp.threads = 1,
 	       verbose = FALSE)
@@ -456,7 +455,6 @@ test_that("verbose prints to the screen", {
 	       data = data.list, 
 	       n.samples = 100,
 	       n.omp.threads = 1,
-         parallel.chains = TRUE,
 	       verbose = TRUE,
 	       n.report = n.report, 
 	       n.burn = 1, 
