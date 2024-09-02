@@ -3,6 +3,7 @@
 skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
+set.seed(320)
 J.x <- 8
 J.y <- 8
 J <- J.x * J.y
@@ -119,7 +120,6 @@ test_that("all correlation functions work", {
 	            data = data.list, 
 	            n.batch = 40, 
 	            batch.length = batch.length, 
-              paralllel.chains = TRUE,
 	            cov.model = "gaussian", 
 	            tuning = list(phi = 0.5), 
 	            NNGP = TRUE,

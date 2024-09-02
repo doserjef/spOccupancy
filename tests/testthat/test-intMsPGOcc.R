@@ -3,7 +3,7 @@ skip_on_cran()
 
 # Intercept only ----------------------------------------------------------
 # Simulate data -----------------------------------------------------------
-# set.seed(883)
+set.seed(883)
 J.x <- 10
 J.y <- 10
 # Total number of data sources across the study region

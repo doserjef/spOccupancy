@@ -184,7 +184,6 @@ test_that("non-integer n.post", {
                batch.length = batch.length, 
                accept.rate = 0.43, 
                NNGP = FALSE,
-               n.factors = 3,
 	       n.omp.threads = 1,
 	       verbose = FALSE))
 })
