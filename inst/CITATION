@@ -1,6 +1,6 @@
 if (!exists("meta") || is.null(meta)) meta <- packageDescription("spOccupancy")
 
-citHeader("To cite package", sQuote(meta$Package), "in publications, please cite the Doser, Finley, Kéry, Zipkin (2022) paper. If using functions lfJSDM, sfJSDM, lfMsPGOcc, or sfMsPGOcc, please also cite the Doser, Finley, Banerjee (2023) paper that introduces this functionality. If using any spatially-varying coefficient function, please cite the Doser, Finley, Saunders, Kéry, Weed, Zipkin (2024) paper:")
+citHeader("To cite package", sQuote(meta$Package), "in publications, please cite the Doser, Finley, Kéry, Zipkin (2022) paper. If using functions lfJSDM, sfJSDM, lfMsPGOcc, or sfMsPGOcc, please also cite the Doser, Finley, Banerjee (2023) paper that introduces this functionality. If using any spatially-varying coefficient function, please cite the Doser, Finley, Saunders, Kéry, Weed, Zipkin (2024) paper.")
 
 year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
 vers <- paste("R package version", meta$Version)

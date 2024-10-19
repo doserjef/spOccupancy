@@ -7,7 +7,7 @@ tIntPGOcc(occ.formula, det.formula, data, inits, priors, tuning,
           n.batch, batch.length, accept.rate = 0.43, n.omp.threads = 1, 
           verbose = TRUE, ar1 = FALSE, n.report = 100, 
           n.burn = round(.10 * n.batch * batch.length), n.thin = 1, n.chains = 1, 
-          parallel.chains = FALSE, ...)
+          ...)
 }
 
 \description{
@@ -129,11 +129,6 @@ Function for fitting single-species multi-season integrated occupancy models usi
   value is set to 1.}
 
 \item{n.chains}{the number of chains to run.}
-
-\item{parallel.chains}{a logical value indicating whether the \code{n.chains}
-  chains will be run in parallel. Note this is distinct from the \code{n.omp.threads}
-  arugment, which implements \emph{within-chain} parallelization for spatially-explicit
-  models. Note if set to \code{TRUE}, all model progress output will be suppressed.}
 
 \item{...}{currently no additional arguments}
 }

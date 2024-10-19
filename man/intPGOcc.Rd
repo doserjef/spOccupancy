@@ -11,7 +11,7 @@ Function for fitting single-species integrated occupancy models using Polya-Gamm
 intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples, 
          n.omp.threads = 1, verbose = TRUE, n.report = 1000, 
          n.burn = round(.10 * n.samples), n.thin = 1, n.chains = 1,
-         parallel.chains = FALSE, k.fold, k.fold.threads = 1, 
+         k.fold, k.fold.threads = 1, 
          k.fold.seed, k.fold.data, k.fold.only = FALSE, ...)
 }
 \arguments{
@@ -112,11 +112,6 @@ intPGOcc(occ.formula, det.formula, data, inits, priors, n.samples,
     value is set to 1.}
 
   \item{n.chains}{the number of chains to run.}
-
-  \item{parallel.chains}{a logical value indicating whether the \code{n.chains} 
-    chains will be run in parallel. Note this is distinct from the \code{n.omp.threads}
-    arugment, which implements \emph{within-chain} parallelization for spatially-explicit
-    models. Note if set to \code{TRUE}, all model progress output will be suppressed.}
 
   \item{k.fold}{specifies the number of \emph{k} folds for cross-validation.
     If not specified as an argument, then cross-validation is not performed

@@ -4,7 +4,7 @@ svcTPGBinom <- function(formula, data, inits, priors,
                         batch.length, accept.rate = 0.43, n.omp.threads = 1, 
                         verbose = TRUE, ar1 = FALSE, n.report = 100, 
                         n.burn = round(.10 * n.batch * batch.length), 
-                        n.thin = 1, n.chains = 1, parallel.chains = FALSE, 
+                        n.thin = 1, n.chains = 1, 
                         k.fold, k.fold.threads = 1, k.fold.seed = 100, 
                         k.fold.only = FALSE, ...){
 
@@ -842,111 +842,43 @@ svcTPGBinom <- function(formula, data, inits, priors,
     out.tmp <- list()
     out <- list()
     if (!k.fold.only) {
-      if (parallel.chains) {
-        if (verbose) {
-          cat("\n----------------------------------------\n");
-          cat("\tRunning the model\n");
-          cat("----------------------------------------\n");
-          message("MCMC chains are running in parallel. Model progress output is suppressed.")
-        }
-        beta.inits.list <- list()
-        sigma.sq.psi.inits.list <- list()
-        beta.star.inits.list <- list()
-        sigma.sq.inits.list <- list()
-        phi.inits.list <- list()
-        nu.inits.list <- list()
-        ar1.vals.list <- list()
-        for (i in 1:n.chains) {
-          beta.inits.list[[i]] <- beta.inits
-          sigma.sq.psi.inits.list[[i]] <- sigma.sq.psi.inits
-          beta.star.inits.list[[i]] <- beta.star.inits
-          sigma.sq.inits.list[[i]] <- sigma.sq.inits
-          phi.inits.list[[i]] <- phi.inits
-          nu.inits.list[[i]] <- nu.inits
-          ar1.vals.list[[i]] <- ar1.vals
-        }
-        if (n.chains > 1) {
-          for (i in 2:n.chains) {
-            if ((!fix.inits)) {
-              beta.inits.list[[i]] <- rnorm(p, mu.beta, sqrt(sigma.beta))
-              if (p.re > 0) {
-                sigma.sq.psi.inits.list[[i]] <- runif(p.re, 0.5, 10)
-                beta.star.inits.list[[i]] <- rnorm(n.re, 0,
-                                                   sqrt(sigma.sq.psi.inits.list[[i]][beta.star.indx + 1]))
-              }
-              if (sigma.sq.ig) {
-                sigma.sq.inits.list[[i]] <- rigamma(p.svc, sigma.sq.a, sigma.sq.b)
-              } else {
-                sigma.sq.inits.list[[i]] <- runif(p.svc, sigma.sq.a, sigma.sq.b)
-              }
-              phi.inits.list[[i]] <- runif(p.svc, phi.a, phi.b)
-              if (cov.model == 'matern') {
-                nu.inits.list[[i]] <- runif(p.svc, nu.a, nu.b)
-              }
-              if (ar1) {
-                ar1.vals.list[[i]][5] <- runif(1, rho.a, rho.b)
-                ar1.vals.list[[i]][6] <- runif(1, 0.5, 10)	
-              }
-            }
+      for (i in 1:n.chains) {
+        # Change initial values if i > 1
+        if ((i > 1) & (!fix.inits)) {
+          beta.inits <- rnorm(p, mu.beta, sqrt(sigma.beta))
+          if (sigma.sq.ig) {
+            sigma.sq.inits <- rigamma(p.svc, sigma.sq.a, sigma.sq.b)
+          } else {
+            sigma.sq.inits <- runif(p.svc, sigma.sq.a, sigma.sq.b)
+          }
+          phi.inits <- runif(p.svc, phi.a, phi.b)
+          if (cov.model == 'matern') {
+            nu.inits <- runif(p.svc, nu.a, nu.b)
+          }
+          if (p.re > 0) {
+            sigma.sq.psi.inits <- runif(p.re, 0.5, 10)
+            beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
+          }
+          if (ar1) {
+            ar1.vals[5] <- runif(1, rho.a, rho.b)
+            ar1.vals[6] <- runif(1, 0.5, 10)	
           }
         }
-        par.cl <- parallel::makePSOCKcluster(n.chains)
-        registerDoParallel(par.cl)
-        out.tmp <- foreach(i = 1:n.chains) %dorng% {
-          .Call("svcTPGBinomNNGP", y, X, X.w, coords, X.re,  
-                consts, weights, n.re.long,
-                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-                beta.inits.list[[i]], sigma.sq.psi.inits.list[[i]], beta.star.inits.list[[i]],
-                phi.inits.list[[i]], sigma.sq.inits.list[[i]], nu.inits.list[[i]],
-                w.inits, z.year.indx, z.dat.indx, 
-                beta.star.indx, beta.level.indx,
-                mu.beta, Sigma.beta,  
-                phi.a, phi.b, sigma.sq.a, sigma.sq.b, nu.a, nu.b,
-                sigma.sq.psi.a, sigma.sq.psi.b, ar1, ar1.vals.list[[i]],
-                tuning.c, cov.model.indx, n.batch, batch.length, accept.rate, 
-                n.omp.threads, verbose, n.report,  
-                n.burn, n.thin, n.post.samples, curr.chain, n.chains, sigma.sq.ig)
-        }
-        parallel::stopCluster(par.cl)
-      } else {
-        for (i in 1:n.chains) {
-          # Change initial values if i > 1
-          if ((i > 1) & (!fix.inits)) {
-            beta.inits <- rnorm(p, mu.beta, sqrt(sigma.beta))
-            if (sigma.sq.ig) {
-              sigma.sq.inits <- rigamma(p.svc, sigma.sq.a, sigma.sq.b)
-            } else {
-              sigma.sq.inits <- runif(p.svc, sigma.sq.a, sigma.sq.b)
-            }
-            phi.inits <- runif(p.svc, phi.a, phi.b)
-            if (cov.model == 'matern') {
-              nu.inits <- runif(p.svc, nu.a, nu.b)
-            }
-            if (p.re > 0) {
-              sigma.sq.psi.inits <- runif(p.re, 0.5, 10)
-              beta.star.inits <- rnorm(n.re, 0, sqrt(sigma.sq.psi.inits[beta.star.indx + 1]))
-            }
-            if (ar1) {
-              ar1.vals[5] <- runif(1, rho.a, rho.b)
-              ar1.vals[6] <- runif(1, 0.5, 10)	
-            }
-          }
-          storage.mode(curr.chain) <- "integer"
-          out.tmp[[i]] <- .Call("svcTPGBinomNNGP", y, X, X.w, coords, X.re,  
-                                consts, weights, n.re.long,
-                                n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
-                                beta.inits, sigma.sq.psi.inits, beta.star.inits,
-                                phi.inits, sigma.sq.inits, nu.inits,
-                                w.inits, z.year.indx, z.dat.indx, 
-                                beta.star.indx, beta.level.indx,
-                                mu.beta, Sigma.beta,  
-                                phi.a, phi.b, sigma.sq.a, sigma.sq.b, nu.a, nu.b,
-                                sigma.sq.psi.a, sigma.sq.psi.b, ar1, ar1.vals,
-                                tuning.c, cov.model.indx, n.batch, batch.length, accept.rate, 
-                                n.omp.threads, verbose, n.report,  
-                                n.burn, n.thin, n.post.samples, curr.chain, n.chains, sigma.sq.ig)
-          curr.chain <- curr.chain + 1
-        }
+        storage.mode(curr.chain) <- "integer"
+        out.tmp[[i]] <- .Call("svcTPGBinomNNGP", y, X, X.w, coords, X.re,  
+                              consts, weights, n.re.long,
+                              n.neighbors, nn.indx, nn.indx.lu, u.indx, u.indx.lu, ui.indx,
+                              beta.inits, sigma.sq.psi.inits, beta.star.inits,
+                              phi.inits, sigma.sq.inits, nu.inits,
+                              w.inits, z.year.indx, z.dat.indx, 
+                              beta.star.indx, beta.level.indx,
+                              mu.beta, Sigma.beta,  
+                              phi.a, phi.b, sigma.sq.a, sigma.sq.b, nu.a, nu.b,
+                              sigma.sq.psi.a, sigma.sq.psi.b, ar1, ar1.vals,
+                              tuning.c, cov.model.indx, n.batch, batch.length, accept.rate, 
+                              n.omp.threads, verbose, n.report,  
+                              n.burn, n.thin, n.post.samples, curr.chain, n.chains, sigma.sq.ig)
+        curr.chain <- curr.chain + 1
       }
 
       # Get the names for theta which makes Rhat calc easier   

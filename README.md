@@ -1,12 +1,12 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# spOccupancy <a href='https://www.doserlab.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
+# spOccupancy <a href='https://doserlab.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test
-coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
+coverage](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov chain Monte Carlo (MCMC). Models are fit
@@ -113,14 +113,14 @@ btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
 We run the model using an adaptive MCMC sampler with a target acceptance
-rate of 0.43. We run 3 chains of the model in parallel each for 20,000
-iterations split into 800 batches each of length 25. For each chain, we
-discard the first 8000 iterations as burn-in and use a thinning rate of
-4 for a resulting 9000 samples from the joint posterior. We fit the
-model using 5 nearest neighbors and an exponential correlation function.
-We also specify the `k.fold` argument to perform 2-fold cross-validation
-after fitting the full model. Run `?spPGOcc` for more detailed
-information on all function arguments.
+rate of 0.43. We run 3 chains of the model for 20,000 iterations split
+into 800 batches each of length 25. For each chain, we discard the first
+8000 iterations as burn-in and use a thinning rate of 4 for a resulting
+9000 samples from the joint posterior. We fit the model using 5 nearest
+neighbors and an exponential correlation function. We also specify the
+`k.fold` argument to perform 2-fold cross-validation after fitting the
+full model. Run `?spPGOcc` for more detailed information on all function
+arguments.
 
 ``` r
 # Run the model
@@ -130,7 +130,7 @@ out <- spPGOcc(occ.formula = btbw.occ.formula,
                accept.rate = 0.43, cov.model = "exponential", 
                NNGP = TRUE, n.neighbors = 5, n.burn = 8000, 
                n.thin = 4, n.chains = 3, verbose = FALSE, 
-               parallel.chains = TRUE, k.fold = 2, k.fold.threads = 2)
+               k.fold = 2, k.fold.threads = 2)
 ```
 
 This will produce a large output object, and you can use `str(out)` to
@@ -145,32 +145,32 @@ summary(out)
 #>     data = btbwHBEF, cov.model = "exponential", NNGP = TRUE, 
 #>     n.neighbors = 5, n.batch = 800, batch.length = 25, accept.rate = 0.43, 
 #>     verbose = FALSE, n.burn = 8000, n.thin = 4, n.chains = 3, 
-#>     parallel.chains = TRUE, k.fold = 2, k.fold.threads = 2)
+#>     k.fold = 2, k.fold.threads = 2)
 #> 
 #> Samples per Chain: 20000
 #> Burn-in: 8000
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 9000
-#> Run Time (min): 0.648
+#> Run Time (min): 1.2816
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
-#> (Intercept)            3.9819 0.5888  3.0184  3.9144  5.2920 1.0199  298
-#> scale(Elevation)      -0.5278 0.2167 -0.9750 -0.5218 -0.1174 1.0042 2148
-#> I(scale(Elevation)^2) -1.1603 0.2145 -1.6386 -1.1399 -0.7961 1.0133  447
+#> (Intercept)            3.9946 0.5810  3.0233  3.9337  5.2932 1.0302  354
+#> scale(Elevation)      -0.5235 0.2193 -0.9785 -0.5145 -0.1082 1.0013 1368
+#> I(scale(Elevation)^2) -1.1673 0.2117 -1.6341 -1.1489 -0.8003 1.0026  571
 #> 
 #> Detection (logit scale): 
 #>                    Mean     SD    2.5%     50%  97.5%   Rhat  ESS
-#> (Intercept)      0.6626 0.1140  0.4390  0.6626 0.8868 0.9999 8178
-#> scale(day)       0.2902 0.0708  0.1528  0.2902 0.4278 1.0002 9054
-#> scale(tod)      -0.0326 0.0692 -0.1669 -0.0331 0.1061 1.0003 9897
-#> I(scale(day)^2) -0.0754 0.0862 -0.2451 -0.0758 0.0965 1.0004 9000
+#> (Intercept)      0.6621 0.1136  0.4429  0.6602 0.8872 1.0009 8235
+#> scale(day)       0.2912 0.0701  0.1526  0.2910 0.4294 1.0019 9000
+#> scale(tod)      -0.0306 0.0699 -0.1672 -0.0299 0.1057 1.0025 9000
+#> I(scale(day)^2) -0.0753 0.0861 -0.2456 -0.0753 0.0927 0.9999 9000
 #> 
 #> Spatial Covariance: 
 #>            Mean     SD   2.5%    50%  97.5%   Rhat ESS
-#> sigma.sq 1.1206 1.0169 0.1908 0.8124 3.8735 1.0230 137
-#> phi      0.0090 0.0083 0.0007 0.0055 0.0281 1.0456  66
+#> sigma.sq 1.1864 0.9200 0.2306 0.9314 3.5575 1.0336 160
+#> phi      0.0075 0.0075 0.0007 0.0044 0.0272 1.0668 111
 ```
 
 ### Posterior predictive check
@@ -196,7 +196,7 @@ summary(ppc.out)
 #> Number of Chains: 3
 #> Total Posterior Samples: 9000
 #> 
-#> Bayesian p-value:  0.4939 
+#> Bayesian p-value:  0.4833 
 #> Fit statistic:  freeman-tukey
 ```
 
@@ -209,7 +209,7 @@ due to Monte Carlo error your results will differ slightly).
 ``` r
 waicOcc(out)
 #>       elpd         pD       WAIC 
-#> -681.77267   21.27419 1406.09372
+#> -680.80100   21.87208 1405.34616
 ```
 
 Alternatively, we can perform k-fold cross-validation (CV) directly in
@@ -222,7 +222,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1415.012
+#> [1] 1414.706
 ```
 
 ### Prediction
@@ -258,8 +258,8 @@ al. 2023). For a description and tutorial of multi-season
 `vignette("spaceTimeModels")`. For a tutorial on spatially-varying
 coefficient models in `spOccupancy`, see `vignette("svcModels")` and
 `vignette(mcmcSVCModels)` and our associated papers that describe the
-[methods](https://www.doserlab.com/files/pubs/doser2024JABES.pdf) (Doser
-et al. 2024A) and [applications to
+[methods](https://doserlab.com/files/pubs/doser2024JABES.pdf) (Doser et
+al. 2024A) and [applications to
 ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814)
 (Doser et al. 2024B) in much more detail.
 

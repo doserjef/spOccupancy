@@ -11,7 +11,7 @@ knitr::opts_chunk$set(
   out.width = "100%")
 ```
 
-# spOccupancy <a href='https://www.doserlab.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
+# spOccupancy <a href='https://doserlab.com/files/spoccupancy-web/'><img src="man/figures/logo.png" align="right" height="139" width="120"/></a>
 
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
@@ -97,7 +97,7 @@ btbw.occ.formula <- ~ scale(Elevation) + I(scale(Elevation)^2)
 btbw.det.formula <- ~ scale(day) + scale(tod) + I(scale(day)^2)
 ```
 
-We run the model using an adaptive MCMC sampler with a target acceptance rate of 0.43. We run 3 chains of the model in parallel each for 20,000 iterations split into 800 batches each of length 25. For each chain, we discard the first 8000 iterations as burn-in and use a thinning rate of 4 for a resulting 9000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 2-fold cross-validation after fitting the full model. Run `?spPGOcc` for more detailed information on all function arguments.
+We run the model using an adaptive MCMC sampler with a target acceptance rate of 0.43. We run 3 chains of the model for 20,000 iterations split into 800 batches each of length 25. For each chain, we discard the first 8000 iterations as burn-in and use a thinning rate of 4 for a resulting 9000 samples from the joint posterior. We fit the model using 5 nearest neighbors and an exponential correlation function. We also specify the `k.fold` argument to perform 2-fold cross-validation after fitting the full model. Run `?spPGOcc` for more detailed information on all function arguments.
 
 ```{r}
 # Run the model
@@ -107,7 +107,7 @@ out <- spPGOcc(occ.formula = btbw.occ.formula,
                accept.rate = 0.43, cov.model = "exponential", 
                NNGP = TRUE, n.neighbors = 5, n.burn = 8000, 
                n.thin = 4, n.chains = 3, verbose = FALSE, 
-               parallel.chains = TRUE, k.fold = 2, k.fold.threads = 2)
+               k.fold = 2, k.fold.threads = 2)
 ```
 
 This will produce a large output object, and you can use `str(out)` to get an overview of what's in there. Here we use the `summary()` function to print a concise but informative summary of the model fit.
@@ -153,7 +153,7 @@ out.pred <- predict(out, X.0, coords.0, verbose = FALSE)
 
 ## Learn more
 
-The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [the introductory spOccupancy paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, `vignette("mcmcFactorModels")`, and our [open-access paper](https://doi.org/10.1002/ecy.4137) (Doser et al. 2023). For a description and tutorial of multi-season (spatio-temporal) occupancy models in `spOccupancy`, see `vignette("spaceTimeModels")`. For a tutorial on spatially-varying coefficient models in `spOccupancy`, see `vignette("svcModels")` and `vignette(mcmcSVCModels)` and our associated papers that describe the [methods](https://www.doserlab.com/files/pubs/doser2024JABES.pdf) (Doser et al. 2024A) and [applications to ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814) (Doser et al. 2024B) in much more detail.
+The `vignette("modelFitting")` provides a more detailed description and tutorial of the core functions in `spOccupancy`. For full statistical details on the MCMC samplers for core functions in `spOccupancy`, see `vignette("mcmcSamplers")`. In addition, see [the introductory spOccupancy paper](https://doi.org/10.1111/2041-210X.13897) that describes the package in more detail (Doser et al. 2022). For a detailed description and tutorial of joint species distribution models in `spOccupancy` that account for residual species correlations, see `vignette("factorModels")`, `vignette("mcmcFactorModels")`, and our [open-access paper](https://doi.org/10.1002/ecy.4137) (Doser et al. 2023). For a description and tutorial of multi-season (spatio-temporal) occupancy models in `spOccupancy`, see `vignette("spaceTimeModels")`. For a tutorial on spatially-varying coefficient models in `spOccupancy`, see `vignette("svcModels")` and `vignette(mcmcSVCModels)` and our associated papers that describe the [methods](https://doserlab.com/files/pubs/doser2024JABES.pdf) (Doser et al. 2024A) and [applications to ecology](https://onlinelibrary.wiley.com/doi/epdf/10.1111/geb.13814) (Doser et al. 2024B) in much more detail.
 
 ## References
 
