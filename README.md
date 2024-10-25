@@ -6,7 +6,7 @@
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
 [![Codecov test
-coverage](https://app.codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
+coverage](https://codecov.io/gh/biodiverse/spOccupancy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/biodiverse/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial
 occupancy models using Markov chain Monte Carlo (MCMC). Models are fit
@@ -152,7 +152,7 @@ summary(out)
 #> Thinning Rate: 4
 #> Number of Chains: 3
 #> Total Posterior Samples: 9000
-#> Run Time (min): 1.2816
+#> Run Time (min): 1.3642
 #> 
 #> Occurrence (logit scale): 
 #>                          Mean     SD    2.5%     50%   97.5%   Rhat  ESS
@@ -222,7 +222,7 @@ value of this CV score.
 
 ``` r
 out$k.fold.deviance
-#> [1] 1414.706
+#> [1] 1414.027
 ```
 
 ### Prediction

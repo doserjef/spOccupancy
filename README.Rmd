@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 [![](http://cranlogs.r-pkg.org/badges/grand-total/spOccupancy?color=blue)](https://CRAN.R-project.org/package=spOccupancy)
 [![CRAN](https://www.r-pkg.org/badges/version/spOccupancy)](https://CRAN.R-project.org/package=spOccupancy)
-[![Codecov test coverage](https://codecov.io/gh/doserjef/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/doserjef/spOccupancy?branch=main)
+[![Codecov test coverage](https://codecov.io/gh/biodiverse/spOccupancy/branch/main/graph/badge.svg)](https://codecov.io/gh/biodiverse/spOccupancy?branch=main)
 
 spOccupancy fits single-species, multi-species, and integrated spatial occupancy models using Markov chain Monte Carlo (MCMC). Models are fit using P&oacute;lya-Gamma data augmentation. Spatial models are fit using either Gaussian processes or Nearest Neighbor Gaussian Processes (NNGP) for large spatial datasets. The package provides functionality for data integration of multiple single-species occupancy data sets using a joint likelihood framework. For multi-species models, spOccupancy provides functions to account for residual species correlations in a joint species distribution model framework while accounting for imperfect detection. `spOccupancy` also provides functions for multi-season (i.e., spatio-temporal) single-species occupancy models. Below we give a very brief introduction to some of the package's functionality, and illustrate just one of the model fitting functions. For more information, see the resources referenced at the bottom of this page. 
 
