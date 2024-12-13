@@ -950,20 +950,19 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         if (verbose) {
           message(paste("Only holding out data from data source ", k.fold.data, ".", sep = ''))
-	}
-	sites.random <- sample(sites[[k.fold.data]])
+        }
+        sites.random <- sample(sites[[k.fold.data]])
       } else {
         sites.random <- sample(1:J)    
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = '+') %dopar% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
-	curr.set.fit <- (1:J)[-curr.set]
-	if (!is.null(k.fold.data)) {
-	  # Only drop out data for the k.fold.data data source if multiple data sources
+        curr.set.fit <- (1:J)[-curr.set]
+        if (!is.null(k.fold.data)) {
+        # Only drop out data for the k.fold.data data source if multiple data sources
           # exist at a given site.
           curr.set.fit <- sort(unique(c(curr.set.fit, unlist(sites[-k.fold.data]))))
         }
@@ -971,7 +970,7 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         if (!is.null(k.fold.data)) {
           y.indx <- ifelse(data.indx.r == k.fold.data, y.indx, TRUE)
         } 
-	y.fit <- y[y.indx]
+        y.fit <- y[y.indx]
         y.0 <- y[!y.indx]
         z.inits.fit <- z.inits[curr.set.fit]
         X.p.fit <- X.p.all[y.indx, , drop = FALSE]
@@ -979,44 +978,44 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         X.fit <- X[curr.set.fit, , drop = FALSE]
         X.0 <- X[curr.set.pred, , drop = FALSE]
         J.fit <- nrow(X.fit)
-	data.indx.c.fit <- data.indx.c[y.indx]
-	data.indx.0 <- data.indx.c[!y.indx] + 1
-	data.indx.r.fit <- data.indx.c.fit + 1
-	# Random Detection Effects
+        data.indx.c.fit <- data.indx.c[y.indx]
+        data.indx.0 <- data.indx.c[!y.indx] + 1
+        data.indx.r.fit <- data.indx.c.fit + 1
+        # Random Detection Effects
         X.p.re.all.fit <- X.p.re.all[y.indx, , drop = FALSE]
         X.p.re.all.0 <- X.p.re.all[!y.indx, , drop = FALSE]
         n.det.re.fit <- length(unique(c(X.p.re.all.fit)[!is.na(c(X.p.re.all.fit))]))
-	# Number of random effect levels for each data set
-	n.det.re.by.data.fit <- rep(NA, n.data)
-	for (i in 1:n.data) {
-          tmp <- c(X.p.re.all.fit[which(data.indx.r.fit == i, ), , drop = FALSE]) 
-          n.det.re.by.data.fit[i] <- length(unique(tmp[!is.na(tmp)]))
-	}
-	# Number of unique levels in each fitted random effect. 
-	n.det.re.long.fit <- rep(NA, p.det.re)
-	curr.indx <- 1
-        for (i in 1:n.data) {
-          tmp <- X.p.re.all.fit[which(data.indx.r.fit == i), , drop = FALSE]
-	  n.det.re.fit.curr <- apply(tmp, 2, function(a) length(unique(a[!is.na(a)])))
-	  curr.res <- n.det.re.fit.curr[n.det.re.fit.curr > 0]
-	  if (length(curr.res > 0)) {
-	    n.det.re.long.fit[curr.indx:(curr.indx + length(curr.res) - 1)] <- curr.res 
-	    curr.indx <- curr.indx + length(curr.res)
-	  }
-	}	
+        # Number of random effect levels for each data set
+        n.det.re.by.data.fit <- rep(NA, n.data)
+        for (q in 1:n.data) {
+                tmp <- c(X.p.re.all.fit[which(data.indx.r.fit == q, ), , drop = FALSE]) 
+                n.det.re.by.data.fit[q] <- length(unique(tmp[!is.na(tmp)]))
+        }
+        # Number of unique levels in each fitted random effect. 
+        n.det.re.long.fit <- rep(NA, p.det.re)
+        curr.indx <- 1
+        for (q in 1:n.data) {
+          tmp <- X.p.re.all.fit[which(data.indx.r.fit == q), , drop = FALSE]
+          n.det.re.fit.curr <- apply(tmp, 2, function(a) length(unique(a[!is.na(a)])))
+          curr.res <- n.det.re.fit.curr[n.det.re.fit.curr > 0]
+          if (length(curr.res > 0)) {
+            n.det.re.long.fit[curr.indx:(curr.indx + length(curr.res) - 1)] <- curr.res 
+            curr.indx <- curr.indx + length(curr.res)
+          }
+        }	
         if (p.det.re > 0) {	
           # Keep track of which detection random effect you're on. 
           alpha.star.indx.fit <- rep(0:(p.det.re - 1), n.det.re.long.fit)
           # Index that indicates the column in X.p.re.all
           alpha.col.fit.list <- list()
           indx <- 1
-          for (i in 1:n.data) {
-            if (p.det.re.by.data[i] > 0) { 
-              for (j in 1:p.det.re.by.data[i]) {
+          for (q in 1:n.data) {
+            if (p.det.re.by.data[q] > 0) { 
+              for (j in 1:p.det.re.by.data[q]) {
                 if (j > 1) {
-                  alpha.col.fit.list[[i]] <- c(alpha.col.fit.list[[i]], rep(j - 1, n.det.re.long.fit[indx]))
+                  alpha.col.fit.list[[q]] <- c(alpha.col.fit.list[[q]], rep(j - 1, n.det.re.long.fit[indx]))
                 } else {
-                  alpha.col.fit.list[[i]] <- rep(j - 1, n.det.re.long.fit[indx])
+                  alpha.col.fit.list[[q]] <- rep(j - 1, n.det.re.long.fit[indx])
                 }
                 indx <- indx + 1
               }
@@ -1030,10 +1029,10 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           alpha.star.indx.fit <- alpha.star.indx
           alpha.level.indx.fit <- alpha.level.indx
           alpha.star.inits.fit <- alpha.star.inits
-	  alpha.n.re.indx.fit <- alpha.n.re.indx
-	  alpha.col.indx.fit <- alpha.col.indx
+          alpha.n.re.indx.fit <- alpha.n.re.indx
+          alpha.col.indx.fit <- alpha.col.indx
         }
-	# Random occurrence effects
+        # Random occurrence effects
         X.re.fit <- X.re[curr.set.fit, , drop = FALSE]
         X.re.0 <- X.re[curr.set.pred, , drop = FALSE]
         n.occ.re.fit <- length(unique(c(X.re.fit)))
@@ -1054,111 +1053,110 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           beta.star.inits.fit <- beta.star.inits
           re.level.names.fit <- re.level.names
         }
-	# Site indices for fitted data
-	sites.fit <- sapply(sites, 
-			    function(a) which(as.numeric(row.names(X.fit)) %in% a[a %in% curr.set.fit]))
-	tmp <- sapply(sites, function(a) a %in% curr.set.fit)
+        # Site indices for fitted data
+        sites.fit <- sapply(sites, 
+                           function(a) which(as.numeric(row.names(X.fit)) %in% a[a %in% curr.set.fit]))
+        tmp <- sapply(sites, function(a) a %in% curr.set.fit)
         # This is needed to ensure that you don't pull the data from data source k.fold.data at sites where there 
-	# is another data source.
-	if (!is.null(k.fold.data)) {
+	      # is another data source.
+        if (!is.null(k.fold.data)) {
           sites.fit[[k.fold.data]] <- which(as.numeric(row.names(X.fit)) %in% sites[[k.fold.data]][sites[[k.fold.data]] %in% (1:J)[-curr.set]])
           tmp[[k.fold.data]] <- sites[[k.fold.data]] %in% (1:J)[-curr.set]
         }
         K.fit <- K[unlist(tmp)]
-	y.big.fit <- y.big
-	for (q in 1:n.data) {
+        y.big.fit <- y.big
+        for (q in 1:n.data) {
           for (j in 1:J.long[q]) {
             if (is.null(k.fold.data)) {
               if (sites[[q]][j] %in% curr.set) {
                 y.big.fit[[q]][j, ] <- NA
-	      }
-	    } else {
+	            }
+	          } else {
               if (q == k.fold.data) {
                 if (sites[[q]][j] %in% curr.set) {
                   y.big.fit[[q]][j, ] <- NA
-	        }
-	      }
-	    }
-	  }
-	  y.big.fit[[q]] <- y.big.fit[[q]][which(apply(y.big.fit[[q]], 
-						       1, function(a) sum(!is.na(a)) > 0)), ]
-	}
-	y.big.0 <- y.big
-	for (q in 1:n.data) {
+	              }
+	            }
+	          }
+          }
+	        y.big.fit[[q]] <- y.big.fit[[q]][which(apply(y.big.fit[[q]], 
+                                                 1, function(a) sum(!is.na(a)) > 0)), ]
+        }
+	      y.big.0 <- y.big
+	      for (q in 1:n.data) {
           for (j in 1:J.long[q]) {
             if (is.null(k.fold.data)) {
               if (! sites[[q]][j] %in% curr.set) {
                 y.big.0[[q]][j, ] <- NA
-	      }
-	    } else {
+	            }
+	          } else {
               if (q == k.fold.data) {
                 if (! sites[[q]][j] %in% curr.set) {
                   y.big.0[[q]][j, ] <- NA
+	              }
+	            }
+	          }
 	        }
+	        y.big.0[[q]] <- y.big.0[[q]][which(apply(y.big.0[[q]], 
+                                                   1, function(a) sum(!is.na(a)) > 0)), ]
 	      }
-	    }
-	  }
-	  y.big.0[[q]] <- y.big.0[[q]][which(apply(y.big.0[[q]], 
-						       1, function(a) sum(!is.na(a)) > 0)), ]
-	}
-	z.long.indx.fit <- list()
-	for (q in 1:n.data) {
+	      z.long.indx.fit <- list()
+	      for (q in 1:n.data) {
           z.long.indx.fit[[q]] <- rep(sites.fit[[q]], K.long.max[q])
-	  z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(c(y.big.fit[[q]]))]
-	}
-	z.long.indx.fit <- unlist(z.long.indx.fit)
+	        z.long.indx.fit[[q]] <- z.long.indx.fit[[q]][!is.na(c(y.big.fit[[q]]))]
+	      }
+	      z.long.indx.fit <- unlist(z.long.indx.fit)
         z.long.indx.fit <- z.long.indx.fit - 1
 	
-	# Site indices for hold out data
-	sites.0 <- sapply(sites, 
-			    function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% curr.set.pred]))
-	tmp <- sapply(sites, function(a) a %in% curr.set.pred)
-	if (!is.null(k.fold.data)) {
+        # Site indices for hold out data
+        sites.0 <- sapply(sites, 
+                          function(a) which(as.numeric(row.names(X.0)) %in% a[a %in% curr.set.pred]))
+        tmp <- sapply(sites, function(a) a %in% curr.set.pred)
+        if (!is.null(k.fold.data)) {
           sites.0[-k.fold.data] <- NA
-	  for (q in 1:n.data) {
+	        for (q in 1:n.data) {
             if (q != k.fold.data) {
               tmp[[q]] <- rep(FALSE, J.long[q])
             }
           }
         }
         K.0 <- K[unlist(tmp)]
-	if (is.null(k.fold.data)) {
-	  z.long.indx.0 <- list()
-	  for (q in 1:n.data) {
+        if (is.null(k.fold.data)) {
+          z.long.indx.0 <- list()
+          for (q in 1:n.data) {
             z.long.indx.0[[q]] <- rep(sites.0[[q]], K.long.max[q])
-	    z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(c(y.big.0[[q]]))]
-	  }
-	  z.long.indx.0 <- unlist(z.long.indx.0) - 1
-	} else {
+            z.long.indx.0[[q]] <- z.long.indx.0[[q]][!is.na(c(y.big.0[[q]]))]
+          }
+          z.long.indx.0 <- unlist(z.long.indx.0) - 1
+        } else {
           z.long.indx.0 <- rep(sites.0[[k.fold.data]], K.long.max[k.fold.data])
-	  z.long.indx.0 <- z.long.indx.0[!is.na(c(y.big.0[[k.fold.data]]))] - 1
-	}
+          z.long.indx.0 <- z.long.indx.0[!is.na(c(y.big.0[[k.fold.data]]))] - 1
+        }
         verbose.fit <- FALSE
         n.omp.threads.fit <- 1
-	n.obs.fit <- length(y.fit)
-	n.obs.0 <- length(y.0)
-	n.obs.long.fit <- as.vector(table(data.indx.c.fit))
-	n.obs.long.0 <- n.obs.long - n.obs.long.fit
-	J.long.fit <- as.vector(tapply(z.long.indx.fit, factor(data.indx.c.fit), 
-			     FUN = function(a) length(unique(a))))
-
+        n.obs.fit <- length(y.fit)
+        n.obs.0 <- length(y.0)
+        n.obs.long.fit <- as.vector(table(data.indx.c.fit))
+        n.obs.long.0 <- n.obs.long - n.obs.long.fit
+        J.long.fit <- as.vector(tapply(z.long.indx.fit, factor(data.indx.c.fit), 
+                                       FUN = function(a) length(unique(a))))
         storage.mode(y.fit) <- "double"
         storage.mode(z.inits.fit) <- "double"
         storage.mode(X.p.fit) <- "double"
         storage.mode(X.fit) <- "double"
         storage.mode(J.long.fit) <- "integer"
         storage.mode(K.fit) <- "integer"
-	storage.mode(n.obs.long.fit) <- "integer"
+        storage.mode(n.obs.long.fit) <- "integer"
         consts.fit <- c(J.fit, n.obs.fit, p.occ, p.occ.re, n.occ.re.fit, 
-			p.det, p.det.re, n.det.re.fit, n.data)
-	storage.mode(consts.fit) <- "integer"
+                        p.det, p.det.re, n.det.re.fit, n.data)
+        storage.mode(consts.fit) <- "integer"
         storage.mode(z.long.indx.fit) <- "integer"
         storage.mode(data.indx.c.fit) <- "integer"
         storage.mode(n.samples) <- "integer"
         storage.mode(n.omp.threads.fit) <- "integer"
         storage.mode(verbose.fit) <- "integer"
         storage.mode(n.report) <- "integer"
-	# Occurrence random effects
+        # Occurrence random effects
         storage.mode(X.re.fit) <- "integer"
         storage.mode(n.occ.re.long.fit) <- "integer"
         storage.mode(beta.star.inits.fit) <- "double"
@@ -1177,24 +1175,24 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         storage.mode(alpha.star.indx.fit) <- "integer"
         storage.mode(alpha.n.re.indx.fit) <- "integer"
         storage.mode(alpha.col.indx.fit) <- "integer"
-	chain.info[1] <- 1
-	storage.mode(chain.info) <- "integer"
-	waic.calc.fit <- FALSE
-	storage.mode(waic.calc.fit) <- "integer"
+        chain.info[1] <- 1
+        storage.mode(chain.info) <- "integer"
+        waic.calc.fit <- FALSE
+        storage.mode(waic.calc.fit) <- "integer"
 
-	out.fit <- .Call("intPGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.all.fit, 
-			 consts.fit, p.det.long, J.long.fit, n.obs.long.fit, K.fit, 
-			 n.occ.re.long.fit, n.det.re.long.fit,
-		         beta.inits, alpha.inits, sigma.sq.psi.inits, 
-			 sigma.sq.p.inits, beta.star.inits.fit, alpha.star.inits.fit, 
-			 z.inits.fit, z.long.indx.fit, data.indx.c.fit, alpha.indx.c, 
-			 beta.star.indx.fit, beta.level.indx.fit, 
-			 alpha.star.indx.fit, alpha.level.indx.fit, 
-			 alpha.n.re.indx.fit, alpha.col.indx.fit, 
-			 waic.J.indx, waic.n.obs.indx, waic.calc.fit, mu.beta, mu.alpha, 
-		         Sigma.beta, sigma.alpha, sigma.sq.psi.a, sigma.sq.psi.b, 
-			 sigma.sq.p.a, sigma.sq.p.b, n.samples, 
-		         n.omp.threads.fit, verbose.fit, n.report, samples.info, chain.info)
+        out.fit <- .Call("intPGOcc", y.fit, X.fit, X.p.fit, X.re.fit, X.p.re.all.fit, 
+                         consts.fit, p.det.long, J.long.fit, n.obs.long.fit, K.fit, 
+                         n.occ.re.long.fit, n.det.re.long.fit,
+                         beta.inits, alpha.inits, sigma.sq.psi.inits, 
+                         sigma.sq.p.inits, beta.star.inits.fit, alpha.star.inits.fit, 
+                         z.inits.fit, z.long.indx.fit, data.indx.c.fit, alpha.indx.c, 
+                         beta.star.indx.fit, beta.level.indx.fit, 
+                         alpha.star.indx.fit, alpha.level.indx.fit, 
+                         alpha.n.re.indx.fit, alpha.col.indx.fit, 
+                         waic.J.indx, waic.n.obs.indx, waic.calc.fit, mu.beta, mu.alpha, 
+                         Sigma.beta, sigma.alpha, sigma.sq.psi.a, sigma.sq.psi.b, 
+                         sigma.sq.p.a, sigma.sq.p.b, n.samples, 
+                         n.omp.threads.fit, verbose.fit, n.report, samples.info, chain.info)
         out.fit$beta.samples <- mcmc(t(out.fit$beta.samples))
         colnames(out.fit$beta.samples) <- x.names
         out.fit$X <- X.fit
@@ -1228,15 +1226,15 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         }
         class(out.fit) <- "intPGOcc"
 
-	# Get RE levels correct for when they aren't supplied at values starting at 1.
-	if (p.occ.re > 0) {
-	  tmp <- unlist(re.level.names)
-	  X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
-	  colnames(X.re.0) <- x.re.names
-	}
+        # Get RE levels correct for when they aren't supplied at values starting at 1.
+        if (p.occ.re > 0) {
+          tmp <- unlist(re.level.names)
+          X.re.0 <- matrix(tmp[c(X.re.0 + 1)], nrow(X.re.0), ncol(X.re.0))
+          colnames(X.re.0) <- x.re.names
+        }
         # Predict occurrence at new sites. 
-	if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
-	out.pred <- predict.intPGOcc(out.fit, X.0)
+        if (p.occ.re > 0) {X.0 <- cbind(X.0, X.re.0)}
+        out.pred <- predict.intPGOcc(out.fit, X.0)
 
         # Detection 
         # Get full random effects if certain levels aren't in the fitted values
@@ -1254,27 +1252,24 @@ intPGOcc <- function(occ.formula, det.formula, data, inits, priors,
           }
         }
 
-	p.0.samples <- matrix(NA, n.post.samples, nrow(X.p.0))
+        p.0.samples <- matrix(NA, n.post.samples, nrow(X.p.0))
         like.samples <- rep(NA, nrow(X.p.0))
         for (j in 1:nrow(X.p.0)) {
           if (p.det.re > 0) {
             det.re.sum <- apply(out.fit$alpha.star.samples[which(alpha.level.indx %in% X.p.re.all.0[j, ]), , drop = FALSE], 2, sum)
             p.0.samples[, j] <- logit.inv(X.p.0[j, 1:sum(alpha.indx.r == data.indx.0[j])] %*% out.fit$alpha.samples[which(alpha.indx.r == data.indx.0[j]), ] + det.re.sum)
-	  } else {
+          } else {
             p.0.samples[, j] <- logit.inv(X.p.0[j, 1:sum(alpha.indx.r == data.indx.0[j])] %*% out.fit$alpha.samples[which(alpha.indx.r == data.indx.0[j]), ])
-	  }
+          }
           like.samples[j] <- mean(dbinom(y.0[j], 1, 
-					 p.0.samples[, j] * out.pred$z.0.samples[, z.long.indx.0[j] + 1]))
+					p.0.samples[, j] * out.pred$z.0.samples[, z.long.indx.0[j] + 1]))
         }
-	as.vector(tapply(like.samples, data.indx.0, function(a) sum(log(a))))
+        as.vector(tapply(like.samples, data.indx.0, function(a) sum(log(a))))
       }
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     }
 
     class(out) <- "intPGOcc"

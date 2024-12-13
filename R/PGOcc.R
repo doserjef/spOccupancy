@@ -785,9 +785,8 @@ if (length(sigma.sq.p.inits) != p.det.re) {
     # Number of sites in each hold out data set. 
     sites.random <- sample(1:J)    
     sites.k.fold <- split(sites.random, sites.random %% k.fold)
-    par.k <- parallel::makePSOCKcluster(k.fold.threads)
-    registerDoParallel(par.k)
-    model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dorng% {
+    registerDoParallel(k.fold.threads)
+    model.deviance <- foreach (i = 1:k.fold, .combine = sum) %dopar% {
       curr.set <- sort(sites.random[sites.k.fold[[i]]])
       if (binom) {
         y.indx <- !(1:J %in% curr.set)
@@ -986,10 +985,7 @@ if (length(sigma.sq.p.inits) != p.det.re) {
     model.deviance <- -2 * model.deviance
     # Return objects from cross-validation
     out$k.fold.deviance <- model.deviance
-    parallel::stopCluster(par.k)
-    # Remove attributes from doRNG
-    attr(out$k.fold.deviance, 'rng') <- NULL
-    attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+    stopImplicitCluster()
   }
   class(out) <- "PGOcc"
   out$run.time <- proc.time() - ptm

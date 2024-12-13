@@ -1247,9 +1247,8 @@ sfJSDM <- function(formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         y.fit <- c(y.big[, -curr.set, drop = FALSE])
         y.fit <- y.fit[!is.na(y.fit)]
@@ -1443,10 +1442,7 @@ sfJSDM <- function(formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     }
    
     class(out) <- "sfJSDM"

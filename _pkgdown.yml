@@ -21,6 +21,9 @@ reference:
    - svcPGBinom
    - svcTPGOcc
    - svcTPGBinom
+   - tIntPGOcc
+   - stIntPGOcc
+   - svcTIntPGOcc
  - title: "Multi-species models"
  - contents:
    - msPGOcc
@@ -38,6 +41,9 @@ reference:
  - contents:
    - ppcOcc
    - waicOcc
+   - residuals.PGOcc
+   - residuals.spPGOcc
+   - residuals.svcPGOcc
  - title: "Data Simulation"
  - contents: 
    - simOcc
@@ -48,6 +54,7 @@ reference:
    - simTBinom
    - simIntMsOcc
    - simTMsOcc
+   - simTIntOcc
  - title: "Miscellaneous"
  - contents: 
    - postHocLM
@@ -78,6 +85,9 @@ reference:
    - summary.tMsPGOcc
    - summary.stMsPGOcc
    - summary.svcTMsPGOcc
+   - summary.tIntPGOcc
+   - summary.stIntPGOcc
+   - summary.svcTIntPGOcc
  - title: "Prediction"
  - contents:
    - predict.PGOcc
@@ -101,6 +111,9 @@ reference:
    - predict.tMsPGOcc
    - predict.stMsPGOcc
    - predict.svcTMsPGOcc
+   - predict.tIntPGOcc
+   - predict.stIntPGOcc
+   - predict.svcTIntPGOcc
  - title: "Fitted values"
  - contents: 
    - fitted.PGOcc
@@ -123,6 +136,9 @@ reference:
    - fitted.tMsPGOcc
    - fitted.stMsPGOcc
    - fitted.svcTMsPGOcc
+   - fitted.tIntPGOcc
+   - fitted.stIntPGOcc
+   - fitted.svcTIntPGOcc
  - title: "Data"
  - contents: 
    - hbef2015

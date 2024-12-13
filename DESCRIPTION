@@ -16,7 +16,6 @@ URL: https://www.doserlab.com/files/spoccupancy-web,
         https://github.com/biodiverse/spOccupancy
 BugReports: https://github.com/biodiverse/spOccupancy/issues
 Depends: R (>= 3.5.0)
-Imports: stats, coda, abind, RANN, lme4, foreach, doParallel, doRNG,
-        parallel, spAbundance, methods
+Imports: stats, coda, abind, RANN, lme4, foreach, doParallel, spAbundance, methods
 Suggests: testthat
 NeedsCompilation: yes

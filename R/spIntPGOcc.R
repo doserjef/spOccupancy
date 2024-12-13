@@ -1241,9 +1241,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         sites.random <- sample(1:J)    
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
 	# curr.set.fit are the rows of X.fit that are included in the fitted model
@@ -1589,10 +1588,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     }
   } else {
 
@@ -1917,9 +1913,8 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
         sites.random <- sample(1:J)    
       }
       sites.k.fold <- split(sites.random, rep(1:k.fold, length.out = length(sites.random)))
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.k.fold[[i]])
         curr.set.pred <- curr.set
 	# curr.set.fit are the rows of X.fit that are included in the fitted model
@@ -2289,10 +2284,7 @@ spIntPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     }
   }
   class(out) <- "spIntPGOcc"

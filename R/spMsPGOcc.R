@@ -1404,9 +1404,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
@@ -1653,10 +1652,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     } # Cross-validation
   } else {
 
@@ -2042,9 +2038,8 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       # Number of sites in each hold out data set. 
       sites.random <- sample(1:J)    
       sites.k.fold <- split(sites.random, sites.random %% k.fold)
-      par.k <- parallel::makePSOCKcluster(k.fold.threads)
-      registerDoParallel(par.k)
-      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dorng% {
+      registerDoParallel(k.fold.threads)
+      model.deviance <- foreach (i = 1:k.fold, .combine = "+") %dopar% {
         curr.set <- sort(sites.random[sites.k.fold[[i]]])
         if (binom) {
           y.indx <- !(1:J %in% curr.set)
@@ -2317,10 +2312,7 @@ spMsPGOcc <- function(occ.formula, det.formula, data, inits, priors,
       model.deviance <- -2 * model.deviance
       # Return objects from cross-validation
       out$k.fold.deviance <- model.deviance
-      parallel::stopCluster(par.k)
-      # Remove attributes from doRNG
-      attr(out$k.fold.deviance, 'rng') <- NULL
-      attr(out$k.fold.deviance, 'doRNG_version') <- NULL
+      stopImplicitCluster()
     } # Cross-validation
   } # NNGP
   class(out) <- "spMsPGOcc"
