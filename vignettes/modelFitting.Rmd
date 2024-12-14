@@ -2,7 +2,7 @@
 title: "Introduction to spOccupancy"
 author: "Jeffrey W. Doser, Andrew O. Finley, Marc K&eacute;ry, Elise F. Zipkin"
 description: Learn how to get started with the core spOccupancy functionality
-date: "2022 (last update: March 27, 2024)"
+date: "2022 (last update: December 13, 2024)"
 output: 
   rmarkdown::html_vignette:
     toc: true

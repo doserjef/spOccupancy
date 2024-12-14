@@ -1772,7 +1772,6 @@ print.intPGOcc <- function(x, ...) {
       "", sep = "\n")
 }
 
-# TODO: should check this a bit more.
 fitted.intPGOcc <- function(object, ...) {
   # Check for unused arguments ------------------------------------------
   formal.args <- names(formals(sys.function(sys.parent())))
