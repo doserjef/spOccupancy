@@ -18,8 +18,9 @@ getSVCSamples <- function(object, pred.object, ...) {
   if (!(class(object) %in% c('svcPGOcc', 'svcPGBinom', 
 			     'svcTPGOcc', 'svcTPGBinom', 
 			     'svcMsPGOcc', 'svcTMsPGOcc', 
-			     'svcAbund', 'svcMsAbund', 'svcTIntPGOcc', 'svcTIntAbund'))) {
-    stop("error: object must be of class svcPGOcc, svcPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc, svcTMsPGOcc, svcTIntPGOcc, svcTIntAbund\n")
+			     'svcAbund', 'svcMsAbund', 'svcTIntPGOcc', 'svcTIntAbund',
+			     'svcFpPGOcc'))) {
+    stop("error: object must be of class svcPGOcc, svcPGBinom, svcTPGOcc, svcTPGBinom, svcMsPGOcc, svcTMsPGOcc, svcAbund, svcMsAbund, svcTIntPGOcc, svcTIntAbund, svcFpPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -37,7 +38,8 @@ getSVCSamples <- function(object, pred.object, ...) {
   p.svc <- length(svc.cols)
   # Single-species models -------------------------------------------------
   if (class(object) %in% c('svcPGOcc', 'svcPGBinom', 
-			   'svcTPGOcc', 'svcTPGBinom', 'svcAbund', 'svcTIntPGOcc', 'svcTIntAbund')) {
+			   'svcTPGOcc', 'svcTPGBinom', 'svcAbund', 'svcTIntPGOcc', 'svcTIntAbund',
+			   'svcFpPGOcc')) {
     if (!missing(pred.object)) {
       svc.samples <- lapply(svc.cols, function(a) mcmc(object$beta.samples[, a] + pred.object$w.0.samples[, which(svc.cols == a), ]))
     } else {

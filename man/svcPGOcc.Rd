@@ -210,13 +210,13 @@ svcPGOcc(occ.formula, det.formula, data, inits, priors,
 
 \references{
   Doser, J. W., Finley, A. O., Saunders, S. P., Kery, M., Weed, A. S., &
-  Zipkin, E. F. (2024A). Modeling complex species-environment
+  Zipkin, E. F. (2025). Modeling complex species-environment
   relationships through spatially-varying coefficient occupancy models.
   Journal of Agricultural, Biological and Environmental Statistics.
   \doi{10.1007/s13253-023-00595-6}.
 
   Doser, J. W., Kery, M., Saunders, S. P., Finley, A. O., Bateman, B. L.,
-  Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024B). Guidelines
+  Grand, J., Reault, S., Weed, A. S., & Zipkin, E. F. (2024). Guidelines
   for the use of spatially varying coefficients in species distribution
   models. Global Ecology and Biogeography, 33(4), e13814.
   \doi{10.1111/geb.13814}.
@@ -268,7 +268,7 @@ svcPGOcc(occ.formula, det.formula, data, inits, priors,
 
   \item{w.samples}{a three-dimensional array of posterior samples for the 
         latent spatial random effects for all spatially-varying coefficients. 
-	Dimensions correspond to MCMC sample, coefficient, and sites.}
+        Dimensions correspond to MCMC sample, coefficient, and sites.}
 
   \item{sigma.sq.psi.samples}{a \code{coda} object of posterior samples
     for variances of random intercepts included in the occupancy portion

@@ -33,6 +33,8 @@
 
   \item{ignore.RE}{logical value that specifies whether or not to remove random effects from the subsequent predictions. If \code{TRUE}, random effects will be included. If \code{FALSE}, random effects will be set to 0 and predictions will only be generated from the fixed effects.}
 
+  \item{n.report}{the interval to report sampling progress.}
+
   \item{type}{a quoted keyword indicating what type of prediction to produce. Valid keywords are 'occupancy' to predict latent occupancy probability and latent occupancy values (this is the default), 'true positive' to predict the true positive detection rates given new values of covariates, and 'false positive' to predict the false positive rates given new values of covariates.}
 
   \item{grid.index.0}{an indexing vector used to specify how each row in \code{X.0} corresponds to the coordinates specified in \code{coords.0}. Only relevant if the spatial random effect was estimated at a higher spatial resolution (e.g., grid cells) than point locations.}

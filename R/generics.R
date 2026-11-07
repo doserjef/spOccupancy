@@ -403,7 +403,7 @@ summary.ppcOcc <- function(object, level = 'both',
     cat("Fit statistic: ", object$fit.stat, "\n")
   }
 
-  if (object$class %in% c('fpPGOcc', 'spFpPGOcc')) {
+  if (object$class %in% c('fpPGOcc', 'spFpPGOcc', 'svcFpPGOcc')) {
     cat("----------------------------------------\n");
     cat("\tDetection data (y)\n");
     cat("----------------------------------------\n");
@@ -3599,8 +3599,8 @@ predict.svcPGOcc <- function(object, X.0, coords.0, weights.0, n.omp.threads = 1
   if (missing(object)) {
     stop("predict expects object\n")
   }
-  if (!(class(object) %in% c('svcPGOcc', 'svcPGBinom'))) {
-    stop("requires an output object of class svcPGOcc or svcPGBinom\n")
+  if (!(class(object) %in% c('svcPGOcc', 'svcPGBinom', 'svcFpPGOcc'))) {
+    stop("requires an output object of class svcPGOcc, svcPGBinom, or svcFpPGOcc\n")
   }
 
   if (!(tolower(type) %in% c('occupancy', 'detection'))) {
@@ -3785,7 +3785,7 @@ predict.svcPGOcc <- function(object, X.0, coords.0, weights.0, n.omp.threads = 1
                  cov.model.indx, n.omp.threads, verbose, n.report, J.w.0, J.w, 
                  grid.index.0.c, sites.link, sites.0.sampled)
 
-    if (is(object, 'svcPGOcc')) {
+    if (class(object) %in% c('svcPGOcc', 'svcFpPGOcc')) {
         out$z.0.samples <- mcmc(t(out$z.0.samples))
         out$psi.0.samples <- mcmc(t(out$psi.0.samples))
         out$w.0.samples <- array(out$w.0.samples, dim = c(p.svc, J.w.0, n.post))
@@ -5839,8 +5839,8 @@ residuals.fpPGOcc <- function(object, n.post.samples = 100, type = 'quantile', .
   if (missing(object)) {
     stop("object must be specified")
   }
-  if (!(class(object) %in% c('fpPGOcc', 'spFpPGOcc'))) {
-    stop('object must be of class fpPGOcc or spFpPGOcc')
+  if (!(class(object) %in% c('fpPGOcc', 'spFpPGOcc', 'svcFpPGOcc'))) {
+    stop('object must be of class fpPGOcc, spFpPGOcc, or svcFpPGOcc')
   }
   if (!(type %in% c('quantile', 'pearson', 'response'))) {
     stop("type must be one of 'quantile', 'pearson', or 'response'")
@@ -6103,5 +6103,64 @@ predict.spFpPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
   out$call <- cl
   out$object.class <- class(object)
   class(out) <- "predict.spFpPGOcc"
+  out
+}
+
+# svcFpPGOcc --------------------------------------------------------------
+print.svcFpPGOcc <- function(x, ...) {
+  print.spFpPGOcc(x)
+}
+
+summary.svcFpPGOcc <- function(object,
+                               quantiles = c(0.025, 0.5, 0.975),
+                               digits = max(3L, getOption("digits") - 3L), ...) {
+  # theta.samples has one sigma.sq, phi (and nu) column per SVC, so the
+  # spFpPGOcc summary prints the per-SVC spatial parameters.
+  summary.spFpPGOcc(object, quantiles = quantiles, digits = digits)
+}
+
+fitted.svcFpPGOcc <- function(object, ...) {
+  fitted.fpPGOcc(object)
+}
+
+residuals.svcFpPGOcc <- function(object, n.post.samples = 100, type = 'quantile', ...) {
+  residuals.fpPGOcc(object, n.post.samples, type)
+}
+
+predict.svcFpPGOcc <- function(object, X.0, coords.0, n.omp.threads = 1,
+                               verbose = TRUE, n.report = 100,
+                               ignore.RE = FALSE, type = 'occupancy',
+                               grid.index.0, ...) {
+  # Check for unused arguments ------------------------------------------
+  formal.args <- names(formals(sys.function(sys.parent())))
+  elip.args <- names(list(...))
+  for(i in elip.args){
+      if(! i %in% formal.args)
+          warning("'",i, "' is not an argument")
+  }
+  # Call ----------------------------------------------------------------
+  cl <- match.call()
+
+  if (missing(object)) {
+    stop("predict expects object\n")
+  }
+  type <- tolower(type)
+  if (!(type %in% c('occupancy', 'true positive', 'false positive'))) {
+    stop("prediction type must be one of 'occupancy', 'true positive', or 'false positive'")
+  }
+  # Occurrence predictions: the occupancy sub-model is the same as svcPGOcc
+  if (type == 'occupancy') {
+    out <- predict.svcPGOcc(object, X.0, coords.0, n.omp.threads = n.omp.threads,
+                            verbose = verbose, n.report = n.report,
+                            ignore.RE = ignore.RE, type = 'occupancy',
+                            grid.index.0 = grid.index.0)
+  }
+  # True positive and false positive rate predictions (non-spatial)
+  if (type %in% c('true positive', 'false positive')) {
+    out <- predict.fpPGOcc(object, X.0, ignore.RE = ignore.RE, type = type)
+  }
+  out$call <- cl
+  out$object.class <- class(object)
+  class(out) <- "predict.svcFpPGOcc"
   out
 }

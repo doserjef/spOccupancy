@@ -39,20 +39,20 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
 
   # Some initial checks -------------------------------------------------
   if (missing(data)) {
-    stop("error: data must be specified")
+    stop("data must be specified")
   }
   if (!is.list(data)) {
-    stop("error: data must be a list")
+    stop("data must be a list")
   }
   names(data) <- tolower(names(data))
   if (missing(occ.formula)) {
-    stop("error: occ.formula must be specified")
+    stop("occ.formula must be specified")
   }
   if (missing(det.formula)) {
-    stop("error: det.formula must be specified")
+    stop("det.formula must be specified")
   }
   if (!'y' %in% names(data)) {
-    stop("error: detection-nondetection data y must be specified in data")
+    stop("detection-nondetection data y must be specified in data")
   }
   y <- as.matrix(data$y)
   if (!'occ.covs' %in% names(data)) {
@@ -62,7 +62,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
       data$occ.covs <- matrix(1, dim(y)[1], 1)
     } else {
-      stop("error: occ.covs must be specified in data for an occupancy model with covariates")
+      stop("occ.covs must be specified in data for an occupancy model with covariates")
     }
   }
   if (!'det.covs' %in% names(data)) {
@@ -72,21 +72,21 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
       data$det.covs <- list(int = matrix(1, dim(y)[1], dim(y)[2]))
     } else {
-      stop("error: det.covs must be specified in data for a detection model with covariates")
+      stop("det.covs must be specified in data for a detection model with covariates")
     }
   }
   if (!is.matrix(data$occ.covs) & !is.data.frame(data$occ.covs)) {
-    stop("error: occ.covs must be a matrix or data frame")
+    stop("occ.covs must be a matrix or data frame")
   }
   if (!'coords' %in% names(data)) {
-    stop("error: coords must be specified in data for a spatial occupancy model.")
+    stop("coords must be specified in data for a spatial occupancy model.")
   }
   if (!is.matrix(data$coords) & !is.data.frame(data$coords)) {
-    stop("error: coords must be a matrix or data frame")
+    stop("coords must be a matrix or data frame")
   }
   coords <- as.matrix(data$coords)
   if (!is.list(data$det.covs)) {
-    stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
+    stop("det.covs must be a list of matrices, data frames, and/or vectors")
   }
   # Check grid index
   if (!'grid.index' %in% names(data)) {
@@ -109,11 +109,11 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     stop("coordinates provided in coords are not all unique. spOccupancy requires each site to have its own unique pair of spatial coordinates. This may be the result of an error in preparing the data list, or you will need to change what you consider a 'site' in order to meet this requirement. Alternatively, you can use data$grid.index to specify the SVC at a larger spatial level than the individual sites (e.g., a grid). See ?svcPGOcc for details.") 
   }
   if (!is.list(data$det.covs)) {
-    stop("error: det.covs must be a list of matrices, data frames, and/or vectors")
+    stop("det.covs must be a list of matrices, data frames, and/or vectors")
   }
   if (!missing(k.fold)) {
     if (!is.numeric(k.fold) | length(k.fold) != 1 | k.fold < 2) {
-      stop("error: k.fold must be a single integer value >= 2")  
+      stop("k.fold must be a single integer value >= 2")  
     }
   }
 
@@ -165,17 +165,17 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # y -------------------------------
   y.na.test <- apply(y.big, 1, function(a) sum(!is.na(a)))
   if (sum(y.na.test == 0) > 0) {
-    stop("error: some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
+    stop("some sites in y have all missing detection histories. Remove these sites from all objects in the 'data' argument, then use 'predict' to obtain predictions at these locations if desired.")
   }
   # occ.covs ------------------------
   if (sum(is.na(data$occ.covs)) != 0) {
-    stop("error: missing values in occ.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
+    stop("missing values in occ.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
   }
   # det.covs ------------------------
   if (!binom) {
     for (i in 1:ncol(data$det.covs)) {
       if (sum(is.na(data$det.covs[, i])) > sum(is.na(y.big))) {
-        stop("error: some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
+        stop("some elements in det.covs have missing values where there is an observed data value in y. Please either replace the NA values in det.covs with non-missing values (e.g., mean imputation) or set the corresponding values in y to NA where the covariate is missing.") 
       }
     }
     # Misalignment between y and det.covs
@@ -194,7 +194,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # det.covs when binom == TRUE -----
   if (binom) {
     if (sum(is.na(data$det.covs)) != 0) {
-      stop("error: missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
+      stop("missing values in site-level det.covs. Please remove these sites from all objects in data or somehow replace the NA values with non-missing values (e.g., mean imputation).") 
     }
   }
 
@@ -205,10 +205,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     occ.re.names <- sapply(findbars(occ.formula), all.vars)
     for (i in 1:length(occ.re.names)) {
       if (is(data$occ.covs[, occ.re.names[i]], 'factor')) {
-        stop(paste("error: random effect variable ", occ.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
+        stop(paste("random effect variable ", occ.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
       } 
       if (is(data$occ.covs[, occ.re.names[i]], 'character')) {
-        stop(paste("error: random effect variable ", occ.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
+        stop(paste("random effect variable ", occ.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
       }
     }
   }
@@ -217,10 +217,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     det.re.names <- sapply(findbars(det.formula), all.vars)
     for (i in 1:length(det.re.names)) {
       if (is(data$det.covs[, det.re.names[i]], 'factor')) {
-        stop(paste("error: random effect variable ", det.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
+        stop(paste("random effect variable ", det.re.names[i], " specified as a factor. Random effect variables must be specified as numeric.", sep = ''))
       } 
       if (is(data$det.covs[, det.re.names[i]], 'character')) {
-        stop(paste("error: random effect variable ", det.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
+        stop(paste("random effect variable ", det.re.names[i], " specified as character. Random effect variables must be specified as numeric.", sep = ''))
       }
     }
   }
@@ -234,7 +234,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     x.re.names <- colnames(X.re)
     x.names <- tmp[[2]]
   } else {
-    stop("error: occ.formula is misspecified")
+    stop("occ.formula is misspecified")
   }
   # Get RE level names
   re.level.names <- lapply(data$occ.covs[, x.re.names, drop = FALSE],
@@ -248,7 +248,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     X.p.re <- as.matrix(tmp[[4]])
     x.p.re.names <- colnames(X.p.re)
   } else {
-    stop("error: det.formula is misspecified")
+    stop("det.formula is misspecified")
   }
   p.re.level.names <- lapply(data$det.covs[, x.p.re.names, drop = FALSE],
 			     function (a) sort(unique(a)))
@@ -284,17 +284,17 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # Because I like K better than n.rep
   K <- n.rep
   if (missing(n.batch)) {
-    stop("error: must specify number of MCMC batches")
+    stop("must specify number of MCMC batches")
   }
   if (missing(batch.length)) {
-    stop("error: must specify length of each MCMC batch")
+    stop("must specify length of each MCMC batch")
   }
   n.samples <- n.batch * batch.length
   if (n.burn > n.samples) {
-    stop("error: n.burn must be less than n.samples")
+    stop("n.burn must be less than n.samples")
   }
   if (n.thin > n.samples) {
-    stop("error: n.thin must be less than n.samples")
+    stop("n.thin must be less than n.samples")
   }
   # Check if n.burn, n.thin, and n.samples result in an integer and error if otherwise.
   if (((n.samples - n.burn) / n.thin) %% 1 != 0) {
@@ -305,7 +305,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     # Check if all column names in svc are in occ.covs
     if (!all(svc.cols %in% x.names)) {
         missing.cols <- svc.cols[!(svc.cols %in% x.names)]
-        stop(paste("error: variable name ", paste(missing.cols, collapse=" and "), " not in occurrence covariates", sep=""))
+        stop(paste("variable name ", paste(missing.cols, collapse=" and "), " not in occurrence covariates", sep=""))
     }
     # Convert desired column names into the numeric column index
     svc.cols <- (1:p.occ)[x.names %in% svc.cols]
@@ -314,7 +314,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     # Check if all column indices are in 1:p.occ
     if (!all(svc.cols %in% 1:p.occ)) {
         missing.cols <- svc.cols[!(svc.cols %in% (1:p.occ))]
-        stop(paste("error: column index ", paste(missing.cols, collapse=" "), " not in design matrix columns", sep=""))
+        stop(paste("column index ", paste(missing.cols, collapse=" "), " not in design matrix columns", sep=""))
     }
   }
   p.svc <- length(svc.cols)
@@ -370,25 +370,25 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # beta -----------------------
   if ("beta.normal" %in% names(priors)) {
     if (!is.list(priors$beta.normal) | length(priors$beta.normal) != 2) {
-      stop("error: beta.normal must be a list of length 2")
+      stop("beta.normal must be a list of length 2")
     }
     mu.beta <- priors$beta.normal[[1]]
     sigma.beta <- priors$beta.normal[[2]]
     if (length(mu.beta) != p.occ & length(mu.beta) != 1) {
       if (p.occ == 1) {
-        stop(paste("error: beta.normal[[1]] must be a vector of length ",
+        stop(paste("beta.normal[[1]] must be a vector of length ",
         	     p.occ, " with elements corresponding to betas' mean", sep = ""))
       } else {
-        stop(paste("error: beta.normal[[1]] must be a vector of length ",
+        stop(paste("beta.normal[[1]] must be a vector of length ",
         	     p.occ, " or 1 with elements corresponding to betas' mean", sep = ""))
       }
     }
     if (length(sigma.beta) != p.occ & length(sigma.beta) != 1) {
       if (p.occ == 1) {
-        stop(paste("error: beta.normal[[2]] must be a vector of length ",
+        stop(paste("beta.normal[[2]] must be a vector of length ",
       	   p.occ, " with elements corresponding to betas' variance", sep = ""))
       } else {
-        stop(paste("error: beta.normal[[2]] must be a vector of length ",
+        stop(paste("beta.normal[[2]] must be a vector of length ",
       	   p.occ, " or 1 with elements corresponding to betas' variance", sep = ""))
       }
     }
@@ -410,25 +410,25 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # alpha -----------------------
   if ("alpha.normal" %in% names(priors)) {
     if (!is.list(priors$alpha.normal) | length(priors$alpha.normal) != 2) {
-      stop("error: alpha.normal must be a list of length 2")
+      stop("alpha.normal must be a list of length 2")
     }
     mu.alpha <- priors$alpha.normal[[1]]
     sigma.alpha <- priors$alpha.normal[[2]]
     if (length(mu.alpha) != p.det & length(mu.alpha) != 1) {
       if (p.det == 1) {
-        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+        stop(paste("alpha.normal[[1]] must be a vector of length ",
         	     p.det, " with elements corresponding to alphas' mean", sep = ""))
       } else {
-        stop(paste("error: alpha.normal[[1]] must be a vector of length ",
+        stop(paste("alpha.normal[[1]] must be a vector of length ",
         	     p.det, " or 1 with elements corresponding to alphas' mean", sep = ""))
       }
     }
     if (length(sigma.alpha) != p.det & length(sigma.alpha) != 1) {
       if (p.det == 1) {
-        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+        stop(paste("alpha.normal[[2]] must be a vector of length ",
       	   p.det, " with elements corresponding to alphas' variance", sep = ""))
       } else {
-        stop(paste("error: alpha.normal[[2]] must be a vector of length ",
+        stop(paste("alpha.normal[[2]] must be a vector of length ",
       	   p.det, " or 1 with elements corresponding to alphas' variance", sep = ""))
       }
     }
@@ -460,18 +460,18 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       }
     } else {
       if (!is.list(priors$phi.unif) | length(priors$phi.unif) != 2) {
-        stop("error: phi.unif must be a list of length 2")
+        stop("phi.unif must be a list of length 2")
       }
       phi.a <- priors$phi.unif[[1]]
       phi.b <- priors$phi.unif[[2]]
       if (length(phi.a) != p.svc & length(phi.a) != 1) {
-        stop(paste("error: phi.unif[[1]] must be a vector of length ", 
+        stop(paste("phi.unif[[1]] must be a vector of length ", 
         	   p.svc, 
              " or 1 with elements corresponding to phis' lower bound for each covariate with spatially-varying coefficients",
              sep = ""))
       }
       if (length(phi.b) != p.svc & length(phi.b) != 1) {
-        stop(paste("error: phi.unif[[2]] must be a vector of length ", 
+        stop(paste("phi.unif[[2]] must be a vector of length ", 
         	   p.svc, 
              " or 1 with elements corresponding to phis' upper bound for each covariate with spatially-varying coefficients", sep = ""))
       }
@@ -491,7 +491,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   }
   # sigma.sq --------------------------
   if (("sigma.sq.ig" %in% names(priors)) & ("sigma.sq.unif" %in% names(priors))) {
-    stop("error: cannot specify both an IG and a uniform prior for sigma.sq")
+    stop("cannot specify both an IG and a uniform prior for sigma.sq")
   }
   if ("sigma.sq.ig" %in% names(priors)) {
     sigma.sq.ig <- TRUE
@@ -501,16 +501,16 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       sigma.sq.b <- rep(1, p.svc)
     } else {
       if (!is.list(priors$sigma.sq.ig) | length(priors$sigma.sq.ig) != 2) {
-        stop("error: sigma.sq.ig must be a list of length 2")
+        stop("sigma.sq.ig must be a list of length 2")
       }
       sigma.sq.a <- priors$sigma.sq.ig[[1]]
       sigma.sq.b <- priors$sigma.sq.ig[[2]]
       if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
-        stop(paste("error: sigma.sq.ig[[1]] must be a vector of length ", 
+        stop(paste("sigma.sq.ig[[1]] must be a vector of length ", 
         	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
       }
       if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
-        stop(paste("error: sigma.sq.ig[[2]] must be a vector of length ", 
+        stop(paste("sigma.sq.ig[[2]] must be a vector of length ", 
         	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
       }
       if (length(sigma.sq.a) != p.svc) {
@@ -529,16 +529,16 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     } else {
       sigma.sq.ig <- FALSE
       if (!is.list(priors$sigma.sq.unif) | length(priors$sigma.sq.unif) != 2) {
-        stop("error: sigma.sq.unif must be a list of length 2")
+        stop("sigma.sq.unif must be a list of length 2")
       }
       sigma.sq.a <- priors$sigma.sq.unif[[1]]
       sigma.sq.b <- priors$sigma.sq.unif[[2]]
       if (length(sigma.sq.a) != p.svc & length(sigma.sq.a) != 1) {
-        stop(paste("error: sigma.sq.unif[[1]] must be a vector of length ", 
+        stop(paste("sigma.sq.unif[[1]] must be a vector of length ", 
         	   p.svc, " or 1 with elements corresponding to sigma.sqs' shape for each covariate with spatially-varying coefficients", sep = ""))
       }
       if (length(sigma.sq.b) != p.svc & length(sigma.sq.b) != 1) {
-        stop(paste("error: sigma.sq.unif[[2]] must be a vector of length ", 
+        stop(paste("sigma.sq.unif[[2]] must be a vector of length ", 
         	   p.svc, " or 1 with elements corresponding to sigma.sqs' scale for each covariate with spatially-varying coefficients", sep = ""))
       }
       if (length(sigma.sq.a) != p.svc) {
@@ -560,19 +560,19 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # nu -----------------------------
   if (cov.model == "matern") {
     if (!"nu.unif" %in% names(priors)) {
-      stop("error: nu.unif must be specified in priors value list")
+      stop("nu.unif must be specified in priors value list")
     }
     nu.a <- priors$nu.unif[[1]]
     nu.b <- priors$nu.unif[[2]]
     if (!is.list(priors$nu.unif) | length(priors$nu.unif) != 2) {
-      stop("error: nu.unif must be a list of length 2")
+      stop("nu.unif must be a list of length 2")
     }
     if (length(nu.a) != p.svc & length(nu.a) != 1) {
-      stop(paste("error: nu.unif[[1]] must be a vector of length ", 
+      stop(paste("nu.unif[[1]] must be a vector of length ", 
       	   p.svc, " or 1 with elements corresponding to nus' lower bound for each covariate with spatially-varying coefficients", sep = ""))
     }
     if (length(nu.b) != p.svc & length(nu.b) != 1) {
-      stop(paste("error: nu.unif[[2]] must be a vector of length ", 
+      stop(paste("nu.unif[[2]] must be a vector of length ", 
       	   p.svc, " or 1 with elements corresponding to nus' upper bound for each covariate with spatially-varying coefficients", sep = ""))
     }
     if (length(nu.a) != p.svc) {
@@ -590,25 +590,25 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if (p.occ.re > 0) {
     if ("sigma.sq.psi.ig" %in% names(priors)) {
       if (!is.list(priors$sigma.sq.psi.ig) | length(priors$sigma.sq.psi.ig) != 2) {
-        stop("error: sigma.sq.psi.ig must be a list of length 2")
+        stop("sigma.sq.psi.ig must be a list of length 2")
       }
       sigma.sq.psi.a <- priors$sigma.sq.psi.ig[[1]]
       sigma.sq.psi.b <- priors$sigma.sq.psi.ig[[2]]
       if (length(sigma.sq.psi.a) != p.occ.re & length(sigma.sq.psi.a) != 1) {
         if (p.occ.re == 1) {
-        stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
+        stop(paste("sigma.sq.psi.ig[[1]] must be a vector of length ", 
         	   p.occ.re, " with elements corresponding to sigma.sq.psis' shape", sep = ""))
         } else {
-        stop(paste("error: sigma.sq.psi.ig[[1]] must be a vector of length ", 
+        stop(paste("sigma.sq.psi.ig[[1]] must be a vector of length ", 
         	   p.occ.re, " or 1 with elements corresponding to sigma.sq.psis' shape", sep = ""))
         }
       }
       if (length(sigma.sq.psi.b) != p.occ.re & length(sigma.sq.psi.b) != 1) {
         if (p.occ.re == 1) {
-          stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
+          stop(paste("sigma.sq.psi.ig[[2]] must be a vector of length ", 
         	   p.occ.re, " with elements corresponding to sigma.sq.psis' scale", sep = ""))
         } else {
-          stop(paste("error: sigma.sq.psi.ig[[2]] must be a vector of length ", 
+          stop(paste("sigma.sq.psi.ig[[2]] must be a vector of length ", 
         	   p.occ.re, " or 1with elements corresponding to sigma.sq.psis' scale", sep = ""))
         }
       }
@@ -633,25 +633,25 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if (p.det.re > 0) {
     if ("sigma.sq.p.ig" %in% names(priors)) {
       if (!is.list(priors$sigma.sq.p.ig) | length(priors$sigma.sq.p.ig) != 2) {
-        stop("error: sigma.sq.p.ig must be a list of length 2")
+        stop("sigma.sq.p.ig must be a list of length 2")
       }
       sigma.sq.p.a <- priors$sigma.sq.p.ig[[1]]
       sigma.sq.p.b <- priors$sigma.sq.p.ig[[2]]
       if (length(sigma.sq.p.a) != p.det.re & length(sigma.sq.p.a) != 1) {
         if (p.det.re == 1) {
-          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+          stop(paste("sigma.sq.p.ig[[1]] must be a vector of length ", 
         	   p.det.re, " with elements corresponding to sigma.sq.ps' shape", sep = ""))
         } else {
-          stop(paste("error: sigma.sq.p.ig[[1]] must be a vector of length ", 
+          stop(paste("sigma.sq.p.ig[[1]] must be a vector of length ", 
         	   p.det.re, " or 1 with elements corresponding to sigma.sq.ps' shape", sep = ""))
         }
       }
       if (length(sigma.sq.p.b) != p.det.re & length(sigma.sq.p.b) != 1) {
         if (p.det.re == 1) {
-          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+          stop(paste("sigma.sq.p.ig[[2]] must be a vector of length ", 
         	     p.det.re, " with elements corresponding to sigma.sq.ps' scale", sep = ""))
         } else {
-          stop(paste("error: sigma.sq.p.ig[[2]] must be a vector of length ", 
+          stop(paste("sigma.sq.p.ig[[2]] must be a vector of length ", 
         	     p.det.re, " or 1 with elements corresponding to sigma.sq.ps' scale", sep = ""))
         }
       }
@@ -682,11 +682,11 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("z" %in% names(inits)) {
     z.inits <- inits$z
     if (!is.vector(z.inits)) {
-      stop(paste("error: initial values for z must be a vector of length ",
+      stop(paste("initial values for z must be a vector of length ",
       	   J, sep = ""))
     }
     if (length(z.inits) != J) {
-      stop(paste("error: initial values for z must be a vector of length ",
+      stop(paste("initial values for z must be a vector of length ",
       	   J, sep = ""))
     }
     # Reorder the user supplied inits values
@@ -696,7 +696,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     z.test <- apply(y.big, 1, max, na.rm = TRUE)
     init.test <- sum(z.inits < z.test)
     if (init.test > 0) {
-      stop("error: initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
+      stop("initial values for latent occurrence (z) are invalid. Please re-specify inits$z so initial values are 1 if the species is observed at that site.")
     }
   } else {
     # In correct order since you reordered y.
@@ -710,11 +710,11 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     beta.inits <- inits[["beta"]]
     if (length(beta.inits) != p.occ & length(beta.inits) != 1) {
       if (p.occ == 1) {
-        stop(paste("error: initial values for beta must be of length ", p.occ,
+        stop(paste("initial values for beta must be of length ", p.occ,
       	     sep = ""))
 
       } else {
-        stop(paste("error: initial values for beta must be of length ", p.occ, " or 1",
+        stop(paste("initial values for beta must be of length ", p.occ, " or 1",
         	     sep = ""))
       }
     }
@@ -732,10 +732,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     alpha.inits <- inits[["alpha"]]
     if (length(alpha.inits) != p.det & length(alpha.inits) != 1) {
       if (p.det == 1) {
-      stop(paste("error: initial values for alpha must be of length ", p.det,
+      stop(paste("initial values for alpha must be of length ", p.det,
       	   sep = ""))
       } else {
-        stop(paste("error: initial values for alpha must be of length ", p.det, " or 1",
+        stop(paste("initial values for alpha must be of length ", p.det, " or 1",
       	     sep = ""))
       }
     }
@@ -752,7 +752,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("phi" %in% names(inits)) {
     phi.inits <- inits[["phi"]]
     if (length(phi.inits) != p.svc & length(phi.inits) != 1) {
-      stop(paste("error: initial values for phi must be of length ", p.svc, " or 1", 
+      stop(paste("initial values for phi must be of length ", p.svc, " or 1", 
       	   sep = ""))
     }
     if (length(phi.inits) != p.svc) {
@@ -768,7 +768,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("sigma.sq" %in% names(inits)) {
     sigma.sq.inits <- inits[["sigma.sq"]]
     if (length(sigma.sq.inits) != p.svc & length(sigma.sq.inits) != 1) {
-      stop(paste("error: initial values for sigma.sq must be of length ", p.svc,  " or 1",
+      stop(paste("initial values for sigma.sq must be of length ", p.svc,  " or 1",
       	   sep = ""))
     }
     if (length(sigma.sq.inits) != p.svc) {
@@ -788,11 +788,11 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("w" %in% names(inits)) {
     w.inits <- inits[["w"]]
     if (!is.matrix(w.inits)) {
-      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      stop(paste("initial values for w must be a matrix with dimensions ",
       	   p.svc, " x ", J.w, sep = ""))
     }
     if (nrow(w.inits) != p.svc | ncol(w.inits) != J.w) {
-      stop(paste("error: initial values for w must be a matrix with dimensions ",
+      stop(paste("initial values for w must be a matrix with dimensions ",
       	   p.svc, " x ", J.w, sep = ""))
     }
     if (NNGP) {
@@ -808,7 +808,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("nu" %in% names(inits)) {
     nu.inits <- inits[["nu"]]
     if (length(nu.inits) != p.svc & length(nu.inits) != 1) {
-      stop(paste("error: initial values for nu must be of length ", p.svc,  " or 1",
+      stop(paste("initial values for nu must be of length ", p.svc,  " or 1",
       	   sep = ""))
     }
     if (length(nu.inits) != p.svc) {
@@ -830,10 +830,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       sigma.sq.psi.inits <- inits[["sigma.sq.psi"]]
       if (length(sigma.sq.psi.inits) != p.occ.re & length(sigma.sq.psi.inits) != 1) {
         if (p.occ.re == 1) {
-          stop(paste("error: initial values for sigma.sq.psi must be of length ", p.occ.re, 
+          stop(paste("initial values for sigma.sq.psi must be of length ", p.occ.re, 
       	       sep = ""))
         } else {
-          stop(paste("error: initial values for sigma.sq.psi must be of length ", p.occ.re, 
+          stop(paste("initial values for sigma.sq.psi must be of length ", p.occ.re, 
       	       " or 1", sep = ""))
         }
       }
@@ -859,10 +859,10 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
       sigma.sq.p.inits <- inits[["sigma.sq.p"]]
       if (length(sigma.sq.p.inits) != p.det.re & length(sigma.sq.p.inits) != 1) {
         if (p.det.re == 1) {
-          stop(paste("error: initial values for sigma.sq.p must be of length ", p.det.re, 
+          stop(paste("initial values for sigma.sq.p must be of length ", p.det.re, 
       	     sep = ""))
         } else {
-          stop(paste("error: initial values for sigma.sq.p must be of length ", p.det.re, 
+          stop(paste("initial values for sigma.sq.p must be of length ", p.det.re, 
       	       " or 1", sep = ""))
           
         }
@@ -887,7 +887,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   if ("fix" %in% names(inits)) {
     fix.inits <- inits[["fix"]]
     if ((fix.inits != TRUE) & (fix.inits != FALSE)) {
-      stop(paste("error: inits$fix must take value TRUE or FALSE"))
+      stop(paste("inits$fix must take value TRUE or FALSE"))
     }
   } else {
     fix.inits <- FALSE
@@ -899,7 +899,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   # Order must match util.cpp spCor.
   cov.model.names <- c("exponential", "spherical", "matern", "gaussian")
   if(! cov.model %in% cov.model.names){
-    stop("error: specified cov.model '",cov.model,"' is not a valid option; choose from ", 
+    stop("specified cov.model '",cov.model,"' is not a valid option; choose from ", 
          paste(cov.model.names, collapse=", ", sep="") ,".")}
   # Obo for cov model lookup on c side
   cov.model.indx <- which(cov.model == cov.model.names) - 1
@@ -925,38 +925,38 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     names(tuning) <- tolower(names(tuning))
     # phi ---------------------------
     if(!"phi" %in% names(tuning)) {
-      stop("error: phi must be specified in tuning value list")
+      stop("phi must be specified in tuning value list")
     }
     phi.tuning <- tuning$phi
     if (length(phi.tuning) == 1) {
       phi.tuning <- rep(tuning$phi, p.svc)
     } else if (length(phi.tuning) != p.svc) {
-      stop(paste("error: phi tuning must be either a single value or a vector of length ",
+      stop(paste("phi tuning must be either a single value or a vector of length ",
       	   p.svc, sep = ""))
     }
     if (cov.model == 'matern') {
       # nu --------------------------
       if(!"nu" %in% names(tuning)) {
-        stop("error: nu must be specified in tuning value list")
+        stop("nu must be specified in tuning value list")
       }
       nu.tuning <- tuning$nu
       if (length(nu.tuning) == 1) {
         nu.tuning <- rep(tuning$nu, p.svc)
       } else if (length(nu.tuning) != p.svc) {
-        stop(paste("error: nu tuning must be either a single value or a vector of length ",
+        stop(paste("nu tuning must be either a single value or a vector of length ",
         	   p.svc, sep = ""))
       }
     }
     if (!sigma.sq.ig) {
       # sigma.sq --------------------------
       if(!"sigma.sq" %in% names(tuning)) {
-        stop("error: sigma.sq must be specified in tuning value list")
+        stop("sigma.sq must be specified in tuning value list")
       }
       sigma.sq.tuning <- tuning$sigma.sq
       if (length(sigma.sq.tuning) == 1) {
         sigma.sq.tuning <- rep(tuning$sigma.sq, p.svc)
       } else if (length(sigma.sq.tuning) != p.svc) {
-        stop(paste("error: sigma.sq tuning must be either a single value or a vector of length ",
+        stop(paste("sigma.sq tuning must be either a single value or a vector of length ",
 		   p.svc, sep = ""))
       }
     }
@@ -967,7 +967,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
   curr.chain <- 1
 
   if (!NNGP) {
-    stop("error: svcPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
+    stop("svcPGOcc is currently only implemented for NNGPs, not full Gaussian Processes. Please set NNGP = TRUE.") 
   } else {
 
     # Nearest Neighbor Search ---------------------------------------------
@@ -980,7 +980,7 @@ svcPGOcc <- function(occ.formula, det.formula, data, inits, priors, tuning,
     search.type.names <- c("brute", "cb")
     
     if(!search.type %in% search.type.names){
-      stop("error: specified search.type '",search.type,
+      stop("specified search.type '",search.type,
 	   "' is not a valid option; choose from ", 
 	   paste(search.type.names, collapse=", ", sep="") ,".")
     }

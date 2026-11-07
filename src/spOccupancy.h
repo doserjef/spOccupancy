@@ -680,4 +680,26 @@ extern "C" {
                      SEXP nThreads_r, SEXP verbose_r, SEXP nReport_r, 
                      SEXP samplesInfo_r, SEXP chainInfo_r, SEXP gridIndx_r);
 
+  SEXP svcFpPGOccNNGP(SEXP y_r, SEXP X_r, SEXP Xw_r, SEXP Xmu_r, SEXP Xomega_r,
+                      SEXP coords_r, SEXP XRE_r, SEXP XmuRE_r, SEXP XomegaRE_r,
+                      SEXP d_r, SEXP nVal_r, SEXP consts_r, SEXP nOccRELong_r,
+                      SEXP nTPDetRELong_r, SEXP nFPDetRELong_r, SEXP m_r,
+                      SEXP nnIndx_r, SEXP nnIndxLU_r, SEXP uIndx_r, SEXP uIndxLU_r,
+                      SEXP uiIndx_r, SEXP betaStarting_r, SEXP gammaStarting_r,
+                      SEXP deltaStarting_r, SEXP sigmaSqPsiStarting_r,
+                      SEXP sigmaSqMuStarting_r, SEXP sigmaSqOmegaStarting_r,
+                      SEXP betaStarStarting_r, SEXP gammaStarStarting_r,
+                      SEXP deltaStarStarting_r, SEXP zStarting_r, SEXP wStarting_r,
+                      SEXP thetaStarting_r, SEXP zLongIndx_r, SEXP betaStarIndx_r,
+                      SEXP betaLevelIndx_r, SEXP gammaStarIndx_r, SEXP gammaLevelIndx_r,
+                      SEXP deltaStarIndx_r, SEXP deltaLevelIndx_r, SEXP muBeta_r,
+                      SEXP muGamma_r, SEXP muDelta_r, SEXP SigmaBeta_r,
+                      SEXP SigmaGamma_r, SEXP SigmaDelta_r, SEXP spPriors_r,
+                      SEXP sigmaSqPsiA_r, SEXP sigmaSqPsiB_r, SEXP sigmaSqMuA_r,
+                      SEXP sigmaSqMuB_r, SEXP sigmaSqOmegaA_r, SEXP sigmaSqOmegaB_r,
+                      SEXP tuning_r, SEXP spInfo_r, SEXP nBatch_r, SEXP batchLength_r,
+                      SEXP acceptRate_r, SEXP nThreads_r, SEXP verbose_r,
+                      SEXP nReport_r, SEXP samplesInfo_r, SEXP chainInfo_r,
+                      SEXP gridIndx_r);
+
 }

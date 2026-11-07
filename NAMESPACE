@@ -42,6 +42,7 @@ export(svcTIntPGOcc)
 export(simFPOcc)
 export(fpPGOcc)
 export(spFpPGOcc)
+export(svcFpPGOcc)
 
 S3method("predict", "PGOcc")
 S3method("print", "PGOcc")
@@ -207,12 +208,20 @@ S3method("predict", "fpPGOcc")
 S3method("plot", "fpPGOcc")
 S3method("summary", "fpPGOcc")
 S3method("residuals", "fpPGOcc")
+
 S3method("print", "spFpPGOcc")
 S3method("fitted", "spFpPGOcc")
 S3method("predict", "spFpPGOcc")
 S3method("plot", "spFpPGOcc")
 S3method("summary", "spFpPGOcc")
 S3method("residuals", "spFpPGOcc")
+
+S3method("print", "svcFpPGOcc")
+S3method("fitted", "svcFpPGOcc")
+S3method("summary", "svcFpPGOcc")
+S3method("residuals", "svcFpPGOcc")
+S3method("predict", "svcFpPGOcc")
+S3method("plot", "svcFpPGOcc")
 
 importFrom("stats", "dist", "rbinom", "rnorm", "coefficients", "glm", 
            "is.empty.model", "model.matrix", "model.response", "terms", 

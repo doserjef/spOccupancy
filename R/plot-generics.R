@@ -5,7 +5,7 @@ overallPlot <- function(x, param, density = TRUE, ...) {
   indx <- 1:n.post
   # Models with a false positive detection process (true positive rate mu
   # with coefficients gamma, false positive rate omega with coefficients delta).
-  fp.classes <- c('fpPGOcc', 'spFpPGOcc')
+  fp.classes <- c('fpPGOcc', 'spFpPGOcc', 'svcFpPGOcc')
   if (param == 'beta.comm') {
     if (class(x) %in% c('PGOcc', 'spPGOcc', 'intPGOcc', 'spIntPGOcc',
 			'tPGOcc', 'stPGOcc', 'svcPGOcc', 'svcTPGOcc',
@@ -67,7 +67,7 @@ overallPlot <- function(x, param, density = TRUE, ...) {
 			  'svcPGOcc', 'svcPGBinom', 'svcTPGOcc', 'svcTPGBinom', 
 			  'spMsPGOcc', 'sfJSDM', 'sfMsPGOcc', 'stMsPGOcc', 'svcMsPGOcc', 
 			  'svcTMsPGOcc', 'tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc',
-			  'spFpPGOcc'))) {
+			  'spFpPGOcc', 'svcFpPGOcc'))) {
       stop("theta is not a parameter in the fitted model")
     }
     for (i in 1:n.chains) {
@@ -267,5 +267,8 @@ plot.fpPGOcc <- function(x, param, density = TRUE, ...) {
   overallPlot(x, param, density)
 }
 plot.spFpPGOcc <- function(x, param, density = TRUE, ...) {
+  overallPlot(x, param, density)
+}
+plot.svcFpPGOcc <- function(x, param, density = TRUE, ...) {
   overallPlot(x, param, density)
 }

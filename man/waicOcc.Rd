@@ -17,7 +17,7 @@ waicOcc(object, by.sp = FALSE, ...)
   \code{sfJSDM}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, \code{tPGOcc}, \code{stPGOcc}, 
   \code{svcPGBinom}, \code{svcPGOcc}, \code{svcTPGBinom}, \code{svcTPGOcc}, or 
   \code{intMsPGOcc}, \code{svcMsPGOcc}, \code{tMsPGOcc}, \code{stMsPGOcc}, 
-  \code{svcTMsPGOcc}, \code{fpPGOcc}, \code{spFpPGOcc}.}
+  \code{svcTMsPGOcc}, \code{fpPGOcc}, \code{spFpPGOcc}, \code{svcFpPGocc}.}
 
   \item{by.sp}{a logical value indicating whether to return a separate WAIC
                value for each species in a multi-species occupancy model or 

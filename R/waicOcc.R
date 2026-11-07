@@ -22,8 +22,8 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
                              'svcTPGBinom', 'svcTPGOcc', 'tMsPGOcc', 'intMsPGOcc', 
                              'svcMsPGOcc', 'stMsPGOcc', 'svcTMsPGOcc', 
                              'tIntPGOcc', 'stIntPGOcc', 'svcTIntPGOcc', 
-                             'fpPGOcc', 'spFpPGOcc'))) {
-    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc, stMsPGOcc, svcTMsPGOcc, tIntPGOcc, stIntPGOcc, svcTIntPGOcc, fpPGOcc, spFpPGOcc\n")
+                             'fpPGOcc', 'spFpPGOcc', 'svcFpPGOcc'))) {
+    stop("error: object must be one of the following classes: PGOcc, spPGOcc, msPGOcc, spMsPGOcc, intPGOcc, spIntPGOcc, lfMsPGOcc, sfMsPGOcc, lfJSDM, sfJSDM, svcPGOcc, tPGOcc, stPGOcc, svcPGBinom, svcPGOcc, svcTPGBinom, svcTPGOcc, tMsPGOcc, intMsPGOcc, svcMsPGOcc, stMsPGOcc, svcTMsPGOcc, tIntPGOcc, stIntPGOcc, svcTIntPGOcc, fpPGOcc, spFpPGOcc, svcFpPGOcc\n")
   }
 
   n.post <- object$n.post * object$n.chains
@@ -32,7 +32,7 @@ waicOcc <- function(object, by.sp = FALSE, ...) {
   logit.inv <- function(z, a = 0, b = 1) {b-(b-a)/(1+exp(z))}
 
   if (class(object) %in% c('PGOcc', 'spPGOcc', 'svcPGBinom', 'svcPGOcc', 'fpPGOcc',
-                           'spFpPGOcc')) {
+                           'spFpPGOcc', 'svcFpPGOcc')) {
     elpd <- sum(apply(object$like.samples, 2, function(a) log(mean(a))), na.rm = TRUE)
     pD <- sum(apply(object$like.samples, 2, function(a) var(log(a))), na.rm = TRUE)
     out <- c(elpd, pD, -2 * (elpd - pD))

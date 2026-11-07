@@ -15,7 +15,7 @@ ppcOcc(object, fit.stat, group, ...)
 \code{spMsPGOcc}, \code{intPGOcc}, \code{spIntPGOcc}, \code{lfMsPGOcc}, \code{sfMsPGOcc}, 
 \code{tPGOcc}, \code{stPGOcc}, \code{svcPGOcc}, \code{svcMsPGOcc}, \code{tMsPGOcc}, 
 \code{stMsPGOcc}, \code{svcTMsPGOcc}, \code{tIntPGOcc}, \code{stIntPGOcc}, 
-\code{svcTIntPGOcc}, \code{fpPGOcc}, \code{spFpPGOcc}.}
+\code{svcTIntPGOcc}, \code{fpPGOcc}, \code{spFpPGOcc}, \code{svcFpPGocc}.}
 
 \item{fit.stat}{a quoted keyword that specifies the fit statistic
 to use in the posterior predictive check. Supported fit statistics are
